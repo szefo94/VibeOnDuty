@@ -1,6 +1,6 @@
 # VIBE ON DUTY
 
-A browser-based first-person shooter built entirely in a single HTML file using Three.js. No install, no build step — just open and play.
+A browser-based first-person shooter built with Three.js. Vibe coded. No install, no build step — just open and play.
 
 **[Play in browser →](https://szefo94.github.io/VibeOnDuty/fps3d.html)**
 
@@ -55,7 +55,17 @@ Dealing and taking damage fills your **Energy** meter. At 100% energy you can th
 
 - [Three.js r128](https://threejs.org/) — 3D rendering (loaded via CDN)
 - Vanilla JS — zero dependencies beyond Three.js
-- Single `.html` file — no bundler, no framework
+- No bundler, no framework
+
+---
+
+## File Structure
+
+```
+fps3d.html   — HTML structure and DOM
+style.css    — all styles and layout
+game.js      — all game logic (Three.js scene, AI, physics, HUD)
+```
 
 ---
 
