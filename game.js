@@ -1,115 +1,16 @@
-'use strict';
-// ═══════════════════ CONFIG ════════════════════════
-const CELL=4, WALL_H=3, PLAYER_H=1.65, PLAYER_H_CROUCH=0.85;
-const MOVE_SPEED=6, SPRINT_MULT=1.65, MOUSE_SENS=0.0018;
-const MAX_HP=100, MAX_AMMO=30, RESERVE_AMMO=90, RELOAD_MS=1800, SHOOT_CD=88;
-const ENEMY_HP=100, ENEMY_SPEED=2.4, ENEMY_ROT_SPD=2.6;
-const ENEMY_SIGHT=22, ENEMY_SHOOT_RANGE=14, ENEMY_SHOOT_CD=1200;
-const ENEMY_DAMAGE=10, BULLET_DAMAGE=28;
-const REACT_MIN=400, REACT_MAX=950;
-const AIM_THRESH=0.055;
-const TRACER_LIFE=0.09;
-const HP_SEGS=4;
-const GRAVITY=18, JUMP_FORCE=7.5;
-const HEAD_BOB_PITCH=0.022;
-const SLIDE_SPEED=10, SLIDE_DUR=0.55, SLIDE_CANCEL_JUMP=true;
-const ENERGY_PER_DMG=0.4;
-const MAX_ENERGY=100, GRENADE_ENERGY_COST=100;
-const GRENADE_RADIUS=9.0, GRENADE_PEAK_DMG=150;
+import { CELL, WALL_H, PLAYER_H, PLAYER_H_CROUCH, MOVE_SPEED, SPRINT_MULT, MOUSE_SENS,
+  MAX_HP, MAX_AMMO, RESERVE_AMMO, RELOAD_MS, SHOOT_CD, ENEMY_HP, ENEMY_SPEED, ENEMY_ROT_SPD,
+  ENEMY_SIGHT, ENEMY_SHOOT_RANGE, ENEMY_SHOOT_CD, ENEMY_DAMAGE, BULLET_DAMAGE,
+  REACT_MIN, REACT_MAX, AIM_THRESH, TRACER_LIFE, HP_SEGS, GRAVITY, JUMP_FORCE,
+  HEAD_BOB_PITCH, SLIDE_SPEED, SLIDE_DUR, SLIDE_CANCEL_JUMP, ENERGY_PER_DMG,
+  MAX_ENERGY, GRENADE_ENERGY_COST, GRENADE_RADIUS, GRENADE_PEAK_DMG } from './src/config.js';
+import { MAP_W, MAP_H, MAP, HMAP, H1, H2, isRamp, isCrack,
+  mapCell, hAt, groundElevation, canMoveTo } from './src/map.js';
+import { normA, slerp } from './src/math.js';
+import { astar } from './src/astar.js';
+import { grenadeFalloff, grenadeEntityDamage, grenadePlayerDamage } from './src/combat/damage.js';
 
-// ═══════════════════ MAP ═══════════════════════════
-// 0=floor 1=solid 2=E-W crack 3=N-S crack 4=ramp-N 5=ramp-S 6=ramp-W 7=ramp-E
-const MAP_W=24, MAP_H=24;
-const MAP=[
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,1,0,1,0,0,0,1,1,1,2,1,1,0,0,0,1,0,1,0,0,1],
-  [1,0,0,0,0,0,0,0,0,4,0,0,0,0,5,0,0,0,0,0,0,0,0,1],
-  [1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1],
-  [1,0,0,0,0,0,1,1,1,1,0,0,0,0,1,1,1,1,0,0,0,0,0,1],
-  [1,0,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,1,0,0,0,0,0,1],
-  [1,0,0,0,0,0,1,0,0,3,0,0,0,0,3,0,0,1,0,0,0,0,0,1],
-  [1,0,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,1,0,0,0,0,0,1],
-  [1,0,0,0,0,0,1,1,2,1,0,0,0,0,1,2,1,1,0,0,0,0,0,1],
-  [1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1],
-  [1,0,0,0,0,0,0,0,0,6,0,0,0,0,7,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1],
-  [1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,1,1,1,0,0,0,0,0,1],
-  [1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1],
-  [1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1],
-  [1,0,0,0,0,0,1,1,2,1,0,0,0,0,1,2,1,1,0,0,0,0,0,1],
-  [1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1],
-  [1,0,0,0,0,0,0,0,0,4,0,0,0,0,5,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,1,0,1,0,0,0,1,1,3,1,1,0,0,0,1,0,1,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-];
-const isRamp=c=>c>=4&&c<=7;
-const isCrack=c=>c===2||c===3;
-function mapCell(mx,mz){if(mx<0||mz<0||mx>=MAP_W||mz>=MAP_H)return 1;return MAP[mz][mx];}
-
-// --- Heightmap ---
-const H1=0.7, H2=1.4;
-const HMAP=[
-  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [0,0,H1,H1,H1,H1,0,0,0,0,0,0,0,0,0,0,0,0,H1,H1,H1,H1,0,0],
-  [0,0,H1,0,0,H1,0,0,0,0,0,0,0,0,0,0,0,0,H1,0,0,H1,0,0],
-  [0,0,H1,H1,H1,H1,0,0,0,H2,H2,H2,H2,H2,H2,0,0,0,H1,H1,H1,H1,0,0],
-  [0,0,0,0,0,0,0,0,0,H2,H2,H2,H2,H2,H2,0,0,0,0,0,0,0,0,0],
-  [0,0,0,0,0,0,0,0,0,0,0,H2,H2,H2,0,0,0,0,0,0,0,0,0,0],
-  [0,0,0,0,0,0,0,0,0,0,0,H2,H2,H2,0,0,0,0,0,0,0,0,0,0],
-  [0,0,0,0,0,0,0,0,0,0,0,H2,H2,H2,0,0,0,0,0,0,0,0,0,0],
-  [0,0,0,0,0,0,0,0,0,0,0,H2,H2,H2,0,0,0,0,0,0,0,0,0,0],
-  [0,0,0,0,0,0,0,0,0,0,0,H2,H2,H2,0,0,0,0,0,0,0,0,0,0],
-  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [0,0,0,0,0,0,0,0,0,H2,H2,H2,H2,H2,H2,0,0,0,0,0,0,0,0,0],
-  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [0,0,0,0,0,0,0,0,0,0,H1,H1,H1,H1,0,0,0,0,0,0,0,0,0,0],
-  [0,0,0,0,0,0,0,0,0,0,H1,H1,H1,H1,0,0,0,0,0,0,0,0,0,0],
-  [0,0,0,0,0,0,0,0,0,0,H1,H1,H1,H1,0,0,0,0,0,0,0,0,0,0],
-  [0,0,0,0,0,0,0,0,0,0,H1,H1,H1,H1,0,0,0,0,0,0,0,0,0,0],
-  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [0,0,H1,H1,H1,H1,0,0,0,H2,H2,H2,H2,H2,H2,0,0,0,H1,H1,H1,H1,0,0],
-  [0,0,H1,0,0,H1,0,0,0,0,0,0,0,0,0,0,0,0,H1,0,0,H1,0,0],
-  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-];
-function hAt(c,r){if(c<0||r<0||c>=MAP_W||r>=MAP_H)return 0;return HMAP[r][c]||0;}
 const visited=Array.from({length:MAP_H},()=>new Uint8Array(MAP_W));
-
-// groundElevation: surface Y — ramps linear within cell, flat cells use own height
-// Neighbors only blended if same height to avoid cross-edge drop
-function groundElevation(wx,wz){
-  const cx=wx/CELL, cz=wz/CELL;
-  const c0=Math.floor(cx), r0=Math.floor(cz);
-  const tx=cx-c0, tz=cz-r0;
-  const cell=mapCell(c0,r0);
-  if(cell===4) return H2*tz;
-  if(cell===5) return H2*(1-tz);
-  if(cell===6) return H2*tx;
-  if(cell===7) return H2*(1-tx);
-  const h=hAt(c0,r0);
-  const h10=mapCell(c0+1,r0)===1?h:hAt(c0+1,r0);
-  const h01=mapCell(c0,r0+1)===1?h:hAt(c0,r0+1);
-  const h11=mapCell(c0+1,r0+1)===1?h:hAt(c0+1,r0+1);
-  return h*(1-tx)*(1-tz)+h10*tx*(1-tz)+h01*(1-tx)*tz+h11*tx*tz;
-}
-
-const MAX_STEP=0.8;  // >= H1 (0.7) so player can step onto low slabs
-
-// canMoveTo: solid walls always block; step-height check when grounded
-function canMoveTo(nx,nz,currentGroundY,airborne=false){
-  const mc=Math.floor(nx/CELL),mr=Math.floor(nz/CELL);
-  const c=mapCell(mc,mr);
-  if(c===1) return false;
-  if(airborne||isRamp(c)) return true;
-  const cellH=hAt(mc,mr);
-  return cellH-currentGroundY<=MAX_STEP;
-}
 
 // ═══════════════════ THREE SETUP ═══════════════════
 const renderer=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true});
@@ -628,19 +529,17 @@ function explodeGrenade(g){
   for(const e of enemies){
     if(e.dead)continue;
     const dist=ep.distanceTo(new THREE.Vector3(e.x,groundElevation(e.x,e.z)+0.9,e.z));
-    if(dist<GRENADE_RADIUS){
-      const fo=(1-dist/GRENADE_RADIUS)**2;
-      const dmg=Math.floor((GRENADE_PEAK_DMG/100)*e.maxHp*fo);
-      if(dmg>0){e.hp=Math.max(0,e.hp-dmg);e.hpDrain=e.hp;player.energy=Math.min(MAX_ENERGY,player.energy+dmg*ENERGY_PER_DMG*0.5);e.state='attack';e.alertTimer=9000;e.reactDelay=0;if(e.hp<=0)killEnemy(e);}
-    }
+    const dmg=grenadeEntityDamage(dist,e.maxHp);
+    if(dmg>0){e.hp=Math.max(0,e.hp-dmg);e.hpDrain=e.hp;player.energy=Math.min(MAX_ENERGY,player.energy+dmg*ENERGY_PER_DMG*0.5);e.state='attack';e.alertTimer=9000;e.reactDelay=0;if(e.hp<=0)killEnemy(e);}
   }
   // Drone blast
   if(activeDrone&&!activeDrone.dead){
     const dist=ep.distanceTo(new THREE.Vector3(activeDrone.x,activeDrone.y,activeDrone.z));
-    if(dist<GRENADE_RADIUS){const fo=(1-dist/GRENADE_RADIUS)**2;killDrone(activeDrone,Math.floor(activeDrone.maxHp*2*fo));}
+    const fo=grenadeFalloff(dist);if(fo>0)killDrone(activeDrone,Math.floor(activeDrone.maxHp*2*fo));
   }
   const pDist=ep.distanceTo(camera.position);
-  if(pDist<GRENADE_RADIUS){const fo=(1-pDist/GRENADE_RADIUS)**2;const dmg=Math.floor(MAX_HP*0.4*fo);if(dmg>0){player.hp=Math.max(1,player.hp-dmg);triggerHitFlash();updateHUD();if(player.hp<=0)triggerDeath();}}
+  const pDmg=grenadePlayerDamage(pDist,MAX_HP);
+  if(pDmg>0){player.hp=Math.max(1,player.hp-pDmg);triggerHitFlash();updateHUD();if(player.hp<=0)triggerDeath();}
 }
 
 // ═══════════════════ SHOOT ═════════════════════════
@@ -737,10 +636,6 @@ function updateDrone(d,dt){
   d.eye.material.color.setHSL(0.55+Math.sin(d.floatT*3)*0.05,1,0.6+Math.sin(d.floatT*5)*0.2);
 }
 
-// ═══════════════════ ANGLE HELPERS ═════════════════
-function normA(a){while(a>Math.PI)a-=Math.PI*2;while(a<-Math.PI)a+=Math.PI*2;return a;}
-function slerp(cur,tgt,spd,dt){const d=normA(tgt-cur),st=spd*dt;if(Math.abs(d)<st)return tgt;return cur+Math.sign(d)*st;}
-
 // ═══════════════════ ENEMY AI ══════════════════════
 function animateEnemyLegs(e,dt,moving){
   const spd=moving?(e.state==='attack'?5:2.5):0;e.animT+=dt*spd;
@@ -830,26 +725,6 @@ function updateEnemies(ts,dt){
     e.radarAge+=dt;
   }
   if(activeDrone&&!activeDrone.dead)updateDrone(activeDrone,dt);
-}
-
-// ═══════════════════ A* ════════════════════════════
-function astar(sx,sz,ex,ez){
-  const gc=v=>Math.floor(v/CELL);const[scx,scz,ecx,ecz]=[gc(sx),gc(sz),gc(ex),gc(ez)];
-  if(scx===ecx&&scz===ecz)return[];
-  const K=(x,z)=>x*100+z,h=(x,z)=>Math.abs(x-ecx)+Math.abs(z-ecz);
-  const open=new Map(),closed=new Set();
-  open.set(K(scx,scz),{x:scx,z:scz,g:0,f:h(scx,scz),parent:null});let it=0;
-  while(open.size&&it++<600){
-    let best=null;for(const n of open.values())if(!best||n.f<best.f)best=n;
-    if(best.x===ecx&&best.z===ecz){const path=[];let c=best;while(c){path.unshift([c.x*CELL+CELL/2,c.z*CELL+CELL/2]);c=c.parent;}return path;}
-    open.delete(K(best.x,best.z));closed.add(K(best.x,best.z));
-    for(const[dx,dz]of[[1,0],[-1,0],[0,1],[0,-1]]){
-      const nx=best.x+dx,nz=best.z+dz;if(nx<0||nz<0||nx>=MAP_W||nz>=MAP_H)continue;
-      const mc=MAP[nz][nx];if(mc===1)continue;if(closed.has(K(nx,nz)))continue;
-      const g=best.g+1,ex2=open.get(K(nx,nz));if(!ex2||g<ex2.g)open.set(K(nx,nz),{x:nx,z:nz,g,f:g+h(nx,nz),parent:best});
-    }
-  }
-  return[];
 }
 
 // ═══════════════════ HUD CANVAS ════════════════════
