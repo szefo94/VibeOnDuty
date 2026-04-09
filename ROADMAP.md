@@ -23,6 +23,10 @@ src/
     drone.js            — exports buildDrone()
   combat/
     damage.js           — grenade falloff, entity/player damage
+  fx/
+    tracers.js          — enemy static tracers — exports spawnTracer, tickTracers
+    impacts.js          — bullet impact sparks — exports spawnImpact, tickImpacts
+    particles.js        — grenade particles + impact zones — exports grenImpactZones, spawnGrenadeParticles, tickGrenadeParticles
 ```
 
 > **Note:** `game.js` uses ES modules. Serve via `npm run dev` (Vite) — do NOT open via `file://`.
@@ -54,13 +58,11 @@ src/
 `src/level.js`, `src/builders/weapon.js`, `src/builders/playerBody.js`,
 `src/builders/enemy.js`, `src/builders/drone.js`
 
-### Batch 3 — FX
+### Batch 3 — FX ✅ DONE
+`src/fx/tracers.js`, `src/fx/impacts.js`, `src/fx/particles.js`
 
-| File | Exports | Cut from game.js |
-|------|---------|-----------------|
-| `src/fx/tracers.js` | `spawnTracer(a,b,enemy)`, `tickTracers(dt)` | TRACERS section |
-| `src/fx/impacts.js` | `spawnImpact(pos)`, `tickImpacts(dt)` | IMPACTS section |
-| `src/fx/particles.js` | `grenImpactZones`, `spawnGrenadeParticles(pos)`, `tickGrenadeParticles(dt)` | GRENADE PARTICLES section |
+> Note: live player-bullet physics (`spawnBullet`, `tickBullets`) stay in game.js
+> until Batch 6 (combat) when `enemies`, `player`, `activeDrone` are importable.
 
 ### Batch 4 — Input
 
@@ -153,7 +155,7 @@ Easy once structure is in place:
 
 ## Next up
 
-1. Batch 3 — extract FX modules (tracers, impacts, grenade particles)
-2. Write first Vitest unit tests for `src/map.js`, `src/math.js`, `src/astar.js`, `src/combat/damage.js`
-3. Playwright smoke test
-4. Continue Batches 4–8 as features are added
+1. Batch 4 — extract `src/input.js` (keys, locked, gameRunning, mouseHeld)
+2. Batch 5 — entity state modules (ammoDrops, enemies, drone, grenades, player)
+3. Batch 6 — `src/combat/shoot.js` (tryShoot, killEnemy, killDrone, live bullets, ehm)
+4. Batches 7–8 — HUD modules, then loop + entry → delete game.js

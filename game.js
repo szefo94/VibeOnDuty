@@ -2,9 +2,9 @@ import * as THREE from 'three';
 import { CELL, PLAYER_H, PLAYER_H_CROUCH, MOVE_SPEED, SPRINT_MULT, MOUSE_SENS,
   MAX_HP, MAX_AMMO, RESERVE_AMMO, RELOAD_MS, SHOOT_CD, ENEMY_HP, ENEMY_SPEED, ENEMY_ROT_SPD,
   ENEMY_SIGHT, ENEMY_SHOOT_RANGE, ENEMY_SHOOT_CD, ENEMY_DAMAGE, BULLET_DAMAGE,
-  REACT_MIN, REACT_MAX, AIM_THRESH, TRACER_LIFE, HP_SEGS, GRAVITY, JUMP_FORCE,
+  REACT_MIN, REACT_MAX, AIM_THRESH, HP_SEGS, GRAVITY, JUMP_FORCE,
   HEAD_BOB_PITCH, SLIDE_SPEED, SLIDE_DUR, SLIDE_CANCEL_JUMP, ENERGY_PER_DMG,
-  MAX_ENERGY, GRENADE_ENERGY_COST, GRENADE_RADIUS, GRENADE_PEAK_DMG } from './src/config.js';
+  MAX_ENERGY, GRENADE_ENERGY_COST, GRENADE_PEAK_DMG } from './src/config.js';
 import { MAP_W, MAP_H, MAP, isRamp, isCrack,
   mapCell, hAt, groundElevation, canMoveTo } from './src/map.js';
 import { normA, slerp } from './src/math.js';
@@ -18,6 +18,9 @@ import { wpn, flash, flashMat, muzzleLight } from './src/builders/weapon.js';
 import { playerBody } from './src/builders/playerBody.js';
 import { buildEnemy } from './src/builders/enemy.js';
 import { buildDrone } from './src/builders/drone.js';
+import { spawnTracer, tickTracers } from './src/fx/tracers.js';
+import { spawnImpact, tickImpacts } from './src/fx/impacts.js';
+import { grenImpactZones, spawnGrenadeParticles, tickGrenadeParticles } from './src/fx/particles.js';
 
 const visited=Array.from({length:MAP_H},()=>new Uint8Array(MAP_W));
 
@@ -135,20 +138,6 @@ document.addEventListener('mouseup',e=>{if(e.button===0)mouseHeld=false;});
 document.addEventListener('contextmenu',e=>e.preventDefault());
 document.addEventListener('pointerlockchange',()=>locked=document.pointerLockElement===document.getElementById('c'));
 
-// ═══════════════════ TRACERS (enemy, static) ════════════════════
-const tracers=[];
-const trEM=new THREE.LineBasicMaterial({color:0xff5500,transparent:true,opacity:1});
-function spawnTracer(a,b){
-  const g=new THREE.BufferGeometry().setFromPoints([a.clone(),b.clone()]);
-  const l=new THREE.Line(g,trEM.clone());scene.add(l);tracers.push({l,life:TRACER_LIFE});
-}
-function tickTracers(dt){
-  for(let i=tracers.length-1;i>=0;i--){
-    const t=tracers[i];t.life-=dt;t.l.material.opacity=Math.max(0,t.life/TRACER_LIFE*0.8);
-    if(t.life<=0){scene.remove(t.l);t.l.geometry.dispose();tracers.splice(i,1);}
-  }
-}
-
 // ═══════════════════ LIVE BULLETS (player, physics) ═════════════
 const BULLET_SPEED=65;    // units/s
 const BULLET_GRAV=6;      // gravity scale on bullets (units/s²)
@@ -231,44 +220,6 @@ function _removeBullet(i){
   const b=liveBullets[i];
   scene.remove(b.line);b.line.geometry.dispose();b.line.material.dispose();
   liveBullets.splice(i,1);
-}
-
-// ═══════════════════ IMPACTS ═══════════════════════
-const impPool=[],impMat=new THREE.MeshBasicMaterial({color:0xffcc33});
-function spawnImpact(pos){
-  let m=impPool.find(p=>!p.visible);
-  if(!m){m=new THREE.Mesh(new THREE.SphereGeometry(0.04,4,4),impMat);scene.add(m);impPool.push(m);}
-  m.position.copy(pos);m.visible=true;m.userData.life=0.09;
-}
-function tickImpacts(dt){impPool.forEach(m=>{if(!m.visible)return;m.userData.life-=dt;if(m.userData.life<=0)m.visible=false;});}
-
-// ═══════════════════ GRENADE PARTICLES + IMPACT ZONE ════════════
-const grenParticles=[];
-const grenImpactZones=[]; // {pos, radius, life, maxLife}
-
-function spawnGrenadeParticles(pos){
-  for(let i=0;i<32;i++){
-    let m=grenParticles.find(p=>!p.active);
-    if(!m){m={mesh:new THREE.Mesh(new THREE.SphereGeometry(0.06,4,4),new THREE.MeshBasicMaterial({transparent:true})),active:false,vel:new THREE.Vector3(),life:0};scene.add(m.mesh);grenParticles.push(m);}
-    m.active=true;m.life=0.5+Math.random()*0.6;m.mesh.visible=true;m.mesh.position.copy(pos);
-    const spd=4+Math.random()*8;
-    m.vel.set((Math.random()-0.5)*spd,(Math.random()*0.5+0.3)*spd,(Math.random()-0.5)*spd);
-    m.mesh.material.color.set(Math.random()>0.4?0xff6600:0xffcc00);m.mesh.material.opacity=1;
-  }
-  // Impact zone ring
-  grenImpactZones.push({pos:pos.clone(),radius:GRENADE_RADIUS,life:2.5,maxLife:2.5});
-}
-
-function tickGrenadeParticles(dt){
-  for(const p of grenParticles){
-    if(!p.active)continue;p.life-=dt;
-    if(p.life<=0){p.active=false;p.mesh.visible=false;continue;}
-    p.vel.y-=14*dt;p.mesh.position.addScaledVector(p.vel,dt);
-    p.mesh.material.opacity=p.life*1.4;p.mesh.scale.setScalar(Math.max(0.05,p.life*0.7));
-  }
-  for(let i=grenImpactZones.length-1;i>=0;i--){
-    const z=grenImpactZones[i];z.life-=dt;if(z.life<=0){grenImpactZones.splice(i,1);}
-  }
 }
 
 // ═══════════════════ ENEMY HIT MESHES + DRONE ══════
