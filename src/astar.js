@@ -1,5 +1,5 @@
-import { CELL, MAP_W, MAP_H } from './config.js';
-import { MAP } from './map.js';
+import { CELL } from './config.js';
+import { MAP, MAP_W, MAP_H } from './map.js';
 
 export function astar(sx,sz,ex,ez){
   const gc=v=>Math.floor(v/CELL);const[scx,scz,ecx,ecz]=[gc(sx),gc(sz),gc(ex),gc(ez)];

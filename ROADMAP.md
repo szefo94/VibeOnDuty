@@ -3,74 +3,58 @@
 ## Current State
 
 ```
-fps3d.html         — DOM structure
-style.css          — all styles
-game.js            — renderer, scene, entities, game loop (imports from src/)
+fps3d.html              — DOM structure
+style.css               — all styles
+game.js                 — game loop, entities, AI, HUD, input (imports from src/)
+vite.config.js          — entry point: fps3d.html
 src/
-  config.js        — all constants
-  map.js           — MAP, HMAP, mapCell, hAt, groundElevation, canMoveTo
-  math.js          — normA, slerp
-  astar.js         — A* pathfinding
+  config.js             — all constants
+  map.js                — MAP, HMAP, mapCell, hAt, groundElevation, canMoveTo
+  math.js               — normA, slerp
+  astar.js              — A* pathfinding
+  level.js              — level build, debug lines — exports wallMeshes, debugLines
+  scene.js              — renderer, scene, camera, hudCanvas, hudCtx
+  materials.js          — mm(), all MeshStandardMaterials
+  lighting.js           — ambient, sun, fill, torches — exports tickTorches
+  builders/
+    weapon.js           — player weapon model — exports wpn, flash, flashMat, muzzleLight
+    playerBody.js       — 3rd-person body — exports playerBody
+    enemy.js            — exports buildEnemy()
+    drone.js            — exports buildDrone()
   combat/
-    damage.js      — grenade falloff, entity/player damage
+    damage.js           — grenade falloff, entity/player damage
 ```
 
-> **Note:** `game.js` now uses ES module `import`. The game must be served over HTTP —
-> open via `python3 -m http.server` or a proper dev server, not `file://`.
+> **Note:** `game.js` uses ES modules. Serve via `npm run dev` (Vite) — do NOT open via `file://`.
+
+### Known migration notes
+- Three.js upgraded from CDN r128 → npm r160. All light intensities scaled by the physical
+  conversion factor (`× Math.PI` for directional/ambient, `× 4π` for point lights).
+- `renderer.outputColorSpace = THREE.SRGBColorSpace` replaces deprecated `outputEncoding`.
 
 ---
 
-## Phase 1 — npm + localhost setup
+## Phase 1 — npm + localhost setup ✅ DONE
 
-**Goal:** run on a proper dev server, enable HMR, replace CDN Three.js with npm package.
-
-### Step 1.1 — Dev server
-
-```bash
-npm install -D vite
-npm run dev   # → localhost:5173
-```
-
-### Step 1.2 — Replace CDN Three.js with npm package
-
-```bash
-npm install three
-```
-
-Change `fps3d.html` — remove the cdnjs `<script>` tag.
-
-Change `game.js` top:
-
-```js
-import * as THREE from 'three';
-```
+- Vite dev server (`npm run dev`)
+- `npm install three` — CDN script tag removed
+- `vite.config.js` added (entry: `fps3d.html`)
+- `vitest` and `@playwright/test` installed
 
 ---
 
-## Phase 2 — Continue module split
+## Phase 2 — Module split
 
-**Goal:** drain `game.js` to near zero by extracting remaining systems in dependency order.
-Each batch is safe to do independently once the previous batch exports are in place.
+**Goal:** drain `game.js` to near zero by extracting remaining systems.
 
-### Batch 1 — Scene foundation (~40 lines, no game-state deps)
+### Batch 1 — Scene foundation ✅ DONE
+`src/scene.js`, `src/materials.js`, `src/lighting.js`
 
-| File | Exports | Cut from game.js |
-|------|---------|-----------------|
-| `src/scene.js` | `renderer`, `scene`, `camera`, `hudCanvas`, `hudCtx`, `rsz` | THREE SETUP section |
-| `src/materials.js` | `mm`, `matFloor`, `matWall`, `matWallD`, `matWallT`, `matCrack`, `matTrim`, `matRamp` | MATERIALS section |
-| `src/lighting.js` | `torchLights` (array), `tickTorches(dt)` | LIGHTING section + torch flicker in loop |
+### Batch 2 — Static builders ✅ DONE
+`src/level.js`, `src/builders/weapon.js`, `src/builders/playerBody.js`,
+`src/builders/enemy.js`, `src/builders/drone.js`
 
-### Batch 2 — Static builders (~190 lines, deps: scene, materials, config, map)
-
-| File | Exports | Cut from game.js |
-|------|---------|-----------------|
-| `src/level.js` | `wallMeshes`, `debugLines`, `debugVisible` | LEVEL BUILD section |
-| `src/builders/weapon.js` | `wpn`, `flash`, `flashMat`, `muzzleLight`, `muzzleT` | PLAYER WEAPON section |
-| `src/builders/playerBody.js` | `playerBody` | THIRD PERSON section |
-| `src/builders/enemy.js` | `buildEnemy()` | ENEMY BUILDER section |
-| `src/builders/drone.js` | `buildDrone()` | DRONE BUILDER section |
-
-### Batch 3 — FX (~50 lines, deps: scene, config)
+### Batch 3 — FX
 
 | File | Exports | Cut from game.js |
 |------|---------|-----------------|
@@ -78,15 +62,15 @@ Each batch is safe to do independently once the previous batch exports are in pl
 | `src/fx/impacts.js` | `spawnImpact(pos)`, `tickImpacts(dt)` | IMPACTS section |
 | `src/fx/particles.js` | `grenImpactZones`, `spawnGrenadeParticles(pos)`, `tickGrenadeParticles(dt)` | GRENADE PARTICLES section |
 
-### Batch 4 — Input (~25 lines, deps: config, DOM only)
+### Batch 4 — Input
 
 | File | Exports | Cut from game.js |
 |------|---------|-----------------|
 | `src/input.js` | `keys`, `locked`, `gameRunning`, `mouseHeld` | INPUT section |
 
-> `input.js` has no entity deps — it just records key/mouse state. Other modules read from it.
+> `input.js` has no entity deps — it just records key/mouse state.
 
-### Batch 5 — Entity state (~300 lines, deps: scene, config, map, builders, fx, input)
+### Batch 5 — Entity state
 
 | File | Exports | Cut from game.js |
 |------|---------|-----------------|
@@ -96,15 +80,15 @@ Each batch is safe to do independently once the previous batch exports are in pl
 | `src/entities/grenades.js` | `grenades`, `tryThrowGrenade()`, `tickGrenades(dt)`, `explodeGrenade(g)` | GRENADES section |
 | `src/entities/player.js` | `player`, `updatePlayer(dt)` | PLAYER STATE + PLAYER MOVEMENT sections |
 
-### Batch 6 — Combat (~60 lines, deps: entities, fx, scene, config)
+### Batch 6 — Combat
 
 | File | Exports | Cut from game.js |
 |------|---------|-----------------|
 | `src/combat/shoot.js` | `tryShoot()`, `killEnemy(e)`, `killDrone(d,dmg)`, `ehm`, `rebuildEHM()`, `sprayHeat` | SHOOT + ENEMY HIT MESHES sections |
 
-> `shoot.js` is extracted after entities so `enemies`, `player`, `activeDrone` are importable.
+> Extract after entities so `enemies`, `player`, `activeDrone` are importable.
 
-### Batch 7 — HUD (~200 lines, deps: entities, scene, config)
+### Batch 7 — HUD
 
 | File | Exports | Cut from game.js |
 |------|---------|-----------------|
@@ -113,32 +97,26 @@ Each batch is safe to do independently once the previous batch exports are in pl
 | `src/hud/hud.js` | `drawHUD()`, `w2s(wx,wy,wz)` | HUD CANVAS section |
 | `src/hud/radar.js` | `drawMinimap(dt)` | RADAR section |
 
-### Batch 8 — Loop + entry (~30 lines, deps: everything)
+### Batch 8 — Loop + entry
 
 | File | Exports | Cut from game.js |
 |------|---------|-----------------|
-| `src/loop.js` | `loop(ts)` | MAIN LOOP section (wave respawn + torch flicker moves here) |
-| `src/main.js` | _(entry point, no exports)_ | START section — wires all imports, calls `requestAnimationFrame(loop)` |
+| `src/loop.js` | `loop(ts)` | MAIN LOOP section |
+| `src/main.js` | _(entry point, no exports)_ | START section — wires imports, calls `requestAnimationFrame(loop)` |
 
-After Batch 8, `game.js` is deleted and `fps3d.html` points to `src/main.js` instead.
+After Batch 8, `game.js` is deleted and `fps3d.html` points to `src/main.js`.
 
 ---
 
 ## Phase 3 — Testing
 
-**Goal:** catch regressions, test AI and physics logic without a browser.
-
-### Step 3.1 — Unit tests (pure logic)
+### Step 3.1 — Unit tests (Vitest)
 
 ```bash
-npm install -D vitest
+npm test
 ```
 
-```json
-"test": "vitest"
-```
-
-Immediate test targets (modules are already split and importable):
+Targets (modules already split and importable):
 
 | File | What to test |
 |------|-------------|
@@ -146,17 +124,11 @@ Immediate test targets (modules are already split and importable):
 | `src/math.js` | `normA` wrapping, `slerp` convergence |
 | `src/astar.js` | finds path, handles blocked route, returns `[]` at destination |
 | `src/combat/damage.js` | falloff at 0%, 50%, 100% radius; entity vs player formulas |
-| `src/config.js` | energy clamping constants, ammo/reload values |
 
-### Step 3.2 — Integration / smoke tests
+### Step 3.2 — Integration / smoke tests (Playwright)
 
 ```bash
-npm install -D @playwright/test
-npx playwright install chromium
-```
-
-```json
-"test:e2e": "playwright test"
+npm run test:e2e
 ```
 
 What to cover:
@@ -170,7 +142,7 @@ What to cover:
 
 ## Phase 4 — Quality of life
 
-These become easy once the structure above is in place:
+Easy once structure is in place:
 
 - **TypeScript** — add `tsconfig.json`, rename `.js` → `.ts`
 - **ESLint** — catch globals, unused vars, unsafe patterns
@@ -179,9 +151,9 @@ These become easy once the structure above is in place:
 
 ---
 
-## Migration order (remaining)
+## Next up
 
-1. `npm install -D vite` + `npm install three`, replace CDN — **zero game changes**
-2. Write first Vitest unit tests for `src/` modules — **1 hour, first tests green**
-3. Playwright smoke test — **1 hour, CI safety net**
-4. System-by-system split of `game.js` as features are added — **ongoing**
+1. Batch 3 — extract FX modules (tracers, impacts, grenade particles)
+2. Write first Vitest unit tests for `src/map.js`, `src/math.js`, `src/astar.js`, `src/combat/damage.js`
+3. Playwright smoke test
+4. Continue Batches 4–8 as features are added
