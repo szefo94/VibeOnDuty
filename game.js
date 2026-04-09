@@ -21,6 +21,7 @@ import { buildDrone } from './src/builders/drone.js';
 import { spawnTracer, tickTracers } from './src/fx/tracers.js';
 import { spawnImpact, tickImpacts } from './src/fx/impacts.js';
 import { grenImpactZones, spawnGrenadeParticles, tickGrenadeParticles } from './src/fx/particles.js';
+import { keys, locked, gameRunning, mouseHeld, setGameRunning } from './src/input.js';
 
 const visited=Array.from({length:MAP_H},()=>new Uint8Array(MAP_W));
 
@@ -110,17 +111,13 @@ const player={
   energy:0, airVelX:0, airVelZ:0,
 };
 
-// ═══════════════════ INPUT ═════════════════════════
-const keys={};
-let locked=false,gameRunning=false,mouseHeld=false;
+// ═══════════════════ INPUT (game-action handlers) ══════════════
+// State vars (keys, locked, gameRunning, mouseHeld) live in src/input.js
 document.addEventListener('keydown',e=>{
-  keys[e.code]=true;
   if(e.code==='KeyR'&&gameRunning&&!player.reloading&&player.ammo<MAX_AMMO&&player.reserve>0)startReload();
   if(e.code==='F3'){debugVisible=!debugVisible;if(debugLines)debugLines.visible=debugVisible;}
   if(e.code==='F4'){thirdPerson=!thirdPerson;wpn.visible=!thirdPerson;playerBody.visible=thirdPerson;showStatus(thirdPerson?'3RD PERSON':'1ST PERSON');}
-  if(['Space','Tab','ArrowUp','ArrowDown'].includes(e.code))e.preventDefault();
 });
-document.addEventListener('keyup',e=>keys[e.code]=false);
 document.addEventListener('mousemove',e=>{
   if(!locked||!gameRunning||player.dead)return;
   player.yaw-=e.movementX*MOUSE_SENS;
@@ -130,13 +127,10 @@ document.addEventListener('mousemove',e=>{
 document.addEventListener('mousedown',e=>{
   if(e.button===0){
     if(!locked&&gameRunning){document.getElementById('c').requestPointerLock();return;}
-    mouseHeld=true;if(locked&&gameRunning)tryShoot();
+    if(locked&&gameRunning)tryShoot();
   }
   if(e.button===2&&locked&&gameRunning)tryThrowGrenade();
 });
-document.addEventListener('mouseup',e=>{if(e.button===0)mouseHeld=false;});
-document.addEventListener('contextmenu',e=>e.preventDefault());
-document.addEventListener('pointerlockchange',()=>locked=document.pointerLockElement===document.getElementById('c'));
 
 // ═══════════════════ LIVE BULLETS (player, physics) ═════════════
 const BULLET_SPEED=65;    // units/s
@@ -796,7 +790,7 @@ function updatePlayer(dt){
   if(player.hp>0&&player.hp<MAX_HP&&now2-player.lastHitTime>3000){player.hp=Math.min(MAX_HP,player.hp+8*dt);updateHUD();}
 }
 
-function triggerDeath(){player.dead=true;gameRunning=false;document.exitPointerLock?.();const ov=document.getElementById('overlay');ov.style.display='flex';
+function triggerDeath(){player.dead=true;setGameRunning(false);document.exitPointerLock?.();const ov=document.getElementById('overlay');ov.style.display='flex';
   ov.innerHTML=`<div class="dead-h">KILLED IN ACTION</div><div class="stat">Kills: ${player.kills}</div><div class="stat" style="color:#333;margin-top:6px">Wave ${wave} — the vibes remain hostile</div><button onclick="location.reload()" style="margin-top:28px;padding:12px 52px;background:#e74c3c;color:#fff;border:none;font-family:'Courier New',monospace;font-size:14px;letter-spacing:4px;cursor:pointer">[ REDEPLOY ]</button>`;}
 
 // ═══════════════════ MAIN LOOP ══════════════════════
@@ -827,7 +821,7 @@ function loop(ts){
 // ═══════════════════ START ══════════════════════════
 document.getElementById('startbtn').addEventListener('click',()=>{
   document.getElementById('overlay').style.display='none';document.getElementById('c').requestPointerLock();
-  gameRunning=true;rebuildEHM();updateHUD();spawnNewDrone();showMsg('VIBE ON DUTY — LOCK AND LOAD',2500);
+  setGameRunning(true);rebuildEHM();updateHUD();spawnNewDrone();showMsg('VIBE ON DUTY — LOCK AND LOAD',2500);
 });
 document.getElementById('c').addEventListener('click',()=>{if(gameRunning&&!player.dead&&!locked)document.getElementById('c').requestPointerLock();});
 last=performance.now();requestAnimationFrame(loop);

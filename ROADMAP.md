@@ -23,6 +23,7 @@ src/
     drone.js            — exports buildDrone()
   combat/
     damage.js           — grenade falloff, entity/player damage
+  input.js              — keys, locked, gameRunning, mouseHeld, setGameRunning
   fx/
     tracers.js          — enemy static tracers — exports spawnTracer, tickTracers
     impacts.js          — bullet impact sparks — exports spawnImpact, tickImpacts
@@ -64,13 +65,12 @@ src/
 > Note: live player-bullet physics (`spawnBullet`, `tickBullets`) stay in game.js
 > until Batch 6 (combat) when `enemies`, `player`, `activeDrone` are importable.
 
-### Batch 4 — Input
+### Batch 4 — Input ✅ DONE
+`src/input.js`
 
-| File | Exports | Cut from game.js |
-|------|---------|-----------------|
-| `src/input.js` | `keys`, `locked`, `gameRunning`, `mouseHeld` | INPUT section |
-
-> `input.js` has no entity deps — it just records key/mouse state.
+> Exports `keys`, `locked`, `gameRunning`, `mouseHeld`, `setGameRunning`.
+> Basic DOM listeners (keydown/keyup, mousedown/mouseup, pointerlock, contextmenu) live here.
+> Game-action handlers (R reload, F3/F4, mousemove look, click shoot/grenade) stay in game.js.
 
 ### Batch 5 — Entity state
 
@@ -155,7 +155,6 @@ Easy once structure is in place:
 
 ## Next up
 
-1. Batch 4 — extract `src/input.js` (keys, locked, gameRunning, mouseHeld)
-2. Batch 5 — entity state modules (ammoDrops, enemies, drone, grenades, player)
-3. Batch 6 — `src/combat/shoot.js` (tryShoot, killEnemy, killDrone, live bullets, ehm)
-4. Batches 7–8 — HUD modules, then loop + entry → delete game.js
+1. Batch 5 — entity state modules (ammoDrops, enemies, drone, grenades, player)
+2. Batch 6 — `src/combat/shoot.js` (tryShoot, killEnemy, killDrone, live bullets, ehm)
+3. Batches 7–8 — HUD modules, then loop + entry → delete game.js
