@@ -135,19 +135,102 @@ document.addEventListener('mouseup',e=>{if(e.button===0)mouseHeld=false;});
 document.addEventListener('contextmenu',e=>e.preventDefault());
 document.addEventListener('pointerlockchange',()=>locked=document.pointerLockElement===document.getElementById('c'));
 
-// ═══════════════════ TRACERS ═══════════════════════
+// ═══════════════════ TRACERS (enemy, static) ════════════════════
 const tracers=[];
-const trPM=new THREE.LineBasicMaterial({color:0xffee55,transparent:true,opacity:1});
 const trEM=new THREE.LineBasicMaterial({color:0xff5500,transparent:true,opacity:1});
-function spawnTracer(a,b,enemy=false){
+function spawnTracer(a,b){
   const g=new THREE.BufferGeometry().setFromPoints([a.clone(),b.clone()]);
-  const l=new THREE.Line(g,enemy?trEM.clone():trPM.clone());scene.add(l);tracers.push({l,life:TRACER_LIFE,enemy});
+  const l=new THREE.Line(g,trEM.clone());scene.add(l);tracers.push({l,life:TRACER_LIFE});
 }
 function tickTracers(dt){
   for(let i=tracers.length-1;i>=0;i--){
-    const t=tracers[i];t.life-=dt;t.l.material.opacity=Math.max(0,t.life/TRACER_LIFE*(t.enemy?0.8:0.95));
+    const t=tracers[i];t.life-=dt;t.l.material.opacity=Math.max(0,t.life/TRACER_LIFE*0.8);
     if(t.life<=0){scene.remove(t.l);t.l.geometry.dispose();tracers.splice(i,1);}
   }
+}
+
+// ═══════════════════ LIVE BULLETS (player, physics) ═════════════
+const BULLET_SPEED=65;    // units/s
+const BULLET_GRAV=6;      // gravity scale on bullets (units/s²)
+const BULLET_MAX_LIFE=1.1;// seconds until despawn
+const BULLET_TRAIL=2.8;   // trail length in units
+const liveBullets=[];
+const _bRc=new THREE.Raycaster();
+const _bPM=new THREE.LineBasicMaterial({color:0xffee55,transparent:true,opacity:1});
+
+function spawnBullet(origin,dir){
+  const vel=dir.clone().multiplyScalar(BULLET_SPEED);
+  const geo=new THREE.BufferGeometry().setFromPoints([origin.clone(),origin.clone()]);
+  const line=new THREE.Line(geo,_bPM.clone());
+  scene.add(line);
+  liveBullets.push({pos:origin.clone(),vel,life:BULLET_MAX_LIFE,line,prevPos:origin.clone()});
+}
+
+function tickBullets(dt){
+  for(let i=liveBullets.length-1;i>=0;i--){
+    const b=liveBullets[i];
+    b.prevPos.copy(b.pos);
+    b.vel.y-=BULLET_GRAV*dt;
+    b.pos.addScaledVector(b.vel,dt);
+    b.life-=dt;
+
+    // Update trail: tail lags behind current pos along velocity direction
+    const vn=b.vel.clone().normalize();
+    const tail=b.pos.clone().addScaledVector(vn,-BULLET_TRAIL);
+    const attr=b.line.geometry.attributes.position;
+    attr.setXYZ(0,tail.x,tail.y,tail.z);
+    attr.setXYZ(1,b.pos.x,b.pos.y,b.pos.z);
+    attr.needsUpdate=true;
+    b.line.material.opacity=Math.max(0,b.life/BULLET_MAX_LIFE*0.95);
+
+    if(b.life<=0){_removeBullet(i);continue;}
+
+    // Wall collision: short ray from prev to current pos
+    const moveDelta=new THREE.Vector3().subVectors(b.pos,b.prevPos);
+    const moveDist=moveDelta.length();
+    if(moveDist>0.001){
+      _bRc.set(b.prevPos,moveDelta.clone().normalize());
+      _bRc.far=moveDist+0.05;
+      const wHits=_bRc.intersectObjects(wallMeshes,false);
+      if(wHits.length&&wHits[0].distance<=moveDist){
+        spawnImpact(wHits[0].point);
+        _removeBullet(i);continue;
+      }
+    }
+
+    // Enemy hit (sphere check)
+    let hit=false;
+    for(const e of enemies){
+      if(e.dead)continue;
+      const eGround=groundElevation(e.x,e.z);
+      const ePos=new THREE.Vector3(e.x,eGround+PLAYER_H*0.6,e.z);
+      if(b.pos.distanceTo(ePos)<0.75){
+        const dmg=BULLET_DAMAGE+Math.floor(Math.random()*10);
+        e.hp=Math.max(0,e.hp-dmg);e.state='attack';e.alertTimer=9000;e.reactDelay=0;
+        player.energy=Math.min(MAX_ENERGY,player.energy+dmg*ENERGY_PER_DMG);
+        spawnHitMarker();if(e.hp<=0)killEnemy(e);
+        _removeBullet(i);hit=true;break;
+      }
+    }
+    if(hit)continue;
+
+    // Drone hit
+    if(activeDrone&&!activeDrone.dead){
+      const dPos=new THREE.Vector3(activeDrone.x,activeDrone.y,activeDrone.z);
+      if(b.pos.distanceTo(dPos)<1.2){
+        const dmg=BULLET_DAMAGE+Math.floor(Math.random()*10);
+        player.energy=Math.min(MAX_ENERGY,player.energy+dmg*ENERGY_PER_DMG);
+        spawnHitMarker();killDrone(activeDrone,dmg);
+        _removeBullet(i);continue;
+      }
+    }
+  }
+}
+
+function _removeBullet(i){
+  const b=liveBullets[i];
+  scene.remove(b.line);b.line.geometry.dispose();b.line.material.dispose();
+  liveBullets.splice(i,1);
 }
 
 // ═══════════════════ IMPACTS ═══════════════════════
@@ -296,36 +379,8 @@ function tryShoot(){
   const up=new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion);
   const ca=sprayHeat*MAX_SPRAY;
   const dir=baseDir.clone().addScaledVector(right,(Math.random()-0.5)*2*ca).addScaledVector(up,(Math.random()-0.5)*2*ca).normalize();
-  _rc.set(camera.position,dir);_rc.far=52;
-  const wHits=_rc.intersectObjects(wallMeshes,false);
-  const wDist=wHits.length?wHits[0].distance:Infinity;
-  if(wHits.length)spawnImpact(wHits[0].point);
-  const eHits=_rc.intersectObjects(ehm,false);
-  let hitE=null,hitD=Infinity,hitPt=null,hitDrone=null;
-  for(const h of eHits){
-    if(h.distance<wDist&&h.distance<hitD){
-      // Check if drone
-      const dr=h.object.userData.droneRef;
-      if(dr&&!dr.dead){hitDrone=dr;hitD=h.distance;hitPt=h.point;hitE=null;continue;}
-      const grp=h.object.userData.enemyGroup;
-      const e=enemies.find(en=>!en.dead&&en.mesh===grp);
-      if(e){hitE=e;hitD=h.distance;hitPt=h.point;hitDrone=null;}
-    }
-  }
   const bw=new THREE.Vector3(0,0.012,-0.54).applyMatrix4(wpn.matrixWorld);
-  const te=hitPt||(wHits.length?wHits[0].point:camera.position.clone().addScaledVector(dir,52));
-  spawnTracer(bw,te,false);
-  if(hitE){
-    const dmg=BULLET_DAMAGE+Math.floor(Math.random()*10);
-    hitE.hp=Math.max(0,hitE.hp-dmg);hitE.state='attack';hitE.alertTimer=9000;hitE.reactDelay=0;
-    player.energy=Math.min(MAX_ENERGY,player.energy+dmg*ENERGY_PER_DMG);
-    spawnHitMarker();if(hitE.hp<=0)killEnemy(hitE);
-  }
-  if(hitDrone){
-    const dmg=BULLET_DAMAGE+Math.floor(Math.random()*10);
-    player.energy=Math.min(MAX_ENERGY,player.energy+dmg*ENERGY_PER_DMG);
-    spawnHitMarker();killDrone(hitDrone,dmg);
-  }
+  spawnBullet(bw,dir);
   if(player.ammo===0)startReload();
 }
 
@@ -415,7 +470,7 @@ function updateEnemies(ts,dt){
           if(hasLOS(e.x,eGround+PLAYER_H*0.85,e.z,camera.position.x,camera.position.y,camera.position.z)){
             player.hp=Math.max(0,player.hp-ENEMY_DAMAGE-Math.floor(Math.random()*7));
             triggerHitFlash();updateHUD();if(player.hp<=0)triggerDeath();
-            e.muzzleFlashT=55;spawnTracer(new THREE.Vector3(0.295,1.190,-0.52).applyMatrix4(e.mesh.matrixWorld),camera.position.clone(),true);
+            e.muzzleFlashT=55;spawnTracer(new THREE.Vector3(0.295,1.190,-0.52).applyMatrix4(e.mesh.matrixWorld),camera.position.clone());
           }
         }
       }
@@ -778,7 +833,7 @@ function updatePlayer(dt){
   for(let dr=-2;dr<=2;dr++)for(let dc=-2;dc<=2;dc++){const vc=pc+dc,vr=pr+dr;if(vc>=0&&vr>=0&&vc<MAP_W&&vr<MAP_H)visited[vr][vc]=1;}
 
   updateWeapon(dt,moving,sprint,player.crouching,player.sliding);
-  tickImpacts(dt);tickTracers(dt);tickAmmoDrops(dt);tickGrenades(dt);tickGrenadeParticles(dt);
+  tickImpacts(dt);tickTracers(dt);tickBullets(dt);tickAmmoDrops(dt);tickGrenades(dt);tickGrenadeParticles(dt);
   sprayHeat=Math.max(0,sprayHeat-SPRAY_COOL*dt);
 
   if(player.reloading){
