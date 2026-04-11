@@ -59,7 +59,7 @@ describe('grenadePlayerDamage', () => {
   it('is always less than or equal to entity damage at the same distance', () => {
     // Player damage is capped; entity damage scales with maxHp (can be higher at 150 peak)
     const pd = grenadePlayerDamage(1, 100);
-    const ed = grenadeEntityDamage(1, 100);
+    grenadeEntityDamage(1, 100); // called to verify it doesn't throw; return value not needed here
     // GRENADE_PEAK_DMG=150 so entity can exceed player cap — just verify player is bounded
     expect(pd).toBeLessThanOrEqual(40);
   });

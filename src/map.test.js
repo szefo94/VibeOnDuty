@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { groundElevation, canMoveTo, hAt } from './map.js';
-import { CELL, PLAYER_H } from './config.js';
+import { CELL } from './config.js';
 import { H1, H2 } from './map.js';
 
 // Cell (9,4) in the MAP is a ramp-N (value 4): low at -Z edge, high at +Z edge.
@@ -17,10 +17,11 @@ describe('groundElevation', () => {
 
   it('interpolates ramp-N (cell 4) from 0 at low edge to H2 at high edge', () => {
     // Cell col=9, row=4 is ramp-N: low at z=row*CELL, high at z=(row+1)*CELL
-    const col = 9, row = 4;
-    const lowZ  = row * CELL;        // south edge of cell → elevation 0
-    const highZ = (row + 1) * CELL;  // north edge → elevation H2
-    const midZ  = row * CELL + CELL / 2;
+    const col = 9,
+      row = 4;
+    const lowZ = row * CELL; // south edge of cell → elevation 0
+    const highZ = (row + 1) * CELL; // north edge → elevation H2
+    const midZ = row * CELL + CELL / 2;
 
     const wx = col * CELL + CELL / 2;
     expect(groundElevation(wx, lowZ + 0.01)).toBeCloseTo(0, 1);

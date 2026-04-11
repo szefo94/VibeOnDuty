@@ -1,16 +1,36 @@
-export const CELL=4, WALL_H=3, PLAYER_H=1.65, PLAYER_H_CROUCH=0.85;
-export const MOVE_SPEED=6, SPRINT_MULT=1.65, MOUSE_SENS=0.0018;
-export const MAX_HP=100, MAX_AMMO=30, RESERVE_AMMO=90, RELOAD_MS=1800, SHOOT_CD=88;
-export const ENEMY_HP=100, ENEMY_SPEED=2.4, ENEMY_ROT_SPD=2.6;
-export const ENEMY_SIGHT=22, ENEMY_SHOOT_RANGE=14, ENEMY_SHOOT_CD=1200;
-export const ENEMY_DAMAGE=10, BULLET_DAMAGE=28;
-export const REACT_MIN=400, REACT_MAX=950;
-export const AIM_THRESH=0.055;
-export const TRACER_LIFE=0.09;
-export const HP_SEGS=4;
-export const GRAVITY=18, JUMP_FORCE=7.5;
-export const HEAD_BOB_PITCH=0.022;
-export const SLIDE_SPEED=10, SLIDE_DUR=0.55, SLIDE_CANCEL_JUMP=true;
-export const ENERGY_PER_DMG=0.4;
-export const MAX_ENERGY=100, GRENADE_ENERGY_COST=100;
-export const GRENADE_RADIUS=9.0, GRENADE_PEAK_DMG=150;
+export const CELL = 4,
+  WALL_H = 3,
+  PLAYER_H = 1.65,
+  PLAYER_H_CROUCH = 0.85;
+export const MOVE_SPEED = 6,
+  SPRINT_MULT = 1.65,
+  MOUSE_SENS = 0.0018;
+export const MAX_HP = 100,
+  MAX_AMMO = 30,
+  RESERVE_AMMO = 90,
+  RELOAD_MS = 1800,
+  SHOOT_CD = 88;
+export const ENEMY_HP = 100,
+  ENEMY_SPEED = 2.4,
+  ENEMY_ROT_SPD = 2.6;
+export const ENEMY_SIGHT = 22,
+  ENEMY_SHOOT_RANGE = 14,
+  ENEMY_SHOOT_CD = 1200;
+export const ENEMY_DAMAGE = 10,
+  BULLET_DAMAGE = 28;
+export const REACT_MIN = 400,
+  REACT_MAX = 950;
+export const AIM_THRESH = 0.055;
+export const TRACER_LIFE = 0.09;
+export const HP_SEGS = 4;
+export const GRAVITY = 18,
+  JUMP_FORCE = 7.5;
+export const HEAD_BOB_PITCH = 0.022;
+export const SLIDE_SPEED = 10,
+  SLIDE_DUR = 0.55,
+  SLIDE_CANCEL_JUMP = true;
+export const ENERGY_PER_DMG = 0.4;
+export const MAX_ENERGY = 100,
+  GRENADE_ENERGY_COST = 100;
+export const GRENADE_RADIUS = 9.0,
+  GRENADE_PEAK_DMG = 150;
