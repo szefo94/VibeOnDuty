@@ -85,6 +85,7 @@ export function spawnEnemyIntoSlot(e) {
     shootCd: 0,
     path: [],
     pathTick: 0,
+    pathGoal: null,
     patrolWp: 0,
     patrol: patrol.map(([c, r]) => [c * CELL + CELL / 2, r * CELL + CELL / 2]),
     wpWait: 0,
@@ -94,7 +95,10 @@ export function spawnEnemyIntoSlot(e) {
     radarAge: Infinity,
     crouching: false,
     crouchTimer: 0,
+    velX: 0,
+    velZ: 0,
     velY: 0,
+    stunTimer: 0,
     onGround: true,
     jumpCd: 0,
   });
@@ -122,6 +126,7 @@ export const enemies = Array.from({ length: NUM_ENEMIES }, (_) => {
     shootCd: 0,
     path: [],
     pathTick: 0,
+    pathGoal: null,
     patrolWp: 0,
     patrol: patrol.map(([c, r]) => [c * CELL + CELL / 2, r * CELL + CELL / 2]),
     wpWait: 0,
@@ -131,7 +136,10 @@ export const enemies = Array.from({ length: NUM_ENEMIES }, (_) => {
     radarAge: Infinity,
     crouching: false,
     crouchTimer: 0,
+    velX: 0,
+    velZ: 0,
     velY: 0,
+    stunTimer: 0,
     onGround: true,
     jumpCd: 0,
   };
@@ -203,6 +211,10 @@ export let activeDrone = null;
 export function spawnNewDrone() {
   const [mc, mr] = randomSpawnCell([]);
   const d = buildDrone(mc * CELL + CELL / 2, DRONE_FLY_H, mr * CELL + CELL / 2);
+  // strafe orbit + EMP state
+  d.strafeDir = Math.random() < 0.5 ? 1 : -1;
+  d.strafeDirTimer = 3 + Math.random() * 4;
+  d.empCd = 0; // starts ready so first EMP fires once drone reaches low HP
   dronePool.push(d);
   activeDrone = d;
   d.mesh.traverse((ch) => {
@@ -219,33 +231,103 @@ export function updateDrone(d, dt) {
     pdz = camera.position.z - d.z;
   const dist = Math.sqrt(pdx * pdx + pdz * pdz);
   const targetDist = 8;
-  if (dist > targetDist + 1) {
-    d.velX += (pdx / dist) * 0.5 * dt;
-    d.velZ += (pdz / dist) * 0.5 * dt;
-  } else if (dist < targetDist - 1) {
-    d.velX -= (pdx / dist) * 0.3 * dt;
-    d.velZ -= (pdz / dist) * 0.3 * dt;
+
+  // velX/velZ are in units/second — applied as d.x += d.velX * dt
+  const DRONE_ACCEL = 4;   // units/s² for approach/retreat
+  const DRONE_STRAFE = 2.8; // units/s² for orbit tangent
+  const DRONE_DRAG = 3;    // drag coefficient (higher = snappier stop)
+  const DRONE_MAX_SPEED = 5; // units/s hard cap
+
+  // ── Approach / retreat to maintain orbit radius ───────────────────
+  const radialErr = dist - targetDist;
+  if (Math.abs(radialErr) > 1) {
+    const sign = radialErr > 0 ? 1 : -1;
+    d.velX += (pdx / dist) * sign * DRONE_ACCEL * dt;
+    d.velZ += (pdz / dist) * sign * DRONE_ACCEL * dt;
   }
-  d.velX *= 1 - dt * 1.5;
-  d.velZ *= 1 - dt * 1.5;
-  d.x += d.velX;
-  d.z += d.velZ;
-  d.x = Math.max(CELL, Math.min((MAP_W - 1) * CELL, d.x));
-  d.z = Math.max(CELL, Math.min((MAP_H - 1) * CELL, d.z));
+
+  // ── Strafe orbit: tangential component perpendicular to player dir ─
+  if (dist > 1) {
+    d.strafeDirTimer -= dt;
+    if (d.strafeDirTimer <= 0) {
+      d.strafeDir *= -1;
+      d.strafeDirTimer = 3 + Math.random() * 4;
+    }
+    const tangX = -(pdz / dist);
+    const tangZ = pdx / dist;
+    d.velX += tangX * d.strafeDir * DRONE_STRAFE * dt;
+    d.velZ += tangZ * d.strafeDir * DRONE_STRAFE * dt;
+  }
+
+  // ── Drag + speed cap ──────────────────────────────────────────────
+  d.velX -= d.velX * DRONE_DRAG * dt;
+  d.velZ -= d.velZ * DRONE_DRAG * dt;
+  const spd = Math.sqrt(d.velX * d.velX + d.velZ * d.velZ);
+  if (spd > DRONE_MAX_SPEED) {
+    d.velX = (d.velX / spd) * DRONE_MAX_SPEED;
+    d.velZ = (d.velZ / spd) * DRONE_MAX_SPEED;
+  }
+
+  // ── Integrate + clamp to map; zero velocity on edge collision ─────
+  const nx = d.x + d.velX * dt;
+  const nz = d.z + d.velZ * dt;
+  const minB = CELL, maxBX = (MAP_W - 2) * CELL, maxBZ = (MAP_H - 2) * CELL;
+  d.x = Math.max(minB, Math.min(maxBX, nx));
+  d.z = Math.max(minB, Math.min(maxBZ, nz));
+  if (d.x !== nx) d.velX = 0;
+  if (d.z !== nz) d.velZ = 0;
   d.y = DRONE_FLY_H + Math.sin(d.floatT) * 0.4;
   d.mesh.position.set(d.x, d.y, d.z);
   d.mesh.rotation.y = Math.atan2(pdx, pdz);
   d.mesh.children.forEach((ch) => {
     if (ch.userData.isRotor) ch.rotation.y += dt * 18;
   });
+
+  // ── EMP pulse when HP critical (< 30%) ────────────────────────────
+  d.empCd = Math.max(0, d.empCd - dt * 1000);
+  if (d.hp < d.maxHp * 0.3 && d.empCd <= 0) {
+    d.empCd = 5000;
+    player.slowTimer = 2.0;
+    showMsg('EMP PULSE — SYSTEMS JAMMED', 2200);
+  }
+
+  // ── Burst fire (disabled — uncomment to enable) ───────────────────
+  // const DRONE_BURST_RANGE = 14;
+  // const DRONE_BURST_CD = 2000;   // ms between bursts
+  // const DRONE_BURST_COUNT = 3;   // bullets per burst
+  // const DRONE_BURST_INTERVAL = 150; // ms between bullets in a burst
+  // d.burstCd = (d.burstCd ?? DRONE_BURST_CD) - dt * 1000;
+  // d.burstCount = d.burstCount ?? 0;
+  // d.burstTimer = (d.burstTimer ?? 0) - dt * 1000;
+  // if (d.burstCd <= 0 && dist < DRONE_BURST_RANGE) {
+  //   d.burstCd = DRONE_BURST_CD;
+  //   d.burstCount = DRONE_BURST_COUNT;
+  //   d.burstTimer = 0;
+  // }
+  // if (d.burstCount > 0 && d.burstTimer <= 0) {
+  //   const fireDir = new THREE.Vector3(
+  //     camera.position.x - d.x,
+  //     camera.position.y - d.y,
+  //     camera.position.z - d.z
+  //   ).normalize();
+  //   spawnBullet(new THREE.Vector3(d.x, d.y, d.z), fireDir);
+  //   d.burstCount--;
+  //   d.burstTimer = DRONE_BURST_INTERVAL;
+  // }
+
   const coneDir = new THREE.Vector3(pdx, camera.position.y - d.y, pdz).normalize();
   d.cone.lookAt(d.cone.position.clone().add(coneDir));
   d.cone.material.opacity = 0.08 + Math.abs(Math.sin(d.floatT * 2)) * 0.07;
-  d.eye.material.color.setHSL(
-    0.55 + Math.sin(d.floatT * 3) * 0.05,
-    1,
-    0.6 + Math.sin(d.floatT * 5) * 0.2
-  );
+  // eye: orange flash right after an EMP pulse, blue otherwise
+  if (d.empCd > 4500) {
+    d.eye.material.color.setHex(0xff4400);
+  } else {
+    d.eye.material.color.setHSL(
+      0.55 + Math.sin(d.floatT * 3) * 0.05,
+      1,
+      0.6 + Math.sin(d.floatT * 5) * 0.2
+    );
+  }
 }
 
 // ── Enemy AI ──────────────────────────────────────────────────────
@@ -308,31 +390,65 @@ export function updateEnemies(ts, dt) {
       e.reactDelay = Math.max(0, e.reactDelay - dt * 1000);
       if (e.reactDelay <= 0) e.state = 'attack';
     }
+
     const desiredY = Math.atan2(-pdx, -pdz);
     let isMoving = false;
-    if (e.state === 'attack' || e.state === 'spotted') {
-      if (e.path.length === 0 || e.pathTick <= 0) {
+
+    if (e.stunTimer > 0) {
+      // ── Stagger: drain knockback velocity, skip normal movement ──────
+      e.stunTimer = Math.max(0, e.stunTimer - dt);
+      e.velX *= 1 - dt * 8;
+      e.velZ *= 1 - dt * 8;
+      const nx = e.x + e.velX * dt;
+      const nz = e.z + e.velZ * dt;
+      if (canMoveTo(nx, e.z, eGround)) e.x = nx;
+      if (canMoveTo(e.x, nz, eGround)) e.z = nz;
+    } else if (e.state === 'attack' || e.state === 'spotted') {
+      // ── Path throttle: recalc only when timer expires OR player cell changes ──
+      const goalCell = [
+        Math.floor(camera.position.x / CELL),
+        Math.floor(camera.position.z / CELL),
+      ];
+      const goalChanged =
+        !e.pathGoal ||
+        e.pathGoal[0] !== goalCell[0] ||
+        e.pathGoal[1] !== goalCell[1];
+      if (e.path.length === 0 || e.pathTick <= 0 || goalChanged) {
         e.path = astar(e.x, e.z, camera.position.x, camera.position.z);
         if (e.path.length > 0) e.path.shift();
         e.pathTick = 600 + Math.random() * 200;
+        e.pathGoal = goalCell;
       }
       e.pathTick -= dt * 1000;
+
+      // ── Velocity-based movement with acceleration + drag ──────────────
       if (e.path.length > 0 && distP > CELL * 1.4) {
         const [tx, tz] = e.path[0];
         const ddx = tx - e.x,
           ddz = tz - e.z,
           dd = Math.sqrt(ddx * ddx + ddz * ddz);
-        if (dd < 0.18) e.path.shift();
-        else {
-          const spd2 = ENEMY_SPEED * dt * (e.state === 'spotted' ? 0.55 : 1);
-          const nx = e.x + (ddx / dd) * spd2,
-            nz = e.z + (ddz / dd) * spd2;
+        if (dd < 0.18) {
+          e.path.shift();
+        } else {
+          const spd = ENEMY_SPEED * (e.state === 'spotted' ? 0.55 : 1);
+          e.velX += ((ddx / dd) * spd - e.velX) * 12 * dt;
+          e.velZ += ((ddz / dd) * spd - e.velZ) * 12 * dt;
+          const nx = e.x + e.velX * dt,
+            nz = e.z + e.velZ * dt;
           if (canMoveTo(nx, e.z, eGround)) e.x = nx;
           if (canMoveTo(e.x, nz, eGround)) e.z = nz;
           isMoving = true;
         }
+      } else {
+        // decelerate when no path target or close enough to player
+        e.velX *= 1 - 10 * dt;
+        e.velZ *= 1 - 10 * dt;
       }
-      e.facingY = slerp(e.facingY, desiredY, ENEMY_ROT_SPD, dt);
+
+      // ── Faster rotation in attack mode ────────────────────────────────
+      const rotSpd = e.state === 'attack' ? ENEMY_ROT_SPD * 2.5 : ENEMY_ROT_SPD;
+      e.facingY = slerp(e.facingY, desiredY, rotSpd, dt);
+
       if (
         e.state === 'attack' &&
         distP < ENEMY_SHOOT_RANGE &&
@@ -364,6 +480,10 @@ export function updateEnemies(ts, dt) {
         }
       }
     } else {
+      // ── Patrol ────────────────────────────────────────────────────────
+      // bleed off any residual velocity from prior attack state
+      e.velX *= 1 - 10 * dt;
+      e.velZ *= 1 - 10 * dt;
       if (e.wpWait > 0) {
         e.wpWait = Math.max(0, e.wpWait - dt * 1000);
         e.facingY += dt * 0.55 * Math.sin(performance.now() / 820 + e.bobT);
@@ -386,6 +506,7 @@ export function updateEnemies(ts, dt) {
         }
       }
     }
+
     animateEnemyLegs(e, dt, isMoving);
     if (e.state === 'attack') {
       if (!e.crouching && e.crouchTimer <= 0 && Math.random() < 0.008) {
@@ -447,6 +568,7 @@ export function updateEnemies(ts, dt) {
               e.x = nc * CELL + CELL / 2;
               e.z = nr * CELL + CELL / 2;
               e.path = [];
+              e.pathGoal = null;
               found = true;
             }
           }

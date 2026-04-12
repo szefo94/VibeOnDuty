@@ -2,15 +2,13 @@ import * as THREE from 'three';
 import { MOUSE_SENS, MAX_AMMO } from './config.js';
 import { camera } from './scene.js';
 import { debugLines } from './level.js';
-import { wpn } from './builders/weapon.js';
-import { playerBody } from './builders/playerBody.js';
 import { locked, gameRunning, setGameRunning } from './input.js';
 import { player, startReload } from './entities/player.js';
 import { spawnNewDrone } from './entities/enemies.js';
 import { tryThrowGrenade } from './entities/grenades.js';
 import { tryShoot, rebuildEHM } from './combat/shoot.js';
 import { updateHUD, showMsg, showStatus } from './hud/overlay.js';
-import { startLoop, setThirdPerson, getThirdPerson } from './loop.js';
+import { startLoop, setThirdPerson, getThirdPerson, toggleTpSide } from './loop.js';
 
 const _euler = new THREE.Euler(0, 0, 0, 'YXZ');
 let debugVisible = false;
@@ -29,11 +27,12 @@ document.addEventListener('keydown', (e) => {
     debugVisible = !debugVisible;
     if (debugLines) debugLines.visible = debugVisible;
   }
-  if (e.code === 'F4') {
+  if (e.code === 'KeyV') {
     setThirdPerson(!getThirdPerson());
-    wpn.visible = !getThirdPerson();
-    playerBody.visible = getThirdPerson();
     showStatus(getThirdPerson() ? '3RD PERSON' : '1ST PERSON');
+  }
+  if (e.code === 'KeyB' && getThirdPerson()) {
+    showStatus(toggleTpSide() === 1 ? 'SHOULDER: RIGHT' : 'SHOULDER: LEFT');
   }
 });
 document.addEventListener('mousemove', (e) => {

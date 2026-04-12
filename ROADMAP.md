@@ -182,11 +182,57 @@ npm run build      # vite build → dist/
 
 ---
 
-## Phase 5 — Enemy upgrade: real assets + improved AI
+## Phase 5 — Enemy upgrade + player mechanics ✅ PARTIALLY DONE
+
+### Step 5.3 — Enemy movement improvements ✅ DONE
+
+| Change | File | Notes |
+|--------|------|-------|
+| Velocity + drag movement | `src/entities/enemies.js` | accel `12×`, drag `10×`, replaces direct position delta |
+| Stagger on hit | `src/combat/shoot.js`, `src/entities/enemies.js` | `velX/Z = 4` knockback, `stunTimer = 0.28 s` |
+| Faster rotation in attack | `src/entities/enemies.js` | `ENEMY_ROT_SPD × 2.5` in attack state |
+| Path throttle + goal tracking | `src/entities/enemies.js` | A* max once per 600–800 ms OR when player cell changes |
+
+### Step 5.4 — Drone upgrade ✅ DONE
+
+| Change | Notes |
+|--------|-------|
+| Strafe orbit | Tangential velocity perpendicular to player, direction flips every 3–7 s |
+| Fixed velocity units | `velX/Z` in units/s, applied as `× dt`; drag `3×`; hard cap `5 u/s`; edge zeroes velocity |
+| EMP pulse | HP < 30% → `player.slowTimer = 2 s` (move speed 40%), 5 s cooldown, eye flashes orange |
+| Burst fire | Implemented but **commented out** in `updateDrone` — 3 bullets / 150 ms, 2 s cooldown |
+
+### Step 5.5 — Player body (3rd person) ✅ DONE
+
+`src/builders/playerBody.js` rebuilt from 4 primitives to a full soldier:
+boots, lower legs, knee pads, thighs, belt, plate carrier with front/back plates and side panels,
+pauldrons, upper arms, elbow pads, forearms, gloved hands, neck, balaclava, composite helmet
+(brim + dome + cheek straps), visor, assault rifle at hip (receiver, stock, grip, handguard,
+barrel, magazine, scope rail).
+
+### Step 5.6 — 3rd person camera (Fortnite-style) ✅ DONE
+
+| Feature | Key | Notes |
+|---------|-----|-------|
+| Toggle 1st/3rd person | `V` | Animated transition (`tpTransition` lerp, ~0.5 s) |
+| Shoulder swap | `B` | Animated left↔right (`tpSideSmooth` lerp, speed 6) |
+| Camera | — | Over-the-shoulder, player quaternion preserved (no `lookAt`) — aiming works normally |
+
+### Step 5.7 — Player movement improvements ✅ DONE
+
+| Feature | Key | Notes |
+|---------|-----|-------|
+| Lean left / right | `Q` / `E` | `±0.28 rad` roll + `±0.38` unit side shift, lerp speed `3.5` |
+| Dive | `Z` | Forward launch `12 u/s` + upward kick `2.8`, camera pitches forward `0.55 rad`, lands into slide |
+| Crouch-landing slide | — | Jump + hold crouch → slide on land if air speed > 60% of walk speed |
+
+---
+
+### Step 5.1 — Asset pipeline: loading GLTF models (PLANNED)
 
 ### Goal
 Replace the hand-built box/cylinder enemy geometry with GLTF models from the internet,
-add skeletal animation, and improve enemy movement so it feels less floaty and robotic.
+add skeletal animation.
 
 ---
 
@@ -375,7 +421,10 @@ until the GLTF path is proven; then delete them.
 
 ## Next up
 
-All phases (1–4) complete. Phase 5 is planned but not started.
+Phase 5 in progress. Done: 5.3, 5.4, 5.5, 5.6, 5.7. Remaining:
+
+1. **5.1** — Load GLTF enemy model (`GLTFLoader`, `public/models/enemy.glb`, sources: Quaternius / Kenney / Mixamo)
+2. **5.2** — Skeletal animation (`AnimationMixer`, crossfade state→clip: idle/walk/run/shoot/death)
 
 Codebase health:
 - Fully split into ES modules under `src/`

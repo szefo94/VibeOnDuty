@@ -132,6 +132,11 @@ export function tickBullets(dt) {
         e.alertTimer = 9000;
         e.reactDelay = 0;
         player.energy = Math.min(MAX_ENERGY, player.energy + dmg * ENERGY_PER_DMG);
+        // knockback stagger
+        const kd = new THREE.Vector3(e.x - camera.position.x, 0, e.z - camera.position.z).normalize();
+        e.velX = kd.x * 4;
+        e.velZ = kd.z * 4;
+        e.stunTimer = 0.28;
         spawnHitMarker();
         if (e.hp <= 0) killEnemy(e);
         _removeBullet(i);

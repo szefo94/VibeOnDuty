@@ -51,11 +51,23 @@ export const player = {
   energy: 0,
   airVelX: 0,
   airVelZ: 0,
+  slowTimer: 0,  // set by drone EMP pulse
+  lean: 0,       // -1 = left (Q), 0 = upright, 1 = right (E), smoothed
+  diving: false,
+  diveTimer: 0,  // counts down after landing, holds forward pitch
+  divePitch: 0,  // extra pitch added to camera during/after dive, lerped out
 };
 
 export const visited = Array.from({ length: MAP_H }, () => new Uint8Array(MAP_W));
 
 const _euler = new THREE.Euler(0, 0, 0, 'YXZ');
+const LEAN_ANGLE = 0.28;        // radians of roll at full lean
+export const LEAN_SHIFT = 0.38; // camera X offset at full lean (world units), read by loop.js
+const LEAN_SPEED = 3.5;         // smoothing speed (lower = slower lean)
+
+const DIVE_SPEED = 12;          // horizontal launch speed
+const DIVE_LAUNCH_Y = 2.8;      // upward kick on dive
+const DIVE_DUR = 0.55;          // seconds camera stays pitched forward after landing
 
 export function startReload() {
   if (player.reloading || player.reserve <= 0) return;
@@ -68,10 +80,23 @@ export function startReload() {
 export function updatePlayer(dt) {
   if (player.dead) return;
   if (mouseHeld && locked) tryShoot();
+  if (player.slowTimer > 0) player.slowTimer = Math.max(0, player.slowTimer - dt);
 
   const sprint = keys['ShiftLeft'] || keys['ShiftRight'];
   const wantCrouch = keys['ControlLeft'] || keys['ControlRight'] || keys['KeyC'];
   const movingForward = keys['KeyW'] || keys['ArrowUp'];
+  // ── Dive (Z key) ─────────────────────────────────────────────────
+  if (keys['KeyZ'] && player.onGround && !player.sliding && !player.diving && !player.crouching) {
+    player.diving = true;
+    player.onGround = false;
+    player.velY = DIVE_LAUNCH_Y;
+    const fwd = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
+    player.airVelX = fwd.x * DIVE_SPEED;
+    player.airVelZ = fwd.z * DIVE_SPEED;
+    player.divePitch = 0.55; // forward tilt on launch
+    showStatus('DIVE');
+  }
+
   const wantSlide =
     movingForward && wantCrouch && !player.sliding && player.onGround && !player.crouching;
 
@@ -109,7 +134,8 @@ export function updatePlayer(dt) {
   let mvX, mvZ;
 
   if (player.onGround) {
-    const moveScale = player.crouching ? 0.72 : sprint ? SPRINT_MULT : 1;
+    const empSlow = player.slowTimer > 0 ? 0.4 : 1;
+    const moveScale = (player.crouching ? 0.72 : sprint ? SPRINT_MULT : 1) * empSlow;
     const spd = MOVE_SPEED * moveScale * dt;
     const fwd = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
     const rgt = new THREE.Vector3(Math.cos(player.yaw), 0, -Math.sin(player.yaw));
@@ -177,6 +203,27 @@ export function updatePlayer(dt) {
       camera.position.y = eyeFloor;
       player.velY = 0;
       player.onGround = true;
+      const airSpd = Math.sqrt(player.airVelX * player.airVelX + player.airVelZ * player.airVelZ);
+      // dive landing → always slide with dive momentum
+      if (player.diving) {
+        player.diving = false;
+        player.diveTimer = DIVE_DUR;
+        player.sliding = true;
+        player.slideTimer = SLIDE_DUR * 1.4;
+        player.slideCancelAvail = true;
+        player.slideVel = new THREE.Vector3(player.airVelX, 0, player.airVelZ)
+          .normalize()
+          .multiplyScalar(Math.min(airSpd, SLIDE_SPEED * 1.2));
+      } else if (wantCrouch && !player.sliding && airSpd > MOVE_SPEED * 0.6) {
+        // crouch-landing slide from regular jump
+        player.sliding = true;
+        player.slideTimer = SLIDE_DUR;
+        player.slideCancelAvail = true;
+        player.slideVel = new THREE.Vector3(player.airVelX, 0, player.airVelZ)
+          .normalize()
+          .multiplyScalar(Math.min(airSpd, SLIDE_SPEED));
+        showStatus('SLIDE');
+      }
     }
   } else {
     camera.position.y += (eyeFloor - camera.position.y) * Math.min(1, dt * 14);
@@ -189,7 +236,26 @@ export function updatePlayer(dt) {
     player.bobPitch *= 0.82;
   }
 
-  _euler.set(player.pitch + player.bobPitch, player.yaw, player.sliding ? 0.04 : 0);
+  // ── Dive pitch recovery ──────────────────────────────────────────
+  if (player.diveTimer > 0) {
+    player.diveTimer -= dt;
+    if (player.diveTimer <= 0) player.diveTimer = 0;
+  }
+  // lerp divePitch toward 0 when in air (in-flight tilt) or after landing (recovery)
+  const divePitchTarget = player.diving ? 0.55 : 0;
+  player.divePitch += (divePitchTarget - player.divePitch) * Math.min(1, dt * 5);
+
+  // ── Lean (Q / E) ────────────────────────────────────────────────
+  const leanTarget = !player.dead && !player.sliding && !player.diving
+    ? (keys['KeyQ'] ? -1 : keys['KeyE'] ? 1 : 0)
+    : 0;
+  player.lean += (leanTarget - player.lean) * Math.min(1, LEAN_SPEED * dt);
+  const slideRoll = player.sliding ? 0.04 : 0;
+  _euler.set(
+    player.pitch + player.bobPitch + player.divePitch,
+    player.yaw,
+    slideRoll - player.lean * LEAN_ANGLE
+  );
   camera.quaternion.setFromEuler(_euler);
 
   const pc = Math.floor(camera.position.x / CELL),
