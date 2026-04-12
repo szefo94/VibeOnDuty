@@ -3,433 +3,202 @@
 ## Current State
 
 ```
-fps3d.html              — DOM structure (entry: src/main.js)
+fps3d.html              — HTML shell (entry: src/main.js)
 style.css               — all styles
-vite.config.js          — entry point: fps3d.html
+vite.config.js          — Vite entry: fps3d.html
+.prettierrc             — Prettier config
+eslint.config.js        — ESLint 9 flat config
+tsconfig.json           — TypeScript (allowJs, noEmit, checkJs: false)
 src/
-  main.js               — entry point: DOM listeners, start button, kicks off loop
-  loop.js               — loop(ts), startLoop(), setThirdPerson/getThirdPerson
-  config.js             — all constants
+  main.js               — entry: DOM listeners, start button, startLoop()
+  loop.js               — game loop, 3rd person camera (tpTransition), lean offset
+  config.js             — all game constants
   map.js                — MAP, HMAP, mapCell, hAt, groundElevation, canMoveTo
   math.js               — normA, slerp
   astar.js              — A* pathfinding
-  level.js              — level build, debug lines — exports wallMeshes, debugLines
+  level.js              — level geometry — exports wallMeshes, debugLines
   scene.js              — renderer, scene, camera, hudCanvas, hudCtx
-  materials.js          — mm(), all MeshStandardMaterials
+  materials.js          — mm(), shared MeshStandardMaterials
   lighting.js           — ambient, sun, fill, torches — exports tickTorches
   input.js              — keys, locked, gameRunning, mouseHeld, setGameRunning
   builders/
-    weapon.js           — player weapon model — exports wpn, flash, flashMat, muzzleLight
-    playerBody.js       — 3rd-person body — exports playerBody
-    enemy.js            — exports buildEnemy()
-    drone.js            — exports buildDrone()
+    weapon.js           — player weapon model
+    playerBody.js       — full soldier body (plate carrier, helmet, rifle)
+    enemy.js            — ground soldier model (procedural)
+    drone.js            — drone model (procedural)
   combat/
-    damage.js           — grenade falloff, entity/player damage
-    shoot.js            — ehm, rebuildEHM, tryShoot, spawnBullet, tickBullets,
-                          sprayHeat, coolSpray, bobT, muzzleT, recoilT, updateWeapon
+    shoot.js            — bullet physics, hit detection, weapon anim, spray
+    damage.js           — grenade falloff, entity/player damage formulas
   entities/
-    player.js           — player, visited, startReload, updatePlayer
-    enemies.js          — enemies, dronePool, activeDrone, WALKABLE_CELLS, wave,
-                          spawnEnemyIntoSlot, spawnNewDrone, updateDrone,
-                          updateEnemies, killEnemy, killDrone, triggerDeath, tickWave
-    ammoDrops.js        — ammoDrops, spawnAmmoDrop, tickAmmoDrops
-    grenades.js         — grenades, tryThrowGrenade, tickGrenades, explodeGrenade
+    player.js           — player state, movement, dive, lean, reload, updatePlayer
+    enemies.js          — enemy + drone AI, wave management, EMP, strafe orbit
+    ammoDrops.js        — ammo pickup spawn and collection
+    grenades.js         — grenade throw, flight, explosion
   fx/
-    tracers.js          — enemy static tracers — exports spawnTracer, tickTracers
-    impacts.js          — bullet impact sparks — exports spawnImpact, tickImpacts
-    particles.js        — grenade particles + impact zones — exports grenImpactZones,
-                          spawnGrenadeParticles, tickGrenadeParticles
+    tracers.js          — enemy muzzle tracers
+    impacts.js          — bullet impact sparks
+    particles.js        — grenade particles + impact zones
   hud/
     overlay.js          — updateHUD, showMsg, showStatus, triggerHitFlash
     hitmarker.js        — hitMarkerT, spawnHitMarker, tickHitMarker
-    hud.js              — w2s, drawHUD
-    radar.js            — drawMinimap
+    hud.js              — w2s, drawHUD (canvas)
+    radar.js            — drawMinimap (canvas)
+  *.test.js             — Vitest unit tests (map, math, astar, damage)
+tests/
+  smoke.spec.js         — Playwright smoke tests
 ```
 
-> **Note:** Serve via `npm run dev` (Vite) — do NOT open via `file://`.
+> **Run:** `npm run dev` — Vite dev server. Do NOT open via `file://`.
 
-### Known migration notes
-- Three.js upgraded from CDN r128 → npm r160. All light intensities scaled by the physical
-  conversion factor (`× Math.PI` for directional/ambient, `× 4π` for point lights).
+### Migration notes
+- Three.js upgraded CDN r128 → npm r160. Light intensities scaled: `× Math.PI` (directional/ambient), `× 4π` (point).
 - `renderer.outputColorSpace = THREE.SRGBColorSpace` replaces deprecated `outputEncoding`.
 
 ---
 
-## Phase 1 — npm + localhost setup ✅ DONE
+## Phase 1 — npm + localhost ✅ DONE
 
-- Vite dev server (`npm run dev`)
-- `npm install three` — CDN script tag removed
-- `vite.config.js` added (entry: `fps3d.html`)
+- Vite dev server (`npm run dev`), `vite.config.js` with `fps3d.html` entry
+- `npm install three` — CDN removed
 - `vitest` and `@playwright/test` installed
 
 ---
 
-## Phase 2 — Module split
+## Phase 2 — Module split ✅ DONE
 
-**Goal:** drain `game.js` to near zero by extracting remaining systems.
+Drained monolithic `game.js` into `src/` modules across 8 batches. `game.js` deleted.
+`fps3d.html` entry changed to `src/main.js`.
 
-### Batch 1 — Scene foundation ✅ DONE
-`src/scene.js`, `src/materials.js`, `src/lighting.js`
+| Batch | Files |
+|-------|-------|
+| 1 — Scene | `scene.js`, `materials.js`, `lighting.js` |
+| 2 — Builders | `level.js`, `builders/weapon.js`, `builders/playerBody.js`, `builders/enemy.js`, `builders/drone.js` |
+| 3 — FX | `fx/tracers.js`, `fx/impacts.js`, `fx/particles.js` |
+| 4 — Input | `input.js` |
+| 5 — Entities | `entities/ammoDrops.js`, `entities/enemies.js`, `entities/grenades.js`, `entities/player.js` |
+| 6 — Combat | `combat/shoot.js`, `hud/hitmarker.js` |
+| 7 — HUD | `hud/overlay.js`, `hud/hud.js`, `hud/radar.js` |
+| 8 — Loop + entry | `loop.js`, `main.js` |
 
-### Batch 2 — Static builders ✅ DONE
-`src/level.js`, `src/builders/weapon.js`, `src/builders/playerBody.js`,
-`src/builders/enemy.js`, `src/builders/drone.js`
-
-### Batch 3 — FX ✅ DONE
-`src/fx/tracers.js`, `src/fx/impacts.js`, `src/fx/particles.js`
-
-> Note: live player-bullet physics (`spawnBullet`, `tickBullets`) stay in game.js
-> until Batch 6 (combat) when `enemies`, `player`, `activeDrone` are importable.
-
-### Batch 4 — Input ✅ DONE
-`src/input.js`
-
-> Exports `keys`, `locked`, `gameRunning`, `mouseHeld`, `setGameRunning`.
-> Basic DOM listeners (keydown/keyup, mousedown/mouseup, pointerlock, contextmenu) live here.
-> Game-action handlers (R reload, F3/F4, mousemove look, click shoot/grenade) stay in game.js.
-
-### Batch 5 — Entity state ✅ DONE
-
-| File | Exports |
-|------|---------|
-| `src/entities/ammoDrops.js` | `ammoDrops`, `spawnAmmoDrop`, `tickAmmoDrops` |
-| `src/entities/enemies.js` | `enemies`, `dronePool`, `activeDrone`, `spawnEnemyIntoSlot`, `updateEnemies`, `WALKABLE_CELLS`, `wave`, `respawnTimer`, `spawnNewDrone`, `updateDrone`, `killEnemy`, `killDrone`, `triggerDeath`, `tickWave` |
-| `src/entities/grenades.js` | `grenades`, `tryThrowGrenade`, `tickGrenades`, `explodeGrenade` |
-| `src/entities/player.js` | `player`, `visited`, `startReload`, `updatePlayer` |
-
-> Note: drone state (`dronePool`, `activeDrone`, `spawnNewDrone`, `updateDrone`) merged into
-> `enemies.js` (single file) rather than a separate `drone.js`. `killEnemy`/`killDrone`
-> also live in `enemies.js` due to wave-state coupling.
-
-### Batch 6 — Combat ✅ DONE
-
-| File | Exports |
-|------|---------|
-| `src/combat/shoot.js` | `ehm`, `rebuildEHM`, `tryShoot`, `spawnBullet`, `tickBullets`, `sprayHeat`, `coolSpray`, `bobT`, `muzzleT`, `recoilT`, `updateWeapon` |
-| `src/hud/hitmarker.js` | `hitMarkerT`, `spawnHitMarker`, `tickHitMarker` |
-
-> Done alongside Batch 5: entities needed `rebuildEHM` + `tryShoot` immediately.
-
-### Batch 7 — HUD ✅ DONE
-
-| File | Exports |
-|------|---------|
-| `src/hud/hitmarker.js` | `hitMarkerT`, `spawnHitMarker`, `tickHitMarker` |
-| `src/hud/overlay.js` | `updateHUD`, `showMsg`, `showStatus`, `triggerHitFlash` |
-| `src/hud/hud.js` | `w2s`, `drawHUD` |
-| `src/hud/radar.js` | `drawMinimap` |
-
-> `triggerDeath` lives in `enemies.js` (it reads `wave`).
-
-### Batch 8 — Loop + entry ✅ DONE
-
-| File | Exports |
-|------|---------|
-| `src/loop.js` | `loop`, `startLoop`, `setThirdPerson`, `getThirdPerson` |
-| `src/main.js` | _(entry point — DOM listeners, start button, `startLoop()`)_ |
-
-`game.js` deleted. `fps3d.html` now points to `src/main.js`.
+> Drone state merged into `enemies.js` (not a separate file) due to wave-state coupling.
+> Circular deps (player↔shoot, player↔grenades, enemies↔shoot) are safe — all cross-module refs are inside function bodies, never at init time.
 
 ---
 
-## Phase 3 — Testing
+## Phase 3 — Testing ✅ DONE
 
-### Step 3.1 — Unit tests (Vitest)
+### Unit tests (Vitest) — `npm test`
 
-```bash
-npm test
-```
+| File | Coverage |
+|------|---------|
+| `src/map.test.js` | `groundElevation` ramp interpolation, `canMoveTo` wall blocking |
+| `src/math.test.js` | `normA` wrapping, `slerp` convergence |
+| `src/astar.test.js` | path finding, wall blocking, empty path at destination |
+| `src/combat/damage.test.js` | falloff at 0/50/100%, entity vs player formulas |
 
-Targets (modules already split and importable):
+33 tests, all passing.
 
-| File | What to test |
-|------|-------------|
-| `src/map.js` | `groundElevation` ramp interpolation, `canMoveTo` wall blocking, step-height |
-| `src/math.js` | `normA` wrapping, `slerp` convergence |
-| `src/astar.js` | finds path, handles blocked route, returns `[]` at destination |
-| `src/combat/damage.js` | falloff at 0%, 50%, 100% radius; entity vs player formulas |
+### Smoke tests (Playwright) — `npm run test:e2e`
 
-### Step 3.2 — Integration / smoke tests (Playwright)
-
-```bash
-npm run test:e2e
-```
-
-What to cover:
-- Page loads with no console errors
-- Click "DROP IN" → overlay hides, game starts
-- Player can move (simulate WASD keydown)
-- Enemy spawns within timeout
-- Wave complete message appears after all enemies killed
+4 tests: page loads, DROP IN hides overlay, HUD elements present, initial ammo/HP values correct.
 
 ---
 
 ## Phase 4 — Quality of life ✅ DONE
 
-| Task | Status | Notes |
-|------|--------|-------|
-| `vite build` | ✅ | outputs to `dist/`, entry `fps3d.html` |
-| Prettier | ✅ | `.prettierrc` created, `npx prettier --write "src/**/*.js"` run |
-| ESLint | ✅ | `eslint.config.js` (flat config), `globals` package, `npm run lint` clean |
-| TypeScript | ✅ | `tsconfig.json` (`checkJs: false`, `noEmit: true`), `npm run typecheck` clean |
-
-New scripts in `package.json`:
-```
-npm run lint       # eslint src/
-npm run typecheck  # tsc --noEmit
-npm run build      # vite build → dist/
-```
+| Tool | Config | Script |
+|------|--------|--------|
+| Prettier | `.prettierrc` (semi, singleQuote, printWidth 100) | `npx prettier --write "src/**/*.js"` |
+| ESLint 9 | `eslint.config.js` (flat config, `globals` browser) | `npm run lint` |
+| TypeScript | `tsconfig.json` (allowJs, noEmit, checkJs: false) | `npm run typecheck` |
+| Vite build | entry `fps3d.html` | `npm run build` → `dist/` |
 
 ---
 
-## Phase 5 — Enemy upgrade + player mechanics ✅ PARTIALLY DONE
+## Phase 5 — Enemy AI, drone, player mechanics ✅ PARTIALLY DONE
 
-### Step 5.3 — Enemy movement improvements ✅ DONE
-
-| Change | File | Notes |
-|--------|------|-------|
-| Velocity + drag movement | `src/entities/enemies.js` | accel `12×`, drag `10×`, replaces direct position delta |
-| Stagger on hit | `src/combat/shoot.js`, `src/entities/enemies.js` | `velX/Z = 4` knockback, `stunTimer = 0.28 s` |
-| Faster rotation in attack | `src/entities/enemies.js` | `ENEMY_ROT_SPD × 2.5` in attack state |
-| Path throttle + goal tracking | `src/entities/enemies.js` | A* max once per 600–800 ms OR when player cell changes |
-
-### Step 5.4 — Drone upgrade ✅ DONE
+### 5.3 — Enemy movement ✅ DONE
 
 | Change | Notes |
 |--------|-------|
-| Strafe orbit | Tangential velocity perpendicular to player, direction flips every 3–7 s |
-| Fixed velocity units | `velX/Z` in units/s, applied as `× dt`; drag `3×`; hard cap `5 u/s`; edge zeroes velocity |
-| EMP pulse | HP < 30% → `player.slowTimer = 2 s` (move speed 40%), 5 s cooldown, eye flashes orange |
-| Burst fire | Implemented but **commented out** in `updateDrone` — 3 bullets / 150 ms, 2 s cooldown |
+| Velocity + drag | Accel `12×` toward path node, drag `10×`; replaces direct position delta |
+| Stagger on hit | `velX/Z = 4` knockback + `stunTimer = 0.28 s` set in `shoot.js` on bullet hit |
+| Faster aim rotation | `ENEMY_ROT_SPD × 2.5` in attack state, normal in spotted/patrol |
+| Path throttle | A* recalcs max once per 600–800 ms OR when player moves to a new cell |
 
-### Step 5.5 — Player body (3rd person) ✅ DONE
+### 5.4 — Drone upgrade ✅ DONE
+
+| Change | Notes |
+|--------|-------|
+| Strafe orbit | Tangential velocity ⊥ to player direction; reverses every 3–7 s |
+| Physics fix | `velX/Z` in units/s applied as `× dt`; drag `3×`; speed cap `5 u/s`; edge zeroes velocity |
+| EMP pulse | At HP < 30%: `player.slowTimer = 2 s` (40% move speed), eye flashes orange, 5 s cooldown |
+| Burst fire | Implemented but **commented out** in `updateDrone` (3 bullets / 150 ms / 2 s cooldown) |
+
+### 5.5 — Player body (3rd person) ✅ DONE
 
 `src/builders/playerBody.js` rebuilt from 4 primitives to a full soldier:
-boots, lower legs, knee pads, thighs, belt, plate carrier with front/back plates and side panels,
-pauldrons, upper arms, elbow pads, forearms, gloved hands, neck, balaclava, composite helmet
-(brim + dome + cheek straps), visor, assault rifle at hip (receiver, stock, grip, handguard,
-barrel, magazine, scope rail).
+boots, lower legs, knee pads, thighs, belt, plate carrier (front plate, back plate, side panels),
+pauldrons, upper arms, elbow pads, forearms, gloved hands, neck, balaclava head,
+composite helmet (brim + dome + cheek straps), visor, assault rifle at hip.
 
-### Step 5.6 — 3rd person camera (Fortnite-style) ✅ DONE
-
-| Feature | Key | Notes |
-|---------|-----|-------|
-| Toggle 1st/3rd person | `V` | Animated transition (`tpTransition` lerp, ~0.5 s) |
-| Shoulder swap | `B` | Animated left↔right (`tpSideSmooth` lerp, speed 6) |
-| Camera | — | Over-the-shoulder, player quaternion preserved (no `lookAt`) — aiming works normally |
-
-### Step 5.7 — Player movement improvements ✅ DONE
+### 5.6 — 3rd person camera ✅ DONE
 
 | Feature | Key | Notes |
 |---------|-----|-------|
-| Lean left / right | `Q` / `E` | `±0.28 rad` roll + `±0.38` unit side shift, lerp speed `3.5` |
-| Dive | `Z` | Forward launch `12 u/s` + upward kick `2.8`, camera pitches forward `0.55 rad`, lands into slide |
-| Crouch-landing slide | — | Jump + hold crouch → slide on land if air speed > 60% of walk speed |
+| Toggle 1st ↔ 3rd person | `V` | `tpTransition` lerp at speed 4.5 (~0.5 s); weapon/body visibility crossfade |
+| Shoulder swap | `B` | `tpSideSmooth` lerp at speed 6; only active in 3rd person |
+| Camera orientation | — | Player quaternion preserved — no `lookAt`, aiming works normally |
+| Over-the-shoulder offset | — | `TP_BACK = 2.6`, `TP_SIDE = 0.85`, `TP_HEIGHT = 0.12` in `loop.js` |
+
+### 5.7 — Player movement ✅ DONE
+
+| Feature | Key | Notes |
+|---------|-----|-------|
+| Lean | `Q` / `E` | ±0.28 rad roll + ±0.38 unit side shift; lerp speed 3.5; suppressed during slide/dive |
+| Dive | `Z` | Forward launch 12 u/s + upward kick 2.8; camera pitches 0.55 rad; lands into boosted slide |
+| Crouch-landing slide | hold `CTRL` on landing | Converts air momentum into slide if speed > 60% of walk speed |
 
 ---
 
-### Step 5.1 — Asset pipeline: loading GLTF models (PLANNED)
+## Phase 6 — GLTF assets + skeletal animation (PLANNED)
 
-### Goal
-Replace the hand-built box/cylinder enemy geometry with GLTF models from the internet,
-add skeletal animation.
+### 6.1 — Asset pipeline
 
----
-
-### Step 5.1 — Asset pipeline: loading GLTF models
-
-**How it works in Three.js r160**
-
-```js
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js'; // optional, for compressed meshes
-```
-
-Vite serves files in `public/` at the root URL — put `.glb` files there:
-```
-public/
-  models/
-    enemy.glb
-    drone.glb
-```
-
-Load once at startup (before `startLoop`):
-```js
-const loader = new GLTFLoader();
-const draco = new DRACOLoader();
-draco.setDecoderPath('/draco/'); // copy node_modules/three/examples/jsm/libs/draco/ → public/draco/
-loader.setDRACOLoader(draco);
-
-export let enemyGLTF = null;
-export async function loadAssets() {
-  const gltf = await loader.loadAsync('/models/enemy.glb');
-  enemyGLTF = gltf;
-}
-```
-
+Load `.glb` files from `public/models/` via `GLTFLoader` + optional `DRACOLoader`.
 Call `await loadAssets()` in `main.js` before `startLoop()`.
 
-**Good free sources (CC0 / CC-BY)**
-- [Quaternius](https://quaternius.com) — low-poly stylised soldiers, robots, animated packs (CC0)
+**Free CC0 sources:**
+- [Quaternius](https://quaternius.com) — low-poly stylised soldiers, robots (CC0)
 - [Kenney.nl](https://kenney.nl/assets) — blocky sci-fi soldiers, drones (CC0)
-- [Sketchfab](https://sketchfab.com) — filter "Downloadable + Free", check licence per model
-- [Mixamo](https://www.mixamo.com) — auto-rigs humanoid FBX/GLTF + walk/run/attack animations (free with Adobe account)
+- [Mixamo](https://www.mixamo.com) — auto-rig + walk/run/shoot/death animations (free with Adobe account, export GLB via Blender)
 
-Recommended format: `.glb` (binary GLTF, single file, smaller). Mixamo exports FBX → convert with Blender's GLTF exporter.
+### 6.2 — AnimationMixer
 
----
-
-### Step 5.2 — Skeletal animation (AnimationMixer)
-
-Replace the current `animT` bob with a real walk/idle/attack cycle:
-
-```js
-// in buildEnemy (or a new src/builders/enemyGLTF.js)
-import { AnimationMixer } from 'three';
-
-export function buildEnemyFromGLTF(wx, wz) {
-  const clone = SkeletonUtils.clone(enemyGLTF.scene); // SkeletonUtils preserves skeleton
-  const mixer = new AnimationMixer(clone);
-  const clips = {
-    idle:   AnimationClip.findByName(enemyGLTF.animations, 'Idle'),
-    walk:   AnimationClip.findByName(enemyGLTF.animations, 'Walk'),
-    run:    AnimationClip.findByName(enemyGLTF.animations, 'Run'),
-    attack: AnimationClip.findByName(enemyGLTF.animations, 'Shoot'),
-    death:  AnimationClip.findByName(enemyGLTF.animations, 'Death'),
-  };
-  const actions = {};
-  for (const [name, clip] of Object.entries(clips))
-    if (clip) actions[name] = mixer.clipAction(clip);
-  actions.idle?.play();
-  clone.position.set(wx, 0, wz);
-  scene.add(clone);
-  clone.traverse(ch => { if (ch.isMesh) ch.userData.enemyGroup = clone; });
-  return { mesh: clone, mixer, actions, animT: 0 };
-}
-```
-
-Tick the mixer in `updateEnemies`:
-```js
-e.mixer?.update(dt);
-```
-
-State → animation mapping (crossfade):
-| Enemy state | Animation |
-|-------------|-----------|
-| `patrol`    | `walk` at speed 0.6× |
-| `spotted`   | `run` |
-| `attack`    | `shoot` (looped) |
-| death       | `death` (clamp + remove mesh after clip finishes) |
-
-Crossfade helper:
-```js
-function crossfade(e, toName, dur = 0.2) {
-  if (e.currentAnim === toName) return;
-  const from = e.actions[e.currentAnim];
-  const to   = e.actions[toName];
-  if (!to) return;
-  to.reset().setEffectiveWeight(1).play();
-  from?.crossFadeTo(to, dur, true);
-  e.currentAnim = toName;
-}
-```
-
----
-
-### Step 5.3 — Improved movement
-
-Current problems with the box-enemy movement:
-1. Slides on diagonals (no deceleration)
-2. Rotates instantly to face player
-3. Jumps on-demand with no reaction delay
-4. Path recalculated every frame (expensive + jittery)
-
-Planned fixes:
-
-**Smooth rotation** — already uses `slerp`, but increase weight to feel snappier on alert:
-```js
-// in updateEnemy: use different rot speed per state
-const rotSpd = e.state === 'attack' ? ENEMY_ROT_SPD * 2.5 : ENEMY_ROT_SPD;
-e.facingY = slerp(e.facingY, targetAngle, rotSpd * dt);
-```
-
-**Velocity-based movement** (replaces direct position delta):
-```js
-// add velX/velZ to enemy state, accelerate toward path target, dampen each frame
-const accel = 8; const drag = 6;
-e.velX += (desiredVx - e.velX) * accel * dt;
-e.velZ += (desiredVz - e.velZ) * drag * dt;
-e.x += e.velX * dt;
-e.z += e.velZ * dt;
-```
-
-**Stagger on hit** — when `hp` drops, push enemy backward and play a `hit` animation clip,
-blocking movement for ~0.3 s (set `e.stunTimer`):
-```js
-// in shoot.js hit handler:
-const knockDir = new THREE.Vector3(e.x - camera.position.x, 0, e.z - camera.position.z).normalize();
-e.velX += knockDir.x * 4;
-e.velZ += knockDir.z * 4;
-e.stunTimer = 0.3;
-crossfade(e, 'hit');
-```
-
-**Path throttle** — recalculate A* max once every 600 ms or when target cell changes:
-```js
-e.pathAge += dt;
-const newGoal = [Math.floor(player.x/CELL), Math.floor(player.z/CELL)];
-if (e.pathAge > 0.6 || !eqCell(e.pathGoal, newGoal)) {
-  e.path = astar(...);
-  e.pathAge = 0;
-  e.pathGoal = newGoal;
-}
-```
-
----
-
-### Step 5.4 — Drone upgrade
-
-**Model**: Kenney "Drone" pack (CC0) or Quaternius sci-fi robot.
-Load the same way as enemy via GLTFLoader. The rotor spin can be driven by rotating
-a bone or just continuing the `userData.isRotor` traverse approach.
-
-**Behaviour additions**:
-- **Strafe circle** — instead of charging straight, orbit the player at `targetDist`
-  using a tangential velocity component
-- **Burst fire** — shoot 3 bullets in 150 ms bursts with a 2 s cooldown (vs current
-  continuous raycast damage)
-- **EMP pulse** — at low HP (< 30%), emit a shockwave that slows player movement for 2 s
-
----
+Replace `animT` leg bob with `AnimationMixer` + `SkeletonUtils.clone`.
+State → clip mapping: `patrol` → walk (0.6×), `spotted` → run, `attack` → shoot (looped), death → death (clamp + remove).
+Use `crossfade(e, clipName, dur)` helper for smooth transitions.
 
 ### Implementation order
 
-| Step | File(s) changed | Complexity |
-|------|----------------|------------|
-| 5.1 Load GLTF | `src/builders/enemyGLTF.js` (new), `src/main.js` | Low |
-| 5.2 AnimationMixer | `src/builders/enemyGLTF.js`, `src/entities/enemies.js` | Medium |
-| 5.3a Smooth rotation tweak | `src/entities/enemies.js` | Trivial |
-| 5.3b Velocity movement | `src/entities/enemies.js` | Low |
-| 5.3c Stagger on hit | `src/combat/shoot.js`, `src/entities/enemies.js` | Low |
-| 5.3d Path throttle | `src/entities/enemies.js` | Low |
-| 5.4 Drone model + strafe | `src/builders/droneGLTF.js` (new), `src/entities/enemies.js` | Medium |
+| Step | File(s) | Effort |
+|------|---------|--------|
+| Load GLTF | `src/builders/enemyGLTF.js` (new), `src/main.js` | Low |
+| AnimationMixer | `src/builders/enemyGLTF.js`, `src/entities/enemies.js` | Medium |
+| Drone GLTF | `src/builders/droneGLTF.js` (new) | Low |
 
-The old `src/builders/enemy.js` and `src/builders/drone.js` stay in place as fallbacks
-until the GLTF path is proven; then delete them.
+Old `builders/enemy.js` and `builders/drone.js` stay as fallbacks until GLTF path is proven.
 
 ---
 
 ## Next up
 
-Phase 5 in progress. Done: 5.3, 5.4, 5.5, 5.6, 5.7. Remaining:
-
-1. **5.1** — Load GLTF enemy model (`GLTFLoader`, `public/models/enemy.glb`, sources: Quaternius / Kenney / Mixamo)
-2. **5.2** — Skeletal animation (`AnimationMixer`, crossfade state→clip: idle/walk/run/shoot/death)
+Phase 6 — GLTF assets + skeletal animation.
 
 Codebase health:
-- Fully split into ES modules under `src/`
-- Tested (Vitest unit tests + Playwright smoke tests)
-- Linted (ESLint 9 flat config)
-- Formatted (Prettier)
-- Type-checked (TypeScript `allowJs` + `checkJs: false`)
-- Production-buildable (`vite build`)
+- Fully modular ES modules under `src/`
+- 33 Vitest unit tests + 4 Playwright smoke tests passing
+- ESLint 9 flat config, zero warnings/errors
+- Prettier formatted
+- TypeScript `allowJs` type checking clean
+- Production build via `vite build`
