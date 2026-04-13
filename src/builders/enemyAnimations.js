@@ -103,13 +103,17 @@ export function attachSkeletonDebug(mesh) {
     _allHelpers.push(ax);
     attached++;
   }
-  // GLTF enemies: fall back to name search (no fixed indices)
+  // GLTF enemies: search by actual Quaternius/UE4 bone names
   if (attached === 0) {
-    const names = ['legL', 'legR', 'thighL', 'thighR', 'kneeL', 'kneeR', 'armSwingL', 'armSwingR'];
+    const names = [
+      'thigh_l', 'thigh_r', 'calf_l', 'calf_r',
+      'upperarm_l', 'upperarm_r', 'lowerarm_l', 'lowerarm_r',
+      'spine_01', 'pelvis', 'Head',
+    ];
     for (const name of names) {
       const node = mesh.getObjectByName(name);
       if (!node) continue;
-      const ax = makeAxes();
+      const ax = makeAxes(0.18); // smaller axes — GLTF bones are dense
       node.add(ax);
       _allHelpers.push(ax);
     }

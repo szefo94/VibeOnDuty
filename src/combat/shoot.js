@@ -213,7 +213,9 @@ export function tryShoot() {
     const targetPt = camera.position.clone().addScaledVector(dir, 80);
     dir.copy(targetPt.sub(origin).normalize());
   } else {
-    origin = new THREE.Vector3(0, 0.012, -0.54).applyMatrix4(wpn.matrixWorld);
+    // Always read from the flash mesh world position — stays correct regardless of weapon model
+    origin = new THREE.Vector3();
+    flash.getWorldPosition(origin);
   }
   spawnBullet(origin, dir);
   if (player.ammo === 0) startReload();

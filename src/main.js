@@ -10,6 +10,8 @@ import { tryShoot, rebuildEHM } from './combat/shoot.js';
 import { updateHUD, showMsg, showStatus } from './hud/overlay.js';
 import { startLoop, setThirdPerson, getThirdPerson, toggleTpSide } from './loop.js';
 import { tryLoadEnemyGLTF, buildPlayerMesh } from './builders/enemyGLTF.js';
+import { tryLoadWeaponFBX } from './builders/weaponFBX.js';
+import { tryLoadPistolFBX } from './builders/enemyWeapon.js';
 import { setSkeletonDebugVisible } from './builders/enemyAnimations.js';
 
 const _euler = new THREE.Euler(0, 0, 0, 'YXZ');
@@ -78,8 +80,12 @@ document.getElementById('c').addEventListener('click', () => {
 if (debugLines) debugLines.visible = debugVisible;
 window.loadGLTF = tryLoadEnemyGLTF; // also callable manually from console
 (async () => {
-  const loaded = await tryLoadEnemyGLTF();
-  if (loaded) {
+  const [enemyLoaded] = await Promise.all([
+    tryLoadEnemyGLTF(),
+    tryLoadWeaponFBX(),
+    tryLoadPistolFBX(),
+  ]);
+  if (enemyLoaded) {
     rebuildAllEnemies(); // swap procedural placeholders for GLTF enemies
     buildPlayerMesh();   // create the player's own GLTF instance
   }

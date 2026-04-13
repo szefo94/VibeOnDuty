@@ -16,6 +16,7 @@ import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.j
 import { scene } from '../scene.js';
 import { buildEnemy } from './enemy.js';
 import { buildEnemyMixer, attachSkeletonDebug } from './enemyAnimations.js';
+import { attachPistolToHand } from './enemyWeapon.js';
 
 // ── State ──────────────────────────────────────────────────────────────────
 let gltfTemplate = null;
@@ -159,6 +160,9 @@ export function buildEnemyMesh(wx, wz) {
     muzzleFlash.position.set(0.3, 1.4, -0.5); // fallback world-space offset
   }
 
+  attachSkeletonDebug(clone);
+  attachPistolToHand(clone);
+
   // Quaternius mannequin faces +Z at rotation.y=0; game convention is -Z forward.
   // Callers add facingOffset to e.mesh.rotation.y so enemies face the right direction.
   return { mesh: clone, muzzleFlash, mixer, actions, facingOffset: Math.PI };
@@ -192,6 +196,8 @@ export function buildPlayerMesh() {
   const idleClip = findClip(gltfTemplate.animations, 'idle');
   if (idleClip && actions.idle) actions.idle.time = Math.random() * idleClip.duration;
   if (actions.idle) actions.idle.play();
+
+  attachSkeletonDebug(clone);
 
   playerMesh = clone;
   playerMixer = mixer;
