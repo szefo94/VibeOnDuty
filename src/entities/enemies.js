@@ -18,8 +18,9 @@ import {
 import { MAP_W, MAP_H, MAP, isRamp, mapCell, canMoveTo, hAt } from '../map.js';
 import { slerp, normA } from '../math.js';
 import { astar } from '../astar.js';
-import { buildEnemy } from '../builders/enemy.js';
 import { buildDrone } from '../builders/drone.js';
+import { buildEnemyMesh } from '../builders/enemyGLTF.js';
+import { crossfade } from '../builders/enemyAnimations.js';
 import { wallMeshes } from '../level.js';
 import { spawnTracer } from '../fx/tracers.js';
 import { player } from './player.js';
@@ -63,16 +64,23 @@ const NUM_ENEMIES = 10;
 // ── Enemies array ─────────────────────────────────────────────────
 export function spawnEnemyIntoSlot(e) {
   if (e.mesh) scene.remove(e.mesh);
+  if (e.mixer) e.mixer.stopAllAction();
   const used = enemies
     .filter((en) => en !== e && !en.dead)
     .map((en) => [Math.floor(en.x / CELL), Math.floor(en.z / CELL)]);
   const [mc, mr] = randomSpawnCell(used);
   const patrol = randomPatrol(mc, mr, 2);
-  const { mesh, muzzleFlash, animT } = buildEnemy(mc * CELL + CELL / 2, mr * CELL + CELL / 2);
+  const { mesh, muzzleFlash, mixer, actions, facingOffset = 0 } = buildEnemyMesh(
+    mc * CELL + CELL / 2,
+    mr * CELL + CELL / 2
+  );
   Object.assign(e, {
     mesh,
     muzzleFlash,
-    animT,
+    mixer,
+    actions,
+    facingOffset,
+    currentClip: 'idle',
     x: mc * CELL + CELL / 2,
     z: mr * CELL + CELL / 2,
     hp: ENEMY_HP,
@@ -101,6 +109,8 @@ export function spawnEnemyIntoSlot(e) {
     stunTimer: 0,
     onGround: true,
     jumpCd: 0,
+    jumpPhase: '',
+    jumpPhaseTimer: 0,
   });
 }
 
@@ -109,11 +119,17 @@ export const enemies = Array.from({ length: NUM_ENEMIES }, (_) => {
   const [mc, mr] = randomSpawnCell(usedCells);
   usedCells.push([mc, mr]);
   const patrol = randomPatrol(mc, mr, 2);
-  const { mesh, muzzleFlash, animT } = buildEnemy(mc * CELL + CELL / 2, mr * CELL + CELL / 2);
+  const { mesh, muzzleFlash, mixer, actions, facingOffset = 0 } = buildEnemyMesh(
+    mc * CELL + CELL / 2,
+    mr * CELL + CELL / 2
+  );
   return {
     mesh,
     muzzleFlash,
-    animT,
+    mixer,
+    actions,
+    facingOffset,
+    currentClip: 'idle',
     x: mc * CELL + CELL / 2,
     z: mr * CELL + CELL / 2,
     hp: ENEMY_HP,
@@ -142,8 +158,16 @@ export const enemies = Array.from({ length: NUM_ENEMIES }, (_) => {
     stunTimer: 0,
     onGround: true,
     jumpCd: 0,
+    jumpPhase: '',
+    jumpPhaseTimer: 0,
   };
 });
+
+// ── Rebuild all enemies with the current buildEnemyMesh (call after GLTF loads) ──
+export function rebuildAllEnemies() {
+  enemies.forEach((e) => spawnEnemyIntoSlot(e));
+  rebuildEHM();
+}
 
 // ── triggerDeath lives here because it reads wave ─────────────────
 export function triggerDeath() {
@@ -155,15 +179,26 @@ export function triggerDeath() {
   ov.innerHTML = `<div class="dead-h">KILLED IN ACTION</div><div class="stat">Kills: ${player.kills}</div><div class="stat" style="color:#333;margin-top:6px">Wave ${wave} — the vibes remain hostile</div><button onclick="location.reload()" style="margin-top:28px;padding:12px 52px;background:#e74c3c;color:#fff;border:none;font-family:'Courier New',monospace;font-size:14px;letter-spacing:4px;cursor:pointer">[ REDEPLOY ]</button>`;
 }
 
+// ── Dying list — dead enemies whose death animation still needs to play ──
+const dyingEnemies = [];
+
 // ── Kill functions ────────────────────────────────────────────────
 export function killEnemy(e) {
   e.dead = true;
-  scene.remove(e.mesh);
+  rebuildEHM(); // remove from hit-targets immediately
   player.kills++;
   document.getElementById('kills-num').textContent = player.kills;
   showMsg('ENEMY DOWN');
-  rebuildEHM();
   spawnAmmoDrop(e.x, e.z);
+
+  if (e.actions && e.actions.death) {
+    crossfade(e, 'death', 0.08);
+    e.dyingTimer = 2.2; // remove mesh after death clip finishes
+    dyingEnemies.push(e);
+  } else {
+    scene.remove(e.mesh);
+  }
+
   if (enemies.every((en) => en.dead)) {
     wave++;
     showMsg(`ZONE CLEARED — WAVE ${wave - 1} COMPLETE`, 3500);
@@ -345,17 +380,55 @@ function hasLOS(ax, ay, az, bx, by, bz) {
   return _los.intersectObjects(wallMeshes, false).length === 0;
 }
 
-function animateEnemyLegs(e, dt, moving) {
-  const spd = moving ? (e.state === 'attack' ? 5 : 2.5) : 0;
-  e.animT += dt * spd;
-  const kids = e.mesh.children;
-  const sw = Math.sin(e.animT) * 0.35;
-  if (kids[2]) kids[2].rotation.x = sw;
-  if (kids[3]) kids[3].rotation.x = -sw;
-  if (kids[6]) kids[6].rotation.x = -sw * 0.6;
-  if (kids[7]) kids[7].rotation.x = sw * 0.6;
-  if (kids[12]) kids[12].rotation.x = -sw * 0.5;
-  if (kids[13]) kids[13].rotation.x = sw * 0.5;
+const E_JUMP_START_DUR = 0.32;
+const E_JUMP_LAND_DUR  = 0.38;
+
+function tickEnemyAnimation(e, dt, isMoving) {
+  // ── Jump-phase tracking (mirrors player logic) ───────────────────
+  const nowOnGround = e.onGround;
+  if (!e._prevOnGround && nowOnGround) {
+    e.jumpPhase = 'land';
+    e.jumpPhaseTimer = E_JUMP_LAND_DUR;
+  } else if (e._prevOnGround && !nowOnGround) {
+    e.jumpPhase = 'start';
+    e.jumpPhaseTimer = E_JUMP_START_DUR;
+  }
+  e._prevOnGround = nowOnGround;
+  if (e.jumpPhase === 'start') {
+    e.jumpPhaseTimer -= dt;
+    if (e.jumpPhaseTimer <= 0) e.jumpPhase = nowOnGround ? '' : 'loop';
+  }
+  if (e.jumpPhase === 'land') {
+    e.jumpPhaseTimer -= dt;
+    if (e.jumpPhaseTimer <= 0) e.jumpPhase = '';
+  }
+
+  let clip;
+  if (e.jumpPhase === 'land' && e.actions.jump_land) {
+    clip = 'jump_land';
+  } else if (!nowOnGround) {
+    if (e.jumpPhase === 'start' && e.actions.jump_start) clip = 'jump_start';
+    else clip = e.actions.jump_loop ? 'jump_loop' : 'idle';
+  } else if (e.stunTimer > 0 && e.actions.hit) {
+    // hit-stagger: play once, don't override with walk mid-stagger
+    clip = 'hit';
+  } else if (e.crouching) {
+    // prefer crouch variants; fall back to idle/walk if GLTF lacks them
+    if (isMoving) clip = e.actions.crouch_walk ? 'crouch_walk' : 'walk';
+    else          clip = e.actions.crouch       ? 'crouch'      : 'idle';
+  } else if (e.state === 'attack') {
+    if (isMoving) {
+      clip = 'run';
+    } else if (e.muzzleFlashT > 0 && e.actions.shoot) {
+      clip = 'shoot'; // Pistol_Shoot for the actual fire moment
+    } else {
+      clip = 'attack'; // Pistol_Idle_Loop — aiming stance between shots
+    }
+  } else {
+    clip = isMoving ? 'walk' : 'idle';
+  }
+  crossfade(e, clip);
+  e.mixer.update(dt);
 }
 
 export function updateEnemies(ts, dt) {
@@ -507,7 +580,7 @@ export function updateEnemies(ts, dt) {
       }
     }
 
-    animateEnemyLegs(e, dt, isMoving);
+    tickEnemyAnimation(e, dt, isMoving);
     if (e.state === 'attack') {
       if (!e.crouching && e.crouchTimer <= 0 && Math.random() < 0.008) {
         e.crouching = true;
@@ -535,7 +608,9 @@ export function updateEnemies(ts, dt) {
         e.mesh.position.y = eGround;
       } else e.mesh.position.y = newY;
     }
-    const crOff = e.crouching ? -0.45 : 0;
+    // crOff compensates for procedural mesh pivot being at centre (scale squash pulls it up).
+    // GLTF pivot is at the feet, so no offset needed — animation handles crouch visually.
+    const crOff = (!e.facingOffset && e.crouching) ? -0.45 : 0;
     e.bobT += dt * (e.state === 'attack' ? 3.8 : 1.6);
     if (e.onGround)
       e.mesh.position.set(
@@ -547,8 +622,13 @@ export function updateEnemies(ts, dt) {
       e.mesh.position.x = e.x;
       e.mesh.position.z = e.z;
     }
-    e.mesh.scale.y += ((e.crouching ? 0.6 : 1) - e.mesh.scale.y) * Math.min(1, dt * 10);
-    e.mesh.rotation.y = e.facingY;
+    // GLTF enemies use Crouch_Idle_Loop/Crouch_Fwd_Loop — skip Y-squash so the rig doesn't deform
+    if (!e.facingOffset) {
+      e.mesh.scale.y += ((e.crouching ? 0.6 : 1) - e.mesh.scale.y) * Math.min(1, dt * 10);
+    } else {
+      e.mesh.scale.y = 1; // always 1 for GLTF; animation handles the visual
+    }
+    e.mesh.rotation.y = e.facingY + (e.facingOffset ?? 0);
     if (e.muzzleFlashT > 0) {
       e.muzzleFlash.material.opacity = e.muzzleFlashT / 55;
       e.muzzleFlashT = Math.max(0, e.muzzleFlashT - dt * 1000);
@@ -578,4 +658,15 @@ export function updateEnemies(ts, dt) {
     e.radarAge += dt;
   }
   if (activeDrone && !activeDrone.dead) updateDrone(activeDrone, dt);
+
+  // ── Tick dying enemies (death animation plays, then mesh removed) ─
+  for (let i = dyingEnemies.length - 1; i >= 0; i--) {
+    const e = dyingEnemies[i];
+    e.mixer.update(dt);
+    e.dyingTimer -= dt;
+    if (e.dyingTimer <= 0) {
+      scene.remove(e.mesh);
+      dyingEnemies.splice(i, 1);
+    }
+  }
 }

@@ -4,14 +4,16 @@ import { camera } from './scene.js';
 import { debugLines } from './level.js';
 import { locked, gameRunning, setGameRunning } from './input.js';
 import { player, startReload } from './entities/player.js';
-import { spawnNewDrone } from './entities/enemies.js';
+import { spawnNewDrone, rebuildAllEnemies } from './entities/enemies.js';
 import { tryThrowGrenade } from './entities/grenades.js';
 import { tryShoot, rebuildEHM } from './combat/shoot.js';
 import { updateHUD, showMsg, showStatus } from './hud/overlay.js';
 import { startLoop, setThirdPerson, getThirdPerson, toggleTpSide } from './loop.js';
+import { tryLoadEnemyGLTF, buildPlayerMesh } from './builders/enemyGLTF.js';
+import { setSkeletonDebugVisible } from './builders/enemyAnimations.js';
 
 const _euler = new THREE.Euler(0, 0, 0, 'YXZ');
-let debugVisible = false;
+let debugVisible = true; // debug ON by default
 
 // ── Input: game-action handlers ────────────────────────────────────
 document.addEventListener('keydown', (e) => {
@@ -26,6 +28,7 @@ document.addEventListener('keydown', (e) => {
   if (e.code === 'F3') {
     debugVisible = !debugVisible;
     if (debugLines) debugLines.visible = debugVisible;
+    setSkeletonDebugVisible(debugVisible);
   }
   if (e.code === 'KeyV') {
     setThirdPerson(!getThirdPerson());
@@ -50,7 +53,11 @@ document.addEventListener('mousedown', (e) => {
     }
     if (locked && gameRunning) tryShoot();
   }
-  if (e.button === 2 && locked && gameRunning) tryThrowGrenade();
+  if (e.button === 1 && locked && gameRunning) tryThrowGrenade(); // middle mouse
+  if (e.button === 2 && locked && gameRunning) player.aiming = true; // RMB aim
+});
+document.addEventListener('mouseup', (e) => {
+  if (e.button === 2) player.aiming = false;
 });
 
 // ── Start button ───────────────────────────────────────────────────
@@ -68,4 +75,13 @@ document.getElementById('c').addEventListener('click', () => {
 });
 
 // ── Kick off ───────────────────────────────────────────────────────
-startLoop();
+if (debugLines) debugLines.visible = debugVisible;
+window.loadGLTF = tryLoadEnemyGLTF; // also callable manually from console
+(async () => {
+  const loaded = await tryLoadEnemyGLTF();
+  if (loaded) {
+    rebuildAllEnemies(); // swap procedural placeholders for GLTF enemies
+    buildPlayerMesh();   // create the player's own GLTF instance
+  }
+  startLoop();
+})();

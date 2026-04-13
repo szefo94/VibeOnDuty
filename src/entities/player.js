@@ -52,10 +52,15 @@ export const player = {
   airVelX: 0,
   airVelZ: 0,
   slowTimer: 0,  // set by drone EMP pulse
-  lean: 0,       // -1 = left (Q), 0 = upright, 1 = right (E), smoothed
+  lean: 0,         // -1 = left (Q), 0 = upright, 1 = right (E), smoothed
   diving: false,
-  diveTimer: 0,  // counts down after landing, holds forward pitch
-  divePitch: 0,  // extra pitch added to camera during/after dive, lerped out
+  diveTimer: 0,    // counts down after landing, holds forward pitch
+  rollTimer: 0,    // counts down from ROLL_ANIM_DUR; drives roll animation in loop.js
+  divePitch: 0,    // extra pitch added to camera during/after dive, lerped out
+  moving: false,   // true when player has non-zero horizontal velocity this frame
+  aiming: false,   // RMB held
+  aimT: 0,         // 0=hip, 1=full ADS — lerped each frame
+  thirdPerson: false, // mirror of loop.js tpTransition>0.5 — written by loop.js
 };
 
 export const visited = Array.from({ length: MAP_H }, () => new Uint8Array(MAP_W));
@@ -68,6 +73,7 @@ const LEAN_SPEED = 3.5;         // smoothing speed (lower = slower lean)
 const DIVE_SPEED = 12;          // horizontal launch speed
 const DIVE_LAUNCH_Y = 2.8;      // upward kick on dive
 const DIVE_DUR = 0.55;          // seconds camera stays pitched forward after landing
+const ROLL_ANIM_DUR = 1.467;    // Roll clip duration from enemy.glb — slide timed to match
 
 export function startReload() {
   if (player.reloading || player.reserve <= 0) return;
@@ -90,6 +96,7 @@ export function updatePlayer(dt) {
     player.diving = true;
     player.onGround = false;
     player.velY = DIVE_LAUNCH_Y;
+    player.rollTimer = ROLL_ANIM_DUR;
     const fwd = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
     player.airVelX = fwd.x * DIVE_SPEED;
     player.airVelZ = fwd.z * DIVE_SPEED;
@@ -209,7 +216,8 @@ export function updatePlayer(dt) {
         player.diving = false;
         player.diveTimer = DIVE_DUR;
         player.sliding = true;
-        player.slideTimer = SLIDE_DUR * 1.4;
+        // Slide lasts exactly as long as the remaining roll animation so they end together
+        player.slideTimer = player.rollTimer;
         player.slideCancelAvail = true;
         player.slideVel = new THREE.Vector3(player.airVelX, 0, player.airVelZ)
           .normalize()
@@ -267,6 +275,10 @@ export function updatePlayer(dt) {
       if (vc >= 0 && vr >= 0 && vc < MAP_W && vr < MAP_H) visited[vr][vc] = 1;
     }
 
+  player.moving = moving;
+  if (player.rollTimer > 0) player.rollTimer = Math.max(0, player.rollTimer - dt);
+  const adsTarget = player.aiming && !player.sliding && !player.diving ? 1 : 0;
+  player.aimT += (adsTarget - player.aimT) * Math.min(1, dt * 14);
   updateWeapon(dt, moving, sprint, player.crouching, player.sliding);
   tickImpacts(dt);
   tickTracers(dt);

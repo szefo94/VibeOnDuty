@@ -1,6 +1,6 @@
 import { renderer, scene, camera } from './scene.js';
-import { PLAYER_H } from './config.js';
-import { gameRunning } from './input.js';
+import { PLAYER_H, PLAYER_H_CROUCH } from './config.js';
+import { gameRunning, keys } from './input.js';
 import { player, updatePlayer, LEAN_SHIFT } from './entities/player.js';
 import { playerBody } from './builders/playerBody.js';
 import { wpn } from './builders/weapon.js';
@@ -8,6 +8,19 @@ import { updateEnemies, tickWave } from './entities/enemies.js';
 import { tickTorches } from './lighting.js';
 import { drawHUD } from './hud/hud.js';
 import { drawMinimap } from './hud/radar.js';
+import { playerMesh, playerMixer, playerActions } from './builders/enemyGLTF.js';
+import { crossfade } from './builders/enemyAnimations.js';
+
+// Shared animation state object for the player — same shape crossfade() expects
+const playerAnim = { actions: null, currentClip: 'idle' };
+
+// ── Player jump-phase state ───────────────────────────────────────────────
+// Tracks jump_start → jump_loop → jump_land sequence with timers
+let prevPlayerOnGround = true;
+let jumpPhase = '';       // 'start' | 'loop' | 'land' | ''
+let jumpPhaseTimer = 0;
+const JUMP_START_DUR = 0.32; // seconds before transitioning start → loop
+const JUMP_LAND_DUR  = 0.38; // seconds to hold landing pose
 
 // ── Third-person state ────────────────────────────────────────────────
 // thirdPerson: semantic bool (what mode we're in)
@@ -20,6 +33,7 @@ let tpTransition = 0;
 export function setThirdPerson(v) {
   thirdPerson = v;
   tpTarget = v ? 1 : 0;
+  player.thirdPerson = v;
 }
 export function getThirdPerson() {
   return thirdPerson;
@@ -45,21 +59,91 @@ export function loop(ts) {
   last = ts;
   if (gameRunning) {
     updatePlayer(dt);
-    // keep body positioned whenever any transition is active
+
+    // ── Player body: GLTF mannequin if loaded, else procedural ───────
+    const bodyTarget = playerMesh || playerBody;
     if (tpTransition > 0.01) {
-      playerBody.position.set(camera.position.x, camera.position.y - PLAYER_H, camera.position.z);
-      playerBody.rotation.y = player.yaw + Math.PI;
+      const eyeH = (player.crouching || player.sliding) ? PLAYER_H_CROUCH : PLAYER_H;
+      bodyTarget.position.set(camera.position.x, camera.position.y - eyeH, camera.position.z);
+      // Mannequin faces +Z at rotation.y=0; player.yaw+PI makes it face forward (same as look dir)
+      bodyTarget.rotation.y = player.yaw + Math.PI;
     }
+
+    // ── Player jump-phase bookkeeping ────────────────────────────────
+    if (!prevPlayerOnGround && player.onGround) {
+      // just landed
+      jumpPhase = 'land';
+      jumpPhaseTimer = JUMP_LAND_DUR;
+    } else if (prevPlayerOnGround && !player.onGround && !player.diving) {
+      // just left ground (jumped — not a dive)
+      jumpPhase = 'start';
+      jumpPhaseTimer = JUMP_START_DUR;
+    }
+    prevPlayerOnGround = player.onGround;
+    if (jumpPhase === 'start') {
+      jumpPhaseTimer -= dt;
+      if (jumpPhaseTimer <= 0) jumpPhase = player.onGround ? '' : 'loop';
+    }
+    if (jumpPhase === 'land') {
+      jumpPhaseTimer -= dt;
+      if (jumpPhaseTimer <= 0) jumpPhase = '';
+    }
+
+    // ── Player animation ─────────────────────────────────────────────
+    if (playerMesh && playerMixer) {
+      // Sync action table once playerActions is populated after load
+      if (!playerAnim.actions && playerActions) playerAnim.actions = playerActions;
+
+      if (playerAnim.actions) {
+        const a = playerAnim.actions;
+        let clip;
+        const sprint = keys['ShiftLeft'] || keys['ShiftRight'];
+
+        if (player.dead && a.death) {
+          clip = 'death';
+        } else if (player.rollTimer > 0 && a.roll) {
+          clip = 'roll';
+        } else if (jumpPhase === 'land' && a.jump_land) {
+          clip = 'jump_land';
+        } else if (!player.onGround) {
+          if (jumpPhase === 'start' && a.jump_start) clip = 'jump_start';
+          else clip = a.jump_loop ? 'jump_loop' : 'idle';
+        } else if (player.reloading && a.reload) {
+          clip = 'reload';
+        } else if (player.crouching || player.sliding) {
+          clip = player.moving
+            ? (a.crouch_walk ? 'crouch_walk' : 'walk')
+            : (a.crouch      ? 'crouch'      : 'idle');
+        } else if (player.aiming && a.attack) {
+          clip = 'attack'; // Pistol_Idle_Loop — aiming stance
+        } else if (player.moving) {
+          clip = sprint && a.run ? 'run' : 'walk';
+        } else {
+          clip = 'idle';
+        }
+        crossfade(playerAnim, clip);
+      }
+    }
+
     updateEnemies(ts, dt);
     tickTorches(dt);
     tickWave(dt);
   }
 
+  // ── Player mixer ticks even when dead so death animation plays ───
+  if (playerMesh && playerMixer) playerMixer.update(dt);
+
   // ── Transition lerp + visibility handoff ─────────────────────────
   tpTransition += (tpTarget - tpTransition) * Math.min(1, TP_SPEED * dt);
-  // weapon visible in 1st-person region, body visible once camera starts pulling back
+  const bodyVisible = tpTransition > 0.05;
   wpn.visible = tpTransition < 0.15;
-  playerBody.visible = tpTransition > 0.05;
+  // Show GLTF player when loaded, hide procedural fallback, or show procedural if no GLTF
+  if (playerMesh) {
+    playerMesh.visible = bodyVisible;
+    playerBody.visible = false;
+  } else {
+    playerBody.visible = bodyVisible;
+  }
 
   drawMinimap(dt);
   const eyeX = camera.position.x,
@@ -83,6 +167,13 @@ export function loop(ts) {
     eyeY + TP_HEIGHT * tpTransition,
     eyeZ + behZ * TP_BACK * tpTransition + rgtZ * TP_SIDE * tpSideSmooth * tpTransition + leanRZ
   );
+
+  // ── ADS FOV ─────────────────────────────────────────────────────────
+  const fovTarget = player.aiming ? 50 : 75;
+  if (camera.fov !== fovTarget) {
+    camera.fov += (fovTarget - camera.fov) * Math.min(1, dt * 14);
+    camera.updateProjectionMatrix();
+  }
 
   renderer.render(scene, camera);
 

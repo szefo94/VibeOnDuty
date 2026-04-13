@@ -45,11 +45,17 @@ export function updateWeapon(dt, moving, sprint, crouching, sliding) {
   const spd = sliding ? 4 : sprint ? 3.4 : crouching ? 1.2 : moving ? 2.1 : 0.22;
   bobT += dt * spd;
   const scale = crouching ? 0.4 : sliding ? 0.15 : 1;
-  const bY = moving ? Math.sin(bobT) * 0.007 * (sprint ? 1.4 : 1) * scale : 0;
-  const bX = moving ? Math.sin(bobT * 0.5) * 0.003 * scale : 0;
+  const aimT = player.aimT;
+  const hipBobScale = 1 - aimT * 0.9; // damp bob while aiming
+  const bY = moving ? Math.sin(bobT) * 0.007 * (sprint ? 1.4 : 1) * scale * hipBobScale : 0;
+  const bX = moving ? Math.sin(bobT * 0.5) * 0.003 * scale * hipBobScale : 0;
   const rc = recoilT > 0 ? recoilT / 100 : 0;
   const crOff = crouching ? -0.04 : sliding ? 0.02 : 0;
-  wpn.position.set(0.11 + bX, -0.105 + bY + rc * 0.024 + crOff, -0.2 - rc * 0.055);
+  // Lerp between hip (0.11, -0.105, -0.2) and ADS centre (0, -0.09, -0.16)
+  const wpnX = 0.11 * (1 - aimT) + bX;
+  const wpnY = (-0.105 + (-0.09 - -0.105) * aimT) + bY + rc * 0.024 + crOff;
+  const wpnZ = (-0.2 + (-0.16 - -0.2) * aimT) - rc * 0.055;
+  wpn.position.set(wpnX, wpnY, wpnZ);
   wpn.rotation.x = rc * 0.07 + (sliding ? 0.15 : 0);
   recoilT = Math.max(0, recoilT - dt * 200);
   if (muzzleT > 0) {
@@ -192,7 +198,23 @@ export function tryShoot() {
     .addScaledVector(right, (Math.random() - 0.5) * 2 * ca)
     .addScaledVector(up, (Math.random() - 0.5) * 2 * ca)
     .normalize();
-  const bw = new THREE.Vector3(0, 0.012, -0.54).applyMatrix4(wpn.matrixWorld);
-  spawnBullet(bw, dir);
+
+  let origin;
+  if (player.thirdPerson) {
+    // Spawn bullet at player's gun-hand area; aim toward crosshair target point.
+    // camera.position is always the player eye (restored after render).
+    const fwd = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
+    const rgt = new THREE.Vector3(Math.cos(player.yaw), 0, -Math.sin(player.yaw));
+    origin = camera.position.clone()
+      .addScaledVector(fwd, 0.45)   // in front of body
+      .addScaledVector(rgt, 0.28)   // gun-hand side
+      .add(new THREE.Vector3(0, -0.28, 0)); // chest height, not eye
+    // Correct bullet dir so it still hits crosshair target despite offset origin
+    const targetPt = camera.position.clone().addScaledVector(dir, 80);
+    dir.copy(targetPt.sub(origin).normalize());
+  } else {
+    origin = new THREE.Vector3(0, 0.012, -0.54).applyMatrix4(wpn.matrixWorld);
+  }
+  spawnBullet(origin, dir);
   if (player.ammo === 0) startReload();
 }
