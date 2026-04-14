@@ -21,7 +21,7 @@ const PALETTE = {
   'Material.004': new THREE.MeshStandardMaterial({ color: 0x22252a, roughness: 0.6,  metalness: 0.5 }), // rail/details
 };
 
-export async function tryLoadWeaponFBX(path = '/models/FBX/P90.fbx') {
+export async function tryLoadWeaponFBX(path = import.meta.env.BASE_URL + 'models/FBX/P90.fbx') {
   try {
     const probe = await fetch(path, { method: 'HEAD' });
     if (!probe.ok) return false;
@@ -78,7 +78,7 @@ const P90_GRIP = new THREE.Vector3(-0.02, 0.0, 0.05);
 
 let _p90HandTemplate = null;
 
-export async function tryLoadP90ForHand(path = '/models/FBX/P90.fbx') {
+export async function tryLoadP90ForHand(path = import.meta.env.BASE_URL + 'models/FBX/P90.fbx') {
   try {
     const probe = await fetch(path, { method: 'HEAD' });
     if (!probe.ok) return false;

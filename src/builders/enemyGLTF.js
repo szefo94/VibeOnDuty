@@ -66,7 +66,7 @@ function findClip(animations, key) {
 export async function tryLoadEnemyGLTF() {
   // HEAD probe first so no 404 noise when file is absent
   try {
-    const probe = await fetch('/models/enemy.glb', { method: 'HEAD' });
+    const probe = await fetch(import.meta.env.BASE_URL + 'models/enemy.glb', { method: 'HEAD' });
     if (!probe.ok) return false;
   } catch {
     return false;
@@ -74,7 +74,7 @@ export async function tryLoadEnemyGLTF() {
 
   try {
     const loader = new GLTFLoader();
-    const gltf = await loader.loadAsync('/models/enemy.glb');
+    const gltf = await loader.loadAsync(import.meta.env.BASE_URL + 'models/enemy.glb');
     gltfTemplate = gltf;
     usingGLTF = true;
     const found = CLIP_KEYS.filter((k) => findClip(gltf.animations, k));

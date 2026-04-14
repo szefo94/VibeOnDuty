@@ -24,13 +24,13 @@ let _template = null;
 
 export async function tryLoadPistolFBX() {
   try {
-    const probe = await fetch('/models/FBX/Pistol.fbx', { method: 'HEAD' });
+    const probe = await fetch(import.meta.env.BASE_URL + 'models/FBX/Pistol.fbx', { method: 'HEAD' });
     if (!probe.ok) return false;
   } catch { return false; }
 
   try {
     const loader = new FBXLoader();
-    const fbx    = await loader.loadAsync('/models/FBX/Pistol.fbx');
+    const fbx    = await loader.loadAsync(import.meta.env.BASE_URL + 'models/FBX/Pistol.fbx');
 
     // ── 1. Collect all SkinnedMeshes with their full world transforms ────────
     //    The FBX has nested groups (scale:100 inside scale:100) that push the
