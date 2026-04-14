@@ -6,7 +6,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     rollupOptions: {
-      input: 'fps3d.html',
+      input: 'index.html',
     },
   },
 });

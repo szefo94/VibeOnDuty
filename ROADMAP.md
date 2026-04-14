@@ -161,39 +161,51 @@ composite helmet (brim + dome + cheek straps), visor, assault rifle at hip.
 
 ---
 
-## Phase 6 — GLTF assets + skeletal animation (PLANNED)
+## Phase 6 — GLTF assets + skeletal animation ✅ PARTIALLY DONE
 
-### 6.1 — Asset pipeline
+### 6.1 — Asset pipeline ✅ DONE
 
-Load `.glb` files from `public/models/` via `GLTFLoader` + optional `DRACOLoader`.
-Call `await loadAssets()` in `main.js` before `startLoop()`.
+`src/builders/enemyGLTF.js` — tries `public/models/enemy.glb` via `GLTFLoader` on startup.
+`main.js` wraps `startLoop()` in an async IIFE: `await tryLoadEnemyGLTF(); startLoop();`
+Falls back silently to procedural enemies if no file is found.
 
-**Free CC0 sources:**
+**Free CC0 sources for `public/models/enemy.glb`:**
 - [Quaternius](https://quaternius.com) — low-poly stylised soldiers, robots (CC0)
 - [Kenney.nl](https://kenney.nl/assets) — blocky sci-fi soldiers, drones (CC0)
 - [Mixamo](https://www.mixamo.com) — auto-rig + walk/run/shoot/death animations (free with Adobe account, export GLB via Blender)
 
-### 6.2 — AnimationMixer
+**Expected animation clip names** (any alias accepted):
 
-Replace `animT` leg bob with `AnimationMixer` + `SkeletonUtils.clone`.
-State → clip mapping: `patrol` → walk (0.6×), `spotted` → run, `attack` → shoot (looped), death → death (clamp + remove).
-Use `crossfade(e, clipName, dur)` helper for smooth transitions.
+| State | Accepted names |
+|-------|---------------|
+| idle | `Idle`, `idle`, `T-Pose` |
+| walk | `Walk`, `walk`, `Walking` |
+| run | `Run`, `run`, `Running` |
+| attack | `Shoot`, `shoot`, `Attack`, `attack` |
 
-### Implementation order
+### 6.2 — AnimationMixer ✅ DONE
 
-| Step | File(s) | Effort |
-|------|---------|--------|
-| Load GLTF | `src/builders/enemyGLTF.js` (new), `src/main.js` | Low |
-| AnimationMixer | `src/builders/enemyGLTF.js`, `src/entities/enemies.js` | Medium |
-| Drone GLTF | `src/builders/droneGLTF.js` (new) | Low |
+`src/builders/enemyAnimations.js` — replaces manual `animateEnemyLegs` with proper `AnimationClip` + `AnimationMixer`.
 
-Old `builders/enemy.js` and `builders/drone.js` stay as fallbacks until GLTF path is proven.
+| Change | Notes |
+|--------|-------|
+| Named mesh children | `legL/R`, `thighL/R`, `kneeL/R`, `armSwingL/R` — targeted by `NumberKeyframeTrack` |
+| Shared clips | `idle / walk / run / attack` built once as sine-wave `AnimationClip`s, reused across all 10 enemy mixers |
+| Per-enemy mixer | `buildEnemyMixer(mesh)` — all actions pre-started at weight 0; idle starts at weight 1; random time offset so enemies don't step in sync |
+| Crossfade | `crossfade(e, clipName, dur=0.22)` — calls Three.js `crossFadeTo(action, dur, warp=true)` for smooth stride-synced transitions |
+| State → clip | `patrol/spotted` → `idle`/`walk`; `attack` → `run`/`attack` depending on movement |
+
+### 6.3 — Drone GLTF (PLANNED)
+
+Wire `src/builders/droneGLTF.js` once a drone GLB with rotor animation is available.
 
 ---
 
 ## Next up
 
-Phase 6 — GLTF assets + skeletal animation.
+Phase 6.3 — Drone GLTF (when `public/models/drone.glb` is available).
+
+Drop `public/models/enemy.glb` to activate GLTF enemies automatically — no code changes needed.
 
 Codebase health:
 - Fully modular ES modules under `src/`
