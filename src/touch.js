@@ -118,7 +118,8 @@ export function initTouch() {
 
       // ① Button ─────────────────────────────────────────────────────
       if (el?.classList.contains('tb')) {
-        touchRoles.set(t.identifier, { type: 'btn', el });
+        // Store start position so fire-button drag can feed touchLook
+        touchRoles.set(t.identifier, { type: 'btn', el, lastX: t.clientX, lastY: t.clientY });
         handleBtnDown(el);
         continue;
       }
@@ -155,6 +156,12 @@ export function initTouch() {
         touchLook.dy += t.clientY - lookLastY;
         lookLastX = t.clientX;
         lookLastY = t.clientY;
+      } else if (role.type === 'btn' && role.el.id === 'tb-fire') {
+        // Dragging the fire button also steers the camera — shoot + aim with one thumb
+        touchLook.dx += t.clientX - role.lastX;
+        touchLook.dy += t.clientY - role.lastY;
+        role.lastX = t.clientX;
+        role.lastY = t.clientY;
       }
     }
   }, { passive: false });
