@@ -146,11 +146,17 @@ export function initTouch() {
     () => { keys['ControlLeft'] = true;  },
     () => { keys['ControlLeft'] = false; }
   );
-  // ADS — hold (mirrors RMB)
-  btn('tb-ads',
-    () => { player.aiming = true;  },
-    () => { player.aiming = false; }
-  );
+  // ADS — toggle on tap (hold is impractical with two fingers on mobile)
+  const adsBtn = document.getElementById('tb-ads');
+  btn('tb-ads', () => {
+    player.aiming = !player.aiming;
+    adsBtn.style.background = player.aiming
+      ? 'rgba(232,200,74,0.35)'
+      : 'rgba(0,0,0,0.45)';
+    adsBtn.style.borderColor = player.aiming
+      ? 'rgba(232,200,74,0.7)'
+      : 'rgba(255,255,255,0.22)';
+  });
   // RELOAD
   btn('tb-reload', () => startReload());
   // GRENADE
