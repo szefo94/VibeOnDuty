@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>VIBE ON DUTY</title>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -39,6 +40,22 @@
     <div class="ctrl"><span class="key">F3</span><div class="desc">DEBUG</div></div>
   </div>
   <button id="startbtn">[ DROP IN ]</button>
+</div>
+<!-- Touch controls — display:none until initTouch() enables on touch devices -->
+<div id="touch-ui" style="display:none">
+  <div id="joy-zone">
+    <div id="joy-base"></div>
+    <div id="joy-thumb"></div>
+  </div>
+  <div id="look-zone">
+    <button class="tb" id="tb-fire">FIRE</button>
+    <button class="tb" id="tb-jump">JUMP</button>
+    <button class="tb" id="tb-ads">ADS</button>
+    <button class="tb tb-sm" id="tb-reload">RLD</button>
+    <button class="tb tb-sm" id="tb-nade">NADE</button>
+    <button class="tb tb-sm" id="tb-crouch">CRH</button>
+    <button class="tb tb-sm" id="tb-dive">DIVE</button>
+  </div>
 </div>
 <script type="module" src="src/main.js"></script>
 </body>

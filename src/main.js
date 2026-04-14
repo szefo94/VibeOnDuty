@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { MOUSE_SENS, MAX_AMMO } from './config.js';
 import { camera } from './scene.js';
 import { debugLines } from './level.js';
-import { locked, gameRunning, setGameRunning } from './input.js';
+import { locked, gameRunning, setGameRunning, setLocked } from './input.js';
+import { initTouch, isTouchDevice } from './touch.js';
 import { player, startReload } from './entities/player.js';
 import { spawnNewDrone, rebuildAllEnemies } from './entities/enemies.js';
 import { tryThrowGrenade } from './entities/grenades.js';
@@ -65,7 +66,12 @@ document.addEventListener('mouseup', (e) => {
 // ── Start button ───────────────────────────────────────────────────
 document.getElementById('startbtn').addEventListener('click', () => {
   document.getElementById('overlay').style.display = 'none';
-  document.getElementById('c').requestPointerLock();
+  if (isTouchDevice) {
+    // Pointer lock is unavailable on mobile — fake it so game logic works
+    setLocked(true);
+  } else {
+    document.getElementById('c').requestPointerLock();
+  }
   setGameRunning(true);
   rebuildEHM();
   updateHUD();
@@ -75,6 +81,9 @@ document.getElementById('startbtn').addEventListener('click', () => {
 document.getElementById('c').addEventListener('click', () => {
   if (gameRunning && !player.dead && !locked) document.getElementById('c').requestPointerLock();
 });
+
+// ── Touch controls ─────────────────────────────────────────────────
+initTouch();
 
 // ── Kick off ───────────────────────────────────────────────────────
 if (debugLines) debugLines.visible = debugVisible;

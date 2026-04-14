@@ -1,5 +1,7 @@
+import * as THREE from 'three';
 import { renderer, scene, camera } from './scene.js';
 import { PLAYER_H, PLAYER_H_CROUCH } from './config.js';
+import { touchLook } from './touch.js';
 import { gameRunning, keys } from './input.js';
 import { player, updatePlayer, LEAN_SHIFT } from './entities/player.js';
 import { playerBody } from './builders/playerBody.js';
@@ -58,10 +60,23 @@ const TP_BACK = 2.6,
   TP_HEIGHT = 0.12;
 const TP_SPEED = 4.5; // lerp speed — ~0.5 s end-to-end
 
+const _tEuler = new THREE.Euler(0, 0, 0, 'YXZ');
+const TOUCH_SENS = 0.005;
+
 let last = 0;
 export function loop(ts) {
   const dt = Math.min(0.05, (ts - last) / 1000);
   last = ts;
+
+  // ── Touch look (consumed once per frame) ─────────────────────────
+  if ((touchLook.dx || touchLook.dy) && gameRunning && !player.dead) {
+    player.yaw  -= touchLook.dx * TOUCH_SENS;
+    player.pitch = Math.max(-1.38, Math.min(1.38, player.pitch - touchLook.dy * TOUCH_SENS));
+    _tEuler.set(player.pitch, player.yaw, 0);
+    camera.quaternion.setFromEuler(_tEuler);
+  }
+  touchLook.dx = touchLook.dy = 0;
+
   if (gameRunning) {
     updatePlayer(dt);
 

@@ -85,7 +85,7 @@ export function startReload() {
 
 export function updatePlayer(dt) {
   if (player.dead) return;
-  if (mouseHeld && locked) tryShoot();
+  if ((mouseHeld || keys['TouchFire']) && locked) tryShoot();
   if (player.slowTimer > 0) player.slowTimer = Math.max(0, player.slowTimer - dt);
 
   const sprint = keys['ShiftLeft'] || keys['ShiftRight'];

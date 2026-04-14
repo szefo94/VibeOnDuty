@@ -6,6 +6,9 @@ export let locked = false,
 export function setGameRunning(v) {
   gameRunning = v;
 }
+export function setLocked(v) {
+  locked = v;
+}
 
 document.addEventListener('keydown', (e) => {
   keys[e.code] = true;
