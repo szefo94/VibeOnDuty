@@ -30,6 +30,11 @@ let thirdPerson = false;
 let tpTarget = 0;
 let tpTransition = 0;
 
+// Smoothed camera Y — slow-lerps during roll so camera flows down/up
+// instead of jumping abruptly with the body position.
+let tpCamY = 0;
+let tpCamYReady = false; // initialised to real eyeY on first frame
+
 export function setThirdPerson(v) {
   thirdPerson = v;
   tpTarget = v ? 1 : 0;
@@ -150,6 +155,18 @@ export function loop(ts) {
     eyeY = camera.position.y,
     eyeZ = camera.position.z;
 
+  // ── Smoothed camera Y for 3rd-person roll ────────────────────────
+  // During roll: slow lerp so camera flows down to crouch level then back up.
+  // Normally: fast lerp so camera still follows (prevents drift after mode switch).
+  // In 1st person: snap immediately (no visible effect there).
+  if (!tpCamYReady) { tpCamY = eyeY; tpCamYReady = true; }
+  if (tpTransition > 0.01) {
+    const camLerpSpeed = player.rollTimer > 0 ? 3.5 : 9;
+    tpCamY += (eyeY - tpCamY) * Math.min(1, dt * camLerpSpeed);
+  } else {
+    tpCamY = eyeY; // snap in 1st person — no lag when switching
+  }
+
   // ── Lean offset (1st person only) ────────────────────────────────
   const leanOff = player.lean * LEAN_SHIFT * (1 - tpTransition);
   const leanRX = Math.cos(player.yaw) * leanOff;
@@ -164,7 +181,7 @@ export function loop(ts) {
 
   camera.position.set(
     eyeX + behX * TP_BACK * tpTransition + rgtX * TP_SIDE * tpSideSmooth * tpTransition + leanRX,
-    eyeY + TP_HEIGHT * tpTransition,
+    tpCamY + TP_HEIGHT * tpTransition,
     eyeZ + behZ * TP_BACK * tpTransition + rgtZ * TP_SIDE * tpSideSmooth * tpTransition + leanRZ
   );
 

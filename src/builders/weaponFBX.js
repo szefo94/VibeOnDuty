@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import { wpn, flash } from './weapon.js';
 
-// ── Tuning constants ──────────────────────────────────────────────────────────
+// ── Tuning constants — FPV P90 ────────────────────────────────────────────────
 // P90.fbx is ~1108 FBX units long → ~0.55 m at this scale
 const SCALE   = 0.0005;
 // Flip if barrel faces the wrong way after loading (try Math.PI if it's backwards)
@@ -60,4 +60,79 @@ export async function tryLoadWeaponFBX(path = '/models/FBX/P90.fbx') {
     console.warn('[Weapon] Failed to load P90.fbx:', err);
     return false;
   }
+}
+
+// ── P90 in player hand (3rd-person) ──────────────────────────────────────────
+// Separate from FPV weapon — baked plain Mesh, auto-scaled, attached to hand_r.
+
+// Longest axis of P90 (barrel along Z) mapped to TARGET_LEN world units
+const P90_TARGET_LEN = 0.52; // ~52 cm — realistic SMG length in scene
+
+// Rotation in hand_r bone-local space.
+// hand_r palm faces roughly +Y, fingers point +X in Quaternius rig.
+// P90 barrel runs along +Z in FBX → rotate so barrel goes along +X (finger dir).
+const P90_ROT = new THREE.Euler(Math.PI / 2, Math.PI / 2, 0);
+
+// Nudge so grip sits in palm
+const P90_GRIP = new THREE.Vector3(-0.02, 0.0, 0.05);
+
+let _p90HandTemplate = null;
+
+export async function tryLoadP90ForHand(path = '/models/FBX/P90.fbx') {
+  try {
+    const probe = await fetch(path, { method: 'HEAD' });
+    if (!probe.ok) return false;
+  } catch { return false; }
+
+  try {
+    const loader = new FBXLoader();
+    const fbx    = await loader.loadAsync(path);
+    fbx.updateMatrixWorld(true);
+
+    const group = new THREE.Group();
+    fbx.traverse(ch => {
+      if (!ch.isMesh && !ch.isSkinnedMesh) return;
+      const remap = m => PALETTE[m?.name] ?? m;
+      const mats  = Array.isArray(ch.material)
+        ? ch.material.map(remap)
+        : remap(ch.material);
+      const mesh = new THREE.Mesh(ch.geometry, mats);
+      mesh.applyMatrix4(ch.matrixWorld);
+      mesh.castShadow = mesh.receiveShadow = false;
+      group.add(mesh);
+    });
+
+    if (!group.children.length) {
+      console.warn('[P90Hand] No mesh found in P90.fbx');
+      return false;
+    }
+
+    // Auto-scale to target length
+    const rawBox  = new THREE.Box3().setFromObject(group);
+    const rawSize = rawBox.getSize(new THREE.Vector3());
+    const longest = Math.max(rawSize.x, rawSize.y, rawSize.z);
+    group.scale.setScalar(P90_TARGET_LEN / longest);
+
+    // Centre then apply grip nudge
+    group.updateMatrixWorld(true);
+    const center = new THREE.Box3().setFromObject(group).getCenter(new THREE.Vector3());
+    group.position.sub(center).add(P90_GRIP);
+    group.rotation.copy(P90_ROT);
+
+    _p90HandTemplate = group;
+
+    const s = P90_TARGET_LEN / longest;
+    console.log(`[P90Hand] loaded — ${(rawSize.x*s).toFixed(3)} × ${(rawSize.y*s).toFixed(3)} × ${(rawSize.z*s).toFixed(3)} m`);
+    return true;
+  } catch (err) {
+    console.warn('[P90Hand] Failed to load P90.fbx for hand:', err);
+    return false;
+  }
+}
+
+export function attachP90ToPlayerHand(playerRoot) {
+  if (!_p90HandTemplate) return;
+  const hand = playerRoot.getObjectByName('hand_r');
+  if (!hand) { console.warn('[P90Hand] hand_r not found in player mesh'); return; }
+  hand.add(_p90HandTemplate.clone());
 }
