@@ -5,7 +5,7 @@ test.describe('VIBE ON DUTY — smoke tests', () => {
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
 
-    await page.goto('/fps3d.html');
+    await page.goto('/');
 
     // Title is correct
     await expect(page).toHaveTitle('VIBE ON DUTY');
@@ -22,7 +22,7 @@ test.describe('VIBE ON DUTY — smoke tests', () => {
   });
 
   test('clicking DROP IN hides the overlay', async ({ page }) => {
-    await page.goto('/fps3d.html');
+    await page.goto('/');
 
     // Wait for the start button to be ready
     const startBtn = page.locator('#startbtn');
@@ -36,7 +36,7 @@ test.describe('VIBE ON DUTY — smoke tests', () => {
   });
 
   test('HUD elements are present in the DOM', async ({ page }) => {
-    await page.goto('/fps3d.html');
+    await page.goto('/');
 
     await expect(page.locator('#hud')).toBeAttached();
     await expect(page.locator('#mm')).toBeAttached();       // minimap canvas
@@ -45,7 +45,7 @@ test.describe('VIBE ON DUTY — smoke tests', () => {
   });
 
   test('ammo and HP show correct initial values', async ({ page }) => {
-    await page.goto('/fps3d.html');
+    await page.goto('/');
 
     // These are set by updateHUD() on game start — check after clicking DROP IN
     await page.locator('#startbtn').click();
