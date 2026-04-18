@@ -31,7 +31,7 @@ export let playerActions = null;
 // ── Clip aliases — maps internal state names to GLB clip names ────────────
 // Retargeted rifle clips listed first so they win over old pistol clips.
 const ALIASES = {
-  idle:        ['Idle_Loop',        'Idle',   'idle',   'T-Pose', 'A_TPose'],
+  idle:        ['attack',           'Idle_Loop',        'Idle',   'idle',   'T-Pose', 'A_TPose'],
   walk:        ['walk',             'Walk_Loop',        'Walk',   'Walking'],
   run:         ['run',              'Jog_Fwd_Loop',     'Sprint_Loop',  'Run'],
   attack:      ['attack',           'Pistol_Aim_Neutral', 'Pistol_Idle_Loop'],
