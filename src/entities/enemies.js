@@ -192,7 +192,7 @@ export function killEnemy(e) {
   spawnAmmoDrop(e.x, e.z);
 
   if (e.actions && e.actions.death) {
-    crossfade(e, 'death', 0.08);
+    crossfade(e, 'death', 0);
     e.dyingTimer = 2.2; // remove mesh after death clip finishes
     dyingEnemies.push(e);
   } else {
@@ -425,9 +425,11 @@ function tickEnemyAnimation(e, dt, isMoving) {
       clip = 'attack'; // Pistol_Idle_Loop — aiming stance between shots
     }
   } else {
-    clip = isMoving ? 'walk' : 'idle';
+    clip = isMoving ? 'walk' : (e.actions.attack ? 'attack' : 'idle');
   }
-  crossfade(e, clip);
+  const SNAP_CLIPS = new Set(['crouch', 'crouch_walk', 'death', 'hit', 'roll', 'jump_start', 'jump_land']);
+  const snapTransition = SNAP_CLIPS.has(clip) || SNAP_CLIPS.has(e.currentClip);
+  crossfade(e, clip, snapTransition ? 0 : 0.22);
   e.mixer.update(dt);
 }
 
