@@ -18,12 +18,10 @@ import { buildEnemy } from './enemy.js';
 import { buildEnemyMixer, attachSkeletonDebug } from './enemyAnimations.js';
 import { attachPistolToHand } from './enemyWeapon.js';
 import { attachP90ToPlayerHand } from './weaponFBX.js';
-import { loadFBXAnimations } from './animLoader.js';
 
 // ── State ──────────────────────────────────────────────────────────────────
 let gltfTemplate = null;
 export let usingGLTF = false;
-let _fbxClips = {};   // extra clips loaded from FBX pack (run_back, strafe_l/r, shoot)
 
 // ── Player GLTF instance (built once after GLB loads) ─────────────────────
 export let playerMesh = null;
@@ -31,27 +29,34 @@ export let playerMixer = null;
 export let playerActions = null;
 
 // ── Clip aliases — maps internal state names to GLB clip names ────────────
+// Retargeted rifle clips listed first so they win over old pistol clips.
 const ALIASES = {
-  idle:        ['Idle_Loop',        'Idle',   'idle',   'T-Pose', 'A_TPose', 'Armature|Idle'],
-  walk:        ['Walk_Loop',        'Walk',   'walk',   'Walking', 'Walk_Formal_Loop'],
-  run:         ['Jog_Fwd_Loop',     'Sprint_Loop', 'Run', 'run', 'Running'],
-  attack:      ['Pistol_Idle_Loop', 'Pistol_Aim_Neutral', 'Aim', 'Attack', 'attack'],
-  shoot:       ['Pistol_Shoot',     'Shoot',  'shoot',  'Fire',   'fire'],
+  idle:        ['Idle_Loop',        'Idle',   'idle',   'T-Pose', 'A_TPose'],
+  walk:        ['walk',             'Walk_Loop',        'Walk',   'Walking'],
+  run:         ['run',              'Jog_Fwd_Loop',     'Sprint_Loop',  'Run'],
+  attack:      ['attack',           'Pistol_Aim_Neutral', 'Pistol_Idle_Loop'],
+  shoot:       ['shoot',            'Pistol_Shoot',     'Shoot',  'Fire'],
   crouch:      ['Crouch_Idle_Loop', 'Crouch_Idle',  'Crouch'],
   crouch_walk: ['Crouch_Fwd_Loop',  'Crouch_Walk'],
   death:       ['Death01',          'Death',  'death',  'Die'],
-  hit:         ['Hit_Chest',        'Hit_Head', 'Hit',  'hit'],
-  roll:        ['Roll',             'roll',   'Dive',   'dive'],
-  jump_start:  ['Jump_Start',       'Jump_start', 'JumpStart'],
-  jump_loop:   ['Jump_Loop',        'Jump_loop',  'JumpLoop', 'InAir'],
-  jump_land:   ['Jump_Land',        'Jump_land',  'JumpLand', 'Landing'],
-  reload:      ['Pistol_Reload',    'Reload', 'reload'],
+  hit:         ['hit',              'Hit_Chest',        'Hit_Head'],
+  roll:        ['Roll',             'roll',   'Dive'],
+  jump_start:  ['Jump_Start',       'Jump_start'],
+  jump_loop:   ['jump_loop',        'Jump_Loop',        'Jump_loop'],
+  jump_land:   ['Jump_Land',        'Jump_land'],
+  reload:      ['reload',           'Pistol_Reload'],
+  run_back:    ['run_back'],
+  walk_back:   ['walk_back'],
+  strafe_l:    ['strafe_l'],
+  strafe_r:    ['strafe_r'],
+  nade:        ['nade'],
 };
 
 // All clip keys to attempt loading
 const CLIP_KEYS = [
   'idle', 'walk', 'run', 'attack', 'shoot', 'crouch', 'crouch_walk',
   'death', 'hit', 'roll', 'jump_start', 'jump_loop', 'jump_land', 'reload',
+  'run_back', 'walk_back', 'strafe_l', 'strafe_r', 'nade',
 ];
 // Minimum clips required — fall back to procedural if none of these match
 const REQUIRED_KEYS = ['idle', 'walk'];
@@ -82,8 +87,6 @@ export async function tryLoadEnemyGLTF() {
     const found = CLIP_KEYS.filter((k) => findClip(gltf.animations, k));
     console.log('[GLTF] enemy.glb loaded — matched clips:', found.join(', '));
     console.log('[GLTF] all clips in file:', gltf.animations.map((c) => c.name).join(', '));
-    _fbxClips = await loadFBXAnimations();
-    console.log('[GLTF] FBX extra clips:', Object.keys(_fbxClips).join(', ') || 'none');
     return true;
   } catch (err) {
     console.warn('[GLTF] failed to load enemy.glb:', err);
@@ -130,13 +133,6 @@ export function buildEnemyMesh(wx, wz) {
     actions[key] = action;
   }
 
-  // Merge FBX extra clips — overrides GLB where keys match, adds new states
-  const FBX_ONCE = new Set(['shoot', 'reload', 'hit', 'nade']);
-  for (const [key, clip] of Object.entries(_fbxClips)) {
-    const action = mixer.clipAction(clip);
-    if (FBX_ONCE.has(key)) { action.setLoop(THREE.LoopOnce); action.clampWhenFinished = true; }
-    actions[key] = action;
-  }
 
   // Require at least idle + walk — otherwise fall back to procedural
   if (REQUIRED_KEYS.some((k) => !actions[k])) {
