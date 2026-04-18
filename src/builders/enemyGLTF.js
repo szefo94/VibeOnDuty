@@ -18,10 +18,12 @@ import { buildEnemy } from './enemy.js';
 import { buildEnemyMixer, attachSkeletonDebug } from './enemyAnimations.js';
 import { attachPistolToHand } from './enemyWeapon.js';
 import { attachP90ToPlayerHand } from './weaponFBX.js';
+import { loadFBXAnimations } from './animLoader.js';
 
 // ── State ──────────────────────────────────────────────────────────────────
 let gltfTemplate = null;
 export let usingGLTF = false;
+let _fbxClips = {};   // extra clips loaded from FBX pack (run_back, strafe_l/r, shoot)
 
 // ── Player GLTF instance (built once after GLB loads) ─────────────────────
 export let playerMesh = null;
@@ -80,6 +82,8 @@ export async function tryLoadEnemyGLTF() {
     const found = CLIP_KEYS.filter((k) => findClip(gltf.animations, k));
     console.log('[GLTF] enemy.glb loaded — matched clips:', found.join(', '));
     console.log('[GLTF] all clips in file:', gltf.animations.map((c) => c.name).join(', '));
+    _fbxClips = await loadFBXAnimations();
+    console.log('[GLTF] FBX extra clips:', Object.keys(_fbxClips).join(', ') || 'none');
     return true;
   } catch (err) {
     console.warn('[GLTF] failed to load enemy.glb:', err);
@@ -123,6 +127,13 @@ export function buildEnemyMesh(wx, wz) {
       action.setLoop(THREE.LoopOnce);
       action.clampWhenFinished = true;
     }
+    actions[key] = action;
+  }
+
+  // Merge FBX extra clips (run_back, strafe_l, strafe_r, shoot override)
+  for (const [key, clip] of Object.entries(_fbxClips)) {
+    const action = mixer.clipAction(clip);
+    if (key === 'shoot') { action.setLoop(THREE.LoopOnce); action.clampWhenFinished = true; }
     actions[key] = action;
   }
 
@@ -190,6 +201,13 @@ export function buildPlayerMesh() {
       action.setLoop(THREE.LoopOnce);
       action.clampWhenFinished = true;
     }
+    actions[key] = action;
+  }
+
+  // Merge FBX extra clips
+  for (const [key, clip] of Object.entries(_fbxClips)) {
+    const action = mixer.clipAction(clip);
+    if (key === 'shoot') { action.setLoop(THREE.LoopOnce); action.clampWhenFinished = true; }
     actions[key] = action;
   }
 

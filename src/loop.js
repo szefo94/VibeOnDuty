@@ -135,9 +135,15 @@ export function loop(ts) {
             ? (a.crouch_walk ? 'crouch_walk' : 'walk')
             : (a.crouch      ? 'crouch'      : 'idle');
         } else if (player.aiming && a.attack) {
-          clip = 'attack'; // Pistol_Idle_Loop — aiming stance
+          clip = 'attack';
         } else if (player.moving) {
-          clip = sprint && a.run ? 'run' : 'walk';
+          const back   = keys['KeyS'] && !keys['KeyW'];
+          const left   = keys['KeyA'] && !keys['KeyD'] && !keys['KeyW'] && !keys['KeyS'];
+          const right  = keys['KeyD'] && !keys['KeyA'] && !keys['KeyW'] && !keys['KeyS'];
+          if (back  && a.run_back) clip = 'run_back';
+          else if (left  && a.strafe_l) clip = 'strafe_l';
+          else if (right && a.strafe_r) clip = 'strafe_r';
+          else clip = sprint && a.run ? 'run' : 'walk';
         } else {
           clip = 'idle';
         }
