@@ -201,13 +201,6 @@ export function buildPlayerMesh() {
     actions[key] = action;
   }
 
-  // Merge FBX extra clips
-  for (const [key, clip] of Object.entries(_fbxClips)) {
-    const action = mixer.clipAction(clip);
-    if (key === 'shoot') { action.setLoop(THREE.LoopOnce); action.clampWhenFinished = true; }
-    actions[key] = action;
-  }
-
   // Start idle
   const idleClip = findClip(gltfTemplate.animations, 'idle');
   if (idleClip && actions.idle) actions.idle.time = Math.random() * idleClip.duration;
