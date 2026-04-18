@@ -70,20 +70,25 @@ function findClip(animations, key) {
 }
 
 // ── Quaternion sign normalisation ──────────────────────────────────────────
-// During crossfade Three.js blends bone quaternions from two clips. If the
+// Three.js blends bone quaternions from two clips during crossfade. If the
 // same bone's quaternion is on opposite hemispheres in different clips the
-// SLERP takes the long path (270° spin instead of 90°). Fix: for every
-// quaternion track, flip signs so frame-0 of every clip agrees with the
-// reference clip (idle). Then fix sign-continuity within each track.
+// weighted average takes the long path (270° instead of 90°).
+//
+// Strategy (order matters):
+//   1. Within-track continuity first — ensures all frames in a clip are on
+//      the same hemisphere as the previous frame.
+//   2. Whole-track flip based on frame-0 vs reference — ensures frame-0 of
+//      every clip agrees with the reference clip. Because continuity is
+//      already fixed, flipping the whole track keeps all frames consistent.
+//
+// Result: walk at ANY frame T is on the same hemisphere as crouch at frame 0.
 function normaliseClipQuatSigns(clips) {
-  // Build a reference: bone → first quaternion from the idle clip
+  const refClip = clips.find((c) => c.name === 'attack' || c.name === 'Idle_Loop' || c.name === 'idle');
   const ref = {};
-  const idleClip = clips.find((c) => c.name === 'attack' || c.name === 'Idle_Loop' || c.name === 'idle');
-  if (idleClip) {
-    for (const track of idleClip.tracks) {
+  if (refClip) {
+    for (const track of refClip.tracks) {
       if (!track.name.endsWith('.quaternion')) continue;
-      const v = track.values;
-      ref[track.name] = [v[0], v[1], v[2], v[3]];
+      ref[track.name] = [track.values[0], track.values[1], track.values[2], track.values[3]];
     }
   }
 
@@ -91,19 +96,21 @@ function normaliseClipQuatSigns(clips) {
     for (const track of clip.tracks) {
       if (!track.name.endsWith('.quaternion')) continue;
       const v = track.values;
-      // Align first frame to reference
-      const r = ref[track.name];
-      if (r) {
-        const dot = r[0]*v[0] + r[1]*v[1] + r[2]*v[2] + r[3]*v[3];
-        if (dot < 0) {
-          for (let i = 0; i < 4; i++) v[i] = -v[i];
-        }
-      }
-      // Ensure continuity within the track
+
+      // Step 1: within-track continuity
       for (let i = 4; i < v.length; i += 4) {
         const dot = v[i-4]*v[i] + v[i-3]*v[i+1] + v[i-2]*v[i+2] + v[i-1]*v[i+3];
         if (dot < 0) {
           v[i] = -v[i]; v[i+1] = -v[i+1]; v[i+2] = -v[i+2]; v[i+3] = -v[i+3];
+        }
+      }
+
+      // Step 2: flip whole track if frame-0 disagrees with reference
+      const r = ref[track.name];
+      if (r) {
+        const dot = r[0]*v[0] + r[1]*v[1] + r[2]*v[2] + r[3]*v[3];
+        if (dot < 0) {
+          for (let i = 0; i < v.length; i++) v[i] = -v[i];
         }
       }
     }
