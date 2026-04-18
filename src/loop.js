@@ -110,6 +110,9 @@ export function loop(ts) {
     }
 
     // ── Player animation ─────────────────────────────────────────────
+    if (!playerMesh || !playerMixer) {
+      setDebugAnimClip('no GLTF (procedural)');
+    }
     if (playerMesh && playerMixer) {
       // Sync action table once playerActions is populated after load
       if (!playerAnim.actions && playerActions) playerAnim.actions = playerActions;

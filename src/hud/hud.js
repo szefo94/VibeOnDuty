@@ -15,8 +15,12 @@ import { grenImpactZones } from '../fx/particles.js';
 
 const _prj = new THREE.Vector3();
 
-export let debugAnimClip = '';
-export function setDebugAnimClip(name) { debugAnimClip = name; }
+const _animDebugEl = document.getElementById('anim-debug');
+export function setDebugAnimClip(name) {
+  if (!_animDebugEl) return;
+  _animDebugEl.textContent = `ANIM: ${name}`;
+  _animDebugEl.style.display = 'block';
+}
 
 export function w2s(wx, wy, wz) {
   _prj.set(wx, wy, wz).project(camera);
@@ -329,15 +333,4 @@ export function drawHUD() {
     hudCtx.restore();
   }
 
-  // ── Animation debug overlay ───────────────────────────────────────────
-  if (debugAnimClip) {
-    hudCtx.save();
-    hudCtx.font = 'bold 13px monospace';
-    hudCtx.textAlign = 'left';
-    hudCtx.fillStyle = 'rgba(0,0,0,0.45)';
-    hudCtx.fillRect(8, 8, 180, 22);
-    hudCtx.fillStyle = '#0f0';
-    hudCtx.fillText(`ANIM: ${debugAnimClip}`, 14, 24);
-    hudCtx.restore();
-  }
 }
