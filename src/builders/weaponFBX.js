@@ -71,7 +71,7 @@ const P90_TARGET_LEN = 0.52; // ~52 cm — realistic SMG length in scene
 // Rotation in hand_r bone-local space.
 // hand_r palm faces roughly +Y, fingers point +X in Quaternius rig.
 // P90 barrel runs along +Z in FBX → rotate so barrel goes along +X (finger dir).
-const P90_ROT = new THREE.Euler(Math.PI / 2, 0, 0);
+const P90_ROT = new THREE.Euler(Math.PI / 2, 0, Math.PI / 2);
 
 // Nudge so grip sits in palm
 const P90_GRIP = new THREE.Vector3(-0.02, 0.0, 0.05);
