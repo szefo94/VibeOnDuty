@@ -16,6 +16,8 @@ const grenMat = mm(0x2a4a1a, 0.6, 0.4),
 export function tryThrowGrenade() {
   if (player.dead || player.energy < GRENADE_ENERGY_COST) return;
   player.energy = 0;
+  player.throwingNade = true;
+  setTimeout(() => { player.throwingNade = false; }, 900); // ~clip duration
   document.getElementById('energy-label').textContent = 'ENERGY: 0%';
   const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
   dir.y += 0.18;

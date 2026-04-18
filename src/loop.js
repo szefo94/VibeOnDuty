@@ -128,6 +128,8 @@ export function loop(ts) {
         } else if (!player.onGround) {
           if (jumpPhase === 'start' && a.jump_start) clip = 'jump_start';
           else clip = a.jump_loop ? 'jump_loop' : 'idle';
+        } else if (player.throwingNade && a.nade) {
+          clip = 'nade';
         } else if (player.reloading && a.reload) {
           clip = 'reload';
         } else if (player.crouching || player.sliding) {
@@ -137,12 +139,13 @@ export function loop(ts) {
         } else if (player.aiming && a.attack) {
           clip = 'attack';
         } else if (player.moving) {
-          const back   = keys['KeyS'] && !keys['KeyW'];
-          const left   = keys['KeyA'] && !keys['KeyD'] && !keys['KeyW'] && !keys['KeyS'];
-          const right  = keys['KeyD'] && !keys['KeyA'] && !keys['KeyW'] && !keys['KeyS'];
-          if (back  && a.run_back) clip = 'run_back';
-          else if (left  && a.strafe_l) clip = 'strafe_l';
-          else if (right && a.strafe_r) clip = 'strafe_r';
+          const back  = keys['KeyS'] && !keys['KeyW'];
+          const left  = keys['KeyA'] && !keys['KeyD'] && !keys['KeyW'] && !keys['KeyS'];
+          const right = keys['KeyD'] && !keys['KeyA'] && !keys['KeyW'] && !keys['KeyS'];
+          if (back  && a.walk_back) clip = 'walk_back';
+          else if (back  && a.run_back)  clip = 'run_back';
+          else if (left  && a.strafe_l)  clip = 'strafe_l';
+          else if (right && a.strafe_r)  clip = 'strafe_r';
           else clip = sprint && a.run ? 'run' : 'walk';
         } else {
           clip = 'idle';

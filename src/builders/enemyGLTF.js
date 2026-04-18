@@ -130,10 +130,11 @@ export function buildEnemyMesh(wx, wz) {
     actions[key] = action;
   }
 
-  // Merge FBX extra clips (run_back, strafe_l, strafe_r, shoot override)
+  // Merge FBX extra clips — overrides GLB where keys match, adds new states
+  const FBX_ONCE = new Set(['shoot', 'reload', 'hit', 'nade']);
   for (const [key, clip] of Object.entries(_fbxClips)) {
     const action = mixer.clipAction(clip);
-    if (key === 'shoot') { action.setLoop(THREE.LoopOnce); action.clampWhenFinished = true; }
+    if (FBX_ONCE.has(key)) { action.setLoop(THREE.LoopOnce); action.clampWhenFinished = true; }
     actions[key] = action;
   }
 

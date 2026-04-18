@@ -46,11 +46,24 @@ function remapClip(clip, name) {
 }
 
 // FBX file → internal clip name
+// Keys that match existing GLB aliases override the GLB clip.
+// New keys (run_back, strafe_l/r, walk_back, nade) add new states.
 const ANIM_FILES = {
+  // Directional movement
+  walk:      'walking.fbx',           // overrides Walk_Loop
+  run:       'rifle run.fbx',         // overrides Jog_Fwd_Loop
   run_back:  'run backwards.fbx',
+  walk_back: 'walking backwards.fbx',
   strafe_l:  'strafe left.fbx',
   strafe_r:  'strafe right.fbx',
-  shoot:     'firing rifle.fbx',   // overrides Pistol_Shoot for rifle feel
+  // Combat
+  attack:    'rifle aiming idle.fbx', // overrides Pistol_Aim_Neutral (rifle stance)
+  shoot:     'firing rifle.fbx',      // overrides Pistol_Shoot
+  reload:    'reloading.fbx',         // overrides Pistol_Reload
+  // Reactions
+  hit:       'hit reaction.fbx',      // overrides Hit_Chest
+  jump_loop: 'rifle jump.fbx',        // overrides Jump_Loop
+  nade:      'toss grenade.fbx',      // new — triggered on grenade throw
 };
 
 const BASE = import.meta.env.BASE_URL + 'models/animations/';
