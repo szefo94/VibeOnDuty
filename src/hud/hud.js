@@ -16,13 +16,13 @@ import { grenImpactZones } from '../fx/particles.js';
 const _prj = new THREE.Vector3();
 
 const _animDebugEl = document.getElementById('anim-debug');
-const _animHistory = [];
+const _animHistory = ['—', '—', '—'];
 let _lastAnimName = '';
 export function setDebugAnimClip(name) {
   if (!_animDebugEl) return;
   if (name !== _lastAnimName) {
     _animHistory.unshift(name);
-    if (_animHistory.length > 3) _animHistory.pop();
+    _animHistory.length = 3;
     _lastAnimName = name;
   }
   _animDebugEl.innerHTML = _animHistory.map((n, i) => `<span style="opacity:${1 - i * 0.3}">${i === 0 ? '▶' : '·'} ${n}</span>`).join('<br>');
