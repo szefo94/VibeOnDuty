@@ -78,7 +78,7 @@ function findClip(animations, key) {
 function normaliseClipQuatSigns(clips) {
   // Build a reference: bone → first quaternion from the idle clip
   const ref = {};
-  const idleClip = clips.find((c) => c.name === 'Idle_Loop' || c.name === 'idle');
+  const idleClip = clips.find((c) => c.name === 'attack' || c.name === 'Idle_Loop' || c.name === 'idle');
   if (idleClip) {
     for (const track of idleClip.tracks) {
       if (!track.name.endsWith('.quaternion')) continue;
