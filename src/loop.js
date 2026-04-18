@@ -153,7 +153,9 @@ export function loop(ts) {
         } else {
           clip = 'idle';
         }
-        crossfade(playerAnim, clip);
+        const SNAP_CLIPS = new Set(['crouch', 'crouch_walk', 'death', 'roll', 'jump_start', 'jump_land']);
+        const snapTransition = SNAP_CLIPS.has(clip) || SNAP_CLIPS.has(playerAnim.currentClip);
+        crossfade(playerAnim, clip, snapTransition ? 0 : 0.22);
         setDebugAnimClip(clip);
       }
     }
