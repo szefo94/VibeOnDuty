@@ -35,8 +35,12 @@ function remapClip(clip, name) {
     const dot = track.name.indexOf('.');
     if (dot === -1) { tracks.push(track); continue; }
     const boneName = track.name.slice(0, dot);
-    const prop     = track.name.slice(dot);       // ".quaternion", ".position" etc.
-    const mapped   = BONE_MAP[boneName];
+    const prop     = track.name.slice(dot);
+    // Drop .position tracks — they're relative to the Mixamo A-pose rest position
+    // and corrupt the Quaternius T-pose skeleton's bone placement.
+    // Character position is driven by game physics, not the clip.
+    if (prop === '.position') continue;
+    const mapped = BONE_MAP[boneName];
     if (!mapped) continue;                         // drop finger/unknown bones
     const t = track.clone();
     t.name  = mapped + prop;
