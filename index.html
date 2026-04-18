@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>VIBE ON DUTY</title>
+  <script type="module" crossorigin src="/VibeOnDuty/assets/index-CH5oIp7D.js"></script>
+  <link rel="stylesheet" crossorigin href="/VibeOnDuty/assets/index-ubB6_7su.css">
+</head>
+<body>
+<canvas id="c"></canvas>
+<canvas id="hudCanvas"></canvas>
+<div id="hud">
+  <div id="xhair"><div class="xh" id="xh-t"></div><div class="xh" id="xh-b"></div><div class="xh" id="xh-l"></div><div class="xh" id="xh-r"></div><div id="xhair-dot"></div></div>
+  <div id="mm-wrap"><div id="mm-label">RADAR</div><canvas id="mm" width="160" height="160"></canvas></div>
+  <div id="anim-debug" style="position:fixed;top:8px;left:8px;background:rgba(0,0,0,0.55);color:#0f0;font:bold 13px monospace;padding:3px 8px;border-radius:3px;pointer-events:none;z-index:999;display:none"></div>
+  <div id="hitflash"></div><div id="vignette"></div>
+  <div id="msg"></div><div id="status"></div>
+  <div id="reloadwrap"><div id="reloadbar"></div><div id="reloadtxt">RELOADING</div></div>
+  <div id="bottombar">
+    <div><div id="ammo-display"><span id="ammo-cur">30</span><span id="ammo-sep">/</span><span id="ammo-rsv">90</span></div><div id="weapon-name">M4A1</div></div>
+    <div id="kills-area"><div id="kills-num">0</div><div id="kills-label">KILLS</div><div id="energy-label">ENERGY 0%</div></div>
+    <div id="hp-area"><div id="hp-num">100</div><div id="hp-label">HEALTH</div><div id="player-hp-bar-wrap"><div id="player-hp-bar"></div></div></div>
+  </div>
+</div>
+<div id="overlay">
+  <h1>VIBE ON DUTY</h1>
+  <div class="sub">VIBE CODED — LOCK &amp; LOAD</div>
+  <div class="ctrl-row">
+    <div class="ctrl"><span class="key">WASD</span><div class="desc">MOVE</div></div>
+    <div class="ctrl"><span class="key">SHIFT</span><div class="desc">SPRINT</div></div>
+    <div class="ctrl"><span class="key">CTRL</span><div class="desc">CROUCH</div></div>
+    <div class="ctrl"><span class="key">W+CTRL</span><div class="desc">SLIDE</div></div>
+    <div class="ctrl"><span class="key">SPACE</span><div class="desc">JUMP</div></div>
+    <div class="ctrl"><span class="key">Z</span><div class="desc">DIVE</div></div>
+    <div class="ctrl"><span class="key">Q / E</span><div class="desc">LEAN</div></div>
+    <div class="ctrl"><span class="key">LMB</span><div class="desc">SHOOT</div></div>
+    <div class="ctrl"><span class="key">RMB</span><div class="desc">AIM</div></div>
+    <div class="ctrl"><span class="key">MMB</span><div class="desc">GRENADE</div></div>
+    <div class="ctrl"><span class="key">R</span><div class="desc">RELOAD</div></div>
+    <div class="ctrl"><span class="key">V</span><div class="desc">3RD PERSON</div></div>
+    <div class="ctrl"><span class="key">F3</span><div class="desc">DEBUG</div></div>
+  </div>
+  <button id="startbtn">[ DROP IN ]</button>
+</div>
+<!-- Touch controls — display:none until initTouch() enables on touch devices -->
+<div id="touch-ui" style="display:none">
+  <div id="joy-zone">
+    <div id="joy-base"></div>
+    <div id="joy-thumb"></div>
+  </div>
+  <div id="look-zone">
+    <button class="tb" id="tb-fire">FIRE</button>
+    <button class="tb" id="tb-jump">JUMP</button>
+    <button class="tb" id="tb-ads" data-on="0">ADS</button>
+    <button class="tb tb-sm" id="tb-reload">RLD</button>
+    <button class="tb tb-sm" id="tb-nade">NADE</button>
+    <button class="tb tb-sm" id="tb-crouch">CRH</button>
+    <button class="tb tb-sm" id="tb-dive">DIVE</button>
+  </div>
+</div>
+</body>
+</html>
