@@ -69,6 +69,47 @@ function findClip(animations, key) {
   return null;
 }
 
+// ── Quaternion sign normalisation ──────────────────────────────────────────
+// During crossfade Three.js blends bone quaternions from two clips. If the
+// same bone's quaternion is on opposite hemispheres in different clips the
+// SLERP takes the long path (270° spin instead of 90°). Fix: for every
+// quaternion track, flip signs so frame-0 of every clip agrees with the
+// reference clip (idle). Then fix sign-continuity within each track.
+function normaliseClipQuatSigns(clips) {
+  // Build a reference: bone → first quaternion from the idle clip
+  const ref = {};
+  const idleClip = clips.find((c) => c.name === 'Idle_Loop' || c.name === 'idle');
+  if (idleClip) {
+    for (const track of idleClip.tracks) {
+      if (!track.name.endsWith('.quaternion')) continue;
+      const v = track.values;
+      ref[track.name] = [v[0], v[1], v[2], v[3]];
+    }
+  }
+
+  for (const clip of clips) {
+    for (const track of clip.tracks) {
+      if (!track.name.endsWith('.quaternion')) continue;
+      const v = track.values;
+      // Align first frame to reference
+      const r = ref[track.name];
+      if (r) {
+        const dot = r[0]*v[0] + r[1]*v[1] + r[2]*v[2] + r[3]*v[3];
+        if (dot < 0) {
+          for (let i = 0; i < 4; i++) v[i] = -v[i];
+        }
+      }
+      // Ensure continuity within the track
+      for (let i = 4; i < v.length; i += 4) {
+        const dot = v[i-4]*v[i] + v[i-3]*v[i+1] + v[i-2]*v[i+2] + v[i-1]*v[i+3];
+        if (dot < 0) {
+          v[i] = -v[i]; v[i+1] = -v[i+1]; v[i+2] = -v[i+2]; v[i+3] = -v[i+3];
+        }
+      }
+    }
+  }
+}
+
 // ── Load ───────────────────────────────────────────────────────────────────
 export async function tryLoadEnemyGLTF() {
   // HEAD probe first so no 404 noise when file is absent
@@ -82,6 +123,7 @@ export async function tryLoadEnemyGLTF() {
   try {
     const loader = new GLTFLoader();
     const gltf = await loader.loadAsync(import.meta.env.BASE_URL + 'models/enemy.glb');
+    normaliseClipQuatSigns(gltf.animations);
     gltfTemplate = gltf;
     usingGLTF = true;
     const found = CLIP_KEYS.filter((k) => findClip(gltf.animations, k));
