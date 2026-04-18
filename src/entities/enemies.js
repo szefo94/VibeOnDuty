@@ -410,22 +410,22 @@ function tickEnemyAnimation(e, dt, isMoving) {
     if (e.jumpPhase === 'start' && e.actions.jump_start) clip = 'jump_start';
     else clip = e.actions.jump_loop ? 'jump_loop' : 'idle';
   } else if (e.stunTimer > 0 && e.actions.hit) {
-    // hit-stagger: play once, don't override with walk mid-stagger
     clip = 'hit';
   } else if (e.crouching) {
-    // prefer crouch variants; fall back to idle/walk if GLTF lacks them
-    if (isMoving) clip = e.actions.crouch_walk ? 'crouch_walk' : 'walk';
-    else          clip = e.actions.crouch       ? 'crouch'      : 'idle';
-  } else if (e.state === 'attack') {
+    clip = isMoving
+      ? (e.actions.crouch_walk ? 'crouch_walk' : 'walk')
+      : (e.actions.crouch      ? 'crouch'      : 'idle');
+  } else if (e.state === 'attack' || e.state === 'spotted') {
     if (isMoving) {
-      clip = 'run';
+      clip = e.actions.run ? 'run' : 'walk';
     } else if (e.muzzleFlashT > 0 && e.actions.shoot) {
-      clip = 'shoot'; // Pistol_Shoot for the actual fire moment
+      clip = 'shoot';
     } else {
-      clip = 'attack'; // Pistol_Idle_Loop — aiming stance between shots
+      clip = 'attack';
     }
   } else {
-    clip = isMoving ? 'walk' : (e.actions.attack ? 'attack' : 'idle');
+    // patrol
+    clip = isMoving ? 'walk' : 'idle';
   }
   const SNAP_CLIPS = new Set(['crouch', 'crouch_walk', 'death', 'hit', 'roll', 'jump_start', 'jump_land']);
   const snapTransition = SNAP_CLIPS.has(clip) || SNAP_CLIPS.has(e.currentClip);
