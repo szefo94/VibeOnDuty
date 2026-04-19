@@ -40,6 +40,10 @@ document.addEventListener('keydown', (e) => {
   if (e.code === 'KeyB' && getThirdPerson()) {
     showStatus(toggleTpSide() === 1 ? 'SHOULDER: RIGHT' : 'SHOULDER: LEFT');
   }
+  if (e.code === 'KeyT' && !player.dead) {
+    player.dancing = !player.dancing;
+    showStatus(player.dancing ? '🕺 DANCE' : '');
+  }
 });
 document.addEventListener('mousemove', (e) => {
   if (!locked || !gameRunning || player.dead) return;

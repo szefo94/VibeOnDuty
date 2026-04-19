@@ -50,13 +50,14 @@ const ALIASES = {
   strafe_l:    ['strafe_l'],
   strafe_r:    ['strafe_r'],
   nade:        ['nade'],
+  dance:       ['Dance_Loop'],
 };
 
 // All clip keys to attempt loading
 const CLIP_KEYS = [
   'idle', 'walk', 'run', 'attack', 'shoot', 'crouch', 'crouch_walk',
   'death', 'hit', 'roll', 'jump_start', 'jump_loop', 'jump_land', 'reload',
-  'run_back', 'walk_back', 'strafe_l', 'strafe_r', 'nade',
+  'run_back', 'walk_back', 'strafe_l', 'strafe_r', 'nade', 'dance',
 ];
 // Minimum clips required — fall back to procedural if none of these match
 const REQUIRED_KEYS = ['idle', 'walk'];
