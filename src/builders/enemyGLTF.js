@@ -69,6 +69,33 @@ function findClip(animations, key) {
   return null;
 }
 
+// ── Undo merge-script CORR on retargeted clips ────────────────────────────
+// merge_animations.py applied qmul(CORR, q) where CORR = +90° X to every
+// rotation keyframe in the 12 retargeted clips. The original 45 clips have
+// no such correction. This puts them in incompatible spaces → 270° spins on
+// any crossfade between them. Fix: premultiply the inverse (-90° X) at load
+// time so all clips end up in the same coordinate space.
+const RETARGETED_CLIPS = new Set([
+  'walk','run','attack','shoot','reload','hit',
+  'jump_loop','nade','run_back','walk_back','strafe_l','strafe_r',
+]);
+const _corrInv = new THREE.Quaternion(-Math.SQRT1_2, 0, 0, Math.SQRT1_2); // -90° X
+const _qTmp    = new THREE.Quaternion();
+
+function undoMergeCORR(clips) {
+  for (const clip of clips) {
+    if (!RETARGETED_CLIPS.has(clip.name)) continue;
+    for (const track of clip.tracks) {
+      if (!track.name.endsWith('.quaternion')) continue;
+      const v = track.values;
+      for (let i = 0; i < v.length; i += 4) {
+        _qTmp.set(v[i], v[i+1], v[i+2], v[i+3]).premultiply(_corrInv);
+        v[i] = _qTmp.x; v[i+1] = _qTmp.y; v[i+2] = _qTmp.z; v[i+3] = _qTmp.w;
+      }
+    }
+  }
+}
+
 // ── Quaternion sign normalisation ──────────────────────────────────────────
 // Three.js blends bone quaternions from two clips during crossfade. If the
 // same bone's quaternion is on opposite hemispheres in different clips the
@@ -83,7 +110,7 @@ function findClip(animations, key) {
 //
 // Result: walk at ANY frame T is on the same hemisphere as crouch at frame 0.
 function normaliseClipQuatSigns(clips) {
-  const refClip = clips.find((c) => c.name === 'attack' || c.name === 'Idle_Loop' || c.name === 'idle');
+  const refClip = clips.find((c) => c.name === 'Idle_Loop' || c.name === 'idle' || c.name === 'attack');
   const ref = {};
   if (refClip) {
     for (const track of refClip.tracks) {
@@ -130,6 +157,7 @@ export async function tryLoadEnemyGLTF() {
   try {
     const loader = new GLTFLoader();
     const gltf = await loader.loadAsync(import.meta.env.BASE_URL + 'models/enemy.glb');
+    undoMergeCORR(gltf.animations);
     normaliseClipQuatSigns(gltf.animations);
     gltfTemplate = gltf;
     usingGLTF = true;
