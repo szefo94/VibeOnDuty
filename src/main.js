@@ -11,7 +11,7 @@ import { tryShoot, rebuildEHM, tryPunchDamage } from './combat/shoot.js';
 import { flashMeleeRing } from './fx/meleeRange.js';
 import { updateHUD, showMsg, showStatus } from './hud/overlay.js';
 import { startLoop, setThirdPerson, getThirdPerson, toggleTpSide } from './loop.js';
-import { startSnd, nextSndRound, getSndSitePositions } from './modes/snd.js';
+import { startSnd, nextSndRound, getSndSitePositions, isSndActive } from './modes/snd.js';
 import { tryLoadEnemyGLTF, buildPlayerMesh } from './builders/enemyGLTF.js';
 import { tryLoadWeaponFBX, tryLoadP90ForHand } from './builders/weaponFBX.js';
 import { tryLoadPistolFBX } from './builders/enemyWeapon.js';
@@ -136,8 +136,9 @@ window.loadGLTF = tryLoadEnemyGLTF; // also callable manually from console
     tryLoadP90ForHand(),
   ]);
   if (enemyLoaded) {
-    rebuildAllEnemies(); // swap procedural placeholders for GLTF enemies
-    buildPlayerMesh();   // create the player's own GLTF instance
+    // If S&D was started before GLTF finished, rebuild at site positions rather than random
+    rebuildAllEnemies(isSndActive() ? getSndSitePositions() : null);
+    buildPlayerMesh();
   }
   startLoop();
 })();

@@ -63,13 +63,18 @@ const WP_WAITS = [600, 1200, 500, 900, 1000, 500];
 const NUM_ENEMIES = 10;
 
 // ── Enemies array ─────────────────────────────────────────────────
-export function spawnEnemyIntoSlot(e) {
+export function spawnEnemyIntoSlot(e, forcedCell = null) {
   if (e.mesh) scene.remove(e.mesh);
   if (e.mixer) e.mixer.stopAllAction();
-  const used = enemies
-    .filter((en) => en !== e && !en.dead)
-    .map((en) => [Math.floor(en.x / CELL), Math.floor(en.z / CELL)]);
-  const [mc, mr] = randomSpawnCell(used);
+  let mc, mr;
+  if (forcedCell) {
+    [mc, mr] = forcedCell;
+  } else {
+    const used = enemies
+      .filter((en) => en !== e && !en.dead)
+      .map((en) => [Math.floor(en.x / CELL), Math.floor(en.z / CELL)]);
+    [mc, mr] = randomSpawnCell(used);
+  }
   const patrol = randomPatrol(mc, mr, 2);
   const { mesh, muzzleFlash, mixer, actions, facingOffset = 0 } = buildEnemyMesh(
     mc * CELL + CELL / 2,
@@ -165,53 +170,37 @@ export const enemies = Array.from({ length: NUM_ENEMIES }, (_) => {
 });
 
 // ── Rebuild all enemies with the current buildEnemyMesh (call after GLTF loads) ──
-export function rebuildAllEnemies() {
-  enemies.forEach((e) => spawnEnemyIntoSlot(e));
-  rebuildEHM();
+// Pass sndSitePositions when S&D is already active so GLTF reload doesn't scatter defenders.
+export function rebuildAllEnemies(sndSitePositions = null) {
+  if (sndSitePositions) {
+    spawnSndEnemies(sndSitePositions);
+  } else {
+    enemies.forEach((e) => spawnEnemyIntoSlot(e));
+    rebuildEHM();
+  }
 }
 
-// ── S&D: spawn enemies as site defenders ─────────────────────────────────
-// sitePositions: [[cx,cz],[cx,cz]] world-space centre of each site
+// ── S&D: spawn enemies as site defenders using the same path as rebuildAllEnemies ──
+// sitePositions: [[worldX, worldZ], [worldX, worldZ]] — one entry per site
+const SND_OFFSETS = [
+  [-1, -1], [0, -1], [1, -1],
+  [-1,  0], [0,  0], [1,  0],
+  [-1,  1], [0,  1], [1,  1],
+  [0, -2],
+];
 export function spawnSndEnemies(sitePositions) {
-  const offsets = [
-    [-1, -1], [0, -1], [1, -1],
-    [-1,  0], [0,  0], [1,  0],
-    [-1,  1], [0,  1], [1,  1],
-    [0, -2],
-  ];
   const half = Math.floor(enemies.length / 2);
   enemies.forEach((e, i) => {
     const [sx, sz] = sitePositions[i < half ? 0 : 1];
-    const [dc, dr] = offsets[i % offsets.length];
-    const mc = Math.floor(sx / CELL) + dc;
-    const mr = Math.floor(sz / CELL) + dr;
-    const cc = Math.max(1, Math.min(MAP_W - 2, mc));
-    const cr = Math.max(1, Math.min(MAP_H - 2, mr));
+    const siteCX = Math.floor(sx / CELL);
+    const siteCZ = Math.floor(sz / CELL);
+    const [dc, dr] = SND_OFFSETS[i % SND_OFFSETS.length];
+    const cc = Math.max(1, Math.min(MAP_W - 2, siteCX + dc));
+    const cr = Math.max(1, Math.min(MAP_H - 2, siteCZ + dr));
     const cell = MAP[cr][cc];
-    const fc = cell === 0 || isRamp(cell) ? cc : Math.floor(sx / CELL);
-    const fr = cell === 0 || isRamp(cell) ? cr : Math.floor(sz / CELL);
-    if (e.mesh) scene.remove(e.mesh);
-    if (e.mixer) e.mixer.stopAllAction();
-    const patrol = randomPatrol(fc, fr, 1);
-    const { mesh, muzzleFlash, mixer, actions, facingOffset = 0 } = buildEnemyMesh(
-      fc * CELL + CELL / 2, fr * CELL + CELL / 2
-    );
-    Object.assign(e, {
-      mesh, muzzleFlash, mixer, actions, facingOffset,
-      currentClip: 'idle',
-      x: fc * CELL + CELL / 2, z: fr * CELL + CELL / 2,
-      hp: ENEMY_HP, maxHp: ENEMY_HP, hpDrain: ENEMY_HP,
-      state: 'patrol',
-      facingY: Math.random() * Math.PI * 2,
-      alertTimer: 0, reactDelay: 0, shootCd: 0,
-      path: [], pathTick: 0, pathGoal: null,
-      patrolWp: 0,
-      patrol: patrol.map(([c, r]) => [c * CELL + CELL / 2, r * CELL + CELL / 2]),
-      wpWait: 0, bobT: Math.random() * 6, dead: false, muzzleFlashT: 0,
-      radarAge: Infinity, crouching: false, crouchTimer: 0,
-      velX: 0, velZ: 0, velY: 0, stunTimer: 0,
-      onGround: true, jumpCd: 0, jumpPhase: '', jumpPhaseTimer: 0,
-    });
+    const fc = (cell === 0 || isRamp(cell)) ? cc : siteCX;
+    const fr = (cell === 0 || isRamp(cell)) ? cr : siteCZ;
+    spawnEnemyIntoSlot(e, [fc, fr]);
   });
   rebuildEHM();
 }
