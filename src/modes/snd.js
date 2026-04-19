@@ -12,11 +12,16 @@ const PLANT_TIME = 3.0;
 const DEFUSE_TIME = 5.0;
 const BOMB_FUSE = 40.0;
 
-// ── Bomb sites (interior ground cells) ───────────────────────────────────
+// ── Bomb sites — west side interior, away from attacker spawn ────────────
+// col 8 open cells: rows 7 and 17 both clear in The Ring map
 const SITES = [
-  { id: 'A', x: 8 * CELL + CELL / 2, z: 6 * CELL + CELL / 2 },
+  { id: 'A', x: 8 * CELL + CELL / 2, z: 7 * CELL + CELL / 2 },
   { id: 'B', x: 8 * CELL + CELL / 2, z: 17 * CELL + CELL / 2 },
 ];
+
+// Attacker spawn — east side interior, far from both sites
+const ATTACKER_X = 16 * CELL + CELL / 2;
+const ATTACKER_Z = 11 * CELL + CELL / 2;
 
 // ── State ─────────────────────────────────────────────────────────────────
 // 'idle' | 'live' | 'planting' | 'planted' | 'over'
@@ -87,6 +92,10 @@ function removeSiteMarkers() {
 }
 
 // ── Public API ────────────────────────────────────────────────────────────
+export function getSndSitePositions() {
+  return SITES.map((s) => [s.x, s.z]);
+}
+
 export function getSndBombPos() {
   return sndState === 'planted' ? [bombWorldX, bombWorldZ] : null;
 }
@@ -116,6 +125,9 @@ export function startSnd() {
   fuseTimer = 0;
   activeSite = null;
   bombWorldX = bombWorldZ = 0;
+  player.dead = false;
+  player.hp = MAX_HP;
+  camera.position.set(ATTACKER_X, PLAYER_H, ATTACKER_Z);
   removeBombMesh();
   createSiteMarkers();
   setSndHudVisible(true);
@@ -136,7 +148,7 @@ export function nextSndRound() {
   bombWorldX = bombWorldZ = 0;
   player.dead = false;
   player.hp = MAX_HP;
-  camera.position.set(11.5 * CELL, PLAYER_H, 6.5 * CELL);
+  camera.position.set(ATTACKER_X, PLAYER_H, ATTACKER_Z);
   sndState = 'live';
   createSiteMarkers();
   setSndHudVisible(true);

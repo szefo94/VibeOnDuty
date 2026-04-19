@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { MOUSE_SENS, MAX_AMMO, CELL } from './config.js';
+import { MOUSE_SENS, MAX_AMMO } from './config.js';
 import { camera } from './scene.js';
 import { debugLines } from './level.js';
 import { locked, gameRunning, setGameRunning, setLocked } from './input.js';
@@ -11,7 +11,7 @@ import { tryShoot, rebuildEHM, tryPunchDamage } from './combat/shoot.js';
 import { flashMeleeRing } from './fx/meleeRange.js';
 import { updateHUD, showMsg, showStatus } from './hud/overlay.js';
 import { startLoop, setThirdPerson, getThirdPerson, toggleTpSide } from './loop.js';
-import { startSnd, nextSndRound } from './modes/snd.js';
+import { startSnd, nextSndRound, getSndSitePositions } from './modes/snd.js';
 import { tryLoadEnemyGLTF, buildPlayerMesh } from './builders/enemyGLTF.js';
 import { tryLoadWeaponFBX, tryLoadP90ForHand } from './builders/weaponFBX.js';
 import { tryLoadPistolFBX } from './builders/enemyWeapon.js';
@@ -99,18 +99,12 @@ document.getElementById('c').addEventListener('click', () => {
   if (gameRunning && !player.dead && !locked) document.getElementById('c').requestPointerLock();
 });
 
-// Site positions must match SITES array in snd.js
-const SND_SITES = [
-  [8 * CELL + CELL / 2, 6 * CELL + CELL / 2],
-  [8 * CELL + CELL / 2, 17 * CELL + CELL / 2],
-];
-
 function sndStart() {
   document.getElementById('overlay').style.display = 'none';
   if (isTouchDevice) { setLocked(true); } else { document.getElementById('c').requestPointerLock(); }
   setGameRunning(true);
-  startSnd();
-  spawnSndEnemies(SND_SITES);
+  startSnd();                                 // resets player pos to east-side spawn
+  spawnSndEnemies(getSndSitePositions());     // defenders cluster on west-side sites
   updateHUD();
   showMsg('S&D — PLANT AT SITE A OR B (HOLD G)', 3500);
 }
@@ -120,8 +114,8 @@ document.getElementById('snd-startbtn').addEventListener('click', sndStart);
 
 // ── S&D next round ─────────────────────────────────────────────────
 document.getElementById('snd-next-btn').addEventListener('click', () => {
-  nextSndRound();
-  spawnSndEnemies(SND_SITES);
+  nextSndRound();                             // resets player pos to east-side spawn
+  spawnSndEnemies(getSndSitePositions());
   updateHUD();
   setGameRunning(true);
   if (isTouchDevice) { setLocked(true); } else { document.getElementById('c').requestPointerLock(); }
