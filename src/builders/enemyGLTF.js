@@ -110,7 +110,7 @@ function undoMergeCORR(clips) {
 //
 // Result: walk at ANY frame T is on the same hemisphere as crouch at frame 0.
 function normaliseClipQuatSigns(clips) {
-  const refClip = clips.find((c) => c.name === 'Idle_Loop' || c.name === 'idle' || c.name === 'attack');
+  const refClip = clips.find((c) => c.name === 'attack' || c.name === 'Idle_Loop' || c.name === 'idle');
   const ref = {};
   if (refClip) {
     for (const track of refClip.tracks) {
@@ -157,7 +157,6 @@ export async function tryLoadEnemyGLTF() {
   try {
     const loader = new GLTFLoader();
     const gltf = await loader.loadAsync(import.meta.env.BASE_URL + 'models/enemy.glb');
-    undoMergeCORR(gltf.animations);
     normaliseClipQuatSigns(gltf.animations);
     gltfTemplate = gltf;
     usingGLTF = true;
