@@ -10,6 +10,7 @@ import { updateEnemies, tickWave } from './entities/enemies.js';
 import { tickTorches } from './lighting.js';
 import { drawHUD, setDebugAnimClip } from './hud/hud.js';
 import { tickMeleeRing } from './fx/meleeRange.js';
+import { tickSnd } from './modes/snd.js';
 import { drawMinimap } from './hud/radar.js';
 import { playerMesh, playerMixer, playerActions } from './builders/enemyGLTF.js';
 import { crossfade } from './builders/enemyAnimations.js';
@@ -169,6 +170,7 @@ export function loop(ts) {
     tickTorches(dt);
     tickWave(dt);
     tickMeleeRing(dt, camera.position.x, camera.position.z);
+    tickSnd(dt, keys);
   }
 
   // ── Player mixer ticks even when dead so death animation plays ───

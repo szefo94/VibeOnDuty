@@ -47,6 +47,29 @@ body{background:#000;overflow:hidden;font-family:'Courier New',monospace}
 .dead-h{font-size:48px;color:#e74c3c;letter-spacing:6px;margin-bottom:14px}
 .stat{font-size:13px;color:#888;letter-spacing:3px;margin:4px 0}
 
+/* ── S&D HUD ─────────────────────────────────────────────────────────────── */
+#snd-bar{position:absolute;top:14px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none}
+#snd-bomb-bar-wrap{display:flex;align-items:center;gap:8px;background:rgba(0,0,0,0.65);padding:5px 14px;border-radius:3px;border:1px solid rgba(231,76,60,0.5)}
+#snd-bomb-label{font-size:9px;color:#e74c3c;letter-spacing:3px}
+#snd-bomb-bar{width:140px;height:5px;background:rgba(255,255,255,0.12);border-radius:2px;overflow:hidden}
+#snd-bomb-bar-fill{height:100%;width:100%;background:#e74c3c;border-radius:2px;transition:width 0.25s linear}
+#snd-bomb-timer{font-size:13px;color:#e74c3c;font-weight:bold;letter-spacing:1px;min-width:28px;text-align:right}
+#snd-plant-bar-wrap{display:flex;align-items:center;gap:8px;background:rgba(0,0,0,0.65);padding:5px 14px;border-radius:3px;border:1px solid rgba(232,200,74,0.5)}
+#snd-plant-label{font-size:9px;color:#e8c84a;letter-spacing:3px}
+#snd-plant-bar{width:140px;height:5px;background:rgba(255,255,255,0.12);border-radius:2px;overflow:hidden}
+#snd-plant-fill{height:100%;width:0;background:#e8c84a;border-radius:2px;transition:width 0.05s linear}
+#snd-defuse-bar-wrap{display:flex;align-items:center;gap:8px;background:rgba(0,0,0,0.65);padding:5px 14px;border-radius:3px;border:1px solid rgba(52,152,219,0.5)}
+#snd-defuse-label{font-size:9px;color:#3498db;letter-spacing:3px}
+#snd-defuse-bar{width:140px;height:5px;background:rgba(255,255,255,0.12);border-radius:2px;overflow:hidden}
+#snd-defuse-fill{height:100%;width:0;background:#3498db;border-radius:2px;transition:width 0.05s linear}
+#snd-result{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.82);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:22}
+#snd-result-title{font-size:44px;letter-spacing:8px;margin-bottom:8px;text-shadow:0 0 30px currentColor}
+#snd-result-sub{font-size:13px;color:#888;letter-spacing:4px;margin-bottom:32px}
+#snd-next-btn{padding:12px 52px;background:#e8c84a;color:#000;border:none;font-family:'Courier New',monospace;font-size:14px;letter-spacing:4px;cursor:pointer;pointer-events:auto}
+#snd-next-btn:hover{background:#fff}
+#snd-startbtn{padding:12px 52px;background:#3498db;color:#fff;border:none;font-family:'Courier New',monospace;font-size:14px;letter-spacing:4px;cursor:pointer}
+#snd-startbtn:hover{background:#5dade2}
+
 /* ── Touch controls ──────────────────────────────────────────────────────── */
 #touch-ui{position:fixed;top:0;left:0;width:100%;height:100%;z-index:15;pointer-events:none}
 #joy-zone{position:absolute;left:0;top:0;width:45%;height:100%;pointer-events:auto}

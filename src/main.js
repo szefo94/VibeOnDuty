@@ -11,6 +11,7 @@ import { tryShoot, rebuildEHM, tryPunchDamage } from './combat/shoot.js';
 import { flashMeleeRing } from './fx/meleeRange.js';
 import { updateHUD, showMsg, showStatus } from './hud/overlay.js';
 import { startLoop, setThirdPerson, getThirdPerson, toggleTpSide } from './loop.js';
+import { startSnd, nextSndRound } from './modes/snd.js';
 import { tryLoadEnemyGLTF, buildPlayerMesh } from './builders/enemyGLTF.js';
 import { tryLoadWeaponFBX, tryLoadP90ForHand } from './builders/weaponFBX.js';
 import { tryLoadPistolFBX } from './builders/enemyWeapon.js';
@@ -45,6 +46,7 @@ document.addEventListener('keydown', (e) => {
     player.dancing = !player.dancing;
     showStatus(player.dancing ? '🕺 DANCE' : '');
   }
+  if (e.code === 'KeyG') return; // G handled via keys state in tickSnd
   if (e.code === 'KeyF' && !player.dead && !player.punching) {
     player.punching = true;
     player.punchClip = player.punchClip === 'punch_cross' ? 'punch_jab' : 'punch_cross';
@@ -95,6 +97,35 @@ document.getElementById('startbtn').addEventListener('click', () => {
 });
 document.getElementById('c').addEventListener('click', () => {
   if (gameRunning && !player.dead && !locked) document.getElementById('c').requestPointerLock();
+});
+
+// ── S&D mode start ─────────────────────────────────────────────────
+document.getElementById('snd-startbtn').addEventListener('click', () => {
+  document.getElementById('overlay').style.display = 'none';
+  if (isTouchDevice) {
+    setLocked(true);
+  } else {
+    document.getElementById('c').requestPointerLock();
+  }
+  setGameRunning(true);
+  rebuildEHM();
+  updateHUD();
+  startSnd();
+  showMsg('SEARCH & DESTROY — PLANT THE BOMB (G near site)', 3500);
+});
+
+// ── S&D next round ─────────────────────────────────────────────────
+document.getElementById('snd-next-btn').addEventListener('click', () => {
+  nextSndRound();
+  rebuildAllEnemies();
+  updateHUD();
+  setGameRunning(true);
+  if (isTouchDevice) {
+    setLocked(true);
+  } else {
+    document.getElementById('c').requestPointerLock();
+  }
+  showMsg('NEXT ROUND — PLANT THE BOMB (G near site)', 3000);
 });
 
 // ── Touch controls ─────────────────────────────────────────────────

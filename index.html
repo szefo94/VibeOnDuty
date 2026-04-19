@@ -15,6 +15,28 @@
   <div id="anim-debug" style="position:fixed;top:8px;left:8px;background:rgba(0,0,0,0.55);color:#0f0;font:bold 13px monospace;padding:3px 8px;border-radius:3px;pointer-events:none;z-index:999;display:none"></div>
   <div id="hitflash"></div><div id="vignette"></div>
   <div id="msg"></div><div id="status"></div>
+
+  <!-- S&D HUD -->
+  <div id="snd-bar" style="display:none">
+    <div id="snd-bomb-bar-wrap" style="display:none">
+      <div id="snd-bomb-label">BOMB</div>
+      <div id="snd-bomb-bar"><div id="snd-bomb-bar-fill"></div></div>
+      <div id="snd-bomb-timer">40s</div>
+    </div>
+    <div id="snd-plant-bar-wrap" style="display:none">
+      <div id="snd-plant-label">PLANTING</div>
+      <div id="snd-plant-bar"><div id="snd-plant-fill"></div></div>
+    </div>
+    <div id="snd-defuse-bar-wrap" style="display:none">
+      <div id="snd-defuse-label">DEFUSING</div>
+      <div id="snd-defuse-bar"><div id="snd-defuse-fill"></div></div>
+    </div>
+  </div>
+  <div id="snd-result" style="display:none">
+    <div id="snd-result-title"></div>
+    <div id="snd-result-sub"></div>
+    <button id="snd-next-btn">[ NEXT ROUND ]</button>
+  </div>
   <div id="reloadwrap"><div id="reloadbar"></div><div id="reloadtxt">RELOADING</div></div>
   <div id="bottombar">
     <div><div id="ammo-display"><span id="ammo-cur">30</span><span id="ammo-sep">/</span><span id="ammo-rsv">90</span></div><div id="weapon-name">M4A1</div></div>
@@ -39,8 +61,12 @@
     <div class="ctrl"><span class="key">R</span><div class="desc">RELOAD</div></div>
     <div class="ctrl"><span class="key">V</span><div class="desc">3RD PERSON</div></div>
     <div class="ctrl"><span class="key">F3</span><div class="desc">DEBUG</div></div>
+    <div class="ctrl"><span class="key">G</span><div class="desc">PLANT</div></div>
   </div>
-  <button id="startbtn">[ DROP IN ]</button>
+  <div style="display:flex;gap:16px">
+    <button id="startbtn">[ DROP IN ]</button>
+    <button id="snd-startbtn">[ S&amp;D MODE ]</button>
+  </div>
 </div>
 <!-- Touch controls — display:none until initTouch() enables on touch devices -->
 <div id="touch-ui" style="display:none">

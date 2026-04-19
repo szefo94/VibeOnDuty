@@ -28,6 +28,7 @@ import { ammoDrops, spawnAmmoDrop } from './ammoDrops.js';
 import { updateHUD, showMsg, triggerHitFlash } from '../hud/overlay.js';
 import { setGameRunning, gameRunning } from '../input.js';
 import { rebuildEHM } from '../combat/shoot.js';
+import { getSndBombPos, isSndActive, onSndPlayerDeath, markEnemyDefusing, getSndDefuseRange } from '../modes/snd.js';
 
 // ── Wave state ────────────────────────────────────────────────────
 export let wave = 1;
@@ -172,6 +173,11 @@ export function rebuildAllEnemies() {
 // ── triggerDeath lives here because it reads wave ─────────────────
 export function triggerDeath() {
   player.dead = true;
+  if (isSndActive()) {
+    document.exitPointerLock?.();
+    onSndPlayerDeath();
+    return;
+  }
   setGameRunning(false);
   document.exitPointerLock?.();
   const ov = document.getElementById('overlay');
@@ -199,7 +205,7 @@ export function killEnemy(e) {
     scene.remove(e.mesh);
   }
 
-  if (enemies.every((en) => en.dead)) {
+  if (!isSndActive() && enemies.every((en) => en.dead)) {
     wave++;
     showMsg(`ZONE CLEARED — WAVE ${wave - 1} COMPLETE`, 3500);
     respawnTimer = 5000;
@@ -224,6 +230,7 @@ export function killDrone(d, dmg) {
 
 // ── Wave countdown (owns respawnTimer mutation) ───────────────────
 export function tickWave(dt) {
+  if (isSndActive()) return; // disable wave system in S&D
   if (respawnTimer <= 0) return;
   respawnTimer -= dt * 1000;
   const secs = Math.ceil(respawnTimer / 1000);
@@ -479,25 +486,35 @@ export function updateEnemies(ts, dt) {
       if (canMoveTo(nx, e.z, eGround)) e.x = nx;
       if (canMoveTo(e.x, nz, eGround)) e.z = nz;
     } else if (e.state === 'attack' || e.state === 'spotted') {
-      // ── Path throttle: recalc only when timer expires OR player cell changes ──
-      const goalCell = [
-        Math.floor(camera.position.x / CELL),
-        Math.floor(camera.position.z / CELL),
-      ];
+      // ── Path throttle: recalc only when timer expires OR goal cell changes ──
+      const bombPos = getSndBombPos();
+      const goalX = bombPos ? bombPos[0] : camera.position.x;
+      const goalZ = bombPos ? bombPos[1] : camera.position.z;
+      const goalCell = [Math.floor(goalX / CELL), Math.floor(goalZ / CELL)];
       const goalChanged =
         !e.pathGoal ||
         e.pathGoal[0] !== goalCell[0] ||
         e.pathGoal[1] !== goalCell[1];
       if (e.path.length === 0 || e.pathTick <= 0 || goalChanged) {
-        e.path = astar(e.x, e.z, camera.position.x, camera.position.z);
+        e.path = astar(e.x, e.z, goalX, goalZ);
         if (e.path.length > 0) e.path.shift();
         e.pathTick = 600 + Math.random() * 200;
         e.pathGoal = goalCell;
       }
       e.pathTick -= dt * 1000;
 
+      // ── Enemy defuse: mark if within range of planted bomb ───────────────
+      if (bombPos) {
+        const defR = getSndDefuseRange();
+        const bdx = e.x - bombPos[0], bdz = e.z - bombPos[1];
+        if (bdx * bdx + bdz * bdz < defR * defR) markEnemyDefusing();
+      }
+
       // ── Velocity-based movement with acceleration + drag ──────────────
-      if (e.path.length > 0 && distP > CELL * 1.4) {
+      const goalDist = bombPos
+        ? Math.sqrt((e.x - goalX) ** 2 + (e.z - goalZ) ** 2)
+        : distP;
+      if (e.path.length > 0 && goalDist > CELL * 1.4) {
         const [tx, tz] = e.path[0];
         const ddx = tx - e.x,
           ddz = tz - e.z,
@@ -515,17 +532,21 @@ export function updateEnemies(ts, dt) {
           isMoving = true;
         }
       } else {
-        // decelerate when no path target or close enough to player
         e.velX *= 1 - 10 * dt;
         e.velZ *= 1 - 10 * dt;
       }
 
       // ── Faster rotation in attack mode ────────────────────────────────
       const rotSpd = e.state === 'attack' ? ENEMY_ROT_SPD * 2.5 : ENEMY_ROT_SPD;
-      e.facingY = slerp(e.facingY, desiredY, rotSpd, dt);
+      // Face bomb when rushing it, otherwise face player
+      const faceX = bombPos ? bombPos[0] : camera.position.x;
+      const faceZ = bombPos ? bombPos[1] : camera.position.z;
+      const faceY = Math.atan2(-(faceX - e.x), -(faceZ - e.z));
+      e.facingY = slerp(e.facingY, faceY, rotSpd, dt);
 
       if (
         e.state === 'attack' &&
+        !bombPos &&
         distP < ENEMY_SHOOT_RANGE &&
         canSee &&
         Math.abs(normA(e.facingY - desiredY)) < AIM_THRESH
