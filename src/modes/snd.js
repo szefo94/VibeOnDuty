@@ -33,15 +33,31 @@ let bombMesh = null, bombLight = null;
 
 function createSiteMarkers() {
   for (const site of SITES) {
-    const geo = new THREE.RingGeometry(0.55, 0.85, 40);
-    geo.rotateX(-Math.PI / 2);
-    const mat = new THREE.MeshBasicMaterial({
-      color: 0xffcc00, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false,
+    // Ground ring — large and bright
+    const ringGeo = new THREE.RingGeometry(0.8, 1.3, 48);
+    ringGeo.rotateX(-Math.PI / 2);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0xffcc00, transparent: true, opacity: 0.75, side: THREE.DoubleSide, depthWrite: false,
     });
-    const ring = new THREE.Mesh(geo, mat);
-    ring.position.set(site.x, 0.04, site.z);
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.position.set(site.x, 0.05, site.z);
     scene.add(ring);
+
+    // Vertical beacon pole
+    const poleGeo = new THREE.CylinderGeometry(0.06, 0.06, 2.8, 8);
+    const poleMat = new THREE.MeshStandardMaterial({ color: 0xffcc00, emissive: 0xffaa00, emissiveIntensity: 0.6 });
+    const pole = new THREE.Mesh(poleGeo, poleMat);
+    pole.position.set(site.x, 1.4, site.z);
+    scene.add(pole);
+
+    // Point light beacon
+    const light = new THREE.PointLight(0xffcc00, 1.5, 6);
+    light.position.set(site.x, 2.6, site.z);
+    scene.add(light);
+
     site.ring = ring;
+    site.pole = pole;
+    site.light = light;
   }
 }
 
@@ -64,7 +80,9 @@ function removeBombMesh() {
 
 function removeSiteMarkers() {
   for (const site of SITES) {
-    if (site.ring) { scene.remove(site.ring); site.ring = null; }
+    if (site.ring)  { scene.remove(site.ring);  site.ring  = null; }
+    if (site.pole)  { scene.remove(site.pole);  site.pole  = null; }
+    if (site.light) { scene.remove(site.light); site.light = null; }
   }
 }
 
@@ -157,10 +175,11 @@ export function tickSnd(dt, keys) {
     return;
   }
 
-  // Pulse site rings
-  const pulse = 0.38 + 0.22 * Math.abs(Math.sin(performance.now() / 700));
+  // Pulse site markers
+  const pulse = 0.5 + 0.35 * Math.abs(Math.sin(performance.now() / 600));
   for (const site of SITES) {
-    if (site.ring) site.ring.material.opacity = pulse;
+    if (site.ring)  site.ring.material.opacity = pulse;
+    if (site.light) site.light.intensity = 1.0 + 1.5 * Math.abs(Math.sin(performance.now() / 450));
   }
 
   // Plant logic
@@ -170,6 +189,9 @@ export function tickSnd(dt, keys) {
     const dx = px - site.x, dz = pz - site.z;
     if (dx * dx + dz * dz < PLANT_RANGE * PLANT_RANGE) { nearSite = site; break; }
   }
+
+  if (nearSite && sndState !== 'planting') showPlantHint(nearSite.id);
+  else if (!nearSite) hidePlantHint();
 
   const gPressed = keys['KeyG'] && !player.dead;
 
@@ -271,4 +293,12 @@ function showSndResult(title, sub, color) {
 function hideSndResult() {
   const el = document.getElementById('snd-result');
   if (el) el.style.display = 'none';
+}
+function showPlantHint(siteId) {
+  const el = document.getElementById('snd-plant-hint');
+  if (el) { el.textContent = `SITE ${siteId} — HOLD G TO PLANT`; el.style.opacity = '1'; }
+}
+function hidePlantHint() {
+  const el = document.getElementById('snd-plant-hint');
+  if (el) el.style.opacity = '0';
 }

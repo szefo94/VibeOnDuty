@@ -170,6 +170,52 @@ export function rebuildAllEnemies() {
   rebuildEHM();
 }
 
+// ── S&D: spawn enemies as site defenders ─────────────────────────────────
+// sitePositions: [[cx,cz],[cx,cz]] world-space centre of each site
+export function spawnSndEnemies(sitePositions) {
+  const offsets = [
+    [-1, -1], [0, -1], [1, -1],
+    [-1,  0], [0,  0], [1,  0],
+    [-1,  1], [0,  1], [1,  1],
+    [0, -2],
+  ];
+  const half = Math.floor(enemies.length / 2);
+  enemies.forEach((e, i) => {
+    const [sx, sz] = sitePositions[i < half ? 0 : 1];
+    const [dc, dr] = offsets[i % offsets.length];
+    const mc = Math.floor(sx / CELL) + dc;
+    const mr = Math.floor(sz / CELL) + dr;
+    const cc = Math.max(1, Math.min(MAP_W - 2, mc));
+    const cr = Math.max(1, Math.min(MAP_H - 2, mr));
+    const cell = MAP[cr][cc];
+    const fc = cell === 0 || isRamp(cell) ? cc : Math.floor(sx / CELL);
+    const fr = cell === 0 || isRamp(cell) ? cr : Math.floor(sz / CELL);
+    if (e.mesh) scene.remove(e.mesh);
+    if (e.mixer) e.mixer.stopAllAction();
+    const patrol = randomPatrol(fc, fr, 1);
+    const { mesh, muzzleFlash, mixer, actions, facingOffset = 0 } = buildEnemyMesh(
+      fc * CELL + CELL / 2, fr * CELL + CELL / 2
+    );
+    Object.assign(e, {
+      mesh, muzzleFlash, mixer, actions, facingOffset,
+      currentClip: 'idle',
+      x: fc * CELL + CELL / 2, z: fr * CELL + CELL / 2,
+      hp: ENEMY_HP, maxHp: ENEMY_HP, hpDrain: ENEMY_HP,
+      state: 'patrol',
+      facingY: Math.random() * Math.PI * 2,
+      alertTimer: 0, reactDelay: 0, shootCd: 0,
+      path: [], pathTick: 0, pathGoal: null,
+      patrolWp: 0,
+      patrol: patrol.map(([c, r]) => [c * CELL + CELL / 2, r * CELL + CELL / 2]),
+      wpWait: 0, bobT: Math.random() * 6, dead: false, muzzleFlashT: 0,
+      radarAge: Infinity, crouching: false, crouchTimer: 0,
+      velX: 0, velZ: 0, velY: 0, stunTimer: 0,
+      onGround: true, jumpCd: 0, jumpPhase: '', jumpPhaseTimer: 0,
+    });
+  });
+  rebuildEHM();
+}
+
 // ── triggerDeath lives here because it reads wave ─────────────────
 export function triggerDeath() {
   player.dead = true;

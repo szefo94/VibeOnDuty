@@ -1,11 +1,11 @@
 import * as THREE from 'three';
-import { MOUSE_SENS, MAX_AMMO } from './config.js';
+import { MOUSE_SENS, MAX_AMMO, CELL } from './config.js';
 import { camera } from './scene.js';
 import { debugLines } from './level.js';
 import { locked, gameRunning, setGameRunning, setLocked } from './input.js';
 import { initTouch, isTouchDevice } from './touch.js';
 import { player, startReload } from './entities/player.js';
-import { spawnNewDrone, rebuildAllEnemies } from './entities/enemies.js';
+import { spawnNewDrone, rebuildAllEnemies, spawnSndEnemies } from './entities/enemies.js';
 import { tryThrowGrenade } from './entities/grenades.js';
 import { tryShoot, rebuildEHM, tryPunchDamage } from './combat/shoot.js';
 import { flashMeleeRing } from './fx/meleeRange.js';
@@ -99,33 +99,33 @@ document.getElementById('c').addEventListener('click', () => {
   if (gameRunning && !player.dead && !locked) document.getElementById('c').requestPointerLock();
 });
 
-// ── S&D mode start ─────────────────────────────────────────────────
-document.getElementById('snd-startbtn').addEventListener('click', () => {
+// Site positions must match SITES array in snd.js
+const SND_SITES = [
+  [8 * CELL + CELL / 2, 6 * CELL + CELL / 2],
+  [8 * CELL + CELL / 2, 17 * CELL + CELL / 2],
+];
+
+function sndStart() {
   document.getElementById('overlay').style.display = 'none';
-  if (isTouchDevice) {
-    setLocked(true);
-  } else {
-    document.getElementById('c').requestPointerLock();
-  }
+  if (isTouchDevice) { setLocked(true); } else { document.getElementById('c').requestPointerLock(); }
   setGameRunning(true);
-  rebuildEHM();
-  updateHUD();
   startSnd();
-  showMsg('SEARCH & DESTROY — PLANT THE BOMB (G near site)', 3500);
-});
+  spawnSndEnemies(SND_SITES);
+  updateHUD();
+  showMsg('S&D — PLANT AT SITE A OR B (HOLD G)', 3500);
+}
+
+// ── S&D mode start ─────────────────────────────────────────────────
+document.getElementById('snd-startbtn').addEventListener('click', sndStart);
 
 // ── S&D next round ─────────────────────────────────────────────────
 document.getElementById('snd-next-btn').addEventListener('click', () => {
   nextSndRound();
-  rebuildAllEnemies();
+  spawnSndEnemies(SND_SITES);
   updateHUD();
   setGameRunning(true);
-  if (isTouchDevice) {
-    setLocked(true);
-  } else {
-    document.getElementById('c').requestPointerLock();
-  }
-  showMsg('NEXT ROUND — PLANT THE BOMB (G near site)', 3000);
+  if (isTouchDevice) { setLocked(true); } else { document.getElementById('c').requestPointerLock(); }
+  showMsg('NEXT ROUND — PLANT AT SITE A OR B (HOLD G)', 3000);
 });
 
 // ── Touch controls ─────────────────────────────────────────────────

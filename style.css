@@ -65,6 +65,7 @@ body{background:#000;overflow:hidden;font-family:'Courier New',monospace}
 #snd-result{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.82);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:22}
 #snd-result-title{font-size:44px;letter-spacing:8px;margin-bottom:8px;text-shadow:0 0 30px currentColor}
 #snd-result-sub{font-size:13px;color:#888;letter-spacing:4px;margin-bottom:32px}
+#snd-plant-hint{font-size:11px;color:#e8c84a;letter-spacing:3px;text-shadow:0 1px 6px #000;transition:opacity 0.2s;padding:3px 0}
 #snd-next-btn{padding:12px 52px;background:#e8c84a;color:#000;border:none;font-family:'Courier New',monospace;font-size:14px;letter-spacing:4px;cursor:pointer;pointer-events:auto}
 #snd-next-btn:hover{background:#fff}
 #snd-startbtn{padding:12px 52px;background:#3498db;color:#fff;border:none;font-family:'Courier New',monospace;font-size:14px;letter-spacing:4px;cursor:pointer}
