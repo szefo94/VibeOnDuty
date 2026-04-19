@@ -9,6 +9,7 @@ import { wpn } from './builders/weapon.js';
 import { updateEnemies, tickWave } from './entities/enemies.js';
 import { tickTorches } from './lighting.js';
 import { drawHUD, setDebugAnimClip } from './hud/hud.js';
+import { tickMeleeRing } from './fx/meleeRange.js';
 import { drawMinimap } from './hud/radar.js';
 import { playerMesh, playerMixer, playerActions } from './builders/enemyGLTF.js';
 import { crossfade } from './builders/enemyAnimations.js';
@@ -143,8 +144,6 @@ export function loop(ts) {
           clip = player.moving
             ? (a.crouch_walk ? 'crouch_walk' : 'walk')
             : (a.crouch      ? 'crouch'      : 'idle');
-        } else if (player.aiming && a.attack) {
-          clip = 'attack';
         } else if (player.moving) {
           const back  = keys['KeyS'] && !keys['KeyW'];
           const left  = keys['KeyA'] && !keys['KeyD'] && !keys['KeyW'] && !keys['KeyS'];
@@ -154,6 +153,8 @@ export function loop(ts) {
           else if (left  && a.strafe_l)  clip = 'strafe_l';
           else if (right && a.strafe_r)  clip = 'strafe_r';
           else clip = sprint && a.run ? 'run' : 'walk';
+        } else if (player.aiming && a.attack) {
+          clip = 'attack';
         } else {
           clip = 'idle';
         }
@@ -167,6 +168,7 @@ export function loop(ts) {
     updateEnemies(ts, dt);
     tickTorches(dt);
     tickWave(dt);
+    tickMeleeRing(dt, camera.position.x, camera.position.z);
   }
 
   // ── Player mixer ticks even when dead so death animation plays ───

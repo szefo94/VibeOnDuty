@@ -7,7 +7,8 @@ import { initTouch, isTouchDevice } from './touch.js';
 import { player, startReload } from './entities/player.js';
 import { spawnNewDrone, rebuildAllEnemies } from './entities/enemies.js';
 import { tryThrowGrenade } from './entities/grenades.js';
-import { tryShoot, rebuildEHM } from './combat/shoot.js';
+import { tryShoot, rebuildEHM, tryPunchDamage } from './combat/shoot.js';
+import { flashMeleeRing } from './fx/meleeRange.js';
 import { updateHUD, showMsg, showStatus } from './hud/overlay.js';
 import { startLoop, setThirdPerson, getThirdPerson, toggleTpSide } from './loop.js';
 import { tryLoadEnemyGLTF, buildPlayerMesh } from './builders/enemyGLTF.js';
@@ -47,6 +48,11 @@ document.addEventListener('keydown', (e) => {
   if (e.code === 'KeyF' && !player.dead && !player.punching) {
     player.punching = true;
     player.punchClip = player.punchClip === 'punch_cross' ? 'punch_jab' : 'punch_cross';
+    // Deal damage at impact frame (~350ms) and flash range ring
+    setTimeout(() => {
+      tryPunchDamage();
+      flashMeleeRing(camera.position.x, camera.position.z);
+    }, 350);
     setTimeout(() => { player.punching = false; }, 700);
   }
 });

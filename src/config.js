@@ -34,3 +34,5 @@ export const MAX_ENERGY = 100,
   GRENADE_ENERGY_COST = 100;
 export const GRENADE_RADIUS = 9.0,
   GRENADE_PEAK_DMG = 150;
+export const PUNCH_RANGE = 1.8,
+  PUNCH_DAMAGE = 55;

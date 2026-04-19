@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { scene, camera } from '../scene.js';
-import { PLAYER_H, BULLET_DAMAGE, SHOOT_CD, ENERGY_PER_DMG, MAX_ENERGY } from '../config.js';
+import { PLAYER_H, BULLET_DAMAGE, SHOOT_CD, ENERGY_PER_DMG, MAX_ENERGY, PUNCH_RANGE, PUNCH_DAMAGE } from '../config.js';
 import { wallMeshes } from '../level.js';
 import { wpn, flash, flashMat, muzzleLight } from '../builders/weapon.js';
 import { spawnImpact } from '../fx/impacts.js';
@@ -163,6 +163,30 @@ export function tickBullets(dt) {
         continue;
       }
     }
+  }
+}
+
+// ── Melee punch ────────────────────────────────────────────────────────
+const _punchFwd = new THREE.Vector3();
+export function tryPunchDamage() {
+  _punchFwd.set(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
+  for (const e of enemies) {
+    if (e.dead) continue;
+    const dx = e.x - camera.position.x;
+    const dz = e.z - camera.position.z;
+    const dist = Math.sqrt(dx * dx + dz * dz);
+    if (dist > PUNCH_RANGE) continue;
+    const dot = _punchFwd.x * (dx / dist) + _punchFwd.z * (dz / dist);
+    if (dot < 0.34) continue; // ~120° frontal arc
+    e.hp = Math.max(0, e.hp - PUNCH_DAMAGE);
+    e.state = 'attack';
+    e.alertTimer = 9000;
+    e.reactDelay = 0;
+    e.velX = (dx / dist) * 3;
+    e.velZ = (dz / dist) * 3;
+    e.stunTimer = 0.45;
+    spawnHitMarker();
+    if (e.hp <= 0) killEnemy(e);
   }
 }
 
