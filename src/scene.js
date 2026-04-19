@@ -14,7 +14,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x7ca8c8);
 scene.fog = new THREE.FogExp2(0xc8b89a, 0.016);
 const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.05, 120);
-camera.position.set(1.5 * CELL, PLAYER_H, 1.5 * CELL);
+camera.position.set(11.5 * CELL, PLAYER_H, 6.5 * CELL); // interior ground, north half
 scene.add(camera);
 const hudCanvas = document.getElementById('hudCanvas');
 const hudCtx = hudCanvas.getContext('2d');
