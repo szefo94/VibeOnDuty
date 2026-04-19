@@ -3,36 +3,36 @@ import { groundElevation, canMoveTo, hAt } from './map.js';
 import { CELL } from './config.js';
 import { H1, H2 } from './map.js';
 
-// Cell (9,4) in the MAP is a ramp-N (value 4): low at -Z edge, high at +Z edge.
-// Cell (2,2) is open floor with HMAP elevation H1.
-// Cell (0,0) is a border wall.
+// New map "The Ring" reference cells:
+// Cell (col=8, row=6)  — interior ground floor, MAP=0, HMAP=0
+// Cell (col=7, row=19) — ramp-N (value 4): low at north edge, high at south edge
+// Cell (col=11, row=10) — interior raised floor, MAP=0, HMAP=H1
 
 describe('groundElevation', () => {
   it('returns 0 for a flat open floor cell with no elevation', () => {
-    // Row 1, col 7 — all four bilinear corners (cols 7-8, rows 1-2) are HMAP=0
-    const wx = 7 * CELL + CELL / 2;
-    const wz = 1 * CELL + CELL / 2;
+    // Row 6, col 8 — interior ground, all four bilinear corners at HMAP=0
+    const wx = 8 * CELL + CELL / 2;
+    const wz = 6 * CELL + CELL / 2;
     expect(groundElevation(wx, wz)).toBeCloseTo(0);
   });
 
   it('interpolates ramp-N (cell 4) from 0 at low edge to H2 at high edge', () => {
-    // Cell col=9, row=4 is ramp-N: low at z=row*CELL, high at z=(row+1)*CELL
-    const col = 9,
-      row = 4;
-    const lowZ = row * CELL; // south edge of cell → elevation 0
-    const highZ = (row + 1) * CELL; // north edge → elevation H2
-    const midZ = row * CELL + CELL / 2;
+    // Cell col=7, row=19 is ramp-N (4): tz=0 at north edge → 0, tz=1 at south edge → H2
+    const col = 7, row = 19;
+    const lowZ  = row * CELL;           // north edge → elevation 0
+    const highZ = (row + 1) * CELL;     // south edge → elevation H2
+    const midZ  = row * CELL + CELL / 2;
 
     const wx = col * CELL + CELL / 2;
-    expect(groundElevation(wx, lowZ + 0.01)).toBeCloseTo(0, 1);
-    expect(groundElevation(wx, highZ - 0.01)).toBeCloseTo(H2, 1);
-    expect(groundElevation(wx, midZ)).toBeCloseTo(H2 / 2, 1);
+    expect(groundElevation(wx, lowZ  + 0.01)).toBeCloseTo(0,   1);
+    expect(groundElevation(wx, highZ - 0.01)).toBeCloseTo(H2,  1);
+    expect(groundElevation(wx, midZ       )).toBeCloseTo(H2 / 2, 1);
   });
 
   it('returns H1 at centre of an H1-elevated flat cell', () => {
-    // Row 2, col 2 has HMAP H1
-    const wx = 2 * CELL + CELL / 2;
-    const wz = 2 * CELL + CELL / 2;
+    // Row 10, col 11 — central room interior floor, HMAP=H1
+    const wx = 11 * CELL + CELL / 2;
+    const wz = 10 * CELL + CELL / 2;
     expect(groundElevation(wx, wz)).toBeCloseTo(H1);
   });
 });
@@ -44,16 +44,16 @@ describe('canMoveTo', () => {
   });
 
   it('allows movement into an open floor cell at ground level', () => {
-    const wx = 2 * CELL + CELL / 2;
-    const wz = 2 * CELL + CELL / 2;
+    // Row 6, col 8 — interior ground, HMAP=0; step from y=0 is 0
+    const wx = 8 * CELL + CELL / 2;
+    const wz = 6 * CELL + CELL / 2;
     expect(canMoveTo(wx, wz, 0)).toBe(true);
   });
 
   it('blocks stepping onto an elevated slab that exceeds MAX_STEP from ground', () => {
-    // H2 = 1.4 which is > MAX_STEP (0.8), so stepping from y=0 onto an H2 cell is blocked
-    const wx = 2 * CELL + CELL / 2; // col 2, row 2 has H1 elevation
+    // H2 = 1.4 > MAX_STEP (0.8); ring cell col=2, row=2 is at H2
+    const wx = 2 * CELL + CELL / 2;
     const wz = 2 * CELL + CELL / 2;
-    // currentGroundY far below the cell height
     expect(canMoveTo(wx, wz, -2)).toBe(false);
   });
 
@@ -72,7 +72,7 @@ describe('hAt', () => {
   });
 
   it('returns H1 for known elevated flat cells', () => {
-    // HMAP[2][2] = H1
-    expect(hAt(2, 2)).toBe(H1);
+    // HMAP[10][11] = H1 (central room interior)
+    expect(hAt(11, 10)).toBe(H1);
   });
 });
