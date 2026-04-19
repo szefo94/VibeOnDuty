@@ -126,6 +126,8 @@ export function loop(ts) {
           clip = 'death';
         } else if (player.dancing && a.dance) {
           clip = 'dance';
+        } else if (player.punching && a[player.punchClip]) {
+          clip = player.punchClip;
         } else if (player.rollTimer > 0 && a.roll) {
           clip = 'roll';
         } else if (jumpPhase === 'land' && a.jump_land) {
@@ -155,7 +157,7 @@ export function loop(ts) {
         } else {
           clip = 'idle';
         }
-        const SNAP_CLIPS = new Set(['crouch', 'crouch_walk', 'death', 'roll', 'jump_start', 'jump_land', 'dance']);
+        const SNAP_CLIPS = new Set(['crouch', 'crouch_walk', 'death', 'roll', 'jump_start', 'jump_land', 'dance', 'punch_cross', 'punch_jab']);
         const snapTransition = SNAP_CLIPS.has(clip) || SNAP_CLIPS.has(playerAnim.currentClip);
         crossfade(playerAnim, clip, snapTransition ? 0 : 0.22);
         setDebugAnimClip(clip);

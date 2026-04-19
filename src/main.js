@@ -44,6 +44,11 @@ document.addEventListener('keydown', (e) => {
     player.dancing = !player.dancing;
     showStatus(player.dancing ? '🕺 DANCE' : '');
   }
+  if (e.code === 'KeyF' && !player.dead && !player.punching) {
+    player.punching = true;
+    player.punchClip = player.punchClip === 'punch_cross' ? 'punch_jab' : 'punch_cross';
+    setTimeout(() => { player.punching = false; }, 700);
+  }
 });
 document.addEventListener('mousemove', (e) => {
   if (!locked || !gameRunning || player.dead) return;

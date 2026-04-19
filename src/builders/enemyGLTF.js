@@ -51,13 +51,15 @@ const ALIASES = {
   strafe_r:    ['strafe_r'],
   nade:        ['nade'],
   dance:       ['Dance_Loop'],
+  punch_cross: ['Punch_Cross'],
+  punch_jab:   ['Punch_Jab'],
 };
 
 // All clip keys to attempt loading
 const CLIP_KEYS = [
   'idle', 'walk', 'run', 'attack', 'shoot', 'crouch', 'crouch_walk',
   'death', 'hit', 'roll', 'jump_start', 'jump_loop', 'jump_land', 'reload',
-  'run_back', 'walk_back', 'strafe_l', 'strafe_r', 'nade', 'dance',
+  'run_back', 'walk_back', 'strafe_l', 'strafe_r', 'nade', 'dance', 'punch_cross', 'punch_jab',
 ];
 // Minimum clips required — fall back to procedural if none of these match
 const REQUIRED_KEYS = ['idle', 'walk'];
@@ -203,7 +205,7 @@ export function buildEnemyMesh(wx, wz) {
     const clip = findClip(gltfTemplate.animations, key);
     if (!clip) continue;
     const action = mixer.clipAction(clip);
-    if (['death', 'hit', 'shoot', 'roll', 'jump_start', 'jump_land', 'reload'].includes(key)) {
+    if (['death', 'hit', 'shoot', 'roll', 'jump_start', 'jump_land', 'reload', 'punch_cross', 'punch_jab', 'nade'].includes(key)) {
       action.setLoop(THREE.LoopOnce);
       action.clampWhenFinished = true;
     }
@@ -271,7 +273,7 @@ export function buildPlayerMesh() {
     const clip = findClip(gltfTemplate.animations, key);
     if (!clip) continue;
     const action = mixer.clipAction(clip);
-    if (['death', 'hit', 'shoot', 'roll', 'jump_start', 'jump_land', 'reload'].includes(key)) {
+    if (['death', 'hit', 'shoot', 'roll', 'jump_start', 'jump_land', 'reload', 'punch_cross', 'punch_jab', 'nade'].includes(key)) {
       action.setLoop(THREE.LoopOnce);
       action.clampWhenFinished = true;
     }
