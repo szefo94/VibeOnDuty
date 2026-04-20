@@ -92,22 +92,19 @@ Phase 6.3 — Drone GLTF: wire `src/builders/droneGLTF.js` once `public/models/d
 
 ---
 
-## Phase 8 — Refactoring targets
+## Phase 8 — Refactoring targets (S&D infrastructure)
 
-### 8.1 — Extract `src/utils/los.js` (SMALL — ~15 lines)
+### 8.1 ✅ — Extract `src/utils/los.js`
 
-`hasLOS` is currently a private function in `enemies.js`. Extracting it to `src/utils/los.js` would let `friendlyBots`, future turret/camera AI, or grenade line-of-sight checks reuse it without duplication.
-
-**Effort:** low. One new file, update import in `enemies.js`.
+`hasLOS` extracted to `src/utils/los.js`. Used by enemies, friendly bots, drone scans.
 
 ---
 
 ### 8.2 — Split friendly bot AI into `entities/friendlyBots.js` (MEDIUM)
 
-`tickFriendlyBot` + friendly shooting loop is ~70 lines inside `enemies.js`. Moving it to its own file keeps `enemies.js` focused on hostile AI. Requires:
-- `hasLOS` extracted first (Phase 8.1) to avoid circular dep
-- `tickEnemyAnimation` either exported from `enemies.js` or moved to `builders/enemyAnimations.js`
-- `tickFriendlyBot` receives `enemies` + `killEnemy` as parameters (breaks circular import)
+`tickFriendlyBot` + friendly shooting loop is ~80 lines inside `enemies.js`. Moving it to its own file keeps `enemies.js` focused on hostile AI. Requires:
+- `tickEnemyAnimation` exported from `enemies.js` or moved to `builders/enemyAnimations.js` first (see 8.3)
+- `tickFriendlyBot` receives `enemies` + `killEnemy` as parameters to avoid circular import
 
 **Effort:** medium. 3 files touched, no logic changes.
 
@@ -115,7 +112,7 @@ Phase 6.3 — Drone GLTF: wire `src/builders/droneGLTF.js` once `public/models/d
 
 ### 8.3 — Move `tickEnemyAnimation` to `builders/enemyAnimations.js` (SMALL)
 
-`tickEnemyAnimation` belongs with crossfade/animation logic, not AI. Unblocks Phase 8.2.
+`tickEnemyAnimation` belongs with crossfade/animation logic, not AI. Unblocks 8.2.
 
 **Effort:** low. Move function, add export, update one import.
 
@@ -123,7 +120,7 @@ Phase 6.3 — Drone GLTF: wire `src/builders/droneGLTF.js` once `public/models/d
 
 ### 8.4 — Extract `src/entities/waveSystem.js` (SMALL)
 
-`wave`, `respawnTimer`, `tickWave` are ~20 lines that live in `enemies.js` but are conceptually separate (game-mode logic, not AI). Extracting cleans the boundary between "how enemies move" and "when waves spawn".
+`wave`, `respawnTimer`, `tickWave` are ~20 lines that live in `enemies.js` but are conceptually separate (game-mode logic). Extracting cleans the boundary between "how enemies move" and "when waves spawn".
 
 **Effort:** low. One new file, update imports in `loop.js` and `enemies.js`.
 
@@ -131,7 +128,7 @@ Phase 6.3 — Drone GLTF: wire `src/builders/droneGLTF.js` once `public/models/d
 
 ### 8.5 — Config audit: move S&D constants out of `snd.js` into `config.js` (TINY)
 
-`PLANT_TIME`, `DEFUSE_TIME`, `BOMB_FUSE`, `ROUND_TIMER`, `WINS_NEEDED` etc. are hardcoded in `snd.js`. Moving them to `config.js` makes tuning easier and consistent with the rest of the game constants.
+`PLANT_TIME`, `DEFUSE_TIME`, `BOMB_FUSE`, `ROUND_TIMER`, `WINS_NEEDED` etc. are hardcoded in `snd.js`. Moving them to `config.js` makes tuning easier.
 
 **Effort:** trivial. No structural change.
 
@@ -139,7 +136,7 @@ Phase 6.3 — Drone GLTF: wire `src/builders/droneGLTF.js` once `public/models/d
 
 ### 8.6 — HUD module split: `hud/sndHud.js` (SMALL)
 
-`hud.js` draws the general game HUD. All `updateMatchHUD`, `updateBombTimerHUD`, `showSndResult` etc. functions are currently in `snd.js`, mixing game-logic with DOM manipulation. Extracting them to `hud/sndHud.js` keeps `snd.js` as pure state machine with no DOM knowledge.
+`updateMatchHUD`, `updateBombTimerHUD`, `showSndResult` etc. live in `snd.js`, mixing game-logic with DOM manipulation. Extracting to `hud/sndHud.js` makes `snd.js` a pure state machine with no DOM knowledge.
 
 **Effort:** low. New file, thin import in `snd.js`.
 
@@ -147,9 +144,9 @@ Phase 6.3 — Drone GLTF: wire `src/builders/droneGLTF.js` once `public/models/d
 
 ### 8.7 — Unit tests for S&D state machine (MEDIUM)
 
-`snd.js` has no test coverage. Key cases to cover:
+`snd.js` has no test coverage. Key cases:
 - `startSnd` resets all state
-- `endRound` correctly assigns win/loss for each result type and both roles
+- `endRound` assigns win/loss correctly for each result type and both roles
 - `matchOver` triggers at 4 wins or round 7
 - `nextRound` alternates role at round 4
 
@@ -159,6 +156,115 @@ Phase 6.3 — Drone GLTF: wire `src/builders/droneGLTF.js` once `public/models/d
 
 ### 8.8 — Playwright smoke tests: S&D mode (SMALL)
 
-Add E2E tests for S&D start flow: button click → overlay hides → snd-bar visible → match header shows correct initial values.
+Button click → overlay hides → snd-bar visible → match header shows correct initial values.
 
 **Effort:** low. 2–3 new test cases in `tests/smoke.spec.js`.
+
+---
+
+## Phase 9 — Entity architecture
+
+### 9.1 — Shared entity mixin: `src/entities/entityBase.js` (SMALL)
+
+**Problem:** `takeDamage` logic is duplicated across shoot.js (bullets), enemies.js (friendly bot shots), and drone.js (EMP + bullet hits). Each site manually clamps HP and calls the right kill function.
+
+**Solution:** A plain-object factory — not a class — that stamps common methods onto any entity object:
+```js
+// entityBase.js
+export function applyEntityBase(obj) {
+  obj.isAlive = () => !obj.dead;
+  obj.takeDamage = (dmg, onDie) => {
+    if (obj.dead) return;
+    obj.hp = Math.max(0, obj.hp - dmg);
+    if (obj.hp <= 0) onDie(obj);
+  };
+}
+```
+Call at spawn time: `applyEntityBase(enemy)`. Keeps `spawnEnemyIntoSlot`'s `Object.assign` pattern intact — methods are just extra properties.
+
+**Why not a class hierarchy?** Enemies are slot-reused via `Object.assign(e, {...})` across rounds. Subclassing would break the slot-reuse pattern without a full respawn-factory rewrite. Player, enemy, and drone also diverge significantly in state shape (lean/pitch/yaw vs path/state/sndTeam). The mixin gets the benefit (shared takeDamage, isAlive) at near-zero cost.
+
+**Effort:** low. One new file (~15 lines), apply in `enemies.js` + `drone.js`, simplify call sites in `shoot.js`.
+
+---
+
+### 9.2 — Enemy AI state machine: `src/ai/enemyStates.js` (MEDIUM)
+
+**Problem:** Enemy AI in `updateEnemies` is a large `if/else if` chain on `e.state`. Adding a new state (e.g. `suppressed`, `flanking`) means modifying a 200-line function.
+
+**Solution:** State objects with `enter`, `tick`, and `exit` hooks:
+```js
+const PATROL_STATE = {
+  enter(e) { e.alertTimer = 0; },
+  tick(e, dt, ctx) { /* patrol waypoints */ },
+  exit(e) {},
+};
+```
+`transitionTo(e, ATTACK_STATE)` calls `exit` on current, `enter` on next. AI logic becomes composable and individually testable. S&D-specific states (`rush_site`, `plant_bomb`, `defuse_bomb`) slot in without touching generic patrol/attack logic.
+
+**Effort:** medium–high. Isolated to `enemies.js` and new `src/ai/` folder. No other files need changing.
+
+---
+
+### 9.3 — TypeScript interfaces for entity shapes (SMALL, prerequisite for 9.4+)
+
+**Problem:** Enemy, player, and drone objects are untyped plain objects. Nothing prevents typos like `e.snfTeam` or missing properties when adding new entity state.
+
+**Solution:** Add `.d.ts` declaration files (no TS compilation needed — just JSDoc + `// @ts-check`):
+```ts
+// types/entities.d.ts
+interface EntityBase { hp: number; dead: boolean; x: number; z: number; mesh: THREE.Object3D; }
+interface Enemy extends EntityBase { state: 'patrol'|'spotted'|'attack'; sndTeam?: 'friend'|'enemy'; ... }
+interface Player extends EntityBase { ammo: number; reserve: number; yaw: number; pitch: number; ... }
+```
+Catches shape bugs in editors without a TS build step.
+
+**Effort:** low. No runtime changes, pure type annotations.
+
+---
+
+## Phase 10 — Decoupling: event bus
+
+### 10.1 — `src/events.js` — lightweight event emitter (MEDIUM)
+
+**Problem:** Modules call each other directly in ways that create tight coupling and circular import risks:
+- `shoot.js` imports `killEnemy` from `enemies.js`
+- `enemies.js` imports `onAllEnemyTeamDead`, `onAllFriendsDead` from `snd.js`
+- `drone.js` imports `isSndActive` from `snd.js` and `enemies` from `enemies.js`
+
+Adding a new game mode (e.g. deathmatch) means threading imports through all these files.
+
+**Solution:** A tiny pub/sub emitter:
+```js
+// events.js
+const _bus = {};
+export const on  = (ev, fn) => (_bus[ev] ??= []).push(fn);
+export const off = (ev, fn) => _bus[ev] = (_bus[ev] || []).filter(f => f !== fn);
+export const emit = (ev, data) => (_bus[ev] || []).forEach(f => f(data));
+```
+`shoot.js` emits `emit('entity:hit', { entity: e, dmg })`.  
+`enemies.js` listens with `on('entity:hit', ...)`.  
+`snd.js` listens with `on('enemy:died', ...)` for round-end checks.
+
+**Benefit:** adding a deathmatch or TDM mode means registering new listeners, not editing existing files.
+
+**Effort:** medium. New file is tiny; refactoring call sites is the work (~8 call sites to convert).
+
+---
+
+## Phase 11 — Asset management
+
+### 11.1 — `src/builders/assetManager.js` (MEDIUM)
+
+**Problem:** GLTF, FBX loaders are separate `async` functions called independently in `main.js` via `Promise.all`. The GLTF-loaded race condition (S&D started before GLTF finishes) is handled by a special `isSndActive()` check scattered across `main.js`. Adding a new asset means touching `main.js` loading logic.
+
+**Solution:** Centralized `AssetManager` with a registry:
+```js
+assetManager.register('enemy-glb',  () => tryLoadEnemyGLTF());
+assetManager.register('player-p90', () => tryLoadP90ForHand());
+await assetManager.loadAll();
+// all assets guaranteed present before game starts
+```
+Race condition eliminated: game only starts after all assets resolve. Fallbacks registered per-asset, not scattered across callers.
+
+**Effort:** medium. Isolated to `main.js` + `builders/`. No gameplay logic changes.
