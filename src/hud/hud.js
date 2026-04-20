@@ -9,7 +9,8 @@ import {
   RELOAD_MS,
 } from '../config.js';
 import { player } from '../entities/player.js';
-import { enemies, activeDrone } from '../entities/enemies.js';
+import { enemies } from '../entities/enemies.js';
+import { activeDrone } from '../entities/drone.js';
 import { sprayHeat } from '../combat/shoot.js';
 import { grenImpactZones } from '../fx/particles.js';
 

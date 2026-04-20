@@ -18,7 +18,6 @@ import {
 import { MAP_W, MAP_H, MAP, isRamp, mapCell, canMoveTo, hAt } from '../map.js';
 import { slerp, normA } from '../math.js';
 import { astar } from '../astar.js';
-import { buildDrone } from '../builders/drone.js';
 import { buildEnemyMesh } from '../builders/enemyGLTF.js';
 import { crossfade } from '../builders/enemyAnimations.js';
 import { wallMeshes } from '../level.js';
@@ -26,7 +25,7 @@ import { spawnTracer } from '../fx/tracers.js';
 import { player } from './player.js';
 import { ammoDrops, spawnAmmoDrop } from './ammoDrops.js';
 import { updateHUD, showMsg, triggerHitFlash } from '../hud/overlay.js';
-import { setGameRunning, gameRunning } from '../input.js';
+import { setGameRunning } from '../input.js';
 import { rebuildEHM } from '../combat/shoot.js';
 import { getSndBombPos, isSndActive, onSndPlayerDeath, markEnemyDefusing, markEnemyPlanting, getSndDefuseRange, getSndPlantRange, getSndSitePositions, getPlayerRole, onAllEnemyTeamDead, onAllFriendsDead } from '../modes/snd.js';
 
@@ -220,15 +219,14 @@ export function spawnSndEnemies(sitePositions) {
       }
       e.sndTeam = 'friend';
       e.sndSiteTarget = i % 2;
-      if (!e._friendIndicator) {
-        const ind = new THREE.Mesh(
-          new THREE.ConeGeometry(0.18, 0.38, 8),
-          new THREE.MeshBasicMaterial({ color: 0x00ccff })
-        );
-        ind.position.set(0, 2.3, 0);
-        e.mesh.add(ind);
-        e._friendIndicator = ind;
-      }
+      // Always recreate — spawnEnemyIntoSlot replaced the mesh, old indicator is gone
+      const ind = new THREE.Mesh(
+        new THREE.ConeGeometry(0.18, 0.38, 8),
+        new THREE.MeshBasicMaterial({ color: 0x00ccff })
+      );
+      ind.position.set(0, 2.3, 0);
+      e.mesh.add(ind);
+      e._friendIndicator = ind;
     } else {
       // ── Enemy team ──
       const j = i - NUM_FRIENDS;
@@ -307,22 +305,6 @@ export function killEnemy(e) {
   }
 }
 
-export function killDrone(d, dmg) {
-  d.hp -= dmg;
-  if (d.hp > 0) return;
-  d.dead = true;
-  scene.remove(d.mesh);
-  activeDrone = null;
-  player.kills++;
-  document.getElementById('kills-num').textContent = player.kills;
-  showMsg('DRONE DOWN — NEW DRONE INCOMING', 2000);
-  spawnAmmoDrop(d.x, d.z);
-  rebuildEHM();
-  setTimeout(() => {
-    if (gameRunning) spawnNewDrone();
-  }, 3000);
-}
-
 // ── Wave countdown (owns respawnTimer mutation) ───────────────────
 export function tickWave(dt) {
   if (isSndActive()) return; // disable wave system in S&D
@@ -337,133 +319,6 @@ export function tickWave(dt) {
     enemies.forEach((e) => spawnEnemyIntoSlot(e));
     rebuildEHM();
     showMsg(`WAVE ${wave} — ENGAGE!`, 2500);
-  }
-}
-
-// ── Drone ─────────────────────────────────────────────────────────
-export const DRONE_FLY_H = 4.5;
-export const dronePool = [];
-export let activeDrone = null;
-
-export function spawnNewDrone() {
-  const [mc, mr] = randomSpawnCell([]);
-  const d = buildDrone(mc * CELL + CELL / 2, DRONE_FLY_H, mr * CELL + CELL / 2);
-  // strafe orbit + EMP state
-  d.strafeDir = Math.random() < 0.5 ? 1 : -1;
-  d.strafeDirTimer = 3 + Math.random() * 4;
-  d.empCd = 0; // starts ready so first EMP fires once drone reaches low HP
-  dronePool.push(d);
-  activeDrone = d;
-  d.mesh.traverse((ch) => {
-    if (ch.isMesh) ch.userData.droneRef = d;
-  });
-  rebuildEHM();
-  return d;
-}
-
-export function updateDrone(d, dt) {
-  if (d.dead) return;
-  d.floatT += dt * 0.8;
-  const pdx = camera.position.x - d.x,
-    pdz = camera.position.z - d.z;
-  const dist = Math.sqrt(pdx * pdx + pdz * pdz);
-  const targetDist = 8;
-
-  // velX/velZ are in units/second — applied as d.x += d.velX * dt
-  const DRONE_ACCEL = 4;   // units/s² for approach/retreat
-  const DRONE_STRAFE = 2.8; // units/s² for orbit tangent
-  const DRONE_DRAG = 3;    // drag coefficient (higher = snappier stop)
-  const DRONE_MAX_SPEED = 5; // units/s hard cap
-
-  // ── Approach / retreat to maintain orbit radius ───────────────────
-  const radialErr = dist - targetDist;
-  if (Math.abs(radialErr) > 1) {
-    const sign = radialErr > 0 ? 1 : -1;
-    d.velX += (pdx / dist) * sign * DRONE_ACCEL * dt;
-    d.velZ += (pdz / dist) * sign * DRONE_ACCEL * dt;
-  }
-
-  // ── Strafe orbit: tangential component perpendicular to player dir ─
-  if (dist > 1) {
-    d.strafeDirTimer -= dt;
-    if (d.strafeDirTimer <= 0) {
-      d.strafeDir *= -1;
-      d.strafeDirTimer = 3 + Math.random() * 4;
-    }
-    const tangX = -(pdz / dist);
-    const tangZ = pdx / dist;
-    d.velX += tangX * d.strafeDir * DRONE_STRAFE * dt;
-    d.velZ += tangZ * d.strafeDir * DRONE_STRAFE * dt;
-  }
-
-  // ── Drag + speed cap ──────────────────────────────────────────────
-  d.velX -= d.velX * DRONE_DRAG * dt;
-  d.velZ -= d.velZ * DRONE_DRAG * dt;
-  const spd = Math.sqrt(d.velX * d.velX + d.velZ * d.velZ);
-  if (spd > DRONE_MAX_SPEED) {
-    d.velX = (d.velX / spd) * DRONE_MAX_SPEED;
-    d.velZ = (d.velZ / spd) * DRONE_MAX_SPEED;
-  }
-
-  // ── Integrate + clamp to map; zero velocity on edge collision ─────
-  const nx = d.x + d.velX * dt;
-  const nz = d.z + d.velZ * dt;
-  const minB = CELL, maxBX = (MAP_W - 2) * CELL, maxBZ = (MAP_H - 2) * CELL;
-  d.x = Math.max(minB, Math.min(maxBX, nx));
-  d.z = Math.max(minB, Math.min(maxBZ, nz));
-  if (d.x !== nx) d.velX = 0;
-  if (d.z !== nz) d.velZ = 0;
-  d.y = DRONE_FLY_H + Math.sin(d.floatT) * 0.4;
-  d.mesh.position.set(d.x, d.y, d.z);
-  d.mesh.rotation.y = Math.atan2(pdx, pdz);
-  d.mesh.children.forEach((ch) => {
-    if (ch.userData.isRotor) ch.rotation.y += dt * 18;
-  });
-
-  // ── EMP pulse when HP critical (< 30%) ────────────────────────────
-  d.empCd = Math.max(0, d.empCd - dt * 1000);
-  if (d.hp < d.maxHp * 0.3 && d.empCd <= 0) {
-    d.empCd = 5000;
-    player.slowTimer = 2.0;
-    showMsg('EMP PULSE — SYSTEMS JAMMED', 2200);
-  }
-
-  // ── Burst fire (disabled — uncomment to enable) ───────────────────
-  // const DRONE_BURST_RANGE = 14;
-  // const DRONE_BURST_CD = 2000;   // ms between bursts
-  // const DRONE_BURST_COUNT = 3;   // bullets per burst
-  // const DRONE_BURST_INTERVAL = 150; // ms between bullets in a burst
-  // d.burstCd = (d.burstCd ?? DRONE_BURST_CD) - dt * 1000;
-  // d.burstCount = d.burstCount ?? 0;
-  // d.burstTimer = (d.burstTimer ?? 0) - dt * 1000;
-  // if (d.burstCd <= 0 && dist < DRONE_BURST_RANGE) {
-  //   d.burstCd = DRONE_BURST_CD;
-  //   d.burstCount = DRONE_BURST_COUNT;
-  //   d.burstTimer = 0;
-  // }
-  // if (d.burstCount > 0 && d.burstTimer <= 0) {
-  //   const fireDir = new THREE.Vector3(
-  //     camera.position.x - d.x,
-  //     camera.position.y - d.y,
-  //     camera.position.z - d.z
-  //   ).normalize();
-  //   spawnBullet(new THREE.Vector3(d.x, d.y, d.z), fireDir);
-  //   d.burstCount--;
-  //   d.burstTimer = DRONE_BURST_INTERVAL;
-  // }
-
-  const coneDir = new THREE.Vector3(pdx, camera.position.y - d.y, pdz).normalize();
-  d.cone.lookAt(d.cone.position.clone().add(coneDir));
-  d.cone.material.opacity = 0.08 + Math.abs(Math.sin(d.floatT * 2)) * 0.07;
-  // eye: orange flash right after an EMP pulse, blue otherwise
-  if (d.empCd > 4500) {
-    d.eye.material.color.setHex(0xff4400);
-  } else {
-    d.eye.material.color.setHSL(
-      0.55 + Math.sin(d.floatT * 3) * 0.05,
-      1,
-      0.6 + Math.sin(d.floatT * 5) * 0.2
-    );
   }
 }
 
@@ -571,6 +426,25 @@ function tickFriendlyBot(e, dt) {
   } else {
     e.velX *= 1 - 8 * dt;
     e.velZ *= 1 - 8 * dt;
+  }
+
+  // ── Friendly shooting: scan for nearby enemies ───────────────────
+  e.shootCd = Math.max(0, (e.shootCd ?? 0) - dt * 1000);
+  if (e.shootCd <= 0) {
+    for (const target of enemies) {
+      if (target.dead || target.sndTeam !== 'enemy') continue;
+      const dx = target.x - e.x, dz = target.z - e.z;
+      const dist2 = dx * dx + dz * dz;
+      if (dist2 > ENEMY_SHOOT_RANGE * ENEMY_SHOOT_RANGE) continue;
+      const tGround = hAt(Math.floor(target.x / CELL), Math.floor(target.z / CELL));
+      if (!hasLOS(e.x, eGround + PLAYER_H * 0.85, e.z, target.x, tGround + PLAYER_H * 0.85, target.z)) continue;
+      e.shootCd = ENEMY_SHOOT_CD;
+      e.facingY = Math.atan2(-dx, -dz);
+      target.hp = Math.max(0, target.hp - ENEMY_DAMAGE);
+      e.muzzleFlashT = 55;
+      if (target.hp <= 0) killEnemy(target);
+      break;
+    }
   }
 
   tickEnemyAnimation(e, dt, isMoving);
@@ -830,8 +704,6 @@ export function updateEnemies(ts, dt) {
     }
     e.radarAge += dt;
   }
-  if (activeDrone && !activeDrone.dead) updateDrone(activeDrone, dt);
-
   // ── Tick dying enemies (death animation plays, then mesh removed) ─
   for (let i = dyingEnemies.length - 1; i >= 0; i--) {
     const e = dyingEnemies[i];

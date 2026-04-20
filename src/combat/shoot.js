@@ -6,7 +6,8 @@ import { wpn, flash, flashMat, muzzleLight } from '../builders/weapon.js';
 import { spawnImpact } from '../fx/impacts.js';
 import { groundElevation } from '../map.js';
 import { player, startReload } from '../entities/player.js';
-import { enemies, activeDrone, dronePool, killEnemy, killDrone } from '../entities/enemies.js';
+import { enemies, killEnemy } from '../entities/enemies.js';
+import { activeDrone, dronePool, killDrone } from '../entities/drone.js';
 import { spawnHitMarker } from '../hud/hitmarker.js';
 import { updateHUD } from '../hud/overlay.js';
 

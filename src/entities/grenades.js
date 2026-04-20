@@ -6,7 +6,8 @@ import { mm } from '../materials.js';
 import { grenadeFalloff, grenadeEntityDamage, grenadePlayerDamage } from '../combat/damage.js';
 import { spawnGrenadeParticles } from '../fx/particles.js';
 import { player } from './player.js';
-import { enemies, activeDrone, killEnemy, killDrone, triggerDeath } from './enemies.js';
+import { enemies, killEnemy, triggerDeath } from './enemies.js';
+import { activeDrone, killDrone } from './drone.js';
 import { showStatus, triggerHitFlash, updateHUD } from '../hud/overlay.js';
 
 export const grenades = [];

@@ -3,7 +3,8 @@ import { MAP_W, MAP_H, MAP, isRamp, isCrack } from '../map.js';
 import { normA } from '../math.js';
 import { camera } from '../scene.js';
 import { player, visited } from '../entities/player.js';
-import { enemies, activeDrone } from '../entities/enemies.js';
+import { enemies } from '../entities/enemies.js';
+import { activeDrone } from '../entities/drone.js';
 import { ammoDrops } from '../entities/ammoDrops.js';
 
 const mmC = document.getElementById('mm'),
