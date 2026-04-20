@@ -28,7 +28,7 @@ import { ammoDrops, spawnAmmoDrop } from './ammoDrops.js';
 import { updateHUD, showMsg, triggerHitFlash } from '../hud/overlay.js';
 import { setGameRunning, gameRunning } from '../input.js';
 import { rebuildEHM } from '../combat/shoot.js';
-import { getSndBombPos, isSndActive, onSndPlayerDeath, markEnemyDefusing, getSndDefuseRange, getSndSitePositions } from '../modes/snd.js';
+import { getSndBombPos, isSndActive, onSndPlayerDeath, markEnemyDefusing, markEnemyPlanting, getSndDefuseRange, getSndPlantRange, getSndSitePositions, getPlayerRole, onAllEnemyTeamDead, onAllFriendsDead } from '../modes/snd.js';
 
 // ── Wave state ────────────────────────────────────────────────────
 export let wave = 1;
@@ -181,12 +181,17 @@ export function rebuildAllEnemies(sndSitePositions = null) {
 }
 
 // ── S&D spawn helpers ─────────────────────────────────────────────────────
-// Attacker (friendly) spawn cells — east interior, near col 16 row 11 player start
+// East interior cells — player attack spawn + enemy attack spawn (role=defend)
 const ATTACKER_SLOTS = [[15,10],[16,10],[17,10],[15,12],[17,12]];
-// Defender spawn offsets relative to site cell
+// Defender spawn offsets relative to site cell (for enemy defenders when player attacks)
 const SND_DEF_OFFSETS = [
   [0,-1],[1,-1],   // site A (i=0,1)
   [0, 0],[1, 0],[-1,0], // site B (i=2,3,4)
+];
+// Friendly defender slots near sites (for friendly bots when player defends)
+const DEFENDER_FRIEND_OFFSETS = [
+  [-1,0],[0,-1],[1,0],   // near site A
+  [-1,0],[0,-1],         // near site B
 ];
 
 function openNear(cx, cz) {
@@ -197,14 +202,24 @@ function openNear(cx, cz) {
 }
 
 export function spawnSndEnemies(sitePositions) {
-  const NUM_FRIENDS = 5; // first 5 = friendly team (attackers with player)
+  const role = getPlayerRole();
+  const NUM_FRIENDS = 5;
   enemies.forEach((e, i) => {
     if (i < NUM_FRIENDS) {
-      // ── Friendly attacker: spawn east side with player ──
-      spawnEnemyIntoSlot(e, ATTACKER_SLOTS[i % ATTACKER_SLOTS.length]);
+      // ── Friendly team ──
+      if (role === 'attack') {
+        // Rush to sites with player (east side)
+        spawnEnemyIntoSlot(e, ATTACKER_SLOTS[i % ATTACKER_SLOTS.length]);
+      } else {
+        // Defend near sites
+        const siteIdx = i < 3 ? 0 : 1;
+        const [sx, sz] = sitePositions[siteIdx];
+        const [dc, dr] = DEFENDER_FRIEND_OFFSETS[i];
+        const [fc, fr] = openNear(Math.floor(sx / CELL) + dc, Math.floor(sz / CELL) + dr);
+        spawnEnemyIntoSlot(e, [fc, fr]);
+      }
       e.sndTeam = 'friend';
-      e.sndSiteTarget = i % 2; // 0 = site A, 1 = site B
-      // Cyan cone indicator above head
+      e.sndSiteTarget = i % 2;
       if (!e._friendIndicator) {
         const ind = new THREE.Mesh(
           new THREE.ConeGeometry(0.18, 0.38, 8),
@@ -215,14 +230,24 @@ export function spawnSndEnemies(sitePositions) {
         e._friendIndicator = ind;
       }
     } else {
-      // ── Defender: spawn at site ──
-      const j = i - NUM_FRIENDS; // 0..4
-      const siteIdx = j < 2 ? 0 : 1; // first 2 at A, next 3 at B
-      const [sx, sz] = sitePositions[siteIdx];
-      const [dc, dr] = SND_DEF_OFFSETS[j];
-      const [fc, fr] = openNear(Math.floor(sx / CELL) + dc, Math.floor(sz / CELL) + dr);
-      spawnEnemyIntoSlot(e, [fc, fr]);
+      // ── Enemy team ──
+      const j = i - NUM_FRIENDS;
+      if (role === 'attack') {
+        // Defenders at sites
+        const siteIdx = j < 2 ? 0 : 1;
+        const [sx, sz] = sitePositions[siteIdx];
+        const [dc, dr] = SND_DEF_OFFSETS[j];
+        const [fc, fr] = openNear(Math.floor(sx / CELL) + dc, Math.floor(sz / CELL) + dr);
+        spawnEnemyIntoSlot(e, [fc, fr]);
+      } else {
+        // Attackers — spawn east side, rush sites
+        spawnEnemyIntoSlot(e, ATTACKER_SLOTS[j % ATTACKER_SLOTS.length]);
+        e.state = 'attack';
+        e.alertTimer = 9000;
+        e.reactDelay = 0;
+      }
       e.sndTeam = 'enemy';
+      e.sndSiteAttack = j < 3 ? 0 : 1;
       if (e._friendIndicator) { e.mesh.remove(e._friendIndicator); e._friendIndicator = null; }
     }
   });
@@ -234,7 +259,9 @@ export function triggerDeath() {
   player.dead = true;
   if (isSndActive()) {
     document.exitPointerLock?.();
-    onSndPlayerDeath();
+    const allFriendsDead = enemies.every((en) => en.dead || en.sndTeam !== 'friend');
+    if (allFriendsDead) onAllFriendsDead();
+    // else game continues — friendlies still alive
     return;
   }
   setGameRunning(false);
@@ -251,7 +278,11 @@ const dyingEnemies = [];
 export function killEnemy(e) {
   e.dead = true;
   rebuildEHM();
-  if (e.sndTeam === 'friend') return; // friendly fire — no kill credit, no round logic
+  if (e.sndTeam === 'friend') {
+    if (isSndActive() && player.dead && enemies.every((en) => en.dead || en.sndTeam !== 'friend'))
+      onAllFriendsDead();
+    return;
+  }
   player.kills++;
   document.getElementById('kills-num').textContent = player.kills;
   showMsg('ENEMY DOWN');
@@ -265,7 +296,11 @@ export function killEnemy(e) {
     scene.remove(e.mesh);
   }
 
-  if (!isSndActive() && enemies.every((en) => en.dead)) {
+  if (isSndActive()) {
+    if (enemies.every((en) => en.dead || en.sndTeam !== 'enemy')) onAllEnemyTeamDead();
+    return;
+  }
+  if (enemies.every((en) => en.dead)) {
     wave++;
     showMsg(`ZONE CLEARED — WAVE ${wave - 1} COMPLETE`, 3500);
     respawnTimer = 5000;
@@ -594,9 +629,11 @@ export function updateEnemies(ts, dt) {
       if (canMoveTo(e.x, nz, eGround)) e.z = nz;
     } else if (e.state === 'attack' || e.state === 'spotted') {
       // ── Path throttle: recalc only when timer expires OR goal cell changes ──
+      const isEnemyAttacker = isSndActive() && e.sndTeam === 'enemy' && getPlayerRole() === 'defend';
+      const sitePos = isEnemyAttacker ? getSndSitePositions()[e.sndSiteAttack ?? 0] : null;
       const bombPos = getSndBombPos();
-      const goalX = bombPos ? bombPos[0] : camera.position.x;
-      const goalZ = bombPos ? bombPos[1] : camera.position.z;
+      const goalX = sitePos ? sitePos[0] : bombPos ? bombPos[0] : camera.position.x;
+      const goalZ = sitePos ? sitePos[1] : bombPos ? bombPos[1] : camera.position.z;
       const goalCell = [Math.floor(goalX / CELL), Math.floor(goalZ / CELL)];
       const goalChanged =
         !e.pathGoal ||
@@ -615,6 +652,12 @@ export function updateEnemies(ts, dt) {
         const defR = getSndDefuseRange();
         const bdx = e.x - bombPos[0], bdz = e.z - bombPos[1];
         if (bdx * bdx + bdz * bdz < defR * defR) markEnemyDefusing();
+      }
+      // ── Enemy plant: mark if attacker reached assigned site ──────────────
+      if (isEnemyAttacker && sitePos && !bombPos) {
+        const pr = getSndPlantRange();
+        const sdx = e.x - sitePos[0], sdz = e.z - sitePos[1];
+        if (sdx * sdx + sdz * sdz < pr * pr) markEnemyPlanting(e.x, e.z);
       }
 
       // ── Velocity-based movement with acceleration + drag ──────────────

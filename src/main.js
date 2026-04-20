@@ -11,7 +11,7 @@ import { tryShoot, rebuildEHM, tryPunchDamage } from './combat/shoot.js';
 import { flashMeleeRing } from './fx/meleeRange.js';
 import { updateHUD, showMsg, showStatus } from './hud/overlay.js';
 import { startLoop, setThirdPerson, getThirdPerson, toggleTpSide } from './loop.js';
-import { startSnd, nextSndRound, getSndSitePositions, isSndActive } from './modes/snd.js';
+import { startSnd, nextRound, getSndSitePositions, isSndActive, isMatchOver } from './modes/snd.js';
 import { tryLoadEnemyGLTF, buildPlayerMesh } from './builders/enemyGLTF.js';
 import { tryLoadWeaponFBX, tryLoadP90ForHand } from './builders/weaponFBX.js';
 import { tryLoadPistolFBX } from './builders/enemyWeapon.js';
@@ -114,12 +114,12 @@ document.getElementById('snd-startbtn').addEventListener('click', sndStart);
 
 // ── S&D next round ─────────────────────────────────────────────────
 document.getElementById('snd-next-btn').addEventListener('click', () => {
-  nextSndRound();                             // resets player pos to east-side spawn
+  if (isMatchOver()) { location.reload(); return; }
+  nextRound();
   spawnSndEnemies(getSndSitePositions());
   updateHUD();
   setGameRunning(true);
   if (isTouchDevice) { setLocked(true); } else { document.getElementById('c').requestPointerLock(); }
-  showMsg('NEXT ROUND — PLANT AT SITE A OR B (HOLD G)', 3000);
 });
 
 // ── Touch controls ─────────────────────────────────────────────────
