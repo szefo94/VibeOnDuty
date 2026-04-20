@@ -6,7 +6,7 @@ import { locked, gameRunning, setGameRunning, setLocked } from './input.js';
 import { initTouch, isTouchDevice } from './touch.js';
 import { player, startReload } from './entities/player.js';
 import { rebuildAllEnemies, spawnSndEnemies } from './entities/enemies.js';
-import { spawnNewDrone } from './entities/drone.js';
+import { spawnNewDrone, spawnSndDrones, clearSndDrones } from './entities/drone.js';
 import { tryThrowGrenade } from './entities/grenades.js';
 import { tryShoot, rebuildEHM, tryPunchDamage } from './combat/shoot.js';
 import { flashMeleeRing } from './fx/meleeRange.js';
@@ -104,8 +104,9 @@ function sndStart() {
   document.getElementById('overlay').style.display = 'none';
   if (isTouchDevice) { setLocked(true); } else { document.getElementById('c').requestPointerLock(); }
   setGameRunning(true);
-  startSnd();                                 // resets player pos to east-side spawn
-  spawnSndEnemies(getSndSitePositions());     // defenders cluster on west-side sites
+  startSnd();
+  spawnSndEnemies(getSndSitePositions());
+  spawnSndDrones();
   updateHUD();
   showMsg('S&D — PLANT AT SITE A OR B (HOLD G)', 3500);
 }
@@ -116,8 +117,10 @@ document.getElementById('snd-startbtn').addEventListener('click', sndStart);
 // ── S&D next round ─────────────────────────────────────────────────
 document.getElementById('snd-next-btn').addEventListener('click', () => {
   if (isMatchOver()) { location.reload(); return; }
+  clearSndDrones();
   nextRound();
   spawnSndEnemies(getSndSitePositions());
+  spawnSndDrones();
   updateHUD();
   setGameRunning(true);
   if (isTouchDevice) { setLocked(true); } else { document.getElementById('c').requestPointerLock(); }

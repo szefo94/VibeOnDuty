@@ -4,7 +4,7 @@ import { normA } from '../math.js';
 import { camera } from '../scene.js';
 import { player, visited } from '../entities/player.js';
 import { enemies } from '../entities/enemies.js';
-import { activeDrone } from '../entities/drone.js';
+import { activeDrone, sndDrones } from '../entities/drone.js';
 import { ammoDrops } from '../entities/ammoDrops.js';
 
 const mmC = document.getElementById('mm'),
@@ -106,6 +106,15 @@ export function drawMinimap(dt) {
       mmX.arc((activeDrone.x / CELL) * MC, (activeDrone.z / CELL) * MC, 4, 0, Math.PI * 2);
       mmX.fill();
     }
+  }
+
+  // S&D recon drones — always visible (they're known threats/assets)
+  for (const d of sndDrones) {
+    const ex = (d.x / CELL) * MC, ez = (d.z / CELL) * MC;
+    mmX.fillStyle = d.team === 'friend' ? 'rgba(0,200,255,0.9)' : 'rgba(255,60,0,0.9)';
+    mmX.beginPath();
+    mmX.arc(ex, ez, 3.5, 0, Math.PI * 2);
+    mmX.fill();
   }
 
   for (const d of ammoDrops) {

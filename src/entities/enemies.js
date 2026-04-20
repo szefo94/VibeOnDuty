@@ -21,6 +21,7 @@ import { astar } from '../astar.js';
 import { buildEnemyMesh } from '../builders/enemyGLTF.js';
 import { crossfade } from '../builders/enemyAnimations.js';
 import { wallMeshes } from '../level.js';
+import { hasLOS } from '../utils/los.js';
 import { spawnTracer } from '../fx/tracers.js';
 import { player } from './player.js';
 import { ammoDrops, spawnAmmoDrop } from './ammoDrops.js';
@@ -325,19 +326,6 @@ export function tickWave(dt) {
 }
 
 // ── Enemy AI ──────────────────────────────────────────────────────
-const _los = new THREE.Raycaster();
-const _tv = new THREE.Vector3(),
-  _tv2 = new THREE.Vector3();
-
-function hasLOS(ax, ay, az, bx, by, bz) {
-  _tv.set(ax, ay, az);
-  _tv2.set(bx - ax, by - ay, bz - az);
-  const d = _tv2.length();
-  _tv2.normalize();
-  _los.set(_tv, _tv2);
-  _los.far = d - 0.14;
-  return _los.intersectObjects(wallMeshes, false).length === 0;
-}
 
 const E_JUMP_START_DUR = 0.32;
 const E_JUMP_LAND_DUR  = 0.38;

@@ -8,6 +8,9 @@ import { spawnAmmoDrop } from './ammoDrops.js';
 import { showMsg } from '../hud/overlay.js';
 import { rebuildEHM } from '../combat/shoot.js';
 import { gameRunning } from '../input.js';
+import { enemies } from './enemies.js';
+import { isSndActive } from '../modes/snd.js';
+import { hasLOS } from '../utils/los.js';
 
 // ── Walkable cells (local copy — avoids circular dep with enemies.js) ──────
 const _WALKABLE = [];
@@ -124,5 +127,136 @@ export function updateDrone(d, dt) {
       0.55 + Math.sin(d.floatT * 3) * 0.05, 1,
       0.6 + Math.sin(d.floatT * 5) * 0.2
     );
+  }
+}
+
+// ── S&D recon drones ─────────────────────────────────────────────────────────
+const RECON_FLY_H  = 4.2;
+const RECON_SPEED  = 4.0;
+const RECON_SCAN_R = 13;
+const RECON_SCAN_CD = 2.5;
+
+// Patrol routes (world coords) — friend sweeps west/sites, enemy sweeps east/player
+const _WP = {
+  friend: [
+    [16 * CELL + CELL / 2,  5 * CELL + CELL / 2],
+    [ 9 * CELL + CELL / 2,  5 * CELL + CELL / 2],
+    [ 8 * CELL + CELL / 2,  7 * CELL + CELL / 2],  // site A
+    [ 8 * CELL + CELL / 2, 17 * CELL + CELL / 2],  // site B
+    [ 9 * CELL + CELL / 2, 19 * CELL + CELL / 2],
+    [16 * CELL + CELL / 2, 19 * CELL + CELL / 2],
+  ],
+  enemy: [
+    [11 * CELL + CELL / 2,  4 * CELL + CELL / 2],
+    [16 * CELL + CELL / 2,  8 * CELL + CELL / 2],
+    [16 * CELL + CELL / 2, 11 * CELL + CELL / 2],  // player spawn
+    [16 * CELL + CELL / 2, 14 * CELL + CELL / 2],
+    [11 * CELL + CELL / 2, 20 * CELL + CELL / 2],
+  ],
+};
+
+export const sndDrones = [];
+
+export function spawnSndDrones() {
+  clearSndDrones();
+  _addRecon('friend');
+  _addRecon('enemy');
+}
+
+export function clearSndDrones() {
+  for (const d of sndDrones) scene.remove(d.mesh);
+  sndDrones.length = 0;
+}
+
+function _addRecon(team) {
+  const wps = _WP[team];
+  const [sx, sz] = wps[0];
+  const color  = team === 'friend' ? 0x00ccff : 0xff3300;
+  const emissive = team === 'friend' ? 0x004488 : 0x881100;
+
+  const body = new THREE.Mesh(
+    new THREE.OctahedronGeometry(0.22, 0),
+    new THREE.MeshStandardMaterial({ color, emissive, emissiveIntensity: 1.2, metalness: 0.6, roughness: 0.3 })
+  );
+  // Rotor ring visual
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(0.32, 0.04, 6, 18),
+    new THREE.MeshBasicMaterial({ color })
+  );
+  ring.rotation.x = Math.PI / 2;
+  body.add(ring);
+
+  const light = new THREE.PointLight(color, 1.2, 5);
+  body.add(light);
+
+  body.position.set(sx, RECON_FLY_H, sz);
+  scene.add(body);
+
+  sndDrones.push({
+    mesh: body, ring, light,
+    x: sx, y: RECON_FLY_H, z: sz,
+    team,
+    waypoints: wps,
+    wpIdx: 0,
+    scanCd: Math.random() * RECON_SCAN_CD,
+    floatT: Math.random() * Math.PI * 2,
+  });
+}
+
+export function updateSndDrone(d, dt) {
+  if (!isSndActive()) return;
+
+  d.floatT += dt * 1.8;
+  d.y = RECON_FLY_H + Math.sin(d.floatT) * 0.28;
+  d.ring.rotation.z += dt * 3.5;
+  d.mesh.rotation.y += dt * 1.2;
+
+  // Waypoint patrol
+  const [wx, wz] = d.waypoints[d.wpIdx];
+  const dx = wx - d.x, dz = wz - d.z;
+  const dist = Math.sqrt(dx * dx + dz * dz);
+  if (dist < 0.8) {
+    d.wpIdx = (d.wpIdx + 1) % d.waypoints.length;
+  } else {
+    d.x += (dx / dist) * RECON_SPEED * dt;
+    d.z += (dz / dist) * RECON_SPEED * dt;
+  }
+  d.mesh.position.set(d.x, d.y, d.z);
+
+  // Periodic scan
+  d.scanCd = Math.max(0, d.scanCd - dt);
+  if (d.scanCd <= 0) {
+    d.scanCd = RECON_SCAN_CD;
+    _scan(d);
+  }
+}
+
+function _scan(d) {
+  const r2 = RECON_SCAN_R * RECON_SCAN_R;
+
+  if (d.team === 'friend') {
+    // Reveal enemy positions on minimap
+    for (const e of enemies) {
+      if (e.dead || e.sndTeam !== 'enemy') continue;
+      const dx = e.x - d.x, dz = e.z - d.z;
+      if (dx * dx + dz * dz > r2) continue;
+      if (hasLOS(d.x, d.y, d.z, e.x, 1.2, e.z)) e.radarAge = 0;
+    }
+  } else {
+    // Reveal player position to enemy bots
+    const pdx = camera.position.x - d.x, pdz = camera.position.z - d.z;
+    if (pdx * pdx + pdz * pdz > r2) return;
+    if (!hasLOS(d.x, d.y, d.z, camera.position.x, camera.position.y, camera.position.z)) return;
+    const alertR2 = 22 * 22;
+    let anyAlerted = false;
+    for (const e of enemies) {
+      if (e.dead || e.sndTeam !== 'enemy') continue;
+      const ex = e.x - camera.position.x, ez = e.z - camera.position.z;
+      if (ex * ex + ez * ez > alertR2) continue;
+      e.alertTimer = Math.max(e.alertTimer ?? 0, 8000);
+      if (e.state === 'patrol') { e.state = 'spotted'; e.reactDelay = Math.min(e.reactDelay, 400); }
+      anyAlerted = true;
+    }
+    if (anyAlerted) showMsg('ENEMY RECON DRONE — POSITION COMPROMISED', 2200);
   }
 }
