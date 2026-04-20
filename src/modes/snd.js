@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { scene, camera } from '../scene.js';
-import { CELL, PLAYER_H, MAX_HP } from '../config.js';
+import { CELL, PLAYER_H, MAX_HP, MAX_AMMO, RESERVE_AMMO } from '../config.js';
 import { player } from '../entities/player.js';
-import { showMsg } from '../hud/overlay.js';
+import { showMsg, updateHUD } from '../hud/overlay.js';
 import { setGameRunning } from '../input.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────
@@ -107,8 +107,13 @@ function _startRound() {
   enemyPlantX = enemyPlantZ = 0;
   bombWorldX  = bombWorldZ  = 0;
 
-  player.dead = false;
-  player.hp   = MAX_HP;
+  player.dead      = false;
+  player.hp        = MAX_HP;
+  player.ammo      = MAX_AMMO;
+  player.reserve   = RESERVE_AMMO;
+  player.reloading = false;
+  player.energy    = 0;
+  updateHUD();
   camera.position.set(
     playerRole === 'attack' ? ATTACKER_X : DEFENDER_X,
     PLAYER_H,

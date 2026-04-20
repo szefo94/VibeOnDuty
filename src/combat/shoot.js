@@ -131,6 +131,7 @@ export function tickBullets(dt) {
     let hit = false;
     for (const e of enemies) {
       if (e.dead) continue;
+      if (e.sndTeam === 'friend') continue; // never shoot allied bots
       const ePos = new THREE.Vector3(e.x, groundElevation(e.x, e.z) + PLAYER_H * 0.6, e.z);
       if (b.pos.distanceTo(ePos) < 0.75) {
         const dmg = BULLET_DAMAGE + Math.floor(Math.random() * 10);
@@ -173,6 +174,7 @@ export function tryPunchDamage() {
   _punchFwd.set(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
   for (const e of enemies) {
     if (e.dead) continue;
+    if (e.sndTeam === 'friend') continue;
     const dx = e.x - camera.position.x;
     const dz = e.z - camera.position.z;
     const dist = Math.sqrt(dx * dx + dz * dz);

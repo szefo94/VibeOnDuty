@@ -220,13 +220,14 @@ export function spawnSndEnemies(sitePositions) {
       }
       e.sndTeam = 'friend';
       e.sndSiteTarget = i % 2;
-      // Always recreate — spawnEnemyIntoSlot replaced the mesh, old indicator is gone
+      // Remove old world-space indicator before creating fresh one
+      if (e._friendIndicator) { scene.remove(e._friendIndicator); e._friendIndicator = null; }
       const ind = new THREE.Mesh(
-        new THREE.ConeGeometry(0.18, 0.38, 8),
-        new THREE.MeshBasicMaterial({ color: 0x00ccff })
+        new THREE.ConeGeometry(0.22, 0.45, 8),
+        new THREE.MeshBasicMaterial({ color: 0x00ccff, depthTest: false })
       );
-      ind.position.set(0, 2.3, 0);
-      e.mesh.add(ind);
+      // Parented to scene (world-space) so GLTF scale/hierarchy doesn't affect it
+      scene.add(ind);
       e._friendIndicator = ind;
     } else {
       // ── Enemy team ──
@@ -247,7 +248,7 @@ export function spawnSndEnemies(sitePositions) {
       }
       e.sndTeam = 'enemy';
       e.sndSiteAttack = j < 3 ? 0 : 1;
-      if (e._friendIndicator) { e.mesh.remove(e._friendIndicator); e._friendIndicator = null; }
+      if (e._friendIndicator) { scene.remove(e._friendIndicator); e._friendIndicator = null; }
     }
   });
   rebuildEHM();
@@ -279,6 +280,16 @@ export function killEnemy(e) {
   e.dead = true;
   rebuildEHM();
   if (e.sndTeam === 'friend') {
+    // Hide indicator immediately on death
+    if (e._friendIndicator) e._friendIndicator.visible = false;
+    // Play death animation for friendly bots just like enemy bots
+    if (e.actions && e.actions.death) {
+      const dyingMesh = e.mesh, dyingMixer = e.mixer;
+      crossfade(e, 'death', 0);
+      dyingEnemies.push({ mesh: dyingMesh, mixer: dyingMixer, timer: 2.2 });
+    } else {
+      scene.remove(e.mesh);
+    }
     if (isSndActive() && player.dead && enemies.every((en) => en.dead || en.sndTeam !== 'friend'))
       onAllFriendsDead();
     return;
@@ -439,9 +450,16 @@ function tickFriendlyBot(e, dt) {
 
   tickEnemyAnimation(e, dt, isMoving);
   e.bobT += dt * 1.6;
-  e.mesh.position.set(e.x, eGround + (isMoving ? Math.abs(Math.sin(e.bobT)) * 0.022 : 0), e.z);
+  const meshY = eGround + (isMoving ? Math.abs(Math.sin(e.bobT)) * 0.022 : 0);
+  e.mesh.position.set(e.x, meshY, e.z);
   e.mesh.rotation.y = e.facingY + (e.facingOffset ?? 0);
   e.mesh.scale.y = 1;
+  // World-space indicator floats above head regardless of mesh hierarchy scale
+  if (e._friendIndicator) {
+    e._friendIndicator.position.set(e.x, meshY + 2.2, e.z);
+    e._friendIndicator.rotation.y += dt * 1.2;
+    e._friendIndicator.visible = !e.dead;
+  }
   e.radarAge += dt;
 }
 
@@ -522,6 +540,22 @@ export function updateEnemies(ts, dt) {
         const pr = getSndPlantRange();
         const sdx = e.x - sitePos[0], sdz = e.z - sitePos[1];
         if (sdx * sdx + sdz * sdz < pr * pr) markEnemyPlanting(e.x, e.z);
+      }
+
+      // ── Enemy bots shoot nearby friendly bots (S&D bot-vs-bot) ─────────
+      if (isSndActive() && ts - (e.botShootCd ?? 0) > ENEMY_SHOOT_CD) {
+        for (const friend of enemies) {
+          if (friend.dead || friend.sndTeam !== 'friend') continue;
+          const fdx = friend.x - e.x, fdz = friend.z - e.z;
+          if (fdx * fdx + fdz * fdz > ENEMY_SHOOT_RANGE * ENEMY_SHOOT_RANGE) continue;
+          const fGround = hAt(Math.floor(friend.x / CELL), Math.floor(friend.z / CELL));
+          if (!hasLOS(e.x, eGround + PLAYER_H * 0.85, e.z, friend.x, fGround + PLAYER_H * 0.85, friend.z)) continue;
+          e.botShootCd = ts;
+          friend.hp = Math.max(0, friend.hp - ENEMY_DAMAGE - Math.floor(Math.random() * 7));
+          e.muzzleFlashT = 55;
+          if (friend.hp <= 0) killEnemy(friend);
+          break;
+        }
       }
 
       // ── Velocity-based movement with acceleration + drag ──────────────
