@@ -278,11 +278,14 @@ function endRound(result) {
   document.exitPointerLock?.();
   hideBombBarWrap(); hideDefuseBar(); hidePlantBar(); hidePlantHint();
 
-  // Determine if player team won
-  // bomb_exploded / team_eliminated = attacker wins
-  // bomb_defused / friend_team_wiped / timeout = defender wins
-  const attackerWins = result === 'bomb_exploded' || result === 'team_eliminated';
-  const playerWins   = (playerRole === 'attack') === attackerWins;
+  // team_eliminated = enemy bots (always opposing side) are all dead → player always wins
+  // bomb_exploded   = attacker wins → player wins iff attacking
+  // bomb_defused / timeout / friend_team_wiped = defender wins → player wins iff defending
+  const playerWins =
+    result === 'team_eliminated' ||
+    (result === 'bomb_exploded' && playerRole === 'attack') ||
+    (result === 'bomb_defused'  && playerRole === 'defend') ||
+    (result === 'timeout'       && playerRole === 'defend');
 
   if (playerWins) playerScore++; else enemyScore++;
 

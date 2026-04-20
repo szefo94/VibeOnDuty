@@ -3,15 +3,12 @@
 ## Current State
 
 ```
-fps3d.html              — HTML shell (entry: src/main.js)
+fps3d.html / index.html — HTML shell (entry: src/main.js)
 style.css               — all styles
-vite.config.js          — Vite entry: fps3d.html
-.prettierrc             — Prettier config
-eslint.config.js        — ESLint 9 flat config
-tsconfig.json           — TypeScript (allowJs, noEmit, checkJs: false)
+vite.config.js          — Vite entry: index.html
 src/
-  main.js               — entry: DOM listeners, start button, startLoop()
-  loop.js               — game loop, 3rd person camera (tpTransition), lean offset
+  main.js               — DOM listeners, start buttons, async GLTF init
+  loop.js               — game loop, 3rd person camera, lean offset, drone tick
   config.js             — all game constants
   map.js                — MAP, HMAP, mapCell, hAt, groundElevation, canMoveTo
   math.js               — normA, slerp
@@ -21,196 +18,147 @@ src/
   materials.js          — mm(), shared MeshStandardMaterials
   lighting.js           — ambient, sun, fill, torches — exports tickTorches
   input.js              — keys, locked, gameRunning, mouseHeld, setGameRunning
+  modes/
+    snd.js              — S&D match state machine, round lifecycle, HUD, bomb logic
   builders/
     weapon.js           — player weapon model
-    playerBody.js       — full soldier body (plate carrier, helmet, rifle)
-    enemy.js            — ground soldier model (procedural)
+    playerBody.js       — full soldier body
+    enemy.js            — ground soldier model (procedural fallback)
     drone.js            — drone model (procedural)
+    enemyGLTF.js        — GLTF enemy + player mesh loader
+    enemyAnimations.js  — AnimationMixer crossfade
+    enemyWeapon.js      — enemy pistol GLTF
+    weaponFBX.js        — player M4/P90 FBX loader
   combat/
     shoot.js            — bullet physics, hit detection, weapon anim, spray
     damage.js           — grenade falloff, entity/player damage formulas
   entities/
-    player.js           — player state, movement, dive, lean, reload, updatePlayer
-    enemies.js          — enemy + drone AI, wave management, EMP, strafe orbit
+    player.js           — player state, movement, dive, lean, reload
+    enemies.js          — enemy AI, friendly bot AI, wave management, spawn
+    drone.js            — drone runtime (AI, EMP, orbit, kill)
     ammoDrops.js        — ammo pickup spawn and collection
     grenades.js         — grenade throw, flight, explosion
   fx/
     tracers.js          — enemy muzzle tracers
     impacts.js          — bullet impact sparks
     particles.js        — grenade particles + impact zones
+    meleeRange.js       — melee ring flash
   hud/
     overlay.js          — updateHUD, showMsg, showStatus, triggerHitFlash
     hitmarker.js        — hitMarkerT, spawnHitMarker, tickHitMarker
     hud.js              — w2s, drawHUD (canvas)
     radar.js            — drawMinimap (canvas)
-  *.test.js             — Vitest unit tests (map, math, astar, damage)
+  *.test.js             — Vitest unit tests
 tests/
   smoke.spec.js         — Playwright smoke tests
 ```
 
 > **Run:** `npm run dev` — Vite dev server. Do NOT open via `file://`.
 
-### Migration notes
-- Three.js upgraded CDN r128 → npm r160. Light intensities scaled: `× Math.PI` (directional/ambient), `× 4π` (point).
-- `renderer.outputColorSpace = THREE.SRGBColorSpace` replaces deprecated `outputEncoding`.
+---
+
+## Phase 1–4 ✅ DONE
+
+npm + Vite, module split from monolithic game.js, Vitest + Playwright tests, ESLint/Prettier/TypeScript tooling.
 
 ---
 
-## Phase 1 — npm + localhost ✅ DONE
+## Phase 5 — Enemy AI, drone, player mechanics ✅ DONE
 
-- Vite dev server (`npm run dev`), `vite.config.js` with `fps3d.html` entry
-- `npm install three` — CDN removed
-- `vitest` and `@playwright/test` installed
-
----
-
-## Phase 2 — Module split ✅ DONE
-
-Drained monolithic `game.js` into `src/` modules across 8 batches. `game.js` deleted.
-`fps3d.html` entry changed to `src/main.js`.
-
-| Batch | Files |
-|-------|-------|
-| 1 — Scene | `scene.js`, `materials.js`, `lighting.js` |
-| 2 — Builders | `level.js`, `builders/weapon.js`, `builders/playerBody.js`, `builders/enemy.js`, `builders/drone.js` |
-| 3 — FX | `fx/tracers.js`, `fx/impacts.js`, `fx/particles.js` |
-| 4 — Input | `input.js` |
-| 5 — Entities | `entities/ammoDrops.js`, `entities/enemies.js`, `entities/grenades.js`, `entities/player.js` |
-| 6 — Combat | `combat/shoot.js`, `hud/hitmarker.js` |
-| 7 — HUD | `hud/overlay.js`, `hud/hud.js`, `hud/radar.js` |
-| 8 — Loop + entry | `loop.js`, `main.js` |
-
-> Drone state merged into `enemies.js` (not a separate file) due to wave-state coupling.
-> Circular deps (player↔shoot, player↔grenades, enemies↔shoot) are safe — all cross-module refs are inside function bodies, never at init time.
-
----
-
-## Phase 3 — Testing ✅ DONE
-
-### Unit tests (Vitest) — `npm test`
-
-| File | Coverage |
-|------|---------|
-| `src/map.test.js` | `groundElevation` ramp interpolation, `canMoveTo` wall blocking |
-| `src/math.test.js` | `normA` wrapping, `slerp` convergence |
-| `src/astar.test.js` | path finding, wall blocking, empty path at destination |
-| `src/combat/damage.test.js` | falloff at 0/50/100%, entity vs player formulas |
-
-33 tests, all passing.
-
-### Smoke tests (Playwright) — `npm run test:e2e`
-
-4 tests: page loads, DROP IN hides overlay, HUD elements present, initial ammo/HP values correct.
-
----
-
-## Phase 4 — Quality of life ✅ DONE
-
-| Tool | Config | Script |
-|------|--------|--------|
-| Prettier | `.prettierrc` (semi, singleQuote, printWidth 100) | `npx prettier --write "src/**/*.js"` |
-| ESLint 9 | `eslint.config.js` (flat config, `globals` browser) | `npm run lint` |
-| TypeScript | `tsconfig.json` (allowJs, noEmit, checkJs: false) | `npm run typecheck` |
-| Vite build | entry `fps3d.html` | `npm run build` → `dist/` |
-
----
-
-## Phase 5 — Enemy AI, drone, player mechanics ✅ PARTIALLY DONE
-
-### 5.3 — Enemy movement ✅ DONE
-
-| Change | Notes |
-|--------|-------|
-| Velocity + drag | Accel `12×` toward path node, drag `10×`; replaces direct position delta |
-| Stagger on hit | `velX/Z = 4` knockback + `stunTimer = 0.28 s` set in `shoot.js` on bullet hit |
-| Faster aim rotation | `ENEMY_ROT_SPD × 2.5` in attack state, normal in spotted/patrol |
-| Path throttle | A* recalcs max once per 600–800 ms OR when player moves to a new cell |
-
-### 5.4 — Drone upgrade ✅ DONE
-
-| Change | Notes |
-|--------|-------|
-| Strafe orbit | Tangential velocity ⊥ to player direction; reverses every 3–7 s |
-| Physics fix | `velX/Z` in units/s applied as `× dt`; drag `3×`; speed cap `5 u/s`; edge zeroes velocity |
-| EMP pulse | At HP < 30%: `player.slowTimer = 2 s` (40% move speed), eye flashes orange, 5 s cooldown |
-| Burst fire | Implemented but **commented out** in `updateDrone` (3 bullets / 150 ms / 2 s cooldown) |
-
-### 5.5 — Player body (3rd person) ✅ DONE
-
-`src/builders/playerBody.js` rebuilt from 4 primitives to a full soldier:
-boots, lower legs, knee pads, thighs, belt, plate carrier (front plate, back plate, side panels),
-pauldrons, upper arms, elbow pads, forearms, gloved hands, neck, balaclava head,
-composite helmet (brim + dome + cheek straps), visor, assault rifle at hip.
-
-### 5.6 — 3rd person camera ✅ DONE
-
-| Feature | Key | Notes |
-|---------|-----|-------|
-| Toggle 1st ↔ 3rd person | `V` | `tpTransition` lerp at speed 4.5 (~0.5 s); weapon/body visibility crossfade |
-| Shoulder swap | `B` | `tpSideSmooth` lerp at speed 6; only active in 3rd person |
-| Camera orientation | — | Player quaternion preserved — no `lookAt`, aiming works normally |
-| Over-the-shoulder offset | — | `TP_BACK = 2.6`, `TP_SIDE = 0.85`, `TP_HEIGHT = 0.12` in `loop.js` |
-
-### 5.7 — Player movement ✅ DONE
-
-| Feature | Key | Notes |
-|---------|-----|-------|
-| Lean | `Q` / `E` | ±0.28 rad roll + ±0.38 unit side shift; lerp speed 3.5; suppressed during slide/dive |
-| Dive | `Z` | Forward launch 12 u/s + upward kick 2.8; camera pitches 0.55 rad; lands into boosted slide |
-| Crouch-landing slide | hold `CTRL` on landing | Converts air momentum into slide if speed > 60% of walk speed |
+Velocity + drag movement, stagger on hit, A* path throttle, strafe-orbit drone, EMP pulse, 3rd-person camera, lean, dive, crouch-slide.
 
 ---
 
 ## Phase 6 — GLTF assets + skeletal animation ✅ PARTIALLY DONE
 
-### 6.1 — Asset pipeline ✅ DONE
+GLTF enemy + player mesh, AnimationMixer crossfade, M4/P90 FBX weapons, pistol for enemies.
 
-`src/builders/enemyGLTF.js` — tries `public/models/enemy.glb` via `GLTFLoader` on startup.
-`main.js` wraps `startLoop()` in an async IIFE: `await tryLoadEnemyGLTF(); startLoop();`
-Falls back silently to procedural enemies if no file is found.
-
-**Free CC0 sources for `public/models/enemy.glb`:**
-- [Quaternius](https://quaternius.com) — low-poly stylised soldiers, robots (CC0)
-- [Kenney.nl](https://kenney.nl/assets) — blocky sci-fi soldiers, drones (CC0)
-- [Mixamo](https://www.mixamo.com) — auto-rig + walk/run/shoot/death animations (free with Adobe account, export GLB via Blender)
-
-**Expected animation clip names** (any alias accepted):
-
-| State | Accepted names |
-|-------|---------------|
-| idle | `Idle`, `idle`, `T-Pose` |
-| walk | `Walk`, `walk`, `Walking` |
-| run | `Run`, `run`, `Running` |
-| attack | `Shoot`, `shoot`, `Attack`, `attack` |
-
-### 6.2 — AnimationMixer ✅ DONE
-
-`src/builders/enemyAnimations.js` — replaces manual `animateEnemyLegs` with proper `AnimationClip` + `AnimationMixer`.
-
-| Change | Notes |
-|--------|-------|
-| Named mesh children | `legL/R`, `thighL/R`, `kneeL/R`, `armSwingL/R` — targeted by `NumberKeyframeTrack` |
-| Shared clips | `idle / walk / run / attack` built once as sine-wave `AnimationClip`s, reused across all 10 enemy mixers |
-| Per-enemy mixer | `buildEnemyMixer(mesh)` — all actions pre-started at weight 0; idle starts at weight 1; random time offset so enemies don't step in sync |
-| Crossfade | `crossfade(e, clipName, dur=0.22)` — calls Three.js `crossFadeTo(action, dur, warp=true)` for smooth stride-synced transitions |
-| State → clip | `patrol/spotted` → `idle`/`walk`; `attack` → `run`/`attack` depending on movement |
-
-### 6.3 — Drone GLTF (PLANNED)
-
-Wire `src/builders/droneGLTF.js` once a drone GLB with rotor animation is available.
+Phase 6.3 — Drone GLTF: wire `src/builders/droneGLTF.js` once `public/models/drone.glb` is available.
 
 ---
 
-## Next up
+## Phase 7 — S&D game mode ✅ DONE
 
-Phase 6.3 — Drone GLTF (when `public/models/drone.glb` is available).
+- Best-of-7 match (first to 4 round wins); rounds 1–3 player attacks, 4–6 defends
+- Two bomb sites (A/B) with 3D ring + pole + point-light markers
+- Plant (hold G, 3 s) and defuse (hold G near bomb, 5 s); 40 s fuse
+- 60 s round timer; timeout = defender win
+- Friendly team of 5 bots spawned with player; enemy team of 5 at opposing side
+- Friendly bots A*-pathfind to sites and shoot enemy bots (LOS check)
+- Enemy attackers rush assigned site and plant when in range
+- Round ends on: bomb exploded, bomb defused, team elimination, timeout, team wipe
+- Match score HUD: role label, round number, score, round timer
+- `entities/drone.js` extracted from `enemies.js` (no circular deps)
 
-Drop `public/models/enemy.glb` to activate GLTF enemies automatically — no code changes needed.
+---
 
-Codebase health:
-- Fully modular ES modules under `src/`
-- 33 Vitest unit tests + 4 Playwright smoke tests passing
-- ESLint 9 flat config, zero warnings/errors
-- Prettier formatted
-- TypeScript `allowJs` type checking clean
-- Production build via `vite build`
+## Phase 8 — Refactoring targets
+
+### 8.1 — Extract `src/utils/los.js` (SMALL — ~15 lines)
+
+`hasLOS` is currently a private function in `enemies.js`. Extracting it to `src/utils/los.js` would let `friendlyBots`, future turret/camera AI, or grenade line-of-sight checks reuse it without duplication.
+
+**Effort:** low. One new file, update import in `enemies.js`.
+
+---
+
+### 8.2 — Split friendly bot AI into `entities/friendlyBots.js` (MEDIUM)
+
+`tickFriendlyBot` + friendly shooting loop is ~70 lines inside `enemies.js`. Moving it to its own file keeps `enemies.js` focused on hostile AI. Requires:
+- `hasLOS` extracted first (Phase 8.1) to avoid circular dep
+- `tickEnemyAnimation` either exported from `enemies.js` or moved to `builders/enemyAnimations.js`
+- `tickFriendlyBot` receives `enemies` + `killEnemy` as parameters (breaks circular import)
+
+**Effort:** medium. 3 files touched, no logic changes.
+
+---
+
+### 8.3 — Move `tickEnemyAnimation` to `builders/enemyAnimations.js` (SMALL)
+
+`tickEnemyAnimation` belongs with crossfade/animation logic, not AI. Unblocks Phase 8.2.
+
+**Effort:** low. Move function, add export, update one import.
+
+---
+
+### 8.4 — Extract `src/entities/waveSystem.js` (SMALL)
+
+`wave`, `respawnTimer`, `tickWave` are ~20 lines that live in `enemies.js` but are conceptually separate (game-mode logic, not AI). Extracting cleans the boundary between "how enemies move" and "when waves spawn".
+
+**Effort:** low. One new file, update imports in `loop.js` and `enemies.js`.
+
+---
+
+### 8.5 — Config audit: move S&D constants out of `snd.js` into `config.js` (TINY)
+
+`PLANT_TIME`, `DEFUSE_TIME`, `BOMB_FUSE`, `ROUND_TIMER`, `WINS_NEEDED` etc. are hardcoded in `snd.js`. Moving them to `config.js` makes tuning easier and consistent with the rest of the game constants.
+
+**Effort:** trivial. No structural change.
+
+---
+
+### 8.6 — HUD module split: `hud/sndHud.js` (SMALL)
+
+`hud.js` draws the general game HUD. All `updateMatchHUD`, `updateBombTimerHUD`, `showSndResult` etc. functions are currently in `snd.js`, mixing game-logic with DOM manipulation. Extracting them to `hud/sndHud.js` keeps `snd.js` as pure state machine with no DOM knowledge.
+
+**Effort:** low. New file, thin import in `snd.js`.
+
+---
+
+### 8.7 — Unit tests for S&D state machine (MEDIUM)
+
+`snd.js` has no test coverage. Key cases to cover:
+- `startSnd` resets all state
+- `endRound` correctly assigns win/loss for each result type and both roles
+- `matchOver` triggers at 4 wins or round 7
+- `nextRound` alternates role at round 4
+
+**Effort:** medium. Add `src/modes/snd.test.js`, mock `scene`/`player`/DOM.
+
+---
+
+### 8.8 — Playwright smoke tests: S&D mode (SMALL)
+
+Add E2E tests for S&D start flow: button click → overlay hides → snd-bar visible → match header shows correct initial values.
+
+**Effort:** low. 2–3 new test cases in `tests/smoke.spec.js`.

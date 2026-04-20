@@ -274,6 +274,7 @@ const dyingEnemies = [];
 
 // ── Kill functions ────────────────────────────────────────────────
 export function killEnemy(e) {
+  if (e.dead) return;
   e.dead = true;
   rebuildEHM();
   if (e.sndTeam === 'friend') {
@@ -287,9 +288,10 @@ export function killEnemy(e) {
   spawnAmmoDrop(e.x, e.z);
 
   if (e.actions && e.actions.death) {
+    // Snapshot mesh+mixer NOW — spawnEnemyIntoSlot may overwrite e.mesh/e.mixer next round
+    const dyingMesh = e.mesh, dyingMixer = e.mixer;
     crossfade(e, 'death', 0);
-    e.dyingTimer = 2.2; // remove mesh after death clip finishes
-    dyingEnemies.push(e);
+    dyingEnemies.push({ mesh: dyingMesh, mixer: dyingMixer, timer: 2.2 });
   } else {
     scene.remove(e.mesh);
   }
@@ -706,11 +708,11 @@ export function updateEnemies(ts, dt) {
   }
   // ── Tick dying enemies (death animation plays, then mesh removed) ─
   for (let i = dyingEnemies.length - 1; i >= 0; i--) {
-    const e = dyingEnemies[i];
-    e.mixer.update(dt);
-    e.dyingTimer -= dt;
-    if (e.dyingTimer <= 0) {
-      scene.remove(e.mesh);
+    const de = dyingEnemies[i];
+    de.mixer.update(dt);
+    de.timer -= dt;
+    if (de.timer <= 0) {
+      scene.remove(de.mesh);
       dyingEnemies.splice(i, 1);
     }
   }
