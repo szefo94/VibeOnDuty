@@ -29,10 +29,7 @@ import { updateHUD, showMsg, triggerHitFlash } from '../hud/overlay.js';
 import { setGameRunning } from '../input.js';
 import { rebuildEHM } from '../combat/shoot.js';
 import { getSndBombPos, isSndActive, onSndPlayerDeath, markEnemyDefusing, markEnemyPlanting, getSndDefuseRange, getSndPlantRange, getSndSitePositions, getPlayerRole, onAllEnemyTeamDead, onAllFriendsDead } from '../modes/snd.js';
-
-// ── Wave state ────────────────────────────────────────────────────
-export let wave = 1;
-export let respawnTimer = -1;
+import { triggerWaveEnd, wave } from './waveSystem.js';
 
 // ── Walkable cells ────────────────────────────────────────────────
 export const WALKABLE_CELLS = [];
@@ -312,28 +309,7 @@ export function killEnemy(e) {
     if (enemies.every((en) => en.dead || en.sndTeam !== 'enemy')) onAllEnemyTeamDead();
     return;
   }
-  if (enemies.every((en) => en.dead)) {
-    wave++;
-    showMsg(`ZONE CLEARED — WAVE ${wave - 1} COMPLETE`, 3500);
-    respawnTimer = 5000;
-  }
-}
-
-// ── Wave countdown (owns respawnTimer mutation) ───────────────────
-export function tickWave(dt) {
-  if (isSndActive()) return; // disable wave system in S&D
-  if (respawnTimer <= 0) return;
-  respawnTimer -= dt * 1000;
-  const secs = Math.ceil(respawnTimer / 1000);
-  showMsg(`WAVE ${wave} INCOMING IN ${secs}...`, 1100);
-  if (respawnTimer <= 0) {
-    respawnTimer = -1;
-    ammoDrops.forEach((d) => scene.remove(d.mesh));
-    ammoDrops.length = 0;
-    enemies.forEach((e) => spawnEnemyIntoSlot(e));
-    rebuildEHM();
-    showMsg(`WAVE ${wave} — ENGAGE!`, 2500);
-  }
+  if (enemies.every((en) => en.dead)) triggerWaveEnd();
 }
 
 // ── Enemy AI ──────────────────────────────────────────────────────

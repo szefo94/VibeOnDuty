@@ -36,3 +36,14 @@ export const GRENADE_RADIUS = 9.0,
   GRENADE_PEAK_DMG = 150;
 export const PUNCH_RANGE = 1.8,
   PUNCH_DAMAGE = 55;
+
+// ── S&D constants ──────────────────────────────────────────────────────────
+export const SND_PLANT_RANGE  = 2.5;
+export const SND_DEFUSE_RANGE = 2.2;
+export const SND_PLANT_TIME   = 3.0;
+export const SND_DEFUSE_TIME  = 5.0;
+export const SND_BOMB_FUSE    = 40.0;
+export const SND_ROUND_TIMER  = 60.0;
+export const SND_ROUNDS_PER_HALF = 3;
+export const SND_TOTAL_ROUNDS    = 7;
+export const SND_WINS_NEEDED     = 4;

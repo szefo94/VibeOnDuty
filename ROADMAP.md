@@ -3,13 +3,13 @@
 ## Current State
 
 ```
-fps3d.html / index.html — HTML shell (entry: src/main.js)
+index.html              — HTML shell (entry: src/main.js)
 style.css               — all styles
 vite.config.js          — Vite entry: index.html
 src/
   main.js               — DOM listeners, start buttons, async GLTF init
   loop.js               — game loop, 3rd person camera, lean offset, drone tick
-  config.js             — all game constants
+  config.js             — all game constants (player, enemy, S&D, physics)
   map.js                — MAP, HMAP, mapCell, hAt, groundElevation, canMoveTo
   math.js               — normA, slerp
   astar.js              — A* pathfinding
@@ -18,8 +18,9 @@ src/
   materials.js          — mm(), shared MeshStandardMaterials
   lighting.js           — ambient, sun, fill, torches — exports tickTorches
   input.js              — keys, locked, gameRunning, mouseHeld, setGameRunning
+  touch.js              — mobile touch controls
   modes/
-    snd.js              — S&D match state machine, round lifecycle, HUD, bomb logic
+    snd.js              — S&D match state machine, round lifecycle, bomb logic (pure state — no DOM)
   builders/
     weapon.js           — player weapon model
     playerBody.js       — full soldier body
@@ -34,10 +35,13 @@ src/
     damage.js           — grenade falloff, entity/player damage formulas
   entities/
     player.js           — player state, movement, dive, lean, reload
-    enemies.js          — enemy AI, friendly bot AI, wave management, spawn
-    drone.js            — drone runtime (AI, EMP, orbit, kill)
+    enemies.js          — enemy AI, friendly bot AI, S&D team spawn
+    drone.js            — drone runtime (AI, EMP, orbit, S&D recon drones)
+    waveSystem.js       — wave state, tickWave, triggerWaveEnd
     ammoDrops.js        — ammo pickup spawn and collection
     grenades.js         — grenade throw, flight, explosion
+  utils/
+    los.js              — hasLOS raycaster utility
   fx/
     tracers.js          — enemy muzzle tracers
     impacts.js          — bullet impact sparks
@@ -48,6 +52,7 @@ src/
     hitmarker.js        — hitMarkerT, spawnHitMarker, tickHitMarker
     hud.js              — w2s, drawHUD (canvas)
     radar.js            — drawMinimap (canvas)
+    sndHud.js           — S&D match header, bomb timer, plant/defuse bars, result overlay
   *.test.js             — Vitest unit tests
 tests/
   smoke.spec.js         — Playwright smoke tests
@@ -118,27 +123,21 @@ Phase 6.3 — Drone GLTF: wire `src/builders/droneGLTF.js` once `public/models/d
 
 ---
 
-### 8.4 — Extract `src/entities/waveSystem.js` (SMALL)
+### 8.4 ✅ — Extract `src/entities/waveSystem.js`
 
-`wave`, `respawnTimer`, `tickWave` are ~20 lines that live in `enemies.js` but are conceptually separate (game-mode logic). Extracting cleans the boundary between "how enemies move" and "when waves spawn".
-
-**Effort:** low. One new file, update imports in `loop.js` and `enemies.js`.
+`wave`, `respawnTimer`, `tickWave`, `triggerWaveEnd` extracted. Circular dep avoided by passing `enemies`+`spawnEnemyIntoSlot` as params from loop.js.
 
 ---
 
-### 8.5 — Config audit: move S&D constants out of `snd.js` into `config.js` (TINY)
+### 8.5 ✅ — Config audit: S&D constants → `config.js`
 
-`PLANT_TIME`, `DEFUSE_TIME`, `BOMB_FUSE`, `ROUND_TIMER`, `WINS_NEEDED` etc. are hardcoded in `snd.js`. Moving them to `config.js` makes tuning easier.
-
-**Effort:** trivial. No structural change.
+`SND_PLANT_TIME/RANGE`, `SND_DEFUSE_TIME/RANGE`, `SND_BOMB_FUSE`, `SND_ROUND_TIMER`, `SND_ROUNDS_PER_HALF`, `SND_TOTAL_ROUNDS`, `SND_WINS_NEEDED` moved to `config.js`.
 
 ---
 
-### 8.6 — HUD module split: `hud/sndHud.js` (SMALL)
+### 8.6 ✅ — HUD module split: `hud/sndHud.js`
 
-`updateMatchHUD`, `updateBombTimerHUD`, `showSndResult` etc. live in `snd.js`, mixing game-logic with DOM manipulation. Extracting to `hud/sndHud.js` makes `snd.js` a pure state machine with no DOM knowledge.
-
-**Effort:** low. New file, thin import in `snd.js`.
+All DOM manipulation for S&D extracted to `hud/sndHud.js`. `snd.js` is now a pure state machine — no `document.getElementById` calls.
 
 ---
 
@@ -268,3 +267,4 @@ await assetManager.loadAll();
 Race condition eliminated: game only starts after all assets resolve. Fallbacks registered per-asset, not scattered across callers.
 
 **Effort:** medium. Isolated to `main.js` + `builders/`. No gameplay logic changes.
+it

@@ -6,7 +6,8 @@ import { gameRunning, keys } from './input.js';
 import { player, updatePlayer, LEAN_SHIFT } from './entities/player.js';
 import { playerBody } from './builders/playerBody.js';
 import { wpn } from './builders/weapon.js';
-import { updateEnemies, tickWave } from './entities/enemies.js';
+import { updateEnemies, enemies, spawnEnemyIntoSlot } from './entities/enemies.js';
+import { tickWave } from './entities/waveSystem.js';
 import { activeDrone, updateDrone, sndDrones, updateSndDrone } from './entities/drone.js';
 import { tickTorches } from './lighting.js';
 import { drawHUD, setDebugAnimClip } from './hud/hud.js';
@@ -171,7 +172,7 @@ export function loop(ts) {
     if (activeDrone && !activeDrone.dead) updateDrone(activeDrone, dt);
     for (const d of sndDrones) updateSndDrone(d, dt);
     tickTorches(dt);
-    tickWave(dt);
+    tickWave(dt, enemies, spawnEnemyIntoSlot);
     tickMeleeRing(dt, camera.position.x, camera.position.z);
     tickSnd(dt, keys);
   }

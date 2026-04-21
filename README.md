@@ -1,25 +1,27 @@
 # VIBE ON DUTY
 
-A browser-based first-person shooter built with Three.js. Survive endless waves of armed infantry and a persistent drone.
+A browser-based first-person shooter built with Three.js. Survive endless waves of armed infantry and a persistent drone — or go head-to-head in Search & Destroy.
 
-**[Play in browser →](https://szefo94.github.io/VibeOnDuty/fps3d.html)**
+**[Play in browser →](https://szefo94.github.io/VibeOnDuty/)**
 
-> Requires a local dev server — run `npm run dev` and open `http://localhost:5173/fps3d.html`.
+> Requires a local dev server — run `npm run dev` and open `http://localhost:5173`.
 
 ---
 
-## Gameplay
+## Game Modes
 
-Survive endless waves of enemies in a tactical indoor arena. Clear each wave to face the next.
+### Wave Mode
+Survive endless waves of enemies in a tactical indoor arena. Clear each wave to face the next. A persistent drone hunts you between waves.
 
-### Enemies
+### Search & Destroy
+Best-of-7 match. Rounds 1–3: you attack — plant the bomb at Site A or B and protect the fuse. Rounds 4–6: you defend — stop the enemy team from planting, or defuse if they succeed. First to 4 round wins takes the match.
 
-- **Ground soldiers** — armed infantry that patrol, chase, and shoot. They react after a random delay, take cover by crouching, and jump to break line-of-sight. Velocity-based movement with knockback stagger on hit.
-- **Drone** — persistent aerial unit with a spotlight cone. Orbits the player at range, strobes its eye, and emits an EMP pulse at low HP that slows player movement for 2 seconds.
-
-### Energy System
-
-Dealing and taking damage fills your **Energy** meter. At 100% energy you can throw a grenade (`RMB`) — a high-damage explosive with a 9-unit blast radius.
+- **60 s** round timer (attackers must plant before it expires)
+- **40 s** fuse after plant
+- **3 s** plant / **5 s** defuse (hold `G`)
+- Round ends on: bomb exploded · bomb defused · team elimination · round timeout
+- 5 friendly bots on your team; 5 enemy bots on the opposing side
+- Recon drones — one per team — patrol the map and reveal enemy positions on the minimap
 
 ---
 
@@ -35,10 +37,14 @@ Dealing and taking damage fills your **Energy** meter. At 100% energy you can th
 | `SPACE` | Jump |
 | `Q` / `E` | Lean left / right |
 | `LMB` (hold) | Shoot |
-| `RMB` | Throw grenade (costs 100% energy) |
+| `RMB` | Aim down sights |
+| `MMB` | Throw grenade (costs 100% energy) |
+| `G` (near site/bomb) | Plant / Defuse |
+| `F` | Melee punch |
 | `R` | Reload |
-| `V` | Toggle 3rd person camera (animated) |
-| `B` | Swap shoulder side in 3rd person (animated) |
+| `V` | Toggle 3rd person camera |
+| `B` | Swap shoulder side in 3rd person |
+| `T` | Dance |
 | `F3` | Toggle debug overlay |
 
 ### Movement tricks
@@ -55,43 +61,48 @@ Dealing and taking damage fills your **Energy** meter. At 100% energy you can th
 
 ### World
 - **24×24 tile map** — solid walls, cracked walls (crawl gaps), ramps, pillars, multi-level heightmap terrain
-- Procedural geometry — all characters and props built from primitive meshes at runtime, no external asset files
+- Two bomb sites (A / B) with pulsing ring markers and point lights in S&D mode
 - Torch lights with flicker, PCF soft shadows, exponential fog, ACES filmic tone mapping
 
 ### Player
 - Full movement system: walk, sprint, crouch, slide, slide-cancel jump, dive, lean
 - Gravity, jump, step-height traversal on ramps and ledges
-- HP regeneration when out of combat for 3 seconds
 - EMP slow (drone ability): reduces movement speed to 40% for 2 s
+- Full loadout reset each S&D round
 
 ### Enemy AI
 - Patrol waypoints with idle wander rotation
 - Line-of-sight detection with reaction delay
-- A\* pathfinding, throttled to max once per 600–800 ms (or when player cell changes)
+- A\* pathfinding, throttled to once per 600–800 ms or when goal cell changes
 - Velocity-based movement with acceleration + drag
-- Knockback stagger on hit (stunTimer blocks movement for ~0.28 s)
-- Crouching and jumping in attack state
-- Wave-based respawn with countdown
+- Knockback stagger on hit, crouching and jumping in attack state
+- Wave-based respawn (wave mode) or team-based spawn (S&D)
+- **Friendly bots** — A\*-pathfind to sites, shoot enemy bots with LOS check
+- **Enemy attackers** — rush assigned site, plant bomb when in range, defuse enemy plant
 
 ### Drone AI
-- Strafe orbit: circles player at ~8 unit radius, direction reverses every 3–7 s
-- EMP pulse at <30% HP: slows player, 5 s cooldown, eye flashes orange
-- Burst fire implemented but disabled (see `updateDrone` in `src/entities/enemies.js`)
+- **Persistent drone** (wave mode): orbits player at ~8 unit radius, EMP pulse at <30% HP
+- **S&D recon drones** (one per team): fixed waypoint patrol, periodic LOS scan
+  - Friendly drone reveals enemy bot positions on minimap
+  - Enemy drone compromises player position and alerts nearby bots
 
 ### Camera
 - 1st person with head bob, weapon sway, spray cone, recoil
-- 3rd person over-the-shoulder (Fortnite-style): animated transition (~0.5 s), shoulder swap with animation, aiming preserved (no lookAt override)
+- 3rd person over-the-shoulder (Fortnite-style): animated transition, shoulder swap, ADS preserved
 - Lean: camera rolls ±0.28 rad and shifts ±0.38 units sideways
+- ADS FOV zoom (75° → 50°)
 
 ### HUD
 - Ammo ring, energy ring, HP segments, reload bar, spray cone indicator
-- Enemy HP bars (in-world), drone HP bar
-- Minimap radar with sweep animation, fog of war, enemy/drone blips, ammo drop blips
+- Enemy HP bars (in-world), drone HP bar, S&D match header (role · round · score · timer)
+- Minimap radar: sweep animation, fog of war, enemy/drone/ammo blips
+- Plant bar, defuse bar, bomb fuse countdown, round result overlay
 - Kill counter, hit flash, damage vignette, status messages
 
 ### Weapons
-- M4A1: 30-round mag, 90 reserve, 1.8 s reload, 88 ms fire rate, spray heat pattern
-- Grenade: energy-gated, 9-unit blast radius, particle effects + impact zones
+- **M4A1**: 30-round mag, 90 reserve, 1.8 s reload, 88 ms fire rate, spray heat pattern
+- **Melee**: punch with 1.8 unit frontal arc, 55 damage, 350 ms impact delay
+- **Grenade**: energy-gated (100%), 9-unit blast radius, particle effects + impact zones
 
 ---
 
@@ -112,43 +123,55 @@ Dealing and taking damage fills your **Energy** meter. At 100% energy you can th
 ## Project Structure
 
 ```
-fps3d.html          — HTML shell + canvas
-style.css           — all styles
-vite.config.js      — entry point config
+index.html            — HTML shell + canvas
+style.css             — all styles
+vite.config.js        — entry point config
 src/
-  main.js           — entry: DOM listeners, start button, startLoop()
-  loop.js           — game loop, 3rd person camera, lean offset
-  config.js         — all game constants
-  map.js            — MAP data, heightmap, pathability
-  math.js           — normA, slerp
-  astar.js          — A* pathfinding
-  scene.js          — renderer, scene, camera
-  materials.js      — shared MeshStandardMaterials
-  lighting.js       — torches, ambient, sun
-  level.js          — level geometry, wall meshes, debug lines
-  input.js          — keyboard, mouse, pointer lock state
+  main.js             — entry: DOM listeners, start buttons, async asset init
+  loop.js             — game loop, 3rd person camera, lean offset, drone ticks
+  config.js           — all game constants (player, enemy, S&D, physics)
+  map.js              — MAP data, heightmap, pathability
+  math.js             — normA, slerp
+  astar.js            — A* pathfinding
+  scene.js            — renderer, scene, camera
+  materials.js        — shared MeshStandardMaterials
+  lighting.js         — torches, ambient, sun
+  level.js            — level geometry, wall meshes, debug lines
+  input.js            — keyboard, mouse, pointer lock state
+  touch.js            — mobile touch controls
+  modes/
+    snd.js            — S&D match state machine, bomb logic, round lifecycle
   builders/
-    weapon.js       — player weapon model
-    playerBody.js   — 3rd person soldier body
-    enemy.js        — ground soldier model
-    drone.js        — drone model
+    weapon.js         — player weapon model
+    playerBody.js     — 3rd person soldier body
+    enemy.js          — ground soldier model (procedural fallback)
+    drone.js          — drone model (procedural)
+    enemyGLTF.js      — GLTF enemy + player mesh loader, clip aliases
+    enemyAnimations.js — AnimationMixer crossfade, skeleton debug
+    enemyWeapon.js    — enemy pistol GLTF attach
+    weaponFBX.js      — player M4 / P90 FBX loader
   combat/
-    shoot.js        — bullet physics, raycasting, weapon animation, spray
-    damage.js       — grenade falloff formulas
+    shoot.js          — bullet physics, hit detection, weapon animation, spray
+    damage.js         — grenade falloff formulas
   entities/
-    player.js       — player state, movement, reload, dive, lean
-    enemies.js      — enemy + drone state, AI, wave management
-    ammoDrops.js    — ammo pickup spawning and collection
-    grenades.js     — grenade throw, flight, explosion
+    player.js         — player state, movement, reload, dive, lean
+    enemies.js        — enemy AI, friendly bot AI, spawn, S&D team logic
+    drone.js          — drone runtime (orbit AI, EMP, S&D recon drones)
+    ammoDrops.js      — ammo pickup spawning and collection
+    grenades.js       — grenade throw, flight, explosion
+  utils/
+    los.js            — hasLOS raycaster utility
   fx/
-    tracers.js      — enemy muzzle tracers
-    impacts.js      — bullet impact sparks
-    particles.js    — grenade explosion particles
+    tracers.js        — enemy muzzle tracers
+    impacts.js        — bullet impact sparks
+    particles.js      — grenade explosion particles
+    meleeRange.js     — melee ring flash
   hud/
-    overlay.js      — HUD DOM updates, hit flash, status messages
-    hitmarker.js    — crosshair hit indicator
-    hud.js          — canvas HUD (ammo, energy, reload, spray, HP bars)
-    radar.js        — minimap radar canvas
+    overlay.js        — updateHUD, showMsg, showStatus, triggerHitFlash
+    hitmarker.js      — crosshair hit indicator
+    hud.js            — canvas HUD (ammo, energy, reload, spray, HP bars)
+    radar.js          — minimap radar canvas
+    sndHud.js         — S&D HUD (match header, bomb timer, plant/defuse bars)
 ```
 
 ---

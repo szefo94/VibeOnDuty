@@ -1,24 +1,22 @@
 import * as THREE from 'three';
 import { scene, camera } from '../scene.js';
-import { CELL, PLAYER_H, MAX_HP, MAX_AMMO, RESERVE_AMMO } from '../config.js';
+import {
+  CELL, PLAYER_H, MAX_HP, MAX_AMMO, RESERVE_AMMO,
+  SND_PLANT_RANGE, SND_DEFUSE_RANGE, SND_PLANT_TIME, SND_DEFUSE_TIME,
+  SND_BOMB_FUSE, SND_ROUND_TIMER, SND_ROUNDS_PER_HALF, SND_TOTAL_ROUNDS, SND_WINS_NEEDED,
+} from '../config.js';
 import { player } from '../entities/player.js';
 import { showMsg, updateHUD } from '../hud/overlay.js';
+import {
+  setSndHudVisible, updateMatchHUD, updateRoundTimerHUD, updateBombTimerHUD,
+  showBombBarWrap, hideBombBarWrap, updatePlantBar, hidePlantBar,
+  updateDefuseBar, hideDefuseBar, showPlantHint, hidePlantHint,
+  showSndResult, hideSndResult,
+} from '../hud/sndHud.js';
 import { setGameRunning } from '../input.js';
 
-// ── Constants ─────────────────────────────────────────────────────────────
-const PLANT_RANGE  = 2.5;
-const DEFUSE_RANGE = 2.2;
-const PLANT_TIME   = 3.0;
-const DEFUSE_TIME  = 5.0;
-const BOMB_FUSE    = 40.0;
-const ROUND_TIMER  = 60.0;   // attacker must plant within this
-
-const ROUNDS_PER_HALF = 3;
-const TOTAL_ROUNDS    = 7;
-const WINS_NEEDED     = 4;
-
-export function getSndPlantRange()  { return PLANT_RANGE; }
-export function getSndDefuseRange() { return DEFUSE_RANGE; }
+export function getSndPlantRange()  { return SND_PLANT_RANGE; }
+export function getSndDefuseRange() { return SND_DEFUSE_RANGE; }
 
 // ── Sites ─────────────────────────────────────────────────────────────────
 const SITES = [
@@ -97,8 +95,8 @@ export function startSnd() {
 
 function _startRound() {
   sndState          = 'live';
-  fuseTimer         = BOMB_FUSE;
-  roundTimer        = ROUND_TIMER;
+  fuseTimer         = SND_BOMB_FUSE;
+  roundTimer        = SND_ROUND_TIMER;
   plantProgress     = 0;
   playerDefuseProg  = 0;
   defuseProgress    = 0;
@@ -127,10 +125,10 @@ function _startRound() {
   hideBombBarWrap();
   hidePlantBar();
   hideDefuseBar();
-  updateMatchHUD();
-  updateRoundTimerHUD(ROUND_TIMER);
+  updateMatchHUD(playerRole, matchRound, SND_TOTAL_ROUNDS, playerScore, enemyScore);
+  updateRoundTimerHUD(SND_ROUND_TIMER);
   showMsg(
-    `ROUND ${matchRound}/7 — ${playerRole === 'attack' ? '⚔ ATTACK: PLANT THE BOMB' : '🛡 DEFEND: STOP THE PLANT'}`,
+    `ROUND ${matchRound}/${SND_TOTAL_ROUNDS} — ${playerRole === 'attack' ? '⚔ ATTACK: PLANT THE BOMB' : '🛡 DEFEND: STOP THE PLANT'}`,
     3000
   );
 }
@@ -140,7 +138,7 @@ export function nextRound() {
   removeBombMesh();
   removeSiteMarkers();
   matchRound++;
-  playerRole = matchRound <= ROUNDS_PER_HALF ? 'attack' : 'defend';
+  playerRole = matchRound <= SND_ROUNDS_PER_HALF ? 'attack' : 'defend';
   _startRound();
 }
 
@@ -176,8 +174,8 @@ export function tickSnd(dt, keys) {
 
 function _tickPlanted(dt, keys) {
   fuseTimer -= dt;
-  updateBombTimerHUD(Math.max(0, fuseTimer), BOMB_FUSE);
-  const blinkHz = 1 + (1 - Math.max(0, fuseTimer) / BOMB_FUSE) * 6;
+  updateBombTimerHUD(Math.max(0, fuseTimer), SND_BOMB_FUSE);
+  const blinkHz = 1 + (1 - Math.max(0, fuseTimer) / SND_BOMB_FUSE) * 6;
   const blink = Math.abs(Math.sin(performance.now() / 1000 * Math.PI * blinkHz));
   if (bombLight) bombLight.intensity = 1.0 + blink * 2.0;
   if (bombMesh)  bombMesh.material.emissiveIntensity = 0.5 + blink;
@@ -185,7 +183,7 @@ function _tickPlanted(dt, keys) {
   if (playerRole === 'attack') {
     // Enemies try to defuse
     if (enemyDefuseFlag) {
-      defuseProgress = Math.min(1, defuseProgress + dt / DEFUSE_TIME);
+      defuseProgress = Math.min(1, defuseProgress + dt / SND_DEFUSE_TIME);
       updateDefuseBar(defuseProgress);
       if (defuseProgress >= 1) { endRound('bomb_defused'); return; }
     } else {
@@ -197,9 +195,9 @@ function _tickPlanted(dt, keys) {
     // Player tries to defuse
     const px = camera.position.x, pz = camera.position.z;
     const dx = px - bombWorldX, dz = pz - bombWorldZ;
-    const nearBomb = dx * dx + dz * dz < DEFUSE_RANGE * DEFUSE_RANGE;
+    const nearBomb = dx * dx + dz * dz < SND_DEFUSE_RANGE * SND_DEFUSE_RANGE;
     if (nearBomb && keys['KeyG'] && !player.dead) {
-      playerDefuseProg = Math.min(1, playerDefuseProg + dt / DEFUSE_TIME);
+      playerDefuseProg = Math.min(1, playerDefuseProg + dt / SND_DEFUSE_TIME);
       updateDefuseBar(playerDefuseProg);
       showPlantHint('HOLD G — DEFUSING');
       if (playerDefuseProg >= 1) { endRound('bomb_defused'); return; }
@@ -218,14 +216,14 @@ function _tickAttackerPlant(dt, keys) {
   let nearSite = null;
   for (const site of SITES) {
     const dx = px - site.x, dz = pz - site.z;
-    if (dx * dx + dz * dz < PLANT_RANGE * PLANT_RANGE) { nearSite = site; break; }
+    if (dx * dx + dz * dz < SND_PLANT_RANGE * SND_PLANT_RANGE) { nearSite = site; break; }
   }
 
   if (nearSite) showPlantHint(`SITE ${nearSite.id} — HOLD G TO PLANT`);
   else hidePlantHint();
 
   if (nearSite && keys['KeyG'] && !player.dead) {
-    plantProgress = Math.min(1, plantProgress + dt / PLANT_TIME);
+    plantProgress = Math.min(1, plantProgress + dt / SND_PLANT_TIME);
     updatePlantBar(plantProgress);
     if (plantProgress >= 1) {
       _plantBomb(nearSite.x, nearSite.z, nearSite);
@@ -241,7 +239,7 @@ function _tickEnemyAttackerPlant(dt) {
     if (plantProgress < 0.01) hidePlantBar();
     return;
   }
-  plantProgress = Math.min(1, plantProgress + dt / PLANT_TIME);
+  plantProgress = Math.min(1, plantProgress + dt / SND_PLANT_TIME);
   updatePlantBar(plantProgress);
   showPlantHint('ENEMY PLANTING...');
   if (plantProgress >= 1) {
@@ -259,7 +257,7 @@ function _tickEnemyAttackerPlant(dt) {
 function _plantBomb(bx, bz, site) {
   bombWorldX = bx; bombWorldZ = bz;
   sndState   = 'planted';
-  fuseTimer  = BOMB_FUSE;
+  fuseTimer  = SND_BOMB_FUSE;
   hidePlantBar();
   showBombBarWrap();
   if (site?.ring)  { scene.remove(site.ring);  site.ring  = null; }
@@ -267,7 +265,7 @@ function _plantBomb(bx, bz, site) {
   if (site?.light) { scene.remove(site.light); site.light = null; }
   createBombMesh(bx, bz);
   if (playerRole === 'attack') {
-    showMsg('BOMB PLANTED — ' + BOMB_FUSE + 's TO DETONATE', 3000);
+    showMsg('BOMB PLANTED — ' + SND_BOMB_FUSE + 's TO DETONATE', 3000);
   } else {
     showMsg('BOMB PLANTED — DEFUSE IT! (G near bomb)', 3000);
   }
@@ -294,7 +292,7 @@ function endRound(result) {
 
   if (playerWins) playerScore++; else enemyScore++;
 
-  _matchOver = playerScore >= WINS_NEEDED || enemyScore >= WINS_NEEDED || matchRound >= TOTAL_ROUNDS;
+  _matchOver = playerScore >= SND_WINS_NEEDED || enemyScore >= SND_WINS_NEEDED || matchRound >= TOTAL_ROUNDS;
   const [title, sub, color] = _roundResultText(result, playerWins, _matchOver);
   showSndResult(title, sub, color, _matchOver);
 }
@@ -305,7 +303,7 @@ function _roundResultText(result, playerWins, matchOver) {
       ? ['MATCH WON', `${playerScore} - ${enemyScore}`, '#2ecc71']
       : ['MATCH LOST', `${playerScore} - ${enemyScore}`, '#e74c3c'];
   }
-  const subScore = `Score: ${playerScore} - ${enemyScore}  |  Round ${matchRound}/${TOTAL_ROUNDS}`;
+  const subScore = `Score: ${playerScore} - ${enemyScore}  |  Round ${matchRound}/${SND_TOTAL_ROUNDS}`;
   const msgs = {
     bomb_exploded:     ['BOMB DETONATED',   playerWins ? 'YOUR TEAM WINS ROUND' : 'ENEMY TEAM WINS ROUND', playerWins ? '#e74c3c' : '#3498db'],
     bomb_defused:      ['BOMB DEFUSED',     playerWins ? 'YOUR TEAM WINS ROUND' : 'ENEMY TEAM WINS ROUND', playerWins ? '#2ecc71' : '#e74c3c'],
@@ -369,81 +367,3 @@ function removeSiteMarkers() {
   }
 }
 
-// ── HUD ───────────────────────────────────────────────────────────────────
-function setSndHudVisible(v) {
-  const el = document.getElementById('snd-bar');
-  if (el) el.style.display = v ? 'block' : 'none';
-}
-function updateMatchHUD() {
-  const role = document.getElementById('snd-role-label');
-  if (role) {
-    role.textContent = playerRole === 'attack' ? '⚔ ATTACK' : '🛡 DEFEND';
-    role.style.color = playerRole === 'attack' ? '#e74c3c' : '#3498db';
-  }
-  const rnd = document.getElementById('snd-round-num');
-  if (rnd) rnd.textContent = `ROUND ${matchRound}/${TOTAL_ROUNDS}`;
-  const ps = document.getElementById('snd-player-score');
-  if (ps) ps.textContent = playerScore;
-  const es = document.getElementById('snd-enemy-score');
-  if (es) es.textContent = enemyScore;
-}
-function updateRoundTimerHUD(t) {
-  const el = document.getElementById('snd-round-timer');
-  if (el) { el.textContent = Math.ceil(t) + 's'; el.style.color = t < 10 ? '#e74c3c' : '#e8c84a'; }
-}
-function updateBombTimerHUD(remaining, total) {
-  const timer = document.getElementById('snd-bomb-timer');
-  if (timer) timer.textContent = Math.ceil(remaining) + 's';
-  const fill = document.getElementById('snd-bomb-bar-fill');
-  if (fill) fill.style.width = (remaining / total * 100) + '%';
-}
-function showBombBarWrap() {
-  const el = document.getElementById('snd-bomb-bar-wrap');
-  if (el) el.style.display = 'flex';
-}
-function hideBombBarWrap() {
-  const el = document.getElementById('snd-bomb-bar-wrap');
-  if (el) el.style.display = 'none';
-}
-function updatePlantBar(pct) {
-  const wrap = document.getElementById('snd-plant-bar-wrap');
-  if (wrap) wrap.style.display = 'flex';
-  const fill = document.getElementById('snd-plant-fill');
-  if (fill) fill.style.width = (pct * 100) + '%';
-}
-function hidePlantBar() {
-  const el = document.getElementById('snd-plant-bar-wrap');
-  if (el) el.style.display = 'none';
-}
-function updateDefuseBar(pct) {
-  const wrap = document.getElementById('snd-defuse-bar-wrap');
-  if (wrap) wrap.style.display = pct > 0.01 ? 'flex' : 'none';
-  const fill = document.getElementById('snd-defuse-fill');
-  if (fill) fill.style.width = (pct * 100) + '%';
-}
-function hideDefuseBar() {
-  const el = document.getElementById('snd-defuse-bar-wrap');
-  if (el) el.style.display = 'none';
-}
-function showPlantHint(txt) {
-  const el = document.getElementById('snd-plant-hint');
-  if (el) { el.textContent = txt; el.style.opacity = '1'; }
-}
-function hidePlantHint() {
-  const el = document.getElementById('snd-plant-hint');
-  if (el) el.style.opacity = '0';
-}
-function showSndResult(title, sub, color, matchOver) {
-  const el = document.getElementById('snd-result');
-  if (!el) return;
-  document.getElementById('snd-result-title').textContent = title;
-  document.getElementById('snd-result-title').style.color = color;
-  document.getElementById('snd-result-sub').textContent  = sub;
-  const btn = document.getElementById('snd-next-btn');
-  if (btn) btn.textContent = matchOver ? '[ PLAY AGAIN ]' : '[ NEXT ROUND ]';
-  el.style.display = 'flex';
-}
-function hideSndResult() {
-  const el = document.getElementById('snd-result');
-  if (el) el.style.display = 'none';
-}
