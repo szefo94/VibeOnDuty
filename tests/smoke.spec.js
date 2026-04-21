@@ -47,9 +47,8 @@ test.describe('VIBE ON DUTY — smoke tests', () => {
   test('ammo and HP show correct initial values', async ({ page }) => {
     await page.goto('/');
 
-    // These are set by updateHUD() on game start — check after clicking DROP IN
-    await page.locator('#startbtn').click();
-
+    // HUD is initialised on page load before the game loop starts — read before
+    // clicking DROP IN so enemies haven't had a chance to deal damage yet.
     await expect(page.locator('#ammo-cur')).toHaveText('30');
     await expect(page.locator('#ammo-rsv')).toHaveText('90');
     await expect(page.locator('#hp-num')).toHaveText('100');
