@@ -292,7 +292,7 @@ function endRound(result) {
 
   if (playerWins) playerScore++; else enemyScore++;
 
-  _matchOver = playerScore >= SND_WINS_NEEDED || enemyScore >= SND_WINS_NEEDED || matchRound >= TOTAL_ROUNDS;
+  _matchOver = playerScore >= SND_WINS_NEEDED || enemyScore >= SND_WINS_NEEDED || matchRound >= SND_TOTAL_ROUNDS;
   const [title, sub, color] = _roundResultText(result, playerWins, _matchOver);
   showSndResult(title, sub, color, _matchOver);
 }
