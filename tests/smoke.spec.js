@@ -54,3 +54,31 @@ test.describe('VIBE ON DUTY — smoke tests', () => {
     await expect(page.locator('#hp-num')).toHaveText('100');
   });
 });
+
+test.describe('VIBE ON DUTY — S&D mode smoke tests', () => {
+  test('S&D button is present on overlay', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#snd-startbtn')).toBeVisible();
+  });
+
+  test('clicking S&D MODE hides overlay and shows snd-bar', async ({ page }) => {
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+
+    await page.goto('/');
+    await page.locator('#snd-startbtn').click();
+
+    await expect(page.locator('#overlay')).toBeHidden();
+    await expect(page.locator('#snd-bar')).toBeVisible();
+    expect(errors).toHaveLength(0);
+  });
+
+  test('S&D match header shows correct initial values', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('#snd-startbtn').click();
+
+    await expect(page.locator('#snd-round-num')).toHaveText('ROUND 1/7');
+    await expect(page.locator('#snd-player-score')).toHaveText('0');
+    await expect(page.locator('#snd-enemy-score')).toHaveText('0');
+  });
+});

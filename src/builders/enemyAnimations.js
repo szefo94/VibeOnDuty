@@ -124,3 +124,57 @@ export function setSkeletonDebugVisible(v) {
   _skeletonDebugOn = v;
   for (const h of _allHelpers) h.visible = v;
 }
+
+// ── Per-enemy animation tick ──────────────────────────────────────────────
+// Drives jump-phase state machine + selects and crossfades to the right clip.
+// Called every frame by both enemy-bot and friendly-bot tickers.
+const E_JUMP_START_DUR = 0.32;
+const E_JUMP_LAND_DUR  = 0.38;
+
+export function tickEnemyAnimation(e, dt, isMoving) {
+  const nowOnGround = e.onGround;
+  if (!e._prevOnGround && nowOnGround) {
+    e.jumpPhase = 'land';
+    e.jumpPhaseTimer = E_JUMP_LAND_DUR;
+  } else if (e._prevOnGround && !nowOnGround) {
+    e.jumpPhase = 'start';
+    e.jumpPhaseTimer = E_JUMP_START_DUR;
+  }
+  e._prevOnGround = nowOnGround;
+  if (e.jumpPhase === 'start') {
+    e.jumpPhaseTimer -= dt;
+    if (e.jumpPhaseTimer <= 0) e.jumpPhase = nowOnGround ? '' : 'loop';
+  }
+  if (e.jumpPhase === 'land') {
+    e.jumpPhaseTimer -= dt;
+    if (e.jumpPhaseTimer <= 0) e.jumpPhase = '';
+  }
+
+  let clip;
+  if (e.jumpPhase === 'land' && e.actions.jump_land) {
+    clip = 'jump_land';
+  } else if (!nowOnGround) {
+    if (e.jumpPhase === 'start' && e.actions.jump_start) clip = 'jump_start';
+    else clip = e.actions.jump_loop ? 'jump_loop' : 'idle';
+  } else if (e.stunTimer > 0 && e.actions.hit) {
+    clip = 'hit';
+  } else if (e.crouching) {
+    clip = isMoving
+      ? (e.actions.crouch_walk ? 'crouch_walk' : 'walk')
+      : (e.actions.crouch      ? 'crouch'      : 'idle');
+  } else if (e.state === 'attack' || e.state === 'spotted') {
+    if (isMoving) {
+      clip = e.actions.run ? 'run' : 'walk';
+    } else if (e.muzzleFlashT > 0 && e.actions.shoot) {
+      clip = 'shoot';
+    } else {
+      clip = 'attack';
+    }
+  } else {
+    clip = isMoving ? 'walk' : 'idle';
+  }
+  const SNAP_CLIPS = new Set(['crouch', 'crouch_walk', 'death', 'hit', 'roll', 'jump_start', 'jump_land']);
+  const snapTransition = SNAP_CLIPS.has(clip) || SNAP_CLIPS.has(e.currentClip);
+  crossfade(e, clip, snapTransition ? 0 : 0.22);
+  e.mixer.update(dt);
+}

@@ -105,21 +105,15 @@ Phase 6.3 — Drone GLTF: wire `src/builders/droneGLTF.js` once `public/models/d
 
 ---
 
-### 8.2 — Split friendly bot AI into `entities/friendlyBots.js` (MEDIUM)
+### 8.2 ✅ — Split friendly bot AI into `entities/friendlyBots.js`
 
-`tickFriendlyBot` + friendly shooting loop is ~80 lines inside `enemies.js`. Moving it to its own file keeps `enemies.js` focused on hostile AI. Requires:
-- `tickEnemyAnimation` exported from `enemies.js` or moved to `builders/enemyAnimations.js` first (see 8.3)
-- `tickFriendlyBot` receives `enemies` + `killEnemy` as parameters to avoid circular import
-
-**Effort:** medium. 3 files touched, no logic changes.
+`tickFriendlyBot` extracted to `entities/friendlyBots.js`. Receives `enemies` + `killEnemy` as params (no circular import). `enemies.js` now focused on hostile AI only.
 
 ---
 
-### 8.3 — Move `tickEnemyAnimation` to `builders/enemyAnimations.js` (SMALL)
+### 8.3 ✅ — Move `tickEnemyAnimation` to `builders/enemyAnimations.js`
 
-`tickEnemyAnimation` belongs with crossfade/animation logic, not AI. Unblocks 8.2.
-
-**Effort:** low. Move function, add export, update one import.
+`tickEnemyAnimation` + jump-phase state machine moved to `enemyAnimations.js`. Called by both enemy and friendly bot tickers.
 
 ---
 
@@ -153,11 +147,9 @@ All DOM manipulation for S&D extracted to `hud/sndHud.js`. `snd.js` is now a pur
 
 ---
 
-### 8.8 — Playwright smoke tests: S&D mode (SMALL)
+### 8.8 ✅ — Playwright smoke tests: S&D mode
 
-Button click → overlay hides → snd-bar visible → match header shows correct initial values.
-
-**Effort:** low. 2–3 new test cases in `tests/smoke.spec.js`.
+S&D button visible, clicking hides overlay + shows snd-bar, match header initial values (ROUND 1/7, 0–0) verified. 3 test cases in `tests/smoke.spec.js`.
 
 ---
 
