@@ -1,36 +1,19 @@
 import * as THREE from 'three';
 import { scene, camera } from '../scene.js';
 import { applyEntityBase } from './entityBase.js';
-import {
-  CELL,
-  PLAYER_H,
-  ENEMY_HP,
-  ENEMY_SPEED,
-  ENEMY_ROT_SPD,
-  ENEMY_SIGHT,
-  ENEMY_SHOOT_RANGE,
-  ENEMY_SHOOT_CD,
-  ENEMY_DAMAGE,
-  REACT_MIN,
-  REACT_MAX,
-  AIM_THRESH,
-  GRAVITY,
-} from '../config.js';
+import { initEnemyState, alertEnemy, STATE_MAP } from '../ai/enemyStates.js';
+import { CELL, PLAYER_H, ENEMY_HP, ENEMY_SIGHT, GRAVITY } from '../config.js';
 import { MAP_W, MAP_H, MAP, isRamp, mapCell, canMoveTo, hAt } from '../map.js';
-import { slerp, normA } from '../math.js';
-import { astar } from '../astar.js';
 import { buildEnemyMesh } from '../builders/enemyGLTF.js';
 import { crossfade, tickEnemyAnimation } from '../builders/enemyAnimations.js';
 import { tickFriendlyBot } from './friendlyBots.js';
-import { wallMeshes } from '../level.js';
 import { hasLOS } from '../utils/los.js';
-import { spawnTracer } from '../fx/tracers.js';
 import { player } from './player.js';
-import { ammoDrops, spawnAmmoDrop } from './ammoDrops.js';
-import { updateHUD, showMsg, triggerHitFlash } from '../hud/overlay.js';
+import { spawnAmmoDrop } from './ammoDrops.js';
+import { showMsg } from '../hud/overlay.js';
 import { setGameRunning } from '../input.js';
 import { rebuildEHM } from '../combat/shoot.js';
-import { getSndBombPos, isSndActive, onSndPlayerDeath, markEnemyDefusing, markEnemyPlanting, getSndDefuseRange, getSndPlantRange, getSndSitePositions, getPlayerRole, onAllEnemyTeamDead, onAllFriendsDead } from '../modes/snd.js';
+import { isSndActive, onSndPlayerDeath, getPlayerRole, onAllEnemyTeamDead, onAllFriendsDead } from '../modes/snd.js';
 import { triggerWaveEnd, wave } from './waveSystem.js';
 
 // ── Walkable cells ────────────────────────────────────────────────
@@ -58,10 +41,13 @@ function randomPatrol(sc, sr, rad = 2) {
     return MAP[br][bc] === 0 ? [bc, br] : [sc, sr];
   });
 }
-const WP_WAITS = [600, 1200, 500, 900, 1000, 500];
 const NUM_ENEMIES = 10;
 
 // ── Enemies array ─────────────────────────────────────────────────
+/**
+ * @param {import('../../types/entities').Enemy} e
+ * @param {[number,number]|null} [forcedCell]
+ */
 export function spawnEnemyIntoSlot(e, forcedCell = null) {
   if (e.mesh) scene.remove(e.mesh);
   if (e.mixer) e.mixer.stopAllAction();
@@ -118,6 +104,7 @@ export function spawnEnemyIntoSlot(e, forcedCell = null) {
     jumpPhaseTimer: 0,
   });
   applyEntityBase(e);
+  initEnemyState(e);
 }
 
 const usedCells = [];
@@ -242,9 +229,7 @@ export function spawnSndEnemies(sitePositions) {
       } else {
         // Attackers — spawn east side, rush sites
         spawnEnemyIntoSlot(e, ATTACKER_SLOTS[j % ATTACKER_SLOTS.length]);
-        e.state = 'attack';
-        e.alertTimer = 9000;
-        e.reactDelay = 0;
+        alertEnemy(e);
       }
       e.sndTeam = 'enemy';
       e.sndSiteAttack = j < 3 ? 0 : 1;
@@ -335,25 +320,12 @@ export function updateEnemies(ts, dt) {
         camera.position.y,
         camera.position.z
       );
-    if (canSee) {
-      if (e.state === 'patrol') {
-        e.state = 'spotted';
-        e.reactDelay = REACT_MIN + Math.random() * (REACT_MAX - REACT_MIN);
-      } else e.state = 'attack';
-      e.alertTimer = 9000;
-    }
-    if (e.state !== 'patrol' && !canSee) {
-      e.alertTimer = Math.max(0, e.alertTimer - dt * 1000);
-      if (e.alertTimer <= 0) e.state = 'patrol';
-    }
-    if (e.state === 'spotted') {
-      e.reactDelay = Math.max(0, e.reactDelay - dt * 1000);
-      if (e.reactDelay <= 0) e.state = 'attack';
-    }
-
     const desiredY = Math.atan2(-pdx, -pdz);
-    let isMoving = false;
 
+    // Sync _aiState if external code mutated e.state (e.g. shoot.js alertEnemy)
+    if (e._aiState?.name !== e.state) e._aiState = STATE_MAP[e.state] ?? e._aiState;
+
+    let isMoving = false;
     if (e.stunTimer > 0) {
       // ── Stagger: drain knockback velocity, skip normal movement ──────
       e.stunTimer = Math.max(0, e.stunTimer - dt);
@@ -363,145 +335,9 @@ export function updateEnemies(ts, dt) {
       const nz = e.z + e.velZ * dt;
       if (canMoveTo(nx, e.z, eGround)) e.x = nx;
       if (canMoveTo(e.x, nz, eGround)) e.z = nz;
-    } else if (e.state === 'attack' || e.state === 'spotted') {
-      // ── Path throttle: recalc only when timer expires OR goal cell changes ──
-      const isEnemyAttacker = isSndActive() && e.sndTeam === 'enemy' && getPlayerRole() === 'defend';
-      const sitePos = isEnemyAttacker ? getSndSitePositions()[e.sndSiteAttack ?? 0] : null;
-      const bombPos = getSndBombPos();
-      const goalX = sitePos ? sitePos[0] : bombPos ? bombPos[0] : camera.position.x;
-      const goalZ = sitePos ? sitePos[1] : bombPos ? bombPos[1] : camera.position.z;
-      const goalCell = [Math.floor(goalX / CELL), Math.floor(goalZ / CELL)];
-      const goalChanged =
-        !e.pathGoal ||
-        e.pathGoal[0] !== goalCell[0] ||
-        e.pathGoal[1] !== goalCell[1];
-      if (e.path.length === 0 || e.pathTick <= 0 || goalChanged) {
-        e.path = astar(e.x, e.z, goalX, goalZ);
-        if (e.path.length > 0) e.path.shift();
-        e.pathTick = 600 + Math.random() * 200;
-        e.pathGoal = goalCell;
-      }
-      e.pathTick -= dt * 1000;
-
-      // ── Enemy defuse: mark if within range of planted bomb ───────────────
-      if (bombPos) {
-        const defR = getSndDefuseRange();
-        const bdx = e.x - bombPos[0], bdz = e.z - bombPos[1];
-        if (bdx * bdx + bdz * bdz < defR * defR) markEnemyDefusing();
-      }
-      // ── Enemy plant: mark if attacker reached assigned site ──────────────
-      if (isEnemyAttacker && sitePos && !bombPos) {
-        const pr = getSndPlantRange();
-        const sdx = e.x - sitePos[0], sdz = e.z - sitePos[1];
-        if (sdx * sdx + sdz * sdz < pr * pr) markEnemyPlanting(e.x, e.z);
-      }
-
-      // ── Enemy bots shoot nearby friendly bots (S&D bot-vs-bot) ─────────
-      if (isSndActive() && ts - (e.botShootCd ?? 0) > ENEMY_SHOOT_CD) {
-        for (const friend of enemies) {
-          if (friend.dead || friend.sndTeam !== 'friend') continue;
-          const fdx = friend.x - e.x, fdz = friend.z - e.z;
-          if (fdx * fdx + fdz * fdz > ENEMY_SHOOT_RANGE * ENEMY_SHOOT_RANGE) continue;
-          const fGround = hAt(Math.floor(friend.x / CELL), Math.floor(friend.z / CELL));
-          if (!hasLOS(e.x, eGround + PLAYER_H * 0.85, e.z, friend.x, fGround + PLAYER_H * 0.85, friend.z)) continue;
-          e.botShootCd = ts;
-          e.muzzleFlashT = 55;
-          friend.takeDamage(ENEMY_DAMAGE + Math.floor(Math.random() * 7), killEnemy);
-          break;
-        }
-      }
-
-      // ── Velocity-based movement with acceleration + drag ──────────────
-      const goalDist = bombPos
-        ? Math.sqrt((e.x - goalX) ** 2 + (e.z - goalZ) ** 2)
-        : distP;
-      if (e.path.length > 0 && goalDist > CELL * 1.4) {
-        const [tx, tz] = e.path[0];
-        const ddx = tx - e.x,
-          ddz = tz - e.z,
-          dd = Math.sqrt(ddx * ddx + ddz * ddz);
-        if (dd < 0.18) {
-          e.path.shift();
-        } else {
-          const spd = ENEMY_SPEED * (e.state === 'spotted' ? 0.55 : 1);
-          e.velX += ((ddx / dd) * spd - e.velX) * 12 * dt;
-          e.velZ += ((ddz / dd) * spd - e.velZ) * 12 * dt;
-          const nx = e.x + e.velX * dt,
-            nz = e.z + e.velZ * dt;
-          if (canMoveTo(nx, e.z, eGround)) e.x = nx;
-          if (canMoveTo(e.x, nz, eGround)) e.z = nz;
-          isMoving = true;
-        }
-      } else {
-        e.velX *= 1 - 10 * dt;
-        e.velZ *= 1 - 10 * dt;
-      }
-
-      // ── Faster rotation in attack mode ────────────────────────────────
-      const rotSpd = e.state === 'attack' ? ENEMY_ROT_SPD * 2.5 : ENEMY_ROT_SPD;
-      // Face bomb when rushing it, otherwise face player
-      const faceX = bombPos ? bombPos[0] : camera.position.x;
-      const faceZ = bombPos ? bombPos[1] : camera.position.z;
-      const faceY = Math.atan2(-(faceX - e.x), -(faceZ - e.z));
-      e.facingY = slerp(e.facingY, faceY, rotSpd, dt);
-
-      if (
-        e.state === 'attack' &&
-        !bombPos &&
-        distP < ENEMY_SHOOT_RANGE &&
-        canSee &&
-        Math.abs(normA(e.facingY - desiredY)) < AIM_THRESH
-      ) {
-        if (ts - e.shootCd > ENEMY_SHOOT_CD) {
-          e.shootCd = ts;
-          if (
-            hasLOS(
-              e.x,
-              eGround + PLAYER_H * 0.85,
-              e.z,
-              camera.position.x,
-              camera.position.y,
-              camera.position.z
-            )
-          ) {
-            player.hp = Math.max(0, player.hp - ENEMY_DAMAGE - Math.floor(Math.random() * 7));
-            triggerHitFlash();
-            updateHUD();
-            if (player.hp <= 0) triggerDeath();
-            e.muzzleFlashT = 55;
-            spawnTracer(
-              new THREE.Vector3(0.295, 1.19, -0.52).applyMatrix4(e.mesh.matrixWorld),
-              camera.position.clone()
-            );
-          }
-        }
-      }
     } else {
-      // ── Patrol ────────────────────────────────────────────────────────
-      // bleed off any residual velocity from prior attack state
-      e.velX *= 1 - 10 * dt;
-      e.velZ *= 1 - 10 * dt;
-      if (e.wpWait > 0) {
-        e.wpWait = Math.max(0, e.wpWait - dt * 1000);
-        e.facingY += dt * 0.55 * Math.sin(performance.now() / 820 + e.bobT);
-      } else {
-        const wp = e.patrol[e.patrolWp];
-        const ddx = wp[0] - e.x,
-          ddz = wp[1] - e.z,
-          dd = Math.sqrt(ddx * ddx + ddz * ddz);
-        if (dd < 0.22) {
-          e.patrolWp = (e.patrolWp + 1) % e.patrol.length;
-          e.wpWait = WP_WAITS[e.patrolWp % WP_WAITS.length];
-        } else {
-          const spd2 = ENEMY_SPEED * 0.42 * dt;
-          const nx = e.x + (ddx / dd) * spd2,
-            nz = e.z + (ddz / dd) * spd2;
-          if (canMoveTo(nx, e.z, eGround)) e.x = nx;
-          if (canMoveTo(e.x, nz, eGround)) e.z = nz;
-          e.facingY = slerp(e.facingY, Math.atan2(-ddx, -ddz), ENEMY_ROT_SPD * 0.5, dt);
-          isMoving = true;
-        }
-      }
+      const ctx = { ts, dt, eGround, canSee, distP, pdx, pdz, desiredY, enemies, killEnemy, triggerDeath };
+      isMoving = e._aiState.tick(e, dt, ctx) ?? false;
     }
 
     tickEnemyAnimation(e, dt, isMoving);

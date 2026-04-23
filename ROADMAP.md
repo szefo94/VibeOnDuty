@@ -135,15 +135,9 @@ All DOM manipulation for S&D extracted to `hud/sndHud.js`. `snd.js` is now a pur
 
 ---
 
-### 8.7 — Unit tests for S&D state machine (MEDIUM)
+### 8.7 ✅ — Unit tests for S&D state machine
 
-`snd.js` has no test coverage. Key cases:
-- `startSnd` resets all state
-- `endRound` assigns win/loss correctly for each result type and both roles
-- `matchOver` triggers at 4 wins or round 7
-- `nextRound` alternates role at round 4
-
-**Effort:** medium. Add `src/modes/snd.test.js`, mock `scene`/`player`/DOM.
+21 tests in `src/modes/snd.test.js` covering `startSnd` reset, `endRound` win/loss for all result types and both roles, `matchOver` at 4 wins or round 7, `nextRound` role alternation at round 4.
 
 ---
 
@@ -155,62 +149,21 @@ S&D button visible, clicking hides overlay + shows snd-bar, match header initial
 
 ## Phase 9 — Entity architecture
 
-### 9.1 — Shared entity mixin: `src/entities/entityBase.js` (SMALL)
+### 9.1 ✅ — Shared entity mixin: `src/entities/entityBase.js`
 
-**Problem:** `takeDamage` logic is duplicated across shoot.js (bullets), enemies.js (friendly bot shots), and drone.js (EMP + bullet hits). Each site manually clamps HP and calls the right kill function.
-
-**Solution:** A plain-object factory — not a class — that stamps common methods onto any entity object:
-```js
-// entityBase.js
-export function applyEntityBase(obj) {
-  obj.isAlive = () => !obj.dead;
-  obj.takeDamage = (dmg, onDie) => {
-    if (obj.dead) return;
-    obj.hp = Math.max(0, obj.hp - dmg);
-    if (obj.hp <= 0) onDie(obj);
-  };
-}
-```
-Call at spawn time: `applyEntityBase(enemy)`. Keeps `spawnEnemyIntoSlot`'s `Object.assign` pattern intact — methods are just extra properties.
-
-**Why not a class hierarchy?** Enemies are slot-reused via `Object.assign(e, {...})` across rounds. Subclassing would break the slot-reuse pattern without a full respawn-factory rewrite. Player, enemy, and drone also diverge significantly in state shape (lean/pitch/yaw vs path/state/sndTeam). The mixin gets the benefit (shared takeDamage, isAlive) at near-zero cost.
-
-**Effort:** low. One new file (~15 lines), apply in `enemies.js` + `drone.js`, simplify call sites in `shoot.js`.
+`applyEntityBase(obj)` stamps `isAlive()` and `takeDamage(dmg, onDie)` onto entities at spawn. Applied in `spawnEnemyIntoSlot` and `spawnNewDrone`. Duplicate `hp = Math.max(0, hp-dmg); if (hp<=0) kill()` pattern removed from `shoot.js` (bullets + melee), `friendlyBots.js`, and `enemies.js` (bot-vs-bot). `killDrone` signature simplified (dmg param removed).
 
 ---
 
-### 9.2 — Enemy AI state machine: `src/ai/enemyStates.js` (MEDIUM)
+### 9.2 ✅ — Enemy AI state machine: `src/ai/enemyStates.js`
 
-**Problem:** Enemy AI in `updateEnemies` is a large `if/else if` chain on `e.state`. Adding a new state (e.g. `suppressed`, `flanking`) means modifying a 200-line function.
-
-**Solution:** State objects with `enter`, `tick`, and `exit` hooks:
-```js
-const PATROL_STATE = {
-  enter(e) { e.alertTimer = 0; },
-  tick(e, dt, ctx) { /* patrol waypoints */ },
-  exit(e) {},
-};
-```
-`transitionTo(e, ATTACK_STATE)` calls `exit` on current, `enter` on next. AI logic becomes composable and individually testable. S&D-specific states (`rush_site`, `plant_bomb`, `defuse_bomb`) slot in without touching generic patrol/attack logic.
-
-**Effort:** medium–high. Isolated to `enemies.js` and new `src/ai/` folder. No other files need changing.
+`PATROL_STATE`, `SPOTTED_STATE`, `ATTACK_STATE` objects with `enter`/`tick`/`exit` hooks. `transitionTo(e, state)` calls exit on current and enter on next. `updateEnemies` shrunk from ~230 lines to ~80 — it now computes ctx per-enemy and calls `e._aiState.tick(e, dt, ctx)`. S&D movement, bot-vs-bot, and player shooting all live in `enemyStates.js`. `alertEnemy` / `semiAlertEnemy` helpers replace bare `e.state = 'attack'` mutations in shoot.js, grenades.js, drone.js.
 
 ---
 
-### 9.3 — TypeScript interfaces for entity shapes (SMALL, prerequisite for 9.4+)
+### 9.3 ✅ — TypeScript interfaces for entity shapes
 
-**Problem:** Enemy, player, and drone objects are untyped plain objects. Nothing prevents typos like `e.snfTeam` or missing properties when adding new entity state.
-
-**Solution:** Add `.d.ts` declaration files (no TS compilation needed — just JSDoc + `// @ts-check`):
-```ts
-// types/entities.d.ts
-interface EntityBase { hp: number; dead: boolean; x: number; z: number; mesh: THREE.Object3D; }
-interface Enemy extends EntityBase { state: 'patrol'|'spotted'|'attack'; sndTeam?: 'friend'|'enemy'; ... }
-interface Player extends EntityBase { ammo: number; reserve: number; yaw: number; pitch: number; ... }
-```
-Catches shape bugs in editors without a TS build step.
-
-**Effort:** low. No runtime changes, pure type annotations.
+`types/entities.d.ts` declares `EntityBase`, `Enemy`, `Player`, `Drone`, `AiState`, `AiCtx`. JSDoc `@type` annotations wired to spawn sites in `entityBase.js`, `enemies.js`, `player.js`, `drone.js`. `tsconfig.json` updated to include `types/`. No runtime changes — pure editor/IDE type checking.
 
 ---
 

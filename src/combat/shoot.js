@@ -7,6 +7,7 @@ import { spawnImpact } from '../fx/impacts.js';
 import { groundElevation } from '../map.js';
 import { player, startReload } from '../entities/player.js';
 import { enemies, killEnemy } from '../entities/enemies.js';
+import { alertEnemy } from '../ai/enemyStates.js';
 import { activeDrone, dronePool, killDrone } from '../entities/drone.js';
 import { spawnHitMarker } from '../hud/hitmarker.js';
 import { updateHUD } from '../hud/overlay.js';
@@ -135,9 +136,7 @@ export function tickBullets(dt) {
       const ePos = new THREE.Vector3(e.x, groundElevation(e.x, e.z) + PLAYER_H * 0.6, e.z);
       if (b.pos.distanceTo(ePos) < 0.75) {
         const dmg = BULLET_DAMAGE + Math.floor(Math.random() * 10);
-        e.state = 'attack';
-        e.alertTimer = 9000;
-        e.reactDelay = 0;
+        alertEnemy(e);
         player.energy = Math.min(MAX_ENERGY, player.energy + dmg * ENERGY_PER_DMG);
         // knockback stagger
         const kd = new THREE.Vector3(e.x - camera.position.x, 0, e.z - camera.position.z).normalize();
@@ -180,9 +179,7 @@ export function tryPunchDamage() {
     if (dist > PUNCH_RANGE) continue;
     const dot = _punchFwd.x * (dx / dist) + _punchFwd.z * (dz / dist);
     if (dot < 0.34) continue; // ~120° frontal arc
-    e.state = 'attack';
-    e.alertTimer = 9000;
-    e.reactDelay = 0;
+    alertEnemy(e);
     e.velX = (dx / dist) * 3;
     e.velZ = (dz / dist) * 3;
     e.stunTimer = 0.45;

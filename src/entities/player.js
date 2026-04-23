@@ -28,7 +28,8 @@ import { updateHUD, showMsg, showStatus } from '../hud/overlay.js';
 import { tickHitMarker } from '../hud/hitmarker.js';
 import { tryShoot, tickBullets, updateWeapon, coolSpray, bobT } from '../combat/shoot.js';
 
-export const player = {
+/** @type {import('../../types/entities').Player} */
+export const player = /** @type {any} */ ({
   hp: MAX_HP,
   ammo: MAX_AMMO,
   reserve: RESERVE_AMMO,
@@ -61,7 +62,7 @@ export const player = {
   aiming: false,   // RMB held
   aimT: 0,         // 0=hip, 1=full ADS — lerped each frame
   thirdPerson: false, // mirror of loop.js tpTransition>0.5 — written by loop.js
-};
+});
 
 export const visited = Array.from({ length: MAP_H }, () => new Uint8Array(MAP_W));
 

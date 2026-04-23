@@ -12,6 +12,7 @@ import { enemies } from './enemies.js';
 import { isSndActive } from '../modes/snd.js';
 import { hasLOS } from '../utils/los.js';
 import { applyEntityBase } from './entityBase.js';
+import { semiAlertEnemy } from '../ai/enemyStates.js';
 
 // ── Walkable cells (local copy — avoids circular dep with enemies.js) ──────
 const _WALKABLE = [];
@@ -28,6 +29,7 @@ export const DRONE_FLY_H = 4.5;
 export const dronePool   = [];
 export let   activeDrone = null;
 
+/** @returns {import('../../types/entities').Drone} */
 export function spawnNewDrone() {
   const [mc, mr] = _randomCell();
   const d = buildDrone(mc * CELL + CELL / 2, DRONE_FLY_H, mr * CELL + CELL / 2);
@@ -254,7 +256,7 @@ function _scan(d) {
       const ex = e.x - camera.position.x, ez = e.z - camera.position.z;
       if (ex * ex + ez * ez > alertR2) continue;
       e.alertTimer = Math.max(e.alertTimer ?? 0, 8000);
-      if (e.state === 'patrol') { e.state = 'spotted'; e.reactDelay = Math.min(e.reactDelay, 400); }
+      semiAlertEnemy(e);
       anyAlerted = true;
     }
     if (anyAlerted) showMsg('ENEMY RECON DRONE — POSITION COMPROMISED', 2200);

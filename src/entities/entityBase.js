@@ -1,3 +1,4 @@
+/** @param {import('../../types/entities').EntityBase} obj */
 export function applyEntityBase(obj) {
   obj.isAlive = () => !obj.dead;
   obj.takeDamage = (dmg, onDie) => {

@@ -7,6 +7,7 @@ import { grenadeFalloff, grenadeEntityDamage, grenadePlayerDamage } from '../com
 import { spawnGrenadeParticles } from '../fx/particles.js';
 import { player } from './player.js';
 import { enemies, killEnemy, triggerDeath } from './enemies.js';
+import { alertEnemy } from '../ai/enemyStates.js';
 import { activeDrone, killDrone } from './drone.js';
 import { showStatus, triggerHitFlash, updateHUD } from '../hud/overlay.js';
 
@@ -75,13 +76,10 @@ export function explodeGrenade(g) {
     const dist = ep.distanceTo(new THREE.Vector3(e.x, groundElevation(e.x, e.z) + 0.9, e.z));
     const dmg = grenadeEntityDamage(dist, e.maxHp);
     if (dmg > 0) {
-      e.hp = Math.max(0, e.hp - dmg);
-      e.hpDrain = e.hp;
+      e.hpDrain = Math.max(0, e.hp - dmg);
       player.energy = Math.min(MAX_ENERGY, player.energy + dmg * ENERGY_PER_DMG * 0.5);
-      e.state = 'attack';
-      e.alertTimer = 9000;
-      e.reactDelay = 0;
-      if (e.hp <= 0) killEnemy(e);
+      alertEnemy(e);
+      e.takeDamage(dmg, killEnemy);
     }
   }
   if (activeDrone && !activeDrone.dead) {
