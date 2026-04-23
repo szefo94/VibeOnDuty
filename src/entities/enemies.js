@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { scene, camera } from '../scene.js';
+import { applyEntityBase } from './entityBase.js';
 import {
   CELL,
   PLAYER_H,
@@ -116,6 +117,7 @@ export function spawnEnemyIntoSlot(e, forcedCell = null) {
     jumpPhase: '',
     jumpPhaseTimer: 0,
   });
+  applyEntityBase(e);
 }
 
 const usedCells = [];
@@ -403,9 +405,8 @@ export function updateEnemies(ts, dt) {
           const fGround = hAt(Math.floor(friend.x / CELL), Math.floor(friend.z / CELL));
           if (!hasLOS(e.x, eGround + PLAYER_H * 0.85, e.z, friend.x, fGround + PLAYER_H * 0.85, friend.z)) continue;
           e.botShootCd = ts;
-          friend.hp = Math.max(0, friend.hp - ENEMY_DAMAGE - Math.floor(Math.random() * 7));
           e.muzzleFlashT = 55;
-          if (friend.hp <= 0) killEnemy(friend);
+          friend.takeDamage(ENEMY_DAMAGE + Math.floor(Math.random() * 7), killEnemy);
           break;
         }
       }

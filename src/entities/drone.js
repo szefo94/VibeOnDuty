@@ -11,6 +11,7 @@ import { gameRunning } from '../input.js';
 import { enemies } from './enemies.js';
 import { isSndActive } from '../modes/snd.js';
 import { hasLOS } from '../utils/los.js';
+import { applyEntityBase } from './entityBase.js';
 
 // ── Walkable cells (local copy — avoids circular dep with enemies.js) ──────
 const _WALKABLE = [];
@@ -33,6 +34,7 @@ export function spawnNewDrone() {
   d.strafeDir      = Math.random() < 0.5 ? 1 : -1;
   d.strafeDirTimer = 3 + Math.random() * 4;
   d.empCd          = 0;
+  applyEntityBase(d);
   dronePool.push(d);
   activeDrone = d;
   d.mesh.traverse((ch) => { if (ch.isMesh) ch.userData.droneRef = d; });
@@ -40,9 +42,7 @@ export function spawnNewDrone() {
   return d;
 }
 
-export function killDrone(d, dmg) {
-  d.hp -= dmg;
-  if (d.hp > 0) return;
+export function killDrone(d) {
   d.dead = true;
   scene.remove(d.mesh);
   activeDrone = null;

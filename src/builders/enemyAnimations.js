@@ -130,6 +130,7 @@ export function setSkeletonDebugVisible(v) {
 // Called every frame by both enemy-bot and friendly-bot tickers.
 const E_JUMP_START_DUR = 0.32;
 const E_JUMP_LAND_DUR  = 0.38;
+const SNAP_CLIPS = new Set(['crouch', 'crouch_walk', 'death', 'hit', 'roll', 'jump_start', 'jump_land']);
 
 export function tickEnemyAnimation(e, dt, isMoving) {
   const nowOnGround = e.onGround;
@@ -173,7 +174,6 @@ export function tickEnemyAnimation(e, dt, isMoving) {
   } else {
     clip = isMoving ? 'walk' : 'idle';
   }
-  const SNAP_CLIPS = new Set(['crouch', 'crouch_walk', 'death', 'hit', 'roll', 'jump_start', 'jump_land']);
   const snapTransition = SNAP_CLIPS.has(clip) || SNAP_CLIPS.has(e.currentClip);
   crossfade(e, clip, snapTransition ? 0 : 0.22);
   e.mixer.update(dt);

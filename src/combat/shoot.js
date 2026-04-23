@@ -135,7 +135,6 @@ export function tickBullets(dt) {
       const ePos = new THREE.Vector3(e.x, groundElevation(e.x, e.z) + PLAYER_H * 0.6, e.z);
       if (b.pos.distanceTo(ePos) < 0.75) {
         const dmg = BULLET_DAMAGE + Math.floor(Math.random() * 10);
-        e.hp = Math.max(0, e.hp - dmg);
         e.state = 'attack';
         e.alertTimer = 9000;
         e.reactDelay = 0;
@@ -146,7 +145,7 @@ export function tickBullets(dt) {
         e.velZ = kd.z * 4;
         e.stunTimer = 0.28;
         spawnHitMarker();
-        if (e.hp <= 0) killEnemy(e);
+        e.takeDamage(dmg, killEnemy);
         _removeBullet(i);
         hit = true;
         break;
@@ -160,7 +159,7 @@ export function tickBullets(dt) {
         const dmg = BULLET_DAMAGE + Math.floor(Math.random() * 10);
         player.energy = Math.min(MAX_ENERGY, player.energy + dmg * ENERGY_PER_DMG);
         spawnHitMarker();
-        killDrone(activeDrone, dmg);
+        activeDrone.takeDamage(dmg, killDrone);
         _removeBullet(i);
         continue;
       }
@@ -181,7 +180,6 @@ export function tryPunchDamage() {
     if (dist > PUNCH_RANGE) continue;
     const dot = _punchFwd.x * (dx / dist) + _punchFwd.z * (dz / dist);
     if (dot < 0.34) continue; // ~120° frontal arc
-    e.hp = Math.max(0, e.hp - PUNCH_DAMAGE);
     e.state = 'attack';
     e.alertTimer = 9000;
     e.reactDelay = 0;
@@ -189,7 +187,7 @@ export function tryPunchDamage() {
     e.velZ = (dz / dist) * 3;
     e.stunTimer = 0.45;
     spawnHitMarker();
-    if (e.hp <= 0) killEnemy(e);
+    e.takeDamage(PUNCH_DAMAGE, killEnemy);
   }
 }
 

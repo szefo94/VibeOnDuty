@@ -57,10 +57,9 @@ export function tickFriendlyBot(e, dt, allEnemies, killEnemy) {
       const tGround = hAt(Math.floor(target.x / CELL), Math.floor(target.z / CELL));
       if (!hasLOS(e.x, eGround + PLAYER_H * 0.85, e.z, target.x, tGround + PLAYER_H * 0.85, target.z)) continue;
       e.shootCd  = ENEMY_SHOOT_CD;
-      e.facingY  = Math.atan2(-(target.x - e.x), -(target.z - e.z));
-      target.hp  = Math.max(0, target.hp - ENEMY_DAMAGE);
+      e.facingY  = Math.atan2(e.x - target.x, e.z - target.z);
       e.muzzleFlashT = 55;
-      if (target.hp <= 0) killEnemy(target);
+      target.takeDamage(ENEMY_DAMAGE, killEnemy);
       break;
     }
   }
