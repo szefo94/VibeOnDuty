@@ -14,7 +14,7 @@ import {
   showSndResult, hideSndResult,
 } from '../hud/sndHud.js';
 import { setGameRunning } from '../input.js';
-import { on } from '../events.js';
+import { on, emit } from '../events.js';
 import { setMode } from './modeManager.js';
 
 export function getSndPlantRange()  { return SND_PLANT_RANGE; }
@@ -91,6 +91,16 @@ export function startSnd() {
   playerRole  = 'attack';
   _matchOver  = false;
   setMode({ name: 'snd', tick: tickSnd });
+  emit('snd:configure', {
+    isActive:        isSndActive,
+    getBombPos:      getSndBombPos,
+    getSitePositions: getSndSitePositions,
+    getPlantRange:   getSndPlantRange,
+    getDefuseRange:  getSndDefuseRange,
+    getPlayerRole,
+    markDefusing:    markEnemyDefusing,
+    markPlanting:    markEnemyPlanting,
+  });
   _startRound();
 }
 

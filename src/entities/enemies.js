@@ -14,7 +14,11 @@ import { showMsg } from '../hud/overlay.js';
 import { setGameRunning } from '../input.js';
 import { isAnyModeActive } from '../modes/modeManager.js';
 import { wave } from './waveSystem.js';
-import { emit } from '../events.js';
+import { on, emit } from '../events.js';
+
+// S&D API injected at runtime via 'snd:configure' event (avoids circular dep).
+let _snd = null;
+on('snd:configure', api => { _snd = api; });
 
 // ── Walkable cells ────────────────────────────────────────────────
 export const WALKABLE_CELLS = [];
@@ -188,7 +192,7 @@ function openNear(cx, cz) {
 }
 
 export function spawnSndEnemies(sitePositions) {
-  const role = getPlayerRole();
+  const role = _snd?.getPlayerRole() ?? 'attack';
   const NUM_FRIENDS = 5;
   enemies.forEach((e, i) => {
     if (i < NUM_FRIENDS) {

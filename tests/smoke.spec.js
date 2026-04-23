@@ -63,7 +63,10 @@ test.describe('VIBE ON DUTY — S&D mode smoke tests', () => {
 
   test('clicking S&D MODE hides overlay and shows snd-bar', async ({ page }) => {
     const errors = [];
-    page.on('pageerror', e => errors.push(e.message));
+    // Pointer-lock is unavailable in headless Playwright — filter that expected browser error.
+    page.on('pageerror', e => {
+      if (!e.message.includes('pointer lock')) errors.push(e.message);
+    });
 
     await page.goto('/');
     await page.locator('#snd-startbtn').click();

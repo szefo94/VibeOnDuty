@@ -11,10 +11,12 @@ import { player } from '../entities/player.js';
 import { hasLOS } from '../utils/los.js';
 import { triggerHitFlash, updateHUD } from '../hud/overlay.js';
 import { spawnTracer } from '../fx/tracers.js';
-import {
-  isSndActive, getSndBombPos, getSndSitePositions, getSndPlantRange,
-  getSndDefuseRange, getPlayerRole, markEnemyDefusing, markEnemyPlanting,
-} from '../modes/snd.js';
+import { on } from '../events.js';
+
+// S&D API injected at runtime via 'snd:configure' event (avoids circular dep).
+// null in wave mode — all _snd?.foo() calls return undefined (falsy) safely.
+let _snd = null;
+on('snd:configure', api => { _snd = api; });
 
 // ctx shape: { ts, dt, eGround, canSee, distP, pdx, pdz, desiredY,
 //              enemies, killEnemy, triggerDeath }
@@ -56,9 +58,9 @@ export function semiAlertEnemy(e) {
 // Returns isMoving.
 function _tickMovement(e, dt, ctx, speedMult, rotMult) {
   const { ts, eGround, pdx, pdz, distP } = ctx;
-  const bombPos        = getSndBombPos();
-  const isEnemyAtk     = isSndActive() && e.sndTeam === 'enemy' && getPlayerRole() === 'defend';
-  const sitePos        = isEnemyAtk ? getSndSitePositions()[e.sndSiteAttack ?? 0] : null;
+  const bombPos        = _snd?.getBombPos() ?? null;
+  const isEnemyAtk     = _snd?.isActive() && e.sndTeam === 'enemy' && _snd?.getPlayerRole() === 'defend';
+  const sitePos        = isEnemyAtk ? _snd?.getSitePositions()[e.sndSiteAttack ?? 0] : null;
   const goalX          = sitePos ? sitePos[0] : bombPos ? bombPos[0] : camera.position.x;
   const goalZ          = sitePos ? sitePos[1] : bombPos ? bombPos[1] : camera.position.z;
   const goalCell       = [Math.floor(goalX / CELL), Math.floor(goalZ / CELL)];
@@ -74,18 +76,18 @@ function _tickMovement(e, dt, ctx, speedMult, rotMult) {
 
   // S&D: enemy defuse / plant marks
   if (bombPos) {
-    const defR = getSndDefuseRange();
+    const defR = _snd.getDefuseRange();
     const bdx = e.x - bombPos[0], bdz = e.z - bombPos[1];
-    if (bdx * bdx + bdz * bdz < defR * defR) markEnemyDefusing();
+    if (bdx * bdx + bdz * bdz < defR * defR) _snd.markDefusing();
   }
   if (isEnemyAtk && sitePos && !bombPos) {
-    const pr = getSndPlantRange();
+    const pr = _snd.getPlantRange();
     const sdx = e.x - sitePos[0], sdz = e.z - sitePos[1];
-    if (sdx * sdx + sdz * sdz < pr * pr) markEnemyPlanting(e.x, e.z);
+    if (sdx * sdx + sdz * sdz < pr * pr) _snd.markPlanting(e.x, e.z);
   }
 
   // Bot-vs-bot shooting (S&D)
-  if (isSndActive() && ts - (e.botShootCd ?? 0) > ENEMY_SHOOT_CD) {
+  if (_snd?.isActive() && ts - (e.botShootCd ?? 0) > ENEMY_SHOOT_CD) {
     for (const friend of ctx.enemies) {
       if (friend.dead || friend.sndTeam !== 'friend') continue;
       const fdx = friend.x - e.x, fdz = friend.z - e.z;
@@ -131,7 +133,7 @@ function _tickMovement(e, dt, ctx, speedMult, rotMult) {
 
 function _tickPlayerShoot(e, ctx) {
   const { ts, eGround, canSee, distP, desiredY } = ctx;
-  if (getSndBombPos()) return;                                    // rushing bomb — don't stop
+  if (_snd?.getBombPos()) return;                                 // rushing bomb — don't stop
   if (distP >= ENEMY_SHOOT_RANGE || !canSee) return;
   if (Math.abs(normA(e.facingY - desiredY)) >= AIM_THRESH) return;
   if (ts - e.shootCd <= ENEMY_SHOOT_CD) return;
