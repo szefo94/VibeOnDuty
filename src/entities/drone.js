@@ -6,10 +6,9 @@ import { buildDrone } from '../builders/drone.js';
 import { player } from './player.js';
 import { spawnAmmoDrop } from './ammoDrops.js';
 import { showMsg } from '../hud/overlay.js';
-import { rebuildEHM } from '../combat/shoot.js';
 import { gameRunning } from '../input.js';
 import { enemies } from './enemies.js';
-import { isSndActive } from '../modes/snd.js';
+import { isAnyModeActive } from '../modes/modeManager.js';
 import { hasLOS } from '../utils/los.js';
 import { applyEntityBase } from './entityBase.js';
 import { semiAlertEnemy } from '../ai/enemyStates.js';
@@ -23,6 +22,13 @@ for (let r = 1; r < MAP_H - 1; r++)
 function _randomCell() {
   return _WALKABLE[Math.floor(Math.random() * _WALKABLE.length)];
 }
+
+// ── Constants ─────────────────────────────────────────────────────────────
+const DRONE_ACCEL      = 4;
+const DRONE_STRAFE     = 2.8;
+const DRONE_DRAG       = 3;
+const DRONE_MAX_SPEED  = 5;
+const DRONE_ORBIT_DIST = 8;
 
 // ── State ─────────────────────────────────────────────────────────────────
 export const DRONE_FLY_H = 4.5;
@@ -40,7 +46,6 @@ export function spawnNewDrone() {
   dronePool.push(d);
   activeDrone = d;
   d.mesh.traverse((ch) => { if (ch.isMesh) ch.userData.droneRef = d; });
-  rebuildEHM();
   return d;
 }
 
@@ -52,7 +57,6 @@ export function killDrone(d) {
   document.getElementById('kills-num').textContent = player.kills;
   showMsg('DRONE DOWN — NEW DRONE INCOMING', 2000);
   spawnAmmoDrop(d.x, d.z);
-  rebuildEHM();
   setTimeout(() => { if (gameRunning) spawnNewDrone(); }, 3000);
 }
 
@@ -62,15 +66,8 @@ export function updateDrone(d, dt) {
   const pdx = camera.position.x - d.x,
         pdz = camera.position.z - d.z;
   const dist = Math.sqrt(pdx * pdx + pdz * pdz);
-  const targetDist = 8;
-
-  const DRONE_ACCEL     = 4;
-  const DRONE_STRAFE    = 2.8;
-  const DRONE_DRAG      = 3;
-  const DRONE_MAX_SPEED = 5;
-
   // Approach / retreat
-  const radialErr = dist - targetDist;
+  const radialErr = dist - DRONE_ORBIT_DIST;
   if (Math.abs(radialErr) > 1) {
     const sign = radialErr > 0 ? 1 : -1;
     d.velX += (pdx / dist) * sign * DRONE_ACCEL * dt;
@@ -206,7 +203,7 @@ function _addRecon(team) {
 }
 
 export function updateSndDrone(d, dt) {
-  if (!isSndActive()) return;
+  if (!isAnyModeActive()) return;
 
   d.floatT += dt * 1.8;
   d.y = RECON_FLY_H + Math.sin(d.floatT) * 0.28;

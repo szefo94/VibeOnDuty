@@ -85,7 +85,7 @@ export function explodeGrenade(g) {
   if (activeDrone && !activeDrone.dead) {
     const dist = ep.distanceTo(new THREE.Vector3(activeDrone.x, activeDrone.y, activeDrone.z));
     const fo = grenadeFalloff(dist);
-    if (fo > 0) killDrone(activeDrone, Math.floor(activeDrone.maxHp * 2 * fo));
+    if (fo > 0) activeDrone.takeDamage(Math.floor(activeDrone.maxHp * 2 * fo), killDrone);
   }
   const pDist = ep.distanceTo(camera.position);
   const pDmg = grenadePlayerDamage(pDist, MAX_HP);

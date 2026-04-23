@@ -11,7 +11,8 @@ export function astar(sx, sz, ex, ez) {
     closed = new Set();
   open.set(K(scx, scz), { x: scx, z: scz, g: 0, f: h(scx, scz), parent: null });
   let it = 0;
-  while (open.size && it++ < 600) {
+  const MAX_ITER = MAP_W * MAP_H;
+  while (open.size && it++ < MAX_ITER) {
     let best = null;
     for (const n of open.values()) if (!best || n.f < best.f) best = n;
     if (best.x === ecx && best.z === ecz) {
@@ -43,5 +44,7 @@ export function astar(sx, sz, ex, ez) {
         open.set(K(nx, nz), { x: nx, z: nz, g, f: g + h(nx, nz), parent: best });
     }
   }
+  if (import.meta.env.DEV)
+    console.warn(`[A*] no path (${scx},${scz})→(${ecx},${ecz}) after ${it} iters`);
   return [];
 }

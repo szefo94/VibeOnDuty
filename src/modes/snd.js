@@ -15,6 +15,7 @@ import {
 } from '../hud/sndHud.js';
 import { setGameRunning } from '../input.js';
 import { on } from '../events.js';
+import { setMode } from './modeManager.js';
 
 export function getSndPlantRange()  { return SND_PLANT_RANGE; }
 export function getSndDefuseRange() { return SND_DEFUSE_RANGE; }
@@ -89,6 +90,7 @@ export function startSnd() {
   enemyScore  = 0;
   playerRole  = 'attack';
   _matchOver  = false;
+  setMode({ name: 'snd', tick: tickSnd });
   _startRound();
 }
 

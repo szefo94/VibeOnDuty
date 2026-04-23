@@ -8,27 +8,9 @@ import { groundElevation } from '../map.js';
 import { player, startReload } from '../entities/player.js';
 import { enemies, killEnemy } from '../entities/enemies.js';
 import { alertEnemy } from '../ai/enemyStates.js';
-import { activeDrone, dronePool, killDrone } from '../entities/drone.js';
+import { activeDrone, killDrone } from '../entities/drone.js';
 import { spawnHitMarker } from '../hud/hitmarker.js';
 import { updateHUD } from '../hud/overlay.js';
-
-// ── Enemy hit meshes ─────────────────────────────────────────────────
-export let ehm = [];
-export function rebuildEHM() {
-  ehm = [];
-  enemies.forEach((e) => {
-    if (!e.dead)
-      e.mesh.traverse((c) => {
-        if (c.isMesh) ehm.push(c);
-      });
-  });
-  dronePool.forEach((d) => {
-    if (!d.dead)
-      d.mesh.traverse((c) => {
-        if (c.isMesh && !c.userData.isRotor) ehm.push(c);
-      });
-  });
-}
 
 // ── Weapon animation state ────────────────────────────────────────────
 export let muzzleT = 0;

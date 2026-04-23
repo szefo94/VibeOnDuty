@@ -8,7 +8,7 @@ import { player, startReload } from './entities/player.js';
 import { rebuildAllEnemies, spawnSndEnemies } from './entities/enemies.js';
 import { spawnNewDrone, spawnSndDrones, clearSndDrones } from './entities/drone.js';
 import { tryThrowGrenade } from './entities/grenades.js';
-import { tryShoot, rebuildEHM, tryPunchDamage } from './combat/shoot.js';
+import { tryShoot, tryPunchDamage } from './combat/shoot.js';
 import { flashMeleeRing } from './fx/meleeRange.js';
 import { updateHUD, showMsg, showStatus } from './hud/overlay.js';
 import { startLoop, setThirdPerson, getThirdPerson, toggleTpSide } from './loop.js';
@@ -92,7 +92,6 @@ document.getElementById('startbtn').addEventListener('click', () => {
     document.getElementById('c').requestPointerLock();
   }
   setGameRunning(true);
-  rebuildEHM();
   updateHUD();
   spawnNewDrone();
   showMsg('VIBE ON DUTY — LOCK AND LOAD', 2500);

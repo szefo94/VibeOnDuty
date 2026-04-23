@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { scene, camera } from '../scene.js';
 import { applyEntityBase } from './entityBase.js';
-import { initEnemyState, alertEnemy, STATE_MAP } from '../ai/enemyStates.js';
+import { initEnemyState, alertEnemy, STATE_MAP, PATROL_STATE } from '../ai/enemyStates.js';
 import { CELL, PLAYER_H, ENEMY_HP, ENEMY_SIGHT, GRAVITY } from '../config.js';
 import { MAP_W, MAP_H, MAP, isRamp, mapCell, canMoveTo, hAt } from '../map.js';
 import { buildEnemyMesh } from '../builders/enemyGLTF.js';
@@ -12,8 +12,7 @@ import { player } from './player.js';
 import { spawnAmmoDrop } from './ammoDrops.js';
 import { showMsg } from '../hud/overlay.js';
 import { setGameRunning } from '../input.js';
-import { rebuildEHM } from '../combat/shoot.js';
-import { isSndActive } from '../modes/snd.js';
+import { isAnyModeActive } from '../modes/modeManager.js';
 import { wave } from './waveSystem.js';
 import { emit } from '../events.js';
 
@@ -164,7 +163,6 @@ export function rebuildAllEnemies(sndSitePositions = null) {
     spawnSndEnemies(sndSitePositions);
   } else {
     enemies.forEach((e) => spawnEnemyIntoSlot(e));
-    rebuildEHM();
   }
 }
 
@@ -237,13 +235,12 @@ export function spawnSndEnemies(sitePositions) {
       if (e._friendIndicator) { scene.remove(e._friendIndicator); e._friendIndicator = null; }
     }
   });
-  rebuildEHM();
 }
 
 // ── triggerDeath lives here because it reads wave ─────────────────
 export function triggerDeath() {
   player.dead = true;
-  if (isSndActive()) {
+  if (isAnyModeActive()) {
     document.exitPointerLock?.();
     const allFriendsDead = enemies.every((en) => en.dead || en.sndTeam !== 'friend');
     if (allFriendsDead) emit('round:friendTeamWiped');
@@ -264,7 +261,6 @@ const dyingEnemies = [];
 export function killEnemy(e) {
   if (e.dead) return;
   e.dead = true;
-  rebuildEHM();
   if (e.sndTeam === 'friend') {
     // Hide indicator immediately on death
     if (e._friendIndicator) e._friendIndicator.visible = false;
@@ -276,7 +272,7 @@ export function killEnemy(e) {
     } else {
       scene.remove(e.mesh);
     }
-    if (isSndActive() && player.dead && enemies.every((en) => en.dead || en.sndTeam !== 'friend'))
+    if (isAnyModeActive() && player.dead && enemies.every((en) => en.dead || en.sndTeam !== 'friend'))
       emit('round:friendTeamWiped');
     return;
   }
@@ -294,7 +290,7 @@ export function killEnemy(e) {
     scene.remove(e.mesh);
   }
 
-  if (isSndActive()) {
+  if (isAnyModeActive()) {
     if (enemies.every((en) => en.dead || en.sndTeam !== 'enemy')) emit('round:enemyTeamWiped');
     return;
   }
@@ -306,7 +302,7 @@ export function killEnemy(e) {
 export function updateEnemies(ts, dt) {
   for (const e of enemies) {
     if (e.dead) continue;
-    if (isSndActive() && e.sndTeam === 'friend') { tickFriendlyBot(e, dt, enemies, killEnemy); continue; }
+    if (isAnyModeActive() && e.sndTeam === 'friend') { tickFriendlyBot(e, dt, enemies, killEnemy); continue; }
     const pdx = camera.position.x - e.x,
       pdz = camera.position.z - e.z;
     const distP = Math.sqrt(pdx * pdx + pdz * pdz);
@@ -324,7 +320,12 @@ export function updateEnemies(ts, dt) {
     const desiredY = Math.atan2(-pdx, -pdz);
 
     // Sync _aiState if external code mutated e.state (e.g. shoot.js alertEnemy)
-    if (e._aiState?.name !== e.state) e._aiState = STATE_MAP[e.state] ?? e._aiState;
+    if (e._aiState?.name !== e.state) {
+      const next = STATE_MAP[e.state];
+      if (!next && import.meta.env.DEV) console.warn(`[Enemy] unknown state "${e.state}", resetting to patrol`);
+      e._aiState = next ?? PATROL_STATE;
+      e.state    = e._aiState.name;
+    }
 
     let isMoving = false;
     if (e.stunTimer > 0) {
