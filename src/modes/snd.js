@@ -14,6 +14,7 @@ import {
   showSndResult, hideSndResult,
 } from '../hud/sndHud.js';
 import { setGameRunning } from '../input.js';
+import { on } from '../events.js';
 
 export function getSndPlantRange()  { return SND_PLANT_RANGE; }
 export function getSndDefuseRange() { return SND_DEFUSE_RANGE; }
@@ -72,10 +73,8 @@ export function onAllFriendsDead() {
   endRound('friend_team_wiped');
 }
 
-export function onSndPlayerDeath() {
-  // Called by triggerDeath. Game continues if friendlies alive.
-  // If all friends already dead, onAllFriendsDead is called instead.
-}
+on('round:enemyTeamWiped', onAllEnemyTeamDead);
+on('round:friendTeamWiped', onAllFriendsDead);
 
 export function isSndActive() { return sndState !== 'idle' && sndState !== 'over'; }
 export function getSndBombPos() { return sndState === 'planted' ? [bombWorldX, bombWorldZ] : null; }

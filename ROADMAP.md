@@ -169,47 +169,14 @@ S&D button visible, clicking hides overlay + shows snd-bar, match header initial
 
 ## Phase 10 — Decoupling: event bus
 
-### 10.1 — `src/events.js` — lightweight event emitter (MEDIUM)
+### 10.1 ✅ — `src/events.js` — lightweight event emitter
 
-**Problem:** Modules call each other directly in ways that create tight coupling and circular import risks:
-- `shoot.js` imports `killEnemy` from `enemies.js`
-- `enemies.js` imports `onAllEnemyTeamDead`, `onAllFriendsDead` from `snd.js`
-- `drone.js` imports `isSndActive` from `snd.js` and `enemies` from `enemies.js`
-
-Adding a new game mode (e.g. deathmatch) means threading imports through all these files.
-
-**Solution:** A tiny pub/sub emitter:
-```js
-// events.js
-const _bus = {};
-export const on  = (ev, fn) => (_bus[ev] ??= []).push(fn);
-export const off = (ev, fn) => _bus[ev] = (_bus[ev] || []).filter(f => f !== fn);
-export const emit = (ev, data) => (_bus[ev] || []).forEach(f => f(data));
-```
-`shoot.js` emits `emit('entity:hit', { entity: e, dmg })`.  
-`enemies.js` listens with `on('entity:hit', ...)`.  
-`snd.js` listens with `on('enemy:died', ...)` for round-end checks.
-
-**Benefit:** adding a deathmatch or TDM mode means registering new listeners, not editing existing files.
-
-**Effort:** medium. New file is tiny; refactoring call sites is the work (~8 call sites to convert).
+4-line pub/sub (`on`/`off`/`emit`). `enemies.js` now emits `'round:enemyTeamWiped'`, `'round:friendTeamWiped'`, and `'wave:end'` instead of calling across module boundaries. `snd.js` registers `on('round:*', ...)` at module init; `waveSystem.js` registers `on('wave:end', triggerWaveEnd)`. Dead import `onSndPlayerDeath` removed. `enemies.js` no longer imports any notification function from `snd.js` or `waveSystem.js`.
 
 ---
 
 ## Phase 11 — Asset management
 
-### 11.1 — `src/builders/assetManager.js` (MEDIUM)
+### 11.1 ✅ — `src/builders/assetManager.js`
 
-**Problem:** GLTF, FBX loaders are separate `async` functions called independently in `main.js` via `Promise.all`. The GLTF-loaded race condition (S&D started before GLTF finishes) is handled by a special `isSndActive()` check scattered across `main.js`. Adding a new asset means touching `main.js` loading logic.
-
-**Solution:** Centralized `AssetManager` with a registry:
-```js
-assetManager.register('enemy-glb',  () => tryLoadEnemyGLTF());
-assetManager.register('player-p90', () => tryLoadP90ForHand());
-await assetManager.loadAll();
-// all assets guaranteed present before game starts
-```
-Race condition eliminated: game only starts after all assets resolve. Fallbacks registered per-asset, not scattered across callers.
-
-**Effort:** medium. Isolated to `main.js` + `builders/`. No gameplay logic changes.
-it
+`register(name, loader)` + `loadAll()` (parallel `Promise.allSettled`). Four assets registered in `main.js` (enemy-glb, weapon-fbx, pistol-fbx, player-p90). Start buttons are disabled with "LOADING…" text until `loadAll()` resolves — race condition eliminated. The `isSndActive()` scatter-check in `main.js` removed; `rebuildAllEnemies()` is now called unconditionally after assets load since buttons are gated.

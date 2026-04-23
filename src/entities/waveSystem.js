@@ -3,6 +3,7 @@ import { showMsg } from '../hud/overlay.js';
 import { ammoDrops } from './ammoDrops.js';
 import { rebuildEHM } from '../combat/shoot.js';
 import { isSndActive } from '../modes/snd.js';
+import { on } from '../events.js';
 
 export let wave = 1;
 export let respawnTimer = -1;
@@ -29,3 +30,5 @@ export function triggerWaveEnd() {
   showMsg(`ZONE CLEARED — WAVE ${wave - 1} COMPLETE`, 3500);
   respawnTimer = 5000;
 }
+
+on('wave:end', triggerWaveEnd);

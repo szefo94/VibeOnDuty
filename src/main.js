@@ -12,11 +12,12 @@ import { tryShoot, rebuildEHM, tryPunchDamage } from './combat/shoot.js';
 import { flashMeleeRing } from './fx/meleeRange.js';
 import { updateHUD, showMsg, showStatus } from './hud/overlay.js';
 import { startLoop, setThirdPerson, getThirdPerson, toggleTpSide } from './loop.js';
-import { startSnd, nextRound, getSndSitePositions, isSndActive, isMatchOver } from './modes/snd.js';
+import { startSnd, nextRound, getSndSitePositions, isMatchOver } from './modes/snd.js';
 import { tryLoadEnemyGLTF, buildPlayerMesh } from './builders/enemyGLTF.js';
 import { tryLoadWeaponFBX, tryLoadP90ForHand } from './builders/weaponFBX.js';
 import { tryLoadPistolFBX } from './builders/enemyWeapon.js';
 import { setSkeletonDebugVisible } from './builders/enemyAnimations.js';
+import { register, loadAll } from './builders/assetManager.js';
 
 const _euler = new THREE.Euler(0, 0, 0, 'YXZ');
 let debugVisible = true; // debug ON by default
@@ -129,19 +130,31 @@ document.getElementById('snd-next-btn').addEventListener('click', () => {
 // ── Touch controls ─────────────────────────────────────────────────
 initTouch();
 
+// ── Asset registry ──────────────────────────────────────────────────
+register('enemy-glb',  tryLoadEnemyGLTF);
+register('weapon-fbx', tryLoadWeaponFBX);
+register('pistol-fbx', tryLoadPistolFBX);
+register('player-p90', tryLoadP90ForHand);
+
 // ── Kick off ───────────────────────────────────────────────────────
 if (debugLines) debugLines.visible = debugVisible;
 window.loadGLTF = tryLoadEnemyGLTF; // also callable manually from console
+
+const _startBtn    = document.getElementById('startbtn');
+const _sndStartBtn = document.getElementById('snd-startbtn');
+_startBtn.disabled    = true;
+_sndStartBtn.disabled = true;
+_startBtn.textContent    = 'LOADING...';
+_sndStartBtn.textContent = 'LOADING...';
+
 (async () => {
-  const [enemyLoaded] = await Promise.all([
-    tryLoadEnemyGLTF(),
-    tryLoadWeaponFBX(),
-    tryLoadPistolFBX(),
-    tryLoadP90ForHand(),
-  ]);
-  if (enemyLoaded) {
-    // If S&D was started before GLTF finished, rebuild at site positions rather than random
-    rebuildAllEnemies(isSndActive() ? getSndSitePositions() : null);
+  const assets = await loadAll();
+  _startBtn.textContent    = 'DEPLOY';
+  _sndStartBtn.textContent = 'S&D — START';
+  _startBtn.disabled    = false;
+  _sndStartBtn.disabled = false;
+  if (assets['enemy-glb']) {
+    rebuildAllEnemies();
     buildPlayerMesh();
   }
   startLoop();

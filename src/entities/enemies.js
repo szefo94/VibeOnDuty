@@ -13,8 +13,9 @@ import { spawnAmmoDrop } from './ammoDrops.js';
 import { showMsg } from '../hud/overlay.js';
 import { setGameRunning } from '../input.js';
 import { rebuildEHM } from '../combat/shoot.js';
-import { isSndActive, onSndPlayerDeath, getPlayerRole, onAllEnemyTeamDead, onAllFriendsDead } from '../modes/snd.js';
-import { triggerWaveEnd, wave } from './waveSystem.js';
+import { isSndActive } from '../modes/snd.js';
+import { wave } from './waveSystem.js';
+import { emit } from '../events.js';
 
 // ── Walkable cells ────────────────────────────────────────────────
 export const WALKABLE_CELLS = [];
@@ -245,7 +246,7 @@ export function triggerDeath() {
   if (isSndActive()) {
     document.exitPointerLock?.();
     const allFriendsDead = enemies.every((en) => en.dead || en.sndTeam !== 'friend');
-    if (allFriendsDead) onAllFriendsDead();
+    if (allFriendsDead) emit('round:friendTeamWiped');
     // else game continues — friendlies still alive
     return;
   }
@@ -276,7 +277,7 @@ export function killEnemy(e) {
       scene.remove(e.mesh);
     }
     if (isSndActive() && player.dead && enemies.every((en) => en.dead || en.sndTeam !== 'friend'))
-      onAllFriendsDead();
+      emit('round:friendTeamWiped');
     return;
   }
   player.kills++;
@@ -294,10 +295,10 @@ export function killEnemy(e) {
   }
 
   if (isSndActive()) {
-    if (enemies.every((en) => en.dead || en.sndTeam !== 'enemy')) onAllEnemyTeamDead();
+    if (enemies.every((en) => en.dead || en.sndTeam !== 'enemy')) emit('round:enemyTeamWiped');
     return;
   }
-  if (enemies.every((en) => en.dead)) triggerWaveEnd();
+  if (enemies.every((en) => en.dead)) emit('wave:end');
 }
 
 // ── Enemy AI ──────────────────────────────────────────────────────

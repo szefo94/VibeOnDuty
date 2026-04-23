@@ -50,6 +50,7 @@ vi.mock('../hud/sndHud.js', () => ({
 }));
 
 vi.mock('../input.js', () => ({ setGameRunning: vi.fn() }));
+vi.mock('../events.js', () => ({ on: vi.fn(), off: vi.fn(), emit: vi.fn() }));
 
 import * as snd from './snd.js';
 const { startSnd, nextRound, onAllEnemyTeamDead, onAllFriendsDead, tickSnd,
