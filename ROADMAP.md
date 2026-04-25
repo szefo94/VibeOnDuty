@@ -122,7 +122,20 @@ The P90 FBX loader already exists (`weaponFBX.js`) but the P90 is never selectab
 
 ---
 
-### Phase 19 — Game feel pass
+### Phase 19 — Weapon buy menu (S&D)
+
+Counter-Strike style buy phase at the start of each round. Player spawns with a pistol only; the buy window is open for the first 10 s of the round (or until the player leaves spawn).
+
+- **Buy menu UI** — press `B` to open a fullscreen overlay listing available weapons grouped by category (rifles, SMGs, pistols, equipment). Clicking a row purchases it and closes the menu; `ESC` closes without buying.
+- **Economy** — each player starts a match with $800. Kills earn $300, planting earns $300, defusing earns $300, winning a round earns $900, losing earns $1 400 (loss bonus, same as CS). Balance shown in HUD top-left during buy phase.
+- **Weapon prices** — examples: M4A1 $2 900, P90 $2 350, pistol $500, grenade $200. Prices stored per-weapon in `config.js`.
+- **Bot economy** — friendly bots auto-buy the best weapon they can afford; enemy bots follow the same rule (creates eco rounds naturally).
+- **Carry-over** — weapons and remaining balance carry between rounds; death resets weapon to pistol but keeps $500 minimum floor.
+- **Implementation sketch** — `src/modes/buyMenu.js` owns the DOM panel and economy state; emits `buy:weaponSelected` event consumed by `player.js` and `friendlyBots.js`. S&D round start emits `round:buyPhase` with a deadline timestamp; buy menu disables itself when deadline passes.
+
+---
+
+### Phase 20 — Game feel pass
 
 Small changes, large perceived impact:
 
@@ -134,7 +147,7 @@ Small changes, large perceived impact:
 
 ---
 
-### Phase 20 — Second map + map selector
+### Phase 21 — Second map + map selector
 
 - Design a second tilemap (rooftop / outdoor) with different site positions and spawn zones
 - `level.js` accepts a map data argument instead of hardcoding MAP import
@@ -143,7 +156,7 @@ Small changes, large perceived impact:
 
 ---
 
-### Phase 21 — Multiplayer foundation
+### Phase 22 — Multiplayer foundation
 
 Real-time player vs. player using WebSocket relay (Cloudflare Worker or small Node server).
 
@@ -155,7 +168,7 @@ Real-time player vs. player using WebSocket relay (Cloudflare Worker or small No
 
 ---
 
-### Phase 22 — Performance & LOD
+### Phase 23 — Performance & LOD
 
 - Skip AI tick for enemies outside `ENEMY_SIGHT * 1.5` and not on path to player
 - Particle budget cap — keep a global counter; oldest particles evicted when over limit
@@ -164,7 +177,7 @@ Real-time player vs. player using WebSocket relay (Cloudflare Worker or small No
 
 ---
 
-### Phase 23 — Mobile & gamepad
+### Phase 24 — Mobile & gamepad
 
 Touch controls exist (`touch.js`) but are minimal.
 
@@ -175,7 +188,7 @@ Touch controls exist (`touch.js`) but are minimal.
 
 ---
 
-### Phase 24 — Progression & persistence
+### Phase 25 — Progression & persistence
 
 - `localStorage` store: lifetime kills, matches won, best wave, accuracy
 - Match-end scoreboard (K/D/A, accuracy %, plants/defuses) with share-to-clipboard
