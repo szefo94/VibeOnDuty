@@ -123,55 +123,70 @@ Best-of-7 match. Rounds 1–3: you attack — plant the bomb at Site A or B and 
 ## Project Structure
 
 ```
-index.html            — HTML shell + canvas
-style.css             — all styles
-vite.config.js        — entry point config
+index.html              — HTML shell + canvas
+style.css               — all styles
+vite.config.js          — entry point config
 src/
-  main.js             — entry: DOM listeners, start buttons, async asset init
-  loop.js             — game loop, 3rd person camera, lean offset, drone ticks
-  config.js           — all game constants (player, enemy, S&D, physics)
-  map.js              — MAP data, heightmap, pathability
-  math.js             — normA, slerp
-  astar.js            — A* pathfinding
-  scene.js            — renderer, scene, camera
-  materials.js        — shared MeshStandardMaterials
-  lighting.js         — torches, ambient, sun
-  level.js            — level geometry, wall meshes, debug lines
-  input.js            — keyboard, mouse, pointer lock state
-  touch.js            — mobile touch controls
+  main.js               — entry: DOM listeners, start buttons, asset-gated init
+  loop.js               — game loop, 3rd-person camera, lean offset, drone ticks
+  config.js             — all game constants (player, enemy, S&D, physics)
+  events.js             — 4-line pub/sub event bus (on/off/emit)
+  map.js                — MAP data, heightmap, pathability
+  math.js               — normA, slerp
+  astar.js              — A* pathfinding with dev-mode failure logging
+  scene.js              — renderer, scene, camera
+  materials.js          — shared MeshStandardMaterials
+  lighting.js           — torches, ambient, sun
+  level.js              — level geometry, wall meshes, debug lines
+  input.js              — keyboard, mouse, pointer lock state
+  touch.js              — mobile touch controls
   modes/
-    snd.js            — S&D match state machine, bomb logic, round lifecycle
+    modeManager.js      — setMode/getMode/isAnyModeActive (zero-dep registry)
+    snd.js              — S&D match state machine, bomb logic, round lifecycle
+  ai/
+    enemyStates.js      — PATROL/SPOTTED/ATTACK state objects + transition helpers
   builders/
-    weapon.js         — player weapon model
-    playerBody.js     — 3rd person soldier body
-    enemy.js          — ground soldier model (procedural fallback)
-    drone.js          — drone model (procedural)
-    enemyGLTF.js      — GLTF enemy + player mesh loader, clip aliases
-    enemyAnimations.js — AnimationMixer crossfade, skeleton debug
-    enemyWeapon.js    — enemy pistol GLTF attach
-    weaponFBX.js      — player M4 / P90 FBX loader
+    weapon.js           — player weapon model
+    playerBody.js       — 3rd-person soldier body
+    enemy.js            — ground soldier model (procedural fallback)
+    drone.js            — drone model (procedural)
+    enemyGLTF.js        — GLTF enemy + player mesh loader, clip aliases
+    enemyAnimations.js  — AnimationMixer crossfade
+    enemyWeapon.js      — enemy pistol GLTF attach
+    weaponFBX.js        — player M4 / P90 FBX loader
+    assetManager.js     — register/loadAll parallel asset registry
   combat/
-    shoot.js          — bullet physics, hit detection, weapon animation, spray
-    damage.js         — grenade falloff formulas
+    shoot.js            — bullet physics, hit detection, weapon animation, spray
+    damage.js           — grenade falloff formulas
   entities/
-    player.js         — player state, movement, reload, dive, lean
-    enemies.js        — enemy AI, friendly bot AI, spawn, S&D team logic
-    drone.js          — drone runtime (orbit AI, EMP, S&D recon drones)
-    ammoDrops.js      — ammo pickup spawning and collection
-    grenades.js       — grenade throw, flight, explosion
+    entityBase.js       — applyEntityBase mixin (isAlive, takeDamage)
+    player.js           — player state, movement, reload, dive, lean
+    enemies.js          — enemy AI loop, S&D team spawn, kill/death events
+    friendlyBots.js     — allied bot AI (A*, LOS, bot-vs-bot shooting)
+    drone.js            — drone runtime (orbit AI, EMP, S&D recon drones)
+    waveSystem.js       — wave state, tickWave, triggerWaveEnd
+    ammoDrops.js        — ammo pickup spawning and collection
+    grenades.js         — grenade throw, flight, explosion
   utils/
-    los.js            — hasLOS raycaster utility
+    los.js              — hasLOS raycaster utility
   fx/
-    tracers.js        — enemy muzzle tracers
-    impacts.js        — bullet impact sparks
-    particles.js      — grenade explosion particles
-    meleeRange.js     — melee ring flash
+    tracers.js          — enemy muzzle tracers
+    impacts.js          — bullet impact sparks
+    particles.js        — grenade explosion particles
+    meleeRange.js       — melee ring flash
   hud/
-    overlay.js        — updateHUD, showMsg, showStatus, triggerHitFlash
-    hitmarker.js      — crosshair hit indicator
-    hud.js            — canvas HUD (ammo, energy, reload, spray, HP bars)
-    radar.js          — minimap radar canvas
-    sndHud.js         — S&D HUD (match header, bomb timer, plant/defuse bars)
+    overlay.js          — updateHUD, showMsg, showStatus, triggerHitFlash
+    hitmarker.js        — crosshair hit indicator
+    hud.js              — drawHUD dispatcher (clears canvas, calls rings + enemyBars)
+    rings.js            — ammo/energy/reload rings, spray cone, healthColor helper
+    enemyBars.js        — drone HP bar, grenade impact zones, enemy HP bars
+    radar.js            — minimap radar canvas
+    sndHud.js           — S&D HUD (match header, bomb timer, plant/defuse bars)
+  *.test.js             — Vitest unit tests (54 tests, 5 files)
+tests/
+  smoke.spec.js         — Playwright smoke tests (7 tests)
+types/
+  entities.d.ts         — EntityBase, Enemy, Player, Drone, AiState, AiCtx interfaces
 ```
 
 ---

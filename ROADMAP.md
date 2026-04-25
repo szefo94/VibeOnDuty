@@ -22,9 +22,9 @@ src/
   touch.js              — mobile touch controls
   modes/
     modeManager.js      — setMode/getMode/isAnyModeActive (zero-dep registry)
-    snd.js              — S&D match state machine, round lifecycle, bomb logic (pure state)
+    snd.js              — S&D match state machine, round lifecycle, bomb logic
   ai/
-    enemyStates.js      — PATROL/SPOTTED/ATTACK state objects + transitionTo, alertEnemy
+    enemyStates.js      — PATROL/SPOTTED/ATTACK + transitionTo, alertEnemy, semiAlertEnemy
   builders/
     weapon.js           — player weapon model
     playerBody.js       — full soldier body
@@ -57,14 +57,14 @@ src/
   hud/
     overlay.js          — updateHUD, showMsg, showStatus, triggerHitFlash
     hitmarker.js        — hitMarkerT, spawnHitMarker, tickHitMarker
-    hud.js              — w2s, setDebugAnimClip, drawHUD dispatcher (35 lines)
-    rings.js            — drawRings: ammo/energy/reload rings + spray cone; healthColor helper
-    enemyBars.js        — drawEnemyOverlays: drone bar, impact zones, enemy HP bars
+    hud.js              — drawHUD dispatcher (35 lines)
+    rings.js            — ammo/energy/reload rings + spray cone; healthColor helper
+    enemyBars.js        — drone bar, grenade impact zones, enemy HP bars
     radar.js            — drawMinimap (canvas)
     sndHud.js           — S&D match header, bomb timer, plant/defuse bars, result overlay
-  *.test.js             — Vitest unit tests (54 tests across 5 files)
+  *.test.js             — Vitest unit tests (54 tests, 5 files)
 tests/
-  smoke.spec.js         — Playwright smoke tests
+  smoke.spec.js         — Playwright smoke tests (7 tests)
 types/
   entities.d.ts         — EntityBase, Enemy, Player, Drone, AiState, AiCtx interfaces
 ```
@@ -73,116 +73,111 @@ types/
 
 ---
 
-## Phases 1–4 ✅ DONE
+## Completed
 
-npm + Vite, module split from monolithic game.js, Vitest + Playwright tests, ESLint/Prettier/TypeScript tooling.
-
----
-
-## Phase 5 ✅ DONE — Enemy AI, drone, player mechanics
-
-Velocity + drag movement, stagger on hit, A* path throttle, strafe-orbit drone, EMP pulse, 3rd-person camera, lean, dive, crouch-slide.
-
----
-
-## Phase 6 ✅ PARTIALLY DONE — GLTF assets + skeletal animation
-
-GLTF enemy + player mesh, AnimationMixer crossfade, M4/P90 FBX weapons, pistol for enemies.
-
-Phase 6.3 — Drone GLTF: wire `src/builders/droneGLTF.js` once `public/models/drone.glb` is available.
-
----
-
-## Phase 7 ✅ DONE — S&D game mode
-
-Best-of-7 match (first to 4 wins), two bomb sites (A/B), plant/defuse mechanics, 60 s round timer, friendly + enemy 5-bot teams, full round-end conditions, match score HUD.
+| Phase | Summary |
+|-------|---------|
+| 1–4 | npm + Vite, module split from monolithic game.js, Vitest + Playwright, ESLint/Prettier/TS |
+| 5 | Velocity movement, stagger on hit, A\* throttle, drone orbit + EMP, 3rd-person camera, lean, dive |
+| 6 | GLTF enemy + player mesh, AnimationMixer crossfade, M4/P90 FBX, enemy pistol GLTF |
+| 7 | S&D mode: best-of-7, two sites, plant/defuse, 60 s timer, 5v5 bot teams, round lifecycle |
+| 8 | `los.js`, `friendlyBots.js`, `waveSystem.js`, `sndHud.js` extracted; 21 S&D unit tests |
+| 9 | `entityBase.js` mixin, AI state machine in `ai/enemyStates.js`, TS interfaces |
+| 10 | `events.js` pub/sub; enemies/waveSystem emit events instead of direct cross-module calls |
+| 11 | `assetManager.js` with `register`/`loadAll`; start buttons gated until all assets resolve |
+| 12 | Drone constants to module scope, grenade→drone damage fix, A\* diagnostic, state guard |
+| 13 | Dead `ehm`/`rebuildEHM` removed (bullet detection uses distance, not raycasting) |
+| 14 | HUD split: `rings.js` (player rings), `enemyBars.js` (bars + impact zones), `hud.js` → 35 lines |
+| 15 | `modeManager.js`; `snd.js` decoupled from loop/enemies/drone/waveSystem via event bus |
 
 ---
 
-## Phase 8 ✅ DONE — S&D infrastructure refactor
+## Upcoming
 
-`los.js` extracted, `friendlyBots.js` split out, `tickEnemyAnimation` moved to `enemyAnimations.js`, `waveSystem.js` extracted, S&D constants centralised in `config.js`, `sndHud.js` split for pure-DOM S&D updates, 21 unit tests for S&D state machine, Playwright smoke tests for S&D button and match header.
+### Phase 16 — Drone GLTF *(stretch — needs asset)*
 
----
-
-## Phase 9 ✅ DONE — Entity architecture
-
-`entityBase.js` mixin (`isAlive`, `takeDamage`), enemy AI state machine in `ai/enemyStates.js` (PATROL/SPOTTED/ATTACK with enter/tick/exit hooks, `alertEnemy`/`semiAlertEnemy`), TypeScript interfaces in `types/entities.d.ts`.
+Wire `src/builders/droneGLTF.js` once `public/models/drone.glb` is available. Register as `'drone-glb'` in `assetManager`. Procedural fallback stays if asset missing.
 
 ---
 
-## Phase 10 ✅ DONE — Event bus decoupling
+### Phase 17 — Audio system
 
-`events.js` 4-line pub/sub. `enemies.js` emits `round:enemyTeamWiped`, `round:friendTeamWiped`, `wave:end` instead of direct cross-module calls. `snd.js` and `waveSystem.js` register listeners at module init.
+Web Audio API with spatial sound via `PannerNode` (positioned relative to camera). No external library needed — Three.js `AudioListener` + `PositionalAudio` or raw `AudioContext` both work.
 
----
-
-## Phase 11 ✅ DONE — Asset manager
-
-`assetManager.js` with `register`/`loadAll` (`Promise.allSettled`). Start buttons gated (disabled + "LOADING…") until all assets resolve — eliminates race condition. `isSndActive()` scatter-check removed from `main.js`.
-
----
-
-## Phase 12 — Code quality pass ✅ DONE
-
-### 12.1 ✅ — Drone motion constants → module scope
-
-`DRONE_ACCEL`, `DRONE_STRAFE`, `DRONE_DRAG`, `DRONE_MAX_SPEED`, `DRONE_ORBIT_DIST` moved from inside `updateDrone()` (reallocated every frame) to module-level constants in `entities/drone.js`.
+- Gunshot blast (player + enemy), footstep surface detection, grenade explosion
+- Bomb plant/defuse tick, round-start countdown
+- Ambient loop, alert bark when enemy spots player
+- Mute/volume control in overlay
 
 ---
 
-### 12.2 ✅ — Fix grenade → drone damage regression
+### Phase 18 — Weapon expansion
 
-`grenades.js` was calling `killDrone(activeDrone, dmg)` with the old two-param signature after Phase 9.1 removed the `dmg` param from `killDrone`. Drone was killed instantly regardless of blast distance. Fixed: `activeDrone.takeDamage(dmg, killDrone)` — mirrors the pattern in `shoot.js`.
+The P90 FBX loader already exists (`weaponFBX.js`) but the P90 is never selectable. Make weapons a first-class concept.
 
----
-
-### 12.3 ✅ — A* path failure diagnostic
-
-Iteration cap changed from magic `600` to `MAP_W * MAP_H` (covers full map). Dev-mode `console.warn` emitted when loop exhausts without reaching goal — surfaces unreachable-target bugs during development.
-
----
-
-### 12.4 ✅ — Enemy AI invalid-state guard
-
-`updateEnemies` previously fell back silently to the old state when `STATE_MAP[e.state]` returned undefined. Now: fallback to `PATROL_STATE`, update `e.state` to match, and emit a dev-mode warning. Prevents stale state objects after erroneous external mutations.
+- Per-weapon config block in `config.js` (damage, fire rate, spray pattern, mag size, reload time, ADS FOV)
+- Key `1`/`2` to switch M4 ↔ P90; pistol as tertiary (`3`)
+- Weapon indicator in HUD (icon + active ammo ring)
+- S&D round reset applies full loadout per weapon
 
 ---
 
-## Phase 13 ✅ DONE — Remove dead `ehm` hitbox array + break circular dep
+### Phase 19 — Game feel pass
 
-`ehm` (enemy hit-mesh array) was built by `rebuildEHM()` but never read — bullet hit detection uses distance checks, not raycasting. Dead code in `shoot.js`, called from `enemies.js`, `drone.js`, `waveSystem.js`, and `main.js`.
+Small changes, large perceived impact:
 
-### 13.1 ✅ — Delete `ehm` / `rebuildEHM`, remove all call sites
-
-`export let ehm` and `export function rebuildEHM()` removed from `shoot.js`. All six call sites removed (enemies.js ×3, drone.js ×2, waveSystem.js ×1, main.js ×1). Unused `dronePool` import removed from `shoot.js`. **Circular dep eliminated**: `enemies.js` no longer imports from `shoot.js`; dep is now strictly `shoot.js → enemies.js`.
-
----
-
-## Phase 14 ✅ DONE — HUD module split
-
-`hud/hud.js` was 344 lines with `drawHUD` handling player rings, spray cone, drone bar, impact zones, and enemy HP bars in one function — with duplicated color-interpolation logic.
-
-### 14.1 ✅ — Extract `hud/rings.js`
-
-Player rings (ammo, energy, reload) and spray cone moved to `hud/rings.js`. Shared `healthColor(pct, gMax)` helper centralises the red→green gradient logic used by ammo ring and enemy bars.
-
-### 14.2 ✅ — Extract `hud/enemyBars.js`
-
-Drone HP bar, grenade impact zones, and enemy HP bars (w2s projection, rounded-rect, per-segment gradient, gloss, state dot) moved to `hud/enemyBars.js`. Uses `healthColor` from `rings.js`. `hud.js` is now 35 lines — `drawHUD()` just clears and dispatches to `drawRings()` + `drawEnemyOverlays()`.
+- **Screen shake** — translate `renderer.domElement` for ~80 ms on explosion/grenade hit
+- **Kill feed** — top-right sliding log: `[PLAYER] ✕ [ENEMY]`, auto-dismiss after 4 s
+- **Post-round stats overlay** — kills, deaths, plants, defuses, accuracy; dismiss on `TAB`
+- **Smoke cloud** — spawn a billow particle group on grenade detonation (separate from sparks)
+- **Hit direction indicator** — arc on the HUD edge pointing toward damage source
 
 ---
 
-## Phase 15 ✅ DONE — Game mode abstraction
+### Phase 20 — Second map + map selector
 
-`loop.js`, `enemies.js`, `drone.js`, and `waveSystem.js` all imported `isSndActive` or `tickSnd` directly from `snd.js`, scattering S&D coupling into core systems.
-
-### 15.1 ✅ — `src/modes/modeManager.js` — central mode registry
-
-`setMode(mode)` / `getMode()` / `isAnyModeActive()` in a zero-dep module. `startSnd()` calls `setMode({ name: 'snd', tick: tickSnd })` to register itself. `loop.js` calls `getMode()?.tick(dt, keys)` instead of the hardcoded `tickSnd()` call — `snd.js` import removed from `loop.js`. `waveSystem.js`, `enemies.js`, `drone.js` replace `isSndActive()` (from `snd.js`) with `isAnyModeActive()` (from `modeManager.js`) — `snd.js` import removed from all three. `enemyStates.js` still imports S&D specifics (bomb positions, plant/defuse ranges) — appropriate since it contains mode-specific AI behaviour.
+- Design a second tilemap (rooftop / outdoor) with different site positions and spawn zones
+- `level.js` accepts a map data argument instead of hardcoding MAP import
+- Map select screen on the overlay before mode select
+- S&D site coordinates become part of the map config rather than constants in `config.js`
 
 ---
 
-## Phase 16 — Drone GLTF (stretch)
+### Phase 21 — Multiplayer foundation
 
-Wire `src/builders/droneGLTF.js` once `public/models/drone.glb` is available. Register as `'drone-glb'` in `assetManager`. Falls back to procedural if missing.
+Real-time player vs. player using WebSocket relay (Cloudflare Worker or small Node server).
+
+- Authoritative tick: server echoes position packets, resolves kills
+- Client sends: position, facing, actions (shoot, grenade, plant)
+- Server sends: enemy positions, hit confirmations, round state
+- Chat / team callout system (`Y` for team, `U` for all)
+- AI bots fill empty team slots below 5
+
+---
+
+### Phase 22 — Performance & LOD
+
+- Skip AI tick for enemies outside `ENEMY_SIGHT * 1.5` and not on path to player
+- Particle budget cap — keep a global counter; oldest particles evicted when over limit
+- Enemy mesh LOD: swap to a simpler geometry beyond 20 units (Three.js `LOD` object)
+- Profile with `performance.mark` in the game loop; surface frame budget in debug overlay
+
+---
+
+### Phase 23 — Mobile & gamepad
+
+Touch controls exist (`touch.js`) but are minimal.
+
+- Virtual joystick (left thumb: move, right thumb: look) using pointer events
+- Fire button, grenade button, crouch toggle in corners
+- Gamepad API: `navigator.getGamepads()` polled each frame; axes mapped to movement/look
+- HUD scales to viewport — replace fixed pixel sizes with `vmin`-based canvas layout
+
+---
+
+### Phase 24 — Progression & persistence
+
+- `localStorage` store: lifetime kills, matches won, best wave, accuracy
+- Match-end scoreboard (K/D/A, accuracy %, plants/defuses) with share-to-clipboard
+- Kill streak rewards: 3-kill → ammo refill, 5-kill → drone strike (reuses recon drone logic), 7-kill → EMP across map
+- Wave mode: difficulty ramp-up curve (enemy speed + damage increase per wave tier)
