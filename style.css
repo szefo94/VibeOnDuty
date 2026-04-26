@@ -47,6 +47,11 @@ body{background:#000;overflow:hidden;font-family:'Courier New',monospace}
 .dead-h{font-size:48px;color:#e74c3c;letter-spacing:6px;margin-bottom:14px}
 .stat{font-size:13px;color:#888;letter-spacing:3px;margin:4px 0}
 
+/* ── Kill feed ───────────────────────────────────────────────────────────── */
+#kill-feed{position:absolute;top:60px;right:14px;display:flex;flex-direction:column;align-items:flex-end;gap:4px;pointer-events:none}
+.kill-feed-entry{background:rgba(0,0,0,0.65);color:#fff;font-size:11px;letter-spacing:2px;padding:3px 10px;border-radius:2px;border-left:2px solid #e74c3c;transition:opacity 0.3s;animation:kf-slide 0.15s ease}
+@keyframes kf-slide{from{transform:translateX(16px);opacity:0}to{transform:translateX(0);opacity:1}}
+
 /* ── S&D HUD ─────────────────────────────────────────────────────────────── */
 #snd-bar{position:absolute;top:14px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none}
 #snd-match-header{display:flex;align-items:center;gap:14px;background:rgba(0,0,0,0.65);padding:5px 16px;border-radius:3px;border:1px solid rgba(255,255,255,0.15)}

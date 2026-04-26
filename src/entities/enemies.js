@@ -10,7 +10,7 @@ import { tickFriendlyBot } from './friendlyBots.js';
 import { hasLOS } from '../utils/los.js';
 import { player } from './player.js';
 import { spawnAmmoDrop } from './ammoDrops.js';
-import { showMsg } from '../hud/overlay.js';
+import { showMsg, showKillFeed } from '../hud/overlay.js';
 import { setGameRunning } from '../input.js';
 import { isAnyModeActive } from '../modes/modeManager.js';
 import { wave } from './waveSystem.js';
@@ -283,6 +283,7 @@ export function killEnemy(e) {
   player.kills++;
   document.getElementById('kills-num').textContent = player.kills;
   showMsg('ENEMY DOWN');
+  showKillFeed('ENEMY');
   spawnAmmoDrop(e.x, e.z);
 
   if (e.actions && e.actions.death) {

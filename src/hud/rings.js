@@ -103,6 +103,24 @@ export function drawRings() {
     hudCtx.lineCap = 'butt';
   }
 
+  // ── Hit direction indicator ────────────────────────────────────────────
+  if (player.lastHitDir !== undefined && player.lastHitTime) {
+    const elapsed = performance.now() - player.lastHitTime;
+    if (elapsed < 1500) {
+      const alpha = (1 - elapsed / 1500) * 0.88;
+      // lastHitDir: 0=front, PI/2=right — canvas arc 0=right so subtract PI/2 to put 0 at top
+      const canvasAngle = player.lastHitDir - Math.PI / 2;
+      const r = Math.min(cx, cy) * 0.62;
+      hudCtx.beginPath();
+      hudCtx.arc(cx, cy, r, canvasAngle - 0.28, canvasAngle + 0.28);
+      hudCtx.strokeStyle = `rgba(255,40,40,${alpha})`;
+      hudCtx.lineWidth = 6;
+      hudCtx.lineCap = 'round';
+      hudCtx.stroke();
+      hudCtx.lineCap = 'butt';
+    }
+  }
+
   // ── Spray cone ─────────────────────────────────────────────────────────
   if (sprayHeat > 0.02) {
     const gap     = 10 + sprayHeat * 28;

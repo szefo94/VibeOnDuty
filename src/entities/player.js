@@ -21,7 +21,7 @@ import { MAP_W, MAP_H, hAt, groundElevation, canMoveTo } from '../map.js';
 import { keys, locked, mouseHeld } from '../input.js';
 import { tickImpacts } from '../fx/impacts.js';
 import { tickTracers } from '../fx/tracers.js';
-import { tickGrenadeParticles } from '../fx/particles.js';
+import { tickGrenadeParticles, tickSmokeCloud } from '../fx/particles.js';
 import { tickAmmoDrops } from './ammoDrops.js';
 import { tickGrenades } from './grenades.js';
 import { updateHUD, showMsg, showStatus } from '../hud/overlay.js';
@@ -287,6 +287,7 @@ export function updatePlayer(dt) {
   tickAmmoDrops(dt);
   tickGrenades(dt);
   tickGrenadeParticles(dt);
+  tickSmokeCloud(dt);
   coolSpray(dt);
 
   if (player.reloading) {

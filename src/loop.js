@@ -13,6 +13,7 @@ import { tickTorches } from './lighting.js';
 import { drawHUD, setDebugAnimClip } from './hud/hud.js';
 import { tickMeleeRing } from './fx/meleeRange.js';
 import { getMode } from './modes/modeManager.js';
+import { tickScreenShake } from './fx/screenShake.js';
 import { drawMinimap } from './hud/radar.js';
 import { playerMesh, playerMixer, playerActions } from './builders/enemyGLTF.js';
 import { crossfade } from './builders/enemyAnimations.js';
@@ -234,6 +235,7 @@ export function loop(ts) {
     camera.updateProjectionMatrix();
   }
 
+  tickScreenShake(dt);
   renderer.render(scene, camera);
 
   // restore eye position (camera.position must stay at player eye for movement)

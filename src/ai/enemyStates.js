@@ -10,6 +10,7 @@ import { camera } from '../scene.js';
 import { player } from '../entities/player.js';
 import { hasLOS } from '../utils/los.js';
 import { triggerHitFlash, updateHUD } from '../hud/overlay.js';
+import { triggerScreenShake } from '../fx/screenShake.js';
 import { spawnTracer } from '../fx/tracers.js';
 import { on } from '../events.js';
 
@@ -141,7 +142,8 @@ function _tickPlayerShoot(e, ctx) {
 
   e.shootCd = ts;
   player.hp = Math.max(0, player.hp - ENEMY_DAMAGE - Math.floor(Math.random() * 7));
-  triggerHitFlash();
+  triggerHitFlash(e.x, e.z);
+  triggerScreenShake(0.45);
   updateHUD();
   if (player.hp <= 0) ctx.triggerDeath();
   e.muzzleFlashT = 55;

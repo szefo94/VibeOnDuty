@@ -4,7 +4,8 @@ import { CELL, GRENADE_ENERGY_COST, MAX_ENERGY, ENERGY_PER_DMG, MAX_HP } from '.
 import { hAt, groundElevation } from '../map.js';
 import { mm } from '../materials.js';
 import { grenadeFalloff, grenadeEntityDamage, grenadePlayerDamage } from '../combat/damage.js';
-import { spawnGrenadeParticles } from '../fx/particles.js';
+import { spawnGrenadeParticles, spawnSmokeCloud } from '../fx/particles.js';
+import { triggerScreenShake } from '../fx/screenShake.js';
 import { player } from './player.js';
 import { enemies, killEnemy, triggerDeath } from './enemies.js';
 import { alertEnemy } from '../ai/enemyStates.js';
@@ -70,7 +71,9 @@ export function explodeGrenade(g) {
   el.position.copy(ep);
   scene.add(el);
   setTimeout(() => scene.remove(el), 200);
+  triggerScreenShake(1.0);
   spawnGrenadeParticles(ep);
+  spawnSmokeCloud(ep);
   for (const e of enemies) {
     if (e.dead) continue;
     const dist = ep.distanceTo(new THREE.Vector3(e.x, groundElevation(e.x, e.z) + 0.9, e.z));
