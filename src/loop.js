@@ -168,7 +168,22 @@ export function loop(ts) {
         }
         const SNAP_CLIPS = new Set(['crouch', 'crouch_walk', 'death', 'roll', 'jump_start', 'jump_land', 'dance', 'punch_cross', 'punch_jab']);
         const snapTransition = SNAP_CLIPS.has(clip) || SNAP_CLIPS.has(playerAnim.currentClip);
+        const prevClip = playerAnim.currentClip;
         crossfade(playerAnim, clip, snapTransition ? 0 : 0.22);
+
+        // Dance plays once then stops — set LoopOnce when first entering the state
+        // so it doesn't spin forever when the player forgets to press T again.
+        if (clip === 'dance' && prevClip !== 'dance' && a.dance && playerMixer) {
+          a.dance.setLoop(THREE.LoopOnce, 1);
+          a.dance.clampWhenFinished = true;
+          playerMixer.addEventListener('finished', function onDanceEnd(ev) {
+            if (ev.action === a.dance) {
+              player.dancing = false;
+              playerMixer.removeEventListener('finished', onDanceEnd);
+            }
+          });
+        }
+
         setDebugAnimClip(clip);
       }
     }
