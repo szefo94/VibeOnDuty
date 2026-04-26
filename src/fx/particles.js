@@ -6,6 +6,7 @@ import { GRENADE_RADIUS } from '../config.js';
 const smokeParts = [];
 
 export function spawnSmokeCloud(pos) {
+  if (_activePCount() >= PARTICLE_BUDGET) return;
   for (let i = 0; i < 14; i++) {
     let s = smokeParts.find(p => !p.active);
     if (!s) {
@@ -49,10 +50,16 @@ export function tickSmokeCloud(dt) {
   }
 }
 
+const PARTICLE_BUDGET = 90;
+function _activePCount() {
+  return grenParticles.filter(p => p.active).length + smokeParts.filter(p => p.active).length;
+}
+
 const grenParticles = [];
 export const grenImpactZones = [];
 
 export function spawnGrenadeParticles(pos) {
+  if (_activePCount() >= PARTICLE_BUDGET) return;
   for (let i = 0; i < 32; i++) {
     let m = grenParticles.find((p) => !p.active);
     if (!m) {

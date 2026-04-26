@@ -342,6 +342,8 @@ export function updateEnemies(ts, dt) {
       const nz = e.z + e.velZ * dt;
       if (canMoveTo(nx, e.z, eGround)) e.x = nx;
       if (canMoveTo(e.x, nz, eGround)) e.z = nz;
+    } else if (e.state === 'patrol' && distP > ENEMY_SIGHT * 2) {
+      // ── Cull AI tick for distant patrollers — imperceptible at this range
     } else {
       const ctx = { ts, dt, eGround, canSee, distP, pdx, pdz, desiredY, enemies, killEnemy, triggerDeath };
       isMoving = e._aiState.tick(e, dt, ctx) ?? false;

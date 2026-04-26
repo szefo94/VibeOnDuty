@@ -10,10 +10,11 @@ import { updateEnemies, enemies, spawnEnemyIntoSlot } from './entities/enemies.j
 import { tickWave } from './entities/waveSystem.js';
 import { activeDrone, updateDrone, sndDrones, updateSndDrone } from './entities/drone.js';
 import { tickTorches } from './lighting.js';
-import { drawHUD, setDebugAnimClip } from './hud/hud.js';
+import { drawHUD, setDebugAnimClip, setDebugFrameMs } from './hud/hud.js';
 import { tickMeleeRing } from './fx/meleeRange.js';
 import { getMode } from './modes/modeManager.js';
 import { tickScreenShake } from './fx/screenShake.js';
+import { tickGamepad } from './gamepad.js';
 import { drawMinimap } from './hud/radar.js';
 import { playerMesh, playerMixer, playerActions } from './builders/enemyGLTF.js';
 import { crossfade } from './builders/enemyAnimations.js';
@@ -82,6 +83,9 @@ export function loop(ts) {
   }
   touchLook.dx = touchLook.dy = 0;
 
+  tickGamepad(dt);
+
+  const _t0 = performance.now();
   if (gameRunning) {
     updatePlayer(dt);
 
@@ -235,6 +239,7 @@ export function loop(ts) {
     camera.updateProjectionMatrix();
   }
 
+  setDebugFrameMs(performance.now() - _t0);
   tickScreenShake(dt);
   renderer.render(scene, camera);
 

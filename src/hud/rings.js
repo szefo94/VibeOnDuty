@@ -14,8 +14,12 @@ export function drawRings() {
   const cx = hudCanvas.width / 2,
     cy = hudCanvas.height / 2;
 
+  // Scale ring radii proportionally to viewport so they look the same on mobile + desktop.
+  // 900 is the design reference (shortest dimension for a 1600×900 display).
+  const vs = Math.min(hudCanvas.width, hudCanvas.height) / 900;
+
   // ── Ammo ring ──────────────────────────────────────────────────────────
-  const ammoR = 34, ammoW = 5;
+  const ammoR = 34 * vs, ammoW = 5 * vs;
   const ammoPct   = player.ammo / MAX_AMMO;
   const ammoAngle = ammoPct * Math.PI * 2;
   const { r: aR, g: aG } = healthColor(ammoPct);
@@ -57,7 +61,7 @@ export function drawRings() {
   }
 
   // ── Energy ring ────────────────────────────────────────────────────────
-  const energyR = 44, energyW = 4;
+  const energyR = 44 * vs, energyW = 4 * vs;
   const energyPct = player.energy / MAX_ENERGY;
 
   hudCtx.beginPath();
@@ -88,7 +92,7 @@ export function drawRings() {
   // ── Reload ring ────────────────────────────────────────────────────────
   if (player.reloading) {
     const rp = 1 - player.reloadTimer / RELOAD_MS;
-    const reloadR = energyR + energyW + 5;
+    const reloadR = energyR + energyW + 5 * vs;
     hudCtx.beginPath();
     hudCtx.arc(cx, cy, reloadR, 0, Math.PI * 2);
     hudCtx.strokeStyle = 'rgba(0,0,0,0.20)';
@@ -123,8 +127,8 @@ export function drawRings() {
 
   // ── Spray cone ─────────────────────────────────────────────────────────
   if (sprayHeat > 0.02) {
-    const gap     = 10 + sprayHeat * 28;
-    const lineLen = 6  + sprayHeat * 10;
+    const gap     = (10 + sprayHeat * 28) * vs;
+    const lineLen = (6  + sprayHeat * 10) * vs;
     const alpha   = Math.min(0.85, sprayHeat * 1.2);
     const cR = sprayHeat > 0.5 ? 255 : Math.floor(255 * sprayHeat * 2);
     const cG = sprayHeat > 0.5 ? Math.floor(255 * (1 - sprayHeat) * 2) : 255;

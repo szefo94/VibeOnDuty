@@ -147,10 +147,51 @@ Counter-Strike style buy phase at the start of each round. Player spawns with a 
 
 ### Phase 21 — Second map + map selector
 
-- Design a second tilemap (rooftop / outdoor) with different site positions and spawn zones
-- `level.js` accepts a map data argument instead of hardcoding MAP import
-- Map select screen on the overlay before mode select
-- S&D site coordinates become part of the map config rather than constants in `config.js`
+#### Map 1 — Current: "The Bunker" (indoor, exists)
+
+Dark brutalist interior — concrete walls, torchlit corridors, ramp ledges, cracked crawl gaps. Two bomb sites inside the structure. Tight sightlines, lots of cover.
+
+#### Map 2 — "Rooftop District" (outdoor, new)
+
+An elevated urban rooftop complex — multiple connected building tops with HVAC units, water tanks, cable runs, and open sky. Much longer sightlines than the Bunker; sniping corridors offset by hard cover clusters.
+
+**Scenery ideas:**
+- **HVAC units** — large box geometry (sheet metal texture), give cover between lanes. Can be procedural or replaced with a GLTF asset.
+- **Water tanks** — cylindrical geometry on tripod legs; landmark for callouts ("tank side", "north tank").
+- **Chain-link fences** — low-poly plane meshes with a transparent fence texture (alpha cutout); breaks sightlines partially.
+- **Satellite dishes + antenna masts** — tall vertical landmarks visible from anywhere on the map.
+- **Overhangs / raised catwalks** — metal grid walkways above the main level; additional vertical plane.
+- **Neon signage** — emissive plane meshes, `MeshBasicMaterial` with glow colour. Aesthetic only but adds mood lighting.
+- **Distant city backdrop** — low-poly skybox buildings or `THREE.Sprite` billboards at the map edge; sells the "high up" feeling.
+
+**Lighting:**
+- Daytime: directional sun at low angle (golden hour), long shadows, `THREE.HemisphereLight` sky/ground gradient.
+- Site A: near a glowing billboard — warm orange point light.
+- Site B: near an antenna cluster — cool blue point light.
+- Replace `FogExp2` with a lighter haze (`density: 0.006`); open air should be clearer than a bunker.
+
+#### Free asset sources to replace procedural shapes
+
+All permissive licences (CC0 / CC-BY / MIT) — drop into `public/models/`:
+
+| Asset | Source | Format | Use |
+|-------|--------|--------|-----|
+| HVAC unit | [Sketchfab — CC0](https://sketchfab.com/search?q=hvac+unit&licenses=7c23a1ba438d4306920229c12afcb5f9) | GLTF/GLB | Rooftop cover |
+| Water tower | [Poly Pizza — CC0](https://poly.pizza/search/water+tower) | GLTF/GLB | Landmark |
+| Chain-link fence panel | [ambientCG — CC0](https://ambientcg.com/list?category=&date=&createdUsing=&basedOn=&q=chain+fence) | PNG texture | Alpha plane |
+| Brick / concrete textures | [ambientCG — CC0](https://ambientcg.com/list?category=&date=&createdUsing=&basedOn=&q=brick) | PNG (albedo+normal+rough) | Wall materials |
+| Metal grating texture | [ambientCG — CC0](https://ambientcg.com/list?category=&date=&createdUsing=&basedOn=&q=metal+grate) | PNG | Catwalk floor |
+| Neon sign | [Sketchfab — CC0](https://sketchfab.com/search?q=neon+sign&licenses=7c23a1ba438d4306920229c12afcb5f9) | GLTF/GLB | Mood lighting |
+
+To use a texture from ambientCG: download the 1K PNG set, create a `THREE.MeshStandardMaterial` with `map` (albedo), `normalMap`, `roughnessMap` — instant PBR surface.
+
+#### Code changes
+
+- `level.js` refactored: `buildLevel(mapDef)` accepts a map definition object instead of hardcoding MAP import.
+- Map definition shape: `{ tiles, heightmap, sites, spawnZones, lightColor, fogDensity, name }`.
+- Map 1 ("Bunker") and Map 2 ("Rooftop") each export a `mapDef` object from `src/maps/`.
+- `config.js` S&D site coords move into the map definition — `snd.js` reads them from the active map.
+- Overlay gets a map carousel (thumbnail + name) before mode select; selection stored in `modeManager`.
 
 ---
 
@@ -215,23 +256,18 @@ Out of scope for Phase 22: voice chat, ranked matchmaking, anti-cheat beyond spe
 
 ---
 
-### Phase 23 — Performance & LOD
+### Phase 23 ✅ DONE — Performance & LOD
 
-- Skip AI tick for enemies outside `ENEMY_SIGHT * 1.5` and not on path to player
-- Particle budget cap — keep a global counter; oldest particles evicted when over limit
-- Enemy mesh LOD: swap to a simpler geometry beyond 20 units (Three.js `LOD` object)
-- Profile with `performance.mark` in the game loop; surface frame budget in debug overlay
+- **AI tick culling** — enemies in `patrol` state beyond `ENEMY_SIGHT * 2` skip `_aiState.tick()` entirely. They can't perceive the player at that range, so the freeze is imperceptible. Saves A* path queries for up to 6 background enemies per frame.
+- **Particle budget cap** — `PARTICLE_BUDGET = 90` global; `spawnGrenadeParticles` and `spawnSmokeCloud` bail if total active spark + smoke count reaches the cap. Prevents simultaneous grenade chains from spawning 200+ drawcalls.
+- **Frame time in debug overlay** — `setDebugFrameMs(ms)` added to `hud.js`; loop measures game-logic wall time via `performance.now()` and displays `⏱ X.Xms` alongside anim clip history in the F3 debug panel.
 
 ---
 
-### Phase 24 — Mobile & gamepad
+### Phase 24 ✅ DONE — Mobile & gamepad
 
-Touch controls exist (`touch.js`) but are minimal.
-
-- Virtual joystick (left thumb: move, right thumb: look) using pointer events
-- Fire button, grenade button, crouch toggle in corners
-- Gamepad API: `navigator.getGamepads()` polled each frame; axes mapped to movement/look
-- HUD scales to viewport — replace fixed pixel sizes with `vmin`-based canvas layout
+- **Gamepad API** — new `src/gamepad.js`; polls `navigator.getGamepads()` each frame, maps left stick to WASD + sprint, right stick to `touchLook` (same path as touch controls), RT→shoot, LT→ADS, A→jump, B→crouch, X→reload, Y→dive, LB/RB→lean, d-pad-up→grenade (single-shot guarded). Only activates when any axis/button is non-zero so keyboard/mouse is unaffected when gamepad is idle. Called from `loop.js` before the game-logic block.
+- **HUD viewport scaling** — ring radii and widths in `rings.js` now multiply by `vs = Math.min(w, h) / 900` (900 = design reference). Spray cone gap and line lengths scale the same way. Rings are the same visual size across a 375 px phone and a 1440 p monitor.
 
 ---
 

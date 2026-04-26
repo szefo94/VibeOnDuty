@@ -14,6 +14,10 @@ export function w2s(wx, wy, wz) {
 const _animDebugEl = document.getElementById('anim-debug');
 const _animHistory = ['—', '—', '—'];
 let _lastAnimName = '';
+let _frameMs = 0;
+
+export function setDebugFrameMs(ms) { _frameMs = ms; }
+
 export function setDebugAnimClip(name) {
   if (!_animDebugEl) return;
   if (name !== _lastAnimName) {
@@ -23,7 +27,7 @@ export function setDebugAnimClip(name) {
   }
   _animDebugEl.innerHTML = _animHistory.map((n, i) =>
     `<span style="opacity:${1 - i * 0.3}">${i === 0 ? '▶' : '·'} ${n}</span>`
-  ).join('<br>');
+  ).join('<br>') + `<br><span style="color:#ff0">⏱ ${_frameMs.toFixed(1)}ms</span>`;
   _animDebugEl.style.display = 'block';
 }
 
