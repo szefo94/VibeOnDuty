@@ -135,15 +135,13 @@ Counter-Strike style buy phase at the start of each round. Player spawns with a 
 
 ---
 
-### Phase 20 — Game feel pass
+### Phase 20 ✅ DONE — Game feel pass
 
-Small changes, large perceived impact:
-
-- **Screen shake** — translate `renderer.domElement` for ~80 ms on explosion/grenade hit
-- **Kill feed** — top-right sliding log: `[PLAYER] ✕ [ENEMY]`, auto-dismiss after 4 s
-- **Post-round stats overlay** — kills, deaths, plants, defuses, accuracy; dismiss on `TAB`
-- **Smoke cloud** — spawn a billow particle group on grenade detonation (separate from sparks)
-- **Hit direction indicator** — arc on the HUD edge pointing toward damage source
+- **Screen shake** — `src/fx/screenShake.js`; CSS translate on `renderer.domElement`, decays over 140 ms. Triggered on grenade explosion (intensity 1.0) and enemy bullet hit (0.45).
+- **Kill feed** — `#kill-feed` DOM list top-right; entries slide in, auto-dismiss after 4 s, capped at 5. `showKillFeed()` in `overlay.js`, called from `killEnemy`.
+- **Smoke cloud** — `spawnSmokeCloud` + `tickSmokeCloud` in `particles.js`; 14 grey billowing spheres per explosion, sine-curve opacity fade, slow upward drift.
+- **Hit direction indicator** — red canvas arc in `rings.js` pointing toward the attacker. `triggerHitFlash(srcX, srcZ)` projects source into camera-local space via right/forward dot products, stores angle on `player.lastHitDir`, fades over 1.5 s.
+- *(Post-round stats deferred — needs round-start event + per-round counter infrastructure)*
 
 ---
 
@@ -158,13 +156,62 @@ Small changes, large perceived impact:
 
 ### Phase 22 — Multiplayer foundation
 
-Real-time player vs. player using WebSocket relay (Cloudflare Worker or small Node server).
+Real-time 5v5 S&D over WebSocket. The existing bot AI stays as filler for empty slots; the goal is to replace bots one-for-one with human players without restructuring the game loop.
 
-- Authoritative tick: server echoes position packets, resolves kills
-- Client sends: position, facing, actions (shoot, grenade, plant)
-- Server sends: enemy positions, hit confirmations, round state
-- Chat / team callout system (`Y` for team, `U` for all)
-- AI bots fill empty team slots below 5
+#### Architecture
+
+```
+Browser A ──WS──┐
+Browser B ──WS──┤
+Browser C ──WS──┤── Server (Node / Cloudflare Worker) ── authoritative match state
+Browser D ──WS──┤
+Browser E ──WS──┘
+```
+
+- **Server is authoritative for round state** (score, timer, bomb, role swap) but **not for movement** — movement stays client-authoritative to keep latency invisible. Hit detection is server-confirmed (lag-compensated rewind to 100 ms history).
+- **Tick rate**: server at 20 Hz; clients interpolate remote players between ticks at 60 fps.
+
+#### Packet design (MessagePack or compact JSON)
+
+| Direction | Message | Fields |
+|-----------|---------|--------|
+| C → S | `move` | `x, z, yaw, pitch, ts` |
+| C → S | `shoot` | `ts, targetId` (id of entity hit, or null) |
+| C → S | `action` | `type` (plant/defuse/grenade), `x, z, ts` |
+| S → C | `world` | array of `{id, x, z, yaw, hp, state, team}` per remote player |
+| S → C | `hit` | `victimId, dmg, killerId` |
+| S → C | `round` | `event` (start/end/bomb/defuse/timeout), `payload` |
+| S → C | `chat` | `senderId, team, text` |
+
+#### Client-side changes
+
+- `src/net/socket.js` — WebSocket wrapper, connect/disconnect, send queue, reconnect backoff.
+- `src/net/remotePlayer.js` — one instance per remote human; holds interpolation buffer (last two `world` snapshots), lerps position/yaw between ticks. Reuses `buildEnemyMesh` for rendering so remote players look identical to bots.
+- `src/net/netSync.js` — reads local player state each frame, diffs against last sent packet, emits `move` at 20 Hz max. Consumes incoming `world` / `hit` / `round` messages via the event bus (`on('net:world', ...)` etc.).
+- `enemies.js` `spawnSndEnemies` — accept a `remotePlayers` map; skip bot slots that are occupied by a remote human connection.
+
+#### Server-side (Node.js, ~300 lines)
+
+- `server/index.js` — `ws` library, room management (one room = one S&D match, up to 10 clients).
+- `server/matchState.js` — mirrors `snd.js` state machine: round timer, bomb, score. Ticks at 20 Hz via `setInterval`. Broadcasts `round` events on transitions.
+- `server/lagComp.js` — ring buffer of player positions per client (last 10 ticks = 500 ms). On `shoot` message, rewinds world to `ts - latency`, checks hit against rewound positions, broadcasts confirmed `hit`.
+- No physics on server — trust client position, only validate that delta per tick is ≤ `ENEMY_SPEED * tickInterval * 1.5` (basic speed-hack guard).
+
+#### Lobby & matchmaking
+
+- Room code system: host generates a 4-char code, shares it out-of-band. Clients join via `?room=XXXX` query param.
+- Overlay gets a **[ HOST ]** and **[ JOIN ]** button alongside DROP IN / S&D. Join flow: enter room code → connect → wait in lobby until host starts the match.
+- Lobby shows connected players (name = browser-generated adjective-noun, e.g. "SilentViper"), team assignment, ready state.
+
+#### Bot fill
+
+- Server tracks human slot count per team. Any slot below 5 without a human is flagged `botFill=true`.
+- Each client simulates its own team's bots locally (same `friendlyBots.js` tick). Remote team bots are driven by the server's designated "bot host" — the first client to connect. If bot host disconnects, server promotes the next client.
+
+#### Scope boundary
+
+Phase 22 ships: position sync, hit confirmation, round state sync, lobby, room codes.  
+Out of scope for Phase 22: voice chat, ranked matchmaking, anti-cheat beyond speed guard, spectator mode.
 
 ---
 
