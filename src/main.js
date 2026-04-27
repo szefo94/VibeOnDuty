@@ -12,15 +12,35 @@ import { tryShoot, tryPunchDamage } from './combat/shoot.js';
 import { flashMeleeRing } from './fx/meleeRange.js';
 import { updateHUD, showMsg, showStatus } from './hud/overlay.js';
 import { startLoop, setThirdPerson, getThirdPerson, toggleTpSide } from './loop.js';
-import { startSnd, nextRound, getSndSitePositions, isMatchOver } from './modes/snd.js';
+import { startSnd, nextRound, getSndSitePositions, isMatchOver, setSndMap } from './modes/snd.js';
 import { tryLoadEnemyGLTF, buildPlayerMesh } from './builders/enemyGLTF.js';
 import { tryLoadWeaponFBX, tryLoadP90ForHand } from './builders/weaponFBX.js';
 import { tryLoadPistolFBX } from './builders/enemyWeapon.js';
 import { setSkeletonDebugVisible } from './builders/enemyAnimations.js';
 import { register, loadAll } from './builders/assetManager.js';
+import { setActiveMap } from './map.js';
+import { buildLevel } from './level.js';
+import { bunkerMapDef } from './maps/bunker.js';
+import { rooftopMapDef } from './maps/rooftop.js';
 
 const _euler = new THREE.Euler(0, 0, 0, 'YXZ');
-let debugVisible = true; // debug ON by default
+let debugVisible = true;
+
+// ── Map selection ──────────────────────────────────────────────────────
+let _selectedMap = bunkerMapDef;
+document.querySelectorAll('.map-card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.map-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    _selectedMap = card.dataset.map === 'rooftop' ? rooftopMapDef : bunkerMapDef;
+  });
+});
+
+function _activateMap() {
+  setActiveMap(_selectedMap);
+  buildLevel(_selectedMap);
+  if (debugLines) debugLines.visible = debugVisible;
+}
 
 // ── Input: game-action handlers ────────────────────────────────────
 document.addEventListener('keydown', (e) => {
@@ -52,7 +72,6 @@ document.addEventListener('keydown', (e) => {
   if (e.code === 'KeyF' && !player.dead && !player.punching) {
     player.punching = true;
     player.punchClip = player.punchClip === 'punch_cross' ? 'punch_jab' : 'punch_cross';
-    // Deal damage at impact frame (~350ms) and flash range ring
     setTimeout(() => {
       tryPunchDamage();
       flashMeleeRing(camera.position.x, camera.position.z);
@@ -75,8 +94,8 @@ document.addEventListener('mousedown', (e) => {
     }
     if (locked && gameRunning) tryShoot();
   }
-  if (e.button === 1 && locked && gameRunning) tryThrowGrenade(); // middle mouse
-  if (e.button === 2 && locked && gameRunning) player.aiming = true; // RMB aim
+  if (e.button === 1 && locked && gameRunning) tryThrowGrenade();
+  if (e.button === 2 && locked && gameRunning) player.aiming = true;
 });
 document.addEventListener('mouseup', (e) => {
   if (e.button === 2) player.aiming = false;
@@ -84,9 +103,9 @@ document.addEventListener('mouseup', (e) => {
 
 // ── Start button ───────────────────────────────────────────────────
 document.getElementById('startbtn').addEventListener('click', () => {
+  _activateMap();
   document.getElementById('overlay').style.display = 'none';
   if (isTouchDevice) {
-    // Pointer lock is unavailable on mobile — fake it so game logic works
     setLocked(true);
   } else {
     document.getElementById('c').requestPointerLock();
@@ -101,6 +120,8 @@ document.getElementById('c').addEventListener('click', () => {
 });
 
 function sndStart() {
+  _activateMap();
+  setSndMap(_selectedMap);
   document.getElementById('overlay').style.display = 'none';
   if (isTouchDevice) { setLocked(true); } else { document.getElementById('c').requestPointerLock(); }
   setGameRunning(true);
@@ -136,8 +157,7 @@ register('pistol-fbx', tryLoadPistolFBX);
 register('player-p90', tryLoadP90ForHand);
 
 // ── Kick off ───────────────────────────────────────────────────────
-if (debugLines) debugLines.visible = debugVisible;
-window.loadGLTF = tryLoadEnemyGLTF; // also callable manually from console
+window.loadGLTF = tryLoadEnemyGLTF;
 
 const _startBtn    = document.getElementById('startbtn');
 const _sndStartBtn = document.getElementById('snd-startbtn');

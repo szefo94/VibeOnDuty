@@ -20,18 +20,21 @@ import { setMode } from './modeManager.js';
 export function getSndPlantRange()  { return SND_PLANT_RANGE; }
 export function getSndDefuseRange() { return SND_DEFUSE_RANGE; }
 
-// ── Sites ─────────────────────────────────────────────────────────────────
-const SITES = [
+// ── Sites and spawns — updated by setSndMap() before each game ────────────
+let _sites = [
   { id: 'A', x: 8 * CELL + CELL / 2, z: 7  * CELL + CELL / 2 },
   { id: 'B', x: 8 * CELL + CELL / 2, z: 17 * CELL + CELL / 2 },
 ];
-export function getSndSitePositions() { return SITES.map((s) => [s.x, s.z]); }
+let _attackerSpawn = { x: 16 * CELL + CELL / 2, z: 11 * CELL + CELL / 2 };
+let _defenderSpawn = { x: 7  * CELL + CELL / 2, z: 11 * CELL + CELL / 2 };
 
-// Spawn anchors
-const ATTACKER_X = 16 * CELL + CELL / 2;   // east interior
-const ATTACKER_Z = 11 * CELL + CELL / 2;
-const DEFENDER_X = 7  * CELL + CELL / 2;   // west interior, between sites
-const DEFENDER_Z = 11 * CELL + CELL / 2;
+export function setSndMap(mapDef) {
+  _sites = mapDef.sites.map(s => ({ ...s }));
+  _attackerSpawn = mapDef.spawnAttacker;
+  _defenderSpawn = mapDef.spawnDefender;
+}
+
+export function getSndSitePositions() { return _sites.map((s) => [s.x, s.z]); }
 
 // ── Match state ───────────────────────────────────────────────────────────
 let matchRound   = 1;
@@ -123,11 +126,8 @@ function _startRound() {
   player.reloading = false;
   player.energy    = 0;
   updateHUD();
-  camera.position.set(
-    playerRole === 'attack' ? ATTACKER_X : DEFENDER_X,
-    PLAYER_H,
-    playerRole === 'attack' ? ATTACKER_Z : DEFENDER_Z
-  );
+  const spawn = playerRole === 'attack' ? _attackerSpawn : _defenderSpawn;
+  camera.position.set(spawn.x, PLAYER_H, spawn.z);
 
   removeBombMesh();
   createSiteMarkers();
@@ -164,7 +164,7 @@ export function tickSnd(dt, keys) {
 
   // Pre-plant: pulse beacons, count round timer
   const pulse = 0.5 + 0.35 * Math.abs(Math.sin(performance.now() / 600));
-  for (const site of SITES) {
+  for (const site of _sites) {
     if (site.ring)  site.ring.material.opacity = pulse;
     if (site.light) site.light.intensity = 1.0 + 1.5 * Math.abs(Math.sin(performance.now() / 450));
   }
@@ -225,7 +225,7 @@ function _tickPlanted(dt, keys) {
 function _tickAttackerPlant(dt, keys) {
   const px = camera.position.x, pz = camera.position.z;
   let nearSite = null;
-  for (const site of SITES) {
+  for (const site of _sites) {
     const dx = px - site.x, dz = pz - site.z;
     if (dx * dx + dz * dz < SND_PLANT_RANGE * SND_PLANT_RANGE) { nearSite = site; break; }
   }
@@ -255,10 +255,10 @@ function _tickEnemyAttackerPlant(dt) {
   showPlantHint('ENEMY PLANTING...');
   if (plantProgress >= 1) {
     // Find which site the enemy is at
-    const site = SITES.find((s) => {
+    const site = _sites.find((s) => {
       const dx = enemyPlantX - s.x, dz = enemyPlantZ - s.z;
       return dx * dx + dz * dz < 4;
-    }) ?? SITES[0];
+    }) ?? _sites[0];
     _plantBomb(enemyPlantX, enemyPlantZ, site);
   }
   enemyPlantFlag = false;
@@ -329,7 +329,7 @@ function _roundResultText(result, playerWins, matchOver) {
 
 // ── 3D helpers ────────────────────────────────────────────────────────────
 function createSiteMarkers() {
-  for (const site of SITES) {
+  for (const site of _sites) {
     const ringGeo = new THREE.RingGeometry(0.8, 1.3, 48);
     ringGeo.rotateX(-Math.PI / 2);
     const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({
@@ -371,7 +371,7 @@ function removeBombMesh() {
 }
 
 function removeSiteMarkers() {
-  for (const site of SITES) {
+  for (const site of _sites) {
     if (site.ring)  { scene.remove(site.ring);  site.ring  = null; }
     if (site.pole)  { scene.remove(site.pole);  site.pole  = null; }
     if (site.light) { scene.remove(site.light); site.light = null; }

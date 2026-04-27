@@ -42,8 +42,19 @@ body{background:#000;overflow:hidden;font-family:'Courier New',monospace}
 .ctrl{text-align:center}
 .ctrl .key{font-size:13px;color:#fff;background:#111;border:1px solid #333;padding:3px 9px;border-radius:3px;margin-bottom:4px;display:inline-block;min-width:40px}
 .ctrl .desc{font-size:9px;color:#555;letter-spacing:2px}
-#startbtn{padding:12px 52px;background:#e8c84a;color:#000;border:none;font-family:'Courier New',monospace;font-size:14px;letter-spacing:4px;cursor:pointer}
-#startbtn:hover{background:#fff}
+#startbtn,#snd-startbtn{padding:12px 36px;background:#e8c84a;color:#000;border:none;font-family:'Courier New',monospace;font-size:14px;letter-spacing:4px;cursor:pointer}
+#startbtn:hover,#snd-startbtn:hover{background:#fff}
+
+/* ── Map selector ────────────────────────────────────────────────────────── */
+#map-selector{display:flex;gap:12px;margin-bottom:20px}
+.map-card{cursor:pointer;border:2px solid rgba(255,255,255,0.15);border-radius:5px;padding:8px;background:rgba(0,0,0,0.4);transition:border-color 0.15s,background 0.15s;user-select:none}
+.map-card:hover{border-color:rgba(232,200,74,0.5);background:rgba(232,200,74,0.06)}
+.map-card.selected{border-color:#e8c84a;background:rgba(232,200,74,0.12)}
+.map-thumb{width:130px;height:82px;border-radius:3px;margin-bottom:7px}
+.bunker-thumb{background:linear-gradient(135deg,#2a1e10 0%,#1a1a2e 55%,#3a2a1a 100%)}
+.rooftop-thumb{background:linear-gradient(135deg,#87b8d8 0%,#4a7090 50%,#2a4060 100%)}
+.map-name{color:#e8c84a;font-size:11px;letter-spacing:3px;font-weight:bold;text-align:center}
+.map-sub{color:#555;font-size:9px;letter-spacing:1.5px;text-align:center;margin-top:3px}
 .dead-h{font-size:48px;color:#e74c3c;letter-spacing:6px;margin-bottom:14px}
 .stat{font-size:13px;color:#888;letter-spacing:3px;margin:4px 0}
 
