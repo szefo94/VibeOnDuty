@@ -20,6 +20,7 @@ src/
   lighting.js           — ambient, sun, fill, torches — exports tickTorches
   input.js              — keys, locked, gameRunning, mouseHeld, setGameRunning
   touch.js              — mobile touch controls
+  gamepad.js            — Standard Gamepad API (left stick, right stick, all buttons mapped)
   modes/
     modeManager.js      — setMode/getMode/isAnyModeActive (zero-dep registry)
     snd.js              — S&D match state machine, round lifecycle, bomb logic
@@ -52,13 +53,14 @@ src/
   fx/
     tracers.js          — enemy muzzle tracers
     impacts.js          — bullet impact sparks
-    particles.js        — grenade particles + impact zones
+    particles.js        — grenade sparks + smoke cloud + impact zones; 90-particle budget cap
     meleeRange.js       — melee ring flash
+    screenShake.js      — triggerScreenShake / tickScreenShake (CSS translate on canvas)
   hud/
-    overlay.js          — updateHUD, showMsg, showStatus, triggerHitFlash
+    overlay.js          — updateHUD, showMsg, showStatus, triggerHitFlash(srcX,srcZ), showKillFeed
     hitmarker.js        — hitMarkerT, spawnHitMarker, tickHitMarker
-    hud.js              — drawHUD dispatcher (35 lines)
-    rings.js            — ammo/energy/reload rings + spray cone; healthColor helper
+    hud.js              — drawHUD dispatcher; setDebugAnimClip + setDebugFrameMs (⏱ in F3 panel)
+    rings.js            — ammo/energy/reload rings + spray cone + hit-dir arc; viewport-scaled; healthColor
     enemyBars.js        — drone bar, grenade impact zones, enemy HP bars
     radar.js            — drawMinimap (canvas)
     sndHud.js           — S&D match header, bomb timer, plant/defuse bars, result overlay
@@ -89,6 +91,11 @@ types/
 | 13 | Dead `ehm`/`rebuildEHM` removed (bullet detection uses distance, not raycasting) |
 | 14 | HUD split: `rings.js` (player rings), `enemyBars.js` (bars + impact zones), `hud.js` → 35 lines |
 | 15 | `modeManager.js`; `snd.js` decoupled from loop/enemies/drone/waveSystem via event bus |
+| 16 (patch) | Circular ESM dep broken: `snd:configure` event-bus injection in `enemyStates.js` + `enemies.js` |
+| 20 | Screen shake (`screenShake.js`), kill feed, smoke cloud, hit-direction arc in `rings.js` |
+| 23 | AI tick culling for distant patrollers, 90-particle budget cap, frame-time in F3 debug panel |
+| 24 | Gamepad API (`gamepad.js`), viewport-relative HUD ring scaling in `rings.js` |
+| bugfix | Dance animation set to `LoopOnce`; `finished` event auto-clears `player.dancing` |
 
 ---
 
@@ -132,16 +139,6 @@ Counter-Strike style buy phase at the start of each round. Player spawns with a 
 - **Bot economy** — friendly bots auto-buy the best weapon they can afford; enemy bots follow the same rule (creates eco rounds naturally).
 - **Carry-over** — weapons and remaining balance carry between rounds; death resets weapon to pistol but keeps $500 minimum floor.
 - **Implementation sketch** — `src/modes/buyMenu.js` owns the DOM panel and economy state; emits `buy:weaponSelected` event consumed by `player.js` and `friendlyBots.js`. S&D round start emits `round:buyPhase` with a deadline timestamp; buy menu disables itself when deadline passes.
-
----
-
-### Phase 20 ✅ DONE — Game feel pass
-
-- **Screen shake** — `src/fx/screenShake.js`; CSS translate on `renderer.domElement`, decays over 140 ms. Triggered on grenade explosion (intensity 1.0) and enemy bullet hit (0.45).
-- **Kill feed** — `#kill-feed` DOM list top-right; entries slide in, auto-dismiss after 4 s, capped at 5. `showKillFeed()` in `overlay.js`, called from `killEnemy`.
-- **Smoke cloud** — `spawnSmokeCloud` + `tickSmokeCloud` in `particles.js`; 14 grey billowing spheres per explosion, sine-curve opacity fade, slow upward drift.
-- **Hit direction indicator** — red canvas arc in `rings.js` pointing toward the attacker. `triggerHitFlash(srcX, srcZ)` projects source into camera-local space via right/forward dot products, stores angle on `player.lastHitDir`, fades over 1.5 s.
-- *(Post-round stats deferred — needs round-start event + per-round counter infrastructure)*
 
 ---
 
@@ -253,21 +250,6 @@ Browser E ──WS──┘
 
 Phase 22 ships: position sync, hit confirmation, round state sync, lobby, room codes.  
 Out of scope for Phase 22: voice chat, ranked matchmaking, anti-cheat beyond speed guard, spectator mode.
-
----
-
-### Phase 23 ✅ DONE — Performance & LOD
-
-- **AI tick culling** — enemies in `patrol` state beyond `ENEMY_SIGHT * 2` skip `_aiState.tick()` entirely. They can't perceive the player at that range, so the freeze is imperceptible. Saves A* path queries for up to 6 background enemies per frame.
-- **Particle budget cap** — `PARTICLE_BUDGET = 90` global; `spawnGrenadeParticles` and `spawnSmokeCloud` bail if total active spark + smoke count reaches the cap. Prevents simultaneous grenade chains from spawning 200+ drawcalls.
-- **Frame time in debug overlay** — `setDebugFrameMs(ms)` added to `hud.js`; loop measures game-logic wall time via `performance.now()` and displays `⏱ X.Xms` alongside anim clip history in the F3 debug panel.
-
----
-
-### Phase 24 ✅ DONE — Mobile & gamepad
-
-- **Gamepad API** — new `src/gamepad.js`; polls `navigator.getGamepads()` each frame, maps left stick to WASD + sprint, right stick to `touchLook` (same path as touch controls), RT→shoot, LT→ADS, A→jump, B→crouch, X→reload, Y→dive, LB/RB→lean, d-pad-up→grenade (single-shot guarded). Only activates when any axis/button is non-zero so keyboard/mouse is unaffected when gamepad is idle. Called from `loop.js` before the game-logic block.
-- **HUD viewport scaling** — ring radii and widths in `rings.js` now multiply by `vs = Math.min(w, h) / 900` (900 = design reference). Spray cone gap and line lengths scale the same way. Rings are the same visual size across a 375 px phone and a 1440 p monitor.
 
 ---
 
