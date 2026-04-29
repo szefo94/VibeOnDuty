@@ -7,20 +7,24 @@ index.html              — HTML shell (entry: src/main.js)
 style.css               — all styles
 vite.config.js          — Vite entry: index.html
 src/
-  main.js               — DOM listeners, start buttons, asset-gated init
+  main.js               — DOM listeners, start buttons, asset-gated init, map registry
   loop.js               — game loop, 3rd-person camera, lean offset, drone tick
   config.js             — all game constants (player, enemy, S&D, physics)
   events.js             — 4-line pub/sub event bus (on/off/emit)
-  map.js                — MAP, HMAP, mapCell, hAt, groundElevation, canMoveTo
+  map.js                — live-binding MAP/HMAP exports, setActiveMap(def)
   math.js               — normA, slerp
   astar.js              — A* pathfinding with dev-mode failure logging
-  level.js              — level geometry — exports wallMeshes, debugLines
+  level.js              — buildLevel(mapDef) — exports wallMeshes, debugLines
   scene.js              — renderer, scene, camera, hudCanvas, hudCtx
   materials.js          — mm(), shared MeshStandardMaterials
-  lighting.js           — ambient, sun, fill, torches — exports tickTorches
+  lighting.js           — ambient, sun, fill, torchLights[] — exports tickTorches
   input.js              — keys, locked, gameRunning, mouseHeld, setGameRunning
   touch.js              — mobile touch controls
   gamepad.js            — Standard Gamepad API (left stick, right stick, all buttons mapped)
+  maps/
+    bunker.js           — Greek Columns mapDef (complex arena, ramps, cracks, torches)
+    rooftop.js          — Rooftop District mapDef (outdoor, HVAC cover, daylight)
+    concept.js          — Column Arena mapDef (marble pillar prototype)
   modes/
     modeManager.js      — setMode/getMode/isAnyModeActive (zero-dep registry)
     snd.js              — S&D match state machine, round lifecycle, bomb logic
@@ -96,6 +100,7 @@ types/
 | 23 | AI tick culling for distant patrollers, 90-particle budget cap, frame-time in F3 debug panel |
 | 24 | Gamepad API (`gamepad.js`), viewport-relative HUD ring scaling in `rings.js` |
 | bugfix | Dance animation set to `LoopOnce`; `finished` event auto-clears `player.dancing` |
+| 21 | Three maps: Greek Columns (original arena), Rooftop District, Column Arena concept. `buildLevel(mapDef)` refactor, `setActiveMap` live bindings, per-map spawn/sites/lighting/fog. Map selector overlay with 3 cards. Fixed rooftop player spawn + HVAC pillar rendering. |
 
 ---
 
@@ -142,7 +147,7 @@ Counter-Strike style buy phase at the start of each round. Player spawns with a 
 
 ---
 
-### Phase 21 — Second map + map selector
+### ~~Phase 21 — Second map + map selector~~ ✅ Done
 
 #### Map 1 — Current: "The Bunker" (indoor, exists)
 
@@ -259,3 +264,81 @@ Out of scope for Phase 22: voice chat, ranked matchmaking, anti-cheat beyond spe
 - Match-end scoreboard (K/D/A, accuracy %, plants/defuses) with share-to-clipboard
 - Kill streak rewards: 3-kill → ammo refill, 5-kill → drone strike (reuses recon drone logic), 7-kill → EMP across map
 - Wave mode: difficulty ramp-up curve (enemy speed + damage increase per wave tier)
+
+---
+
+### Phase 26 — Bot personality modes
+
+Give bots distinct play styles so repeat sessions feel different and difficulty is tunable.
+
+- **Tiers**: Passive (holds angles, retreats when hurt), Competitive (rotates, uses cover intelligently), Aggressive (pushes site, peeks fast, ignores health).
+- Per-bot `personality` field on the enemy object; `enemyStates.js` reads it for decision weights (peek chance, retreat threshold, reaction delay).
+- S&D lobby lets players choose enemy difficulty before starting — stored in `config.js` as `BOT_PERSONALITY`.
+- Passive bots work great as tutorial fodder; Aggressive tier provides a real challenge once players know the maps.
+
+---
+
+### Phase 27 — Killcam / round-end highlight
+
+Replay the last 3 seconds of a round (or the killing blow on the player) when the round ends.
+
+- **Ring buffer**: each tick, snapshot `{ pos, yaw, pitch, hp }` for every entity into a circular buffer (3 s × 60 fps = 180 entries per entity). `src/replay/replayBuffer.js`.
+- On player death or round end, detach the live camera and play back the buffer from the killer's POV: position-lerp + yaw-lerp at 1× speed.
+- Overlay shows "KILLCAM" badge and a "SKIP" button; after 3 s (or skip) the round result screen appears as normal.
+- No additional server state needed — purely client-side ring buffer.
+- **Why it matters**: players love rewatching the kill that ended them; it also subtly teaches map positions and angles.
+
+---
+
+### Phase 28 — Advanced movement mechanics
+
+Add a movement skill ceiling that rewards practice and separates casual from competitive play.
+
+- **Bunny hop**: if player jumps within ~80 ms of landing and strafes, preserve a fraction of horizontal momentum (source-engine style). Cap at `PLAYER_SPEED * 1.35` to prevent infinite acceleration.
+- **Wall-slide**: when sprinting into a wall at an angle, player slides along it instead of stopping dead — feels smooth and prevents frustrating stutter.
+- **Ledge grab**: if the player walks into geometry that is ≤ 0.9 m above their head, auto-climb over it (short tween, ~200 ms). Works on HVAC boxes, low walls, window sills.
+- **Slide cancel**: pressing jump during a slide pops the player upward with partial slide momentum — creates a low-profile burst move.
+- All mechanics gated behind a `ADVANCED_MOVEMENT` config flag so they can be toggled off for casual modes.
+
+---
+
+### Phase 29 — Operator abilities (Valorant-style)
+
+Each round, the player gets one signature ability charge (free) and can buy a second in the buy phase.
+
+| Ability | Effect | Duration |
+|---------|--------|----------|
+| **Recon Drone** | Deploy a controllable mini-drone for 8 s; enemies briefly highlighted after | 8 s |
+| **Smoke Canister** | Throw a canister that spawns a 4 m smoke sphere blocking LOS | 15 s |
+| **EMP Pulse** | Instant AoE that disables enemy HUD overlays and slows drones for 6 s | instant |
+| **Flashbang** | Existing grenade slot; add white-screen blind effect to enemies in LOS | 2 s blind |
+| **Wall Sensor** | Place a device on any wall; enemies passing within 5 m trigger a ping on radar | 30 s |
+
+- Ability key: `E`. Current ability shown in HUD bottom-center (icon + charge count).
+- `src/abilities/abilityManager.js` — maps player ability type → handler function, tracks cooldown.
+- Bots get random ability assignment at round start; they use abilities on a timer (no decision-tree complexity needed for v1).
+- Pairs naturally with Phase 19 (buy menu) — abilities have prices just like weapons.
+
+---
+
+### Phase 30 — Environmental interaction
+
+Make arenas feel alive and dynamic — small changes that big-studio games take for granted.
+
+- **Destructible crates**: scattered box props (already have rubble geometry) that take damage from bullets and explosions; splinter into 4–6 smaller pieces using `THREE.BufferGeometry` subdivision. Pieces persist until round reset.
+- **Shootable lights**: point lights in the scene can be shot out (HP = 1 bullet). Darkness creates new tactical angles; `tickTorches` skips shot-out lights.
+- **Explosive barrels**: red barrel prop (`MeshStandardMaterial`, emissive tint) that explodes when shot — `triggerExplosion` radius 4 m, 60 damage. One barrel per S&D site as a map-design risk/reward.
+- **Door toggles**: thin box meshes acting as doors that open/close on interact (`F` key when within 1.5 m). Opens new flanking routes mid-round.
+- Implementation: `src/entities/destructibles.js` — array of destructible objects with HP; `buildLevel` populates them from `mapDef.destructibles[]`.
+
+---
+
+### Phase 31 — Cosmetic system
+
+Pure visual customisation — no pay-to-win. Gives players identity and a reason to keep playing.
+
+- **Operator skins**: swap the player GLTF mesh material colours (hue-shift on `MeshStandardMaterial.color`). 6 presets (Urban, Desert, Arctic, Neon, Woodland, Ghost). Selected in a new **Locker** tab on the overlay.
+- **Weapon finishes**: tint the weapon FBX material. Unlocked by reaching kill milestones (50 kills = Desert finish, 200 kills = Neon finish, etc.).
+- **Kill card**: a short particle burst style unique to each operator when they get a kill (orange sparks vs. blue sparks vs. green sparks). `src/fx/killCard.js`, reads `player.operatorStyle`.
+- **Player nameplate**: floating text above allied bots using `THREE.Sprite` + canvas texture — shows squad callsign ("ALPHA-1"). Toggle with F3.
+- All unlocks stored in `localStorage` alongside Phase 25 progression data.
