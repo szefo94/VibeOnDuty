@@ -22,17 +22,19 @@ import { setActiveMap } from './map.js';
 import { buildLevel } from './level.js';
 import { bunkerMapDef } from './maps/bunker.js';
 import { rooftopMapDef } from './maps/rooftop.js';
+import { conceptMapDef } from './maps/concept.js';
 
 const _euler = new THREE.Euler(0, 0, 0, 'YXZ');
 let debugVisible = true;
 
 // ── Map selection ──────────────────────────────────────────────────────
+const _mapRegistry = { bunker: bunkerMapDef, rooftop: rooftopMapDef, concept: conceptMapDef };
 let _selectedMap = bunkerMapDef;
 document.querySelectorAll('.map-card').forEach(card => {
   card.addEventListener('click', () => {
     document.querySelectorAll('.map-card').forEach(c => c.classList.remove('selected'));
     card.classList.add('selected');
-    _selectedMap = card.dataset.map === 'rooftop' ? rooftopMapDef : bunkerMapDef;
+    _selectedMap = _mapRegistry[card.dataset.map] ?? bunkerMapDef;
   });
 });
 
