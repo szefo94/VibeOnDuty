@@ -347,13 +347,86 @@ Pure visual customisation — no pay-to-win. Gives players identity and a reason
 
 ### Phase 32 — Training range
 
-A dedicated offline mode for warming up aim and learning spray patterns — no enemies, no pressure.
+A dedicated offline mode for warming up aim and learning spray patterns. The player can load straight into the range from the overlay without starting a match — it's a pressure-free sandbox that also happens to be the game's best tutorial.
 
-- New overlay tab **[ RANGE ]** launches a standalone scene with a flat floor, 10 pop-up target dummies at varying distances (5–40 m), and an infinite ammo state.
-- **Target modes**: Static (dummies stand still), Moving (strafe left/right on a rail at configurable speed), Reaction (random pop-up with 1.5 s window — miss = target resets).
-- **Spray trainer**: project the bullet-impact positions onto a 2D canvas panel beside the target after each mag. Overlays the theoretical ideal pattern so players can compare their pull to the correct compensation.
-- **Stats HUD**: hits / shots fired, accuracy %, average reaction time, headshot %, best streak. Shown live and summarised on session end.
-- `src/modes/trainingRange.js` — owns scene setup, target lifecycle, stats accumulation. Shares `tryShoot` and `startReload` with the main game unchanged.
+#### Scene layout
+
+A long rectangular hall, ~60 m deep × 30 m wide. Divided into four zones left-to-right:
+
+```
+[  SPRAY WALL  |  SHORT RANGE  |  MEDIUM RANGE  |  LONG LANE  ]
+    0–4 m          5–15 m           16–30 m          31–60 m
+```
+
+- **Spray wall**: blank flat surface right in front of the spawn. Every bullet leaves a persistent decal dot. Used for mag dumps without aiming — purely to see the raw recoil pattern before compensation.
+- **Short range**: 3 pop-up mannequin targets at 5, 8, 12 m. Best for CQB drills and flick training.
+- **Medium range**: 4 targets at 16, 20, 25, 30 m on horizontal sliding rails (2 m travel each direction). Simulates holding an angle while the enemy peeks.
+- **Long lane**: narrow 3 m-wide corridor, 2 static targets at 40 m and 55 m. Only headshots register on the far one — body is too small to reliably hit at that range, forcing precision.
+
+The floor is a neutral grey concrete (no rubble, no ramps — zero visual noise). Overhead strip lighting, no torch flicker. The goal is that nothing distracts from the aim itself.
+
+#### Drill modes
+
+Selectable from a panel on the left wall (interact with `F`):
+
+| Mode | Description | Ends when |
+|------|-------------|-----------|
+| **Free practice** | All targets up, infinite ammo, no timer | Player exits |
+| **Flick drill** | One random target lights up red. Hit it within 800 ms, next one lights. Miss = no penalty, just resets | 60 s — score = hits |
+| **Tracking drill** | One moving target at medium range. Hold crosshair on it — score accumulates per ms on-target | 30 s — score = % time on target |
+| **Reaction drill** | Targets hidden behind cover panels, pop up for exactly 400 ms then drop. Miss window = target counts as kill | 20 targets total — score = hits/20 |
+| **Spray control** | Close-range static wall. After each mag the wall resets; ideal M4 pattern is drawn in green, player's dots in white | Per-mag — score = average deviation from ideal |
+| **1-tap drill** | Single tap only (game enforces it — holding fire does nothing). Targets pop up 1 at a time at random distances | 90 s — score = accuracy % |
+
+Between drills the player sees a 5-second score card with their result and personal best before the next drill starts automatically.
+
+#### Target behaviour
+
+Each target is a `THREE.Group`: torso box + head sphere, each with a separate `Raycast` mesh. Headshots glow briefly yellow; body hits glow white. A miss within 15 cm of the target shows a near-miss flash (orange) — close enough to be encouraging, far enough to sting.
+
+Pop-up animation: target rises from a slot in the floor over 80 ms using a linear position tween. Drops back in 60 ms on timeout. The fast drop is intentional — a barely-missed target feels like it dodged, which is more fun than it just disappearing.
+
+Moving targets run on a `userData.phase` sine wave: `x = rail_center + Math.sin(userData.phase) * rail_half`. Speed is configurable per drill. Fast setting (0.8× player strafe speed) is genuinely difficult — comparable to a real opponent speed-peeking.
+
+#### Spray pattern visualiser
+
+After each mag in Free Practice or Spray Control mode, a 2D canvas panel (`src/fx/sprayVisualiser.js`) appears floating beside the spray wall:
+
+- Player's impact positions recorded in **aim-space** — each bullet's deviation from the crosshair centre in mrad, not world space. This makes the pattern weapon-relative regardless of where the player was aiming.
+- Rendered as white dots on black background, scaled so the full M4 pattern fits the panel.
+- Ideal pattern for the current weapon overlaid as green dots with connecting lines — this is the pattern the player needs to **counter-pull** against.
+- Panel persists until next mag starts. Tap `R` to dismiss early.
+- Deviation score: average distance from each player dot to its ideal counterpart. <15 mrad = gold, <25 = silver, <40 = bronze.
+
+#### Stats tracking
+
+Live HUD in the top-left corner during any drill:
+
+```
+HITS       42 / 58
+ACCURACY   72.4%
+HEADSHOTS  18  (42.8%)
+AVG REACT  387 ms
+STREAK     ×7
+```
+
+Session summary on exit: all five metrics plus a per-drill breakdown. Stored in `localStorage` as `range_pb` — personal bests persist between sessions and show as a thin gold line on the score card.
+
+If the player beats a personal best, the score card flashes gold and shows `NEW BEST` — a small dopamine hit that makes people come back the next day to warm up.
+
+#### Weapon selection
+
+Wall rack on the right side of the spawn: silhouettes of each available weapon. Walk up to one and press `F` to equip. Switching weapon mid-drill is allowed — useful for comparing M4 vs P90 spray at the same distance. Infinite reserve ammo always. Reload still takes real time (no fast reload cheat) because reload speed is part of the skill being trained.
+
+#### Implementation sketch
+
+```
+src/modes/trainingRange.js   — scene setup, drill state machine, target spawning
+src/fx/sprayVisualiser.js    — records aim-space impact offsets, draws canvas panel
+src/entities/targetDummy.js  — Group (torso + head), pop/drop tween, hit callbacks
+```
+
+`trainingRange.js` calls `buildLevel` with a purpose-built `rangeDef` (flat floor, strip lights, no fog). It reuses `tryShoot`, `startReload`, `updateHUD` unchanged — the range is not a separate game, just a different scene with different entities. Exiting calls `location.reload()` cleanly (same as S&D match-over).
 
 ---
 
