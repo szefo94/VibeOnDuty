@@ -160,6 +160,7 @@ function _tickStrafe(e, dt, ctx) {
 function _tickPlayerShoot(e, ctx) {
   const { ts, eGround, canSee, distP, desiredY } = ctx;
   const d = getDifficulty();
+  if (player.dead) return;
   if (_snd?.getBombPos()) return;                                     // rushing bomb — don't stop
   if (distP >= ENEMY_SHOOT_RANGE || !canSee) return;
   if (Math.abs(normA(e.facingY - desiredY)) >= d.aimThresh) return;

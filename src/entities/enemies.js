@@ -5,7 +5,7 @@ import { initEnemyState, alertEnemy, STATE_MAP, PATROL_STATE } from '../ai/enemy
 import { CELL, PLAYER_H, ENEMY_HP, ENEMY_SIGHT, GRAVITY } from '../config.js';
 import { getDifficulty } from '../difficulty.js';
 import { MAP_W, MAP_H, MAP, isRamp, mapCell, canMoveTo, hAt } from '../map.js';
-import { buildEnemyMesh } from '../builders/enemyGLTF.js';
+import { buildEnemyMesh, tintEnemyMesh } from '../builders/enemyGLTF.js';
 import { crossfade, tickEnemyAnimation } from '../builders/enemyAnimations.js';
 import { tickFriendlyBot } from './friendlyBots.js';
 import { hasLOS } from '../utils/los.js';
@@ -259,8 +259,57 @@ export function spawnSndEnemies(sitePositions) {
   });
 }
 
+// ── Restore friend indicator after respawn ────────────────────────────
+export function restoreFriendIndicator(e) {
+  if (e._friendIndicator) {
+    e._friendIndicator.visible = true;
+  } else {
+    const ind = new THREE.Mesh(
+      new THREE.ConeGeometry(0.22, 0.45, 8),
+      new THREE.MeshBasicMaterial({ color: 0x00ccff, depthTest: false })
+    );
+    scene.add(ind);
+    e._friendIndicator = ind;
+  }
+}
+
+// ── TDM spawn: 5 friendly bots near player + 5 enemies on far side ──
+const TDM_OFFSETS = [[0,0],[1,0],[-1,0],[0,1],[0,-1]];
+
+export function spawnTdmEnemies(mapDef) {
+  const atkPos = mapDef.spawnAttacker ?? mapDef.spawnPlayer ?? { x: 16 * CELL + CELL / 2, z: 11 * CELL + CELL / 2 };
+  const defPos = mapDef.spawnDefender ?? { x: 4 * CELL + CELL / 2, z: 11 * CELL + CELL / 2 };
+  const atkCell = [Math.round(atkPos.x / CELL), Math.round(atkPos.z / CELL)];
+  const defCell = [Math.round(defPos.x / CELL), Math.round(defPos.z / CELL)];
+  enemies.forEach((e, i) => {
+    if (i < 5) {
+      const [dc, dr] = TDM_OFFSETS[i];
+      const [fc, fr] = openNear(atkCell[0] + dc, atkCell[1] + dr);
+      spawnEnemyIntoSlot(e, [fc, fr]);
+      e.sndTeam = 'friend';
+      tintEnemyMesh(e.mesh, 0x00bb44);
+      if (e._friendIndicator) { scene.remove(e._friendIndicator); e._friendIndicator = null; }
+      const ind = new THREE.Mesh(
+        new THREE.ConeGeometry(0.22, 0.45, 8),
+        new THREE.MeshBasicMaterial({ color: 0x00ccff, depthTest: false })
+      );
+      scene.add(ind);
+      e._friendIndicator = ind;
+    } else {
+      const [dc, dr] = TDM_OFFSETS[i - 5];
+      const [fc, fr] = openNear(defCell[0] + dc, defCell[1] + dr);
+      spawnEnemyIntoSlot(e, [fc, fr]);
+      e.sndTeam = 'enemy';
+      tintEnemyMesh(e.mesh, 0xcc2200);
+      if (e._friendIndicator) { scene.remove(e._friendIndicator); e._friendIndicator = null; }
+      alertEnemy(e);
+    }
+  });
+}
+
 // ── triggerDeath lives here because it reads wave ─────────────────
 export function triggerDeath() {
+  if (player.dead) return;
   player.dead = true;
   emit('player:died');
   if (isAnyModeActive()) {

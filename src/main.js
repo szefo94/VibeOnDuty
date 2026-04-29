@@ -5,7 +5,7 @@ import { debugLines } from './level.js';
 import { locked, gameRunning, setGameRunning, setLocked } from './input.js';
 import { initTouch, isTouchDevice } from './touch.js';
 import { player, startReload } from './entities/player.js';
-import { rebuildAllEnemies, spawnSndEnemies } from './entities/enemies.js';
+import { rebuildAllEnemies, spawnSndEnemies, spawnTdmEnemies } from './entities/enemies.js';
 import { spawnNewDrone, spawnSndDrones, clearSndDrones } from './entities/drone.js';
 import { tryThrowGrenade } from './entities/grenades.js';
 import { tryShoot, tryPunchDamage } from './combat/shoot.js';
@@ -183,7 +183,7 @@ function sndStart() {
 
 function tdmStart() {
   _activateMap();
-  rebuildAllEnemies();                       // apply difficulty HP
+  spawnTdmEnemies(_selectedMap);             // 5 friendly bots + 5 enemies
   const sp = _selectedMap.spawnPlayer ?? { x: 10, z: 10 };
   camera.position.set(sp.x, PLAYER_H, sp.z);
   document.getElementById('overlay').style.display = 'none';

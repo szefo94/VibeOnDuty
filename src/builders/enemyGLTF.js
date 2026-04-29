@@ -293,3 +293,25 @@ export function buildPlayerMesh() {
   playerActions = actions;
   return true;
 }
+
+// ── Team tint ─────────────────────────────────────────────────────────────
+// Clones every material on the mesh so siblings are unaffected, then
+// applies an emissive tint (preserves GLTF textures). Falls back to color.
+export function tintEnemyMesh(mesh, hexColor) {
+  if (!mesh) return;
+  const col = new THREE.Color(hexColor);
+  mesh.traverse((ch) => {
+    if (!ch.isMesh || !ch.material) return;
+    const mats = Array.isArray(ch.material) ? ch.material : [ch.material];
+    ch.material = mats.map((m) => {
+      const c = m.clone();
+      if (c.emissive !== undefined) {
+        c.emissive.set(col);
+        c.emissiveIntensity = 0.4;
+      } else {
+        c.color.set(col);
+      }
+      return c;
+    });
+  });
+}

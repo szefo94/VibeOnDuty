@@ -1,13 +1,15 @@
 import { setMode } from './modeManager.js';
 import { on, emit } from '../events.js';
 import { player } from '../entities/player.js';
-import { enemies, spawnEnemyIntoSlot } from '../entities/enemies.js';
+import { enemies, spawnEnemyIntoSlot, restoreFriendIndicator } from '../entities/enemies.js';
+import { tintEnemyMesh } from '../builders/enemyGLTF.js';
 import { camera } from '../scene.js';
-import { PLAYER_H, MAX_HP, WEAPONS, DEFAULT_WEAPON } from '../config.js';
+import { PLAYER_H, MAX_HP, WEAPONS } from '../config.js';
 import { updateHUD, showMsg, showStatus } from '../hud/overlay.js';
 import { setGameRunning } from '../input.js';
 import { isTouchDevice } from '../touch.js';
 import { show1pWeapon, show3pWeapon } from '../builders/weapon.js';
+import { alertEnemy } from '../ai/enemyStates.js';
 
 const KILL_LIMIT    = 50;
 const MATCH_SECS    = 600;   // 10 minutes
@@ -97,7 +99,10 @@ function tick(dt) {
   for (let i = _enemyRespawnQ.length - 1; i >= 0; i--) {
     _enemyRespawnQ[i].timer -= dt;
     if (_enemyRespawnQ[i].timer <= 0) {
-      spawnEnemyIntoSlot(_enemyRespawnQ[i].e);
+      const e = _enemyRespawnQ[i].e;
+      spawnEnemyIntoSlot(e);
+      tintEnemyMesh(e.mesh, 0xcc2200);
+      alertEnemy(e);
       _enemyRespawnQ.splice(i, 1);
     }
   }
@@ -108,6 +113,8 @@ function tick(dt) {
     if (_friendRespawnQ[i].timer <= 0) {
       const e = _friendRespawnQ[i].e;
       spawnEnemyIntoSlot(e, null, e.weaponRole);
+      tintEnemyMesh(e.mesh, 0x00bb44);
+      restoreFriendIndicator(e);
       _friendRespawnQ.splice(i, 1);
     }
   }
