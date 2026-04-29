@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { MOUSE_SENS, MAX_AMMO, PLAYER_H } from './config.js';
+import { MOUSE_SENS, MAX_AMMO, PLAYER_H, WEAPONS } from './config.js';
 import { camera } from './scene.js';
 import { debugLines } from './level.js';
 import { locked, gameRunning, setGameRunning, setLocked } from './input.js';
@@ -14,6 +14,8 @@ import { updateHUD, showMsg, showStatus } from './hud/overlay.js';
 import { startLoop, setThirdPerson, getThirdPerson, toggleTpSide } from './loop.js';
 import { startSnd, nextRound, getSndSitePositions, isMatchOver, setSndMap } from './modes/snd.js';
 import { tryLoadEnemyGLTF, buildPlayerMesh } from './builders/enemyGLTF.js';
+import { show1pWeapon, show3pWeapon, weapon3p } from './builders/weapon.js';
+import { playerBody } from './builders/playerBody.js';
 import { tryLoadWeaponFBX, tryLoadP90ForHand } from './builders/weaponFBX.js';
 import { tryLoadPistolFBX } from './builders/enemyWeapon.js';
 import { setSkeletonDebugVisible } from './builders/enemyAnimations.js';
@@ -44,13 +46,32 @@ function _activateMap() {
   if (debugLines) debugLines.visible = debugVisible;
 }
 
+// ── Weapon switching ───────────────────────────────────────────────
+function switchWeapon(key) {
+  if (!WEAPONS[key] || player.weapon === key || player.dead) return;
+  if (player.reloading) {
+    player.reloading = false;
+    document.getElementById('reloadwrap').style.display = 'none';
+  }
+  player.weaponAmmo[player.weapon] = player.ammo;
+  player.weaponReserve[player.weapon] = player.reserve;
+  player.weapon = key;
+  player.ammo = player.weaponAmmo[key];
+  player.reserve = player.weaponReserve[key];
+  player.shootCd = 0;
+  show1pWeapon(key);
+  show3pWeapon(key);
+  updateHUD();
+  showStatus(WEAPONS[key].name);
+}
+
 // ── Input: game-action handlers ────────────────────────────────────
 document.addEventListener('keydown', (e) => {
   if (
     e.code === 'KeyR' &&
     gameRunning &&
     !player.reloading &&
-    player.ammo < MAX_AMMO &&
+    player.ammo < (WEAPONS[player.weapon]?.maxAmmo ?? MAX_AMMO) &&
     player.reserve > 0
   )
     startReload();
@@ -71,6 +92,10 @@ document.addEventListener('keydown', (e) => {
     showStatus(player.dancing ? '🕺 DANCE' : '');
   }
   if (e.code === 'KeyG') return; // G handled via keys state in tickSnd
+  if (e.code === 'Digit1' && gameRunning && !player.dead) switchWeapon('m4');
+  if (e.code === 'Digit2' && gameRunning && !player.dead) switchWeapon('p90');
+  if (e.code === 'Digit3' && gameRunning && !player.dead) switchWeapon('awp');
+  if (e.code === 'Digit4' && gameRunning && !player.dead) switchWeapon('pistol');
   if (e.code === 'KeyF' && !player.dead && !player.punching) {
     player.punching = true;
     player.punchClip = player.punchClip === 'punch_cross' ? 'punch_jab' : 'punch_cross';
@@ -181,5 +206,7 @@ _sndStartBtn.textContent = 'LOADING...';
     rebuildAllEnemies();
     buildPlayerMesh();
   }
+  weapon3p.position.set(0.30, 0.90, -0.18);
+  playerBody.add(weapon3p);
   startLoop();
 })();

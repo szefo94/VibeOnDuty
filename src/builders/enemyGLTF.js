@@ -17,7 +17,7 @@ import { scene } from '../scene.js';
 import { buildEnemy } from './enemy.js';
 import { buildEnemyMixer, attachSkeletonDebug } from './enemyAnimations.js';
 import { attachPistolToHand } from './enemyWeapon.js';
-import { attachP90ToPlayerHand } from './weaponFBX.js';
+import { attachWeapons3pToHand } from './weaponFBX.js';
 
 // ── State ──────────────────────────────────────────────────────────────────
 let gltfTemplate = null;
@@ -286,7 +286,7 @@ export function buildPlayerMesh() {
   if (actions.idle) actions.idle.play();
 
   attachSkeletonDebug(clone);
-  attachP90ToPlayerHand(clone);
+  attachWeapons3pToHand(clone);
 
   playerMesh = clone;
   playerMixer = mixer;

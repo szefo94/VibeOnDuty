@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { scene, camera } from '../scene.js';
-import { PLAYER_H, BULLET_DAMAGE, SHOOT_CD, ENERGY_PER_DMG, MAX_ENERGY, PUNCH_RANGE, PUNCH_DAMAGE } from '../config.js';
+import { PLAYER_H, WEAPONS, ENERGY_PER_DMG, MAX_ENERGY, PUNCH_RANGE, PUNCH_DAMAGE } from '../config.js';
 import { wallMeshes } from '../level.js';
 import { wpn, flash, flashMat, muzzleLight } from '../builders/weapon.js';
 import { spawnImpact } from '../fx/impacts.js';
@@ -17,8 +17,6 @@ export let muzzleT = 0;
 export let recoilT = 0;
 export let bobT = 0;
 export let sprayHeat = 0;
-const MAX_SPRAY = 0.055,
-  SPRAY_GROW = 0.08;
 export const SPRAY_COOL = 0.5;
 
 export function coolSpray(dt) {
@@ -63,7 +61,7 @@ const liveBullets = [];
 const _bRc = new THREE.Raycaster();
 const _bPM = new THREE.LineBasicMaterial({ color: 0xffee55, transparent: true, opacity: 1 });
 
-export function spawnBullet(origin, dir) {
+export function spawnBullet(origin, dir, damage = 28) {
   const vel = dir.clone().multiplyScalar(BULLET_SPEED);
   const geo = new THREE.BufferGeometry().setFromPoints([origin.clone(), origin.clone()]);
   const line = new THREE.Line(geo, _bPM.clone());
@@ -74,6 +72,7 @@ export function spawnBullet(origin, dir) {
     life: BULLET_MAX_LIFE,
     line,
     prevPos: origin.clone(),
+    damage,
   });
 }
 
@@ -117,7 +116,7 @@ export function tickBullets(dt) {
       if (e.sndTeam === 'friend') continue; // never shoot allied bots
       const ePos = new THREE.Vector3(e.x, groundElevation(e.x, e.z) + PLAYER_H * 0.6, e.z);
       if (b.pos.distanceTo(ePos) < 0.75) {
-        const dmg = BULLET_DAMAGE + Math.floor(Math.random() * 10);
+        const dmg = b.damage;
         alertEnemy(e);
         player.energy = Math.min(MAX_ENERGY, player.energy + dmg * ENERGY_PER_DMG);
         // knockback stagger
@@ -137,7 +136,7 @@ export function tickBullets(dt) {
     if (activeDrone && !activeDrone.dead) {
       const dPos = new THREE.Vector3(activeDrone.x, activeDrone.y, activeDrone.z);
       if (b.pos.distanceTo(dPos) < 1.2) {
-        const dmg = BULLET_DAMAGE + Math.floor(Math.random() * 10);
+        const dmg = b.damage;
         player.energy = Math.min(MAX_ENERGY, player.energy + dmg * ENERGY_PER_DMG);
         spawnHitMarker();
         activeDrone.takeDamage(dmg, killDrone);
@@ -185,18 +184,19 @@ export function tryShoot() {
     startReload();
     return;
   }
+  const wDef = WEAPONS[player.weapon] ?? WEAPONS.m4;
   const now = performance.now();
-  if (now - player.shootCd < SHOOT_CD) return;
+  if (now - player.shootCd < wDef.fireRate) return;
   player.shootCd = now;
   player.ammo--;
   updateHUD();
   muzzleT = 62;
   recoilT = 1;
-  sprayHeat = Math.min(1, sprayHeat + SPRAY_GROW);
+  sprayHeat = Math.min(1, sprayHeat + wDef.sprayGrow);
   const baseDir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
   const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
   const up = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
-  const ca = sprayHeat * MAX_SPRAY;
+  const ca = sprayHeat * wDef.sprayMax;
   const dir = baseDir
     .clone()
     .addScaledVector(right, (Math.random() - 0.5) * 2 * ca)
@@ -221,6 +221,7 @@ export function tryShoot() {
     origin = new THREE.Vector3();
     flash.getWorldPosition(origin);
   }
-  spawnBullet(origin, dir);
+  const damage = wDef.damage + Math.floor(Math.random() * 10);
+  spawnBullet(origin, dir, damage);
   if (player.ammo === 0) startReload();
 }

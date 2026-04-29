@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
-import { wpn, flash } from './weapon.js';
+import { flash, replaceFbxModel, attachWeapon3pToHand } from './weapon.js';
 
 // ── Tuning constants — FPV P90 ────────────────────────────────────────────────
 // P90.fbx is ~1108 FBX units long → ~0.55 m at this scale
@@ -47,11 +47,9 @@ export async function tryLoadWeaponFBX(path = import.meta.env.BASE_URL + 'models
         : remap(ch.material);
     });
 
-    // Remove procedural weapon geometry, keep the muzzle flash sphere
-    [...wpn.children].forEach(c => { if (c !== flash) wpn.remove(c); });
-    wpn.add(fbx);
+    replaceFbxModel(fbx);
 
-    // Move flash to barrel tip
+    // Move flash to FBX barrel tip
     flash.position.copy(MUZZLE);
 
     console.log('[Weapon] P90.fbx loaded — adjust SCALE/ROT_Y/OFFSET/MUZZLE in weaponFBX.js if needed');
@@ -130,9 +128,8 @@ export async function tryLoadP90ForHand(path = import.meta.env.BASE_URL + 'model
   }
 }
 
-export function attachP90ToPlayerHand(playerRoot) {
-  if (!_p90HandTemplate) return;
+export function attachWeapons3pToHand(playerRoot) {
   const hand = playerRoot.getObjectByName('hand_r');
-  if (!hand) { console.warn('[P90Hand] hand_r not found in player mesh'); return; }
-  hand.add(_p90HandTemplate.clone());
+  if (!hand) { console.warn('[Weapon3p] hand_r not found in player mesh'); return; }
+  attachWeapon3pToHand(hand, P90_ROT, P90_GRIP);
 }

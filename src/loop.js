@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { renderer, scene, camera } from './scene.js';
-import { PLAYER_H, PLAYER_H_CROUCH } from './config.js';
+import { PLAYER_H, PLAYER_H_CROUCH, WEAPONS } from './config.js';
 import { touchLook } from './touch.js';
 import { gameRunning, keys } from './input.js';
 import { player, updatePlayer, LEAN_SHIFT } from './entities/player.js';
@@ -248,7 +248,7 @@ export function loop(ts) {
   );
 
   // ── ADS FOV ─────────────────────────────────────────────────────────
-  const fovTarget = player.aiming ? 50 : 75;
+  const fovTarget = player.aiming ? (WEAPONS[player.weapon]?.adsZoom ?? 50) : 75;
   if (camera.fov !== fovTarget) {
     camera.fov += (fovTarget - camera.fov) * Math.min(1, dt * 14);
     camera.updateProjectionMatrix();

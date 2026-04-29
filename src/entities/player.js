@@ -7,15 +7,14 @@ import {
   MOVE_SPEED,
   SPRINT_MULT,
   MAX_HP,
-  MAX_AMMO,
-  RESERVE_AMMO,
-  RELOAD_MS,
   GRAVITY,
   JUMP_FORCE,
   HEAD_BOB_PITCH,
   SLIDE_SPEED,
   SLIDE_DUR,
   SLIDE_CANCEL_JUMP,
+  WEAPONS,
+  DEFAULT_WEAPON,
 } from '../config.js';
 import { MAP_W, MAP_H, hAt, groundElevation, canMoveTo } from '../map.js';
 import { keys, locked, mouseHeld } from '../input.js';
@@ -31,11 +30,12 @@ import { tryShoot, tickBullets, updateWeapon, coolSpray, bobT } from '../combat/
 /** @type {import('../../types/entities').Player} */
 export const player = /** @type {any} */ ({
   hp: MAX_HP,
-  ammo: MAX_AMMO,
-  reserve: RESERVE_AMMO,
+  ammo: WEAPONS[DEFAULT_WEAPON].maxAmmo,
+  reserve: WEAPONS[DEFAULT_WEAPON].reserve,
   kills: 0,
   reloading: false,
   reloadTimer: 0,
+  reloadTotal: 0,
   shootCd: 0,
   dead: false,
   yaw: 0,
@@ -62,6 +62,9 @@ export const player = /** @type {any} */ ({
   aiming: false,   // RMB held
   aimT: 0,         // 0=hip, 1=full ADS — lerped each frame
   thirdPerson: false, // mirror of loop.js tpTransition>0.5 — written by loop.js
+  weapon: DEFAULT_WEAPON,
+  weaponAmmo:    { m4: WEAPONS.m4.maxAmmo,    p90: WEAPONS.p90.maxAmmo,    awp: WEAPONS.awp.maxAmmo,    pistol: WEAPONS.pistol.maxAmmo    },
+  weaponReserve: { m4: WEAPONS.m4.reserve,    p90: WEAPONS.p90.reserve,    awp: WEAPONS.awp.reserve,    pistol: WEAPONS.pistol.reserve    },
 });
 
 export const visited = Array.from({ length: MAP_H }, () => new Uint8Array(MAP_W));
@@ -79,7 +82,8 @@ const ROLL_ANIM_DUR = 1.467;    // Roll clip duration from enemy.glb — slide t
 export function startReload() {
   if (player.reloading || player.reserve <= 0) return;
   player.reloading = true;
-  player.reloadTimer = RELOAD_MS;
+  player.reloadTotal = WEAPONS[player.weapon].reload;
+  player.reloadTimer = player.reloadTotal;
   document.getElementById('reloadwrap').style.display = 'block';
   showMsg('RELOADING');
 }
@@ -293,9 +297,9 @@ export function updatePlayer(dt) {
   if (player.reloading) {
     player.reloadTimer -= dt * 1000;
     document.getElementById('reloadbar').style.width =
-      (1 - player.reloadTimer / RELOAD_MS) * 100 + '%';
+      (1 - player.reloadTimer / player.reloadTotal) * 100 + '%';
     if (player.reloadTimer <= 0) {
-      const take = Math.min(MAX_AMMO - player.ammo, player.reserve);
+      const take = Math.min(WEAPONS[player.weapon].maxAmmo - player.ammo, player.reserve);
       player.ammo += take;
       player.reserve -= take;
       player.reloading = false;

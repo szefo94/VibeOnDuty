@@ -1,5 +1,5 @@
 import { hudCtx, hudCanvas } from '../scene.js';
-import { MAX_AMMO, GRENADE_ENERGY_COST, MAX_ENERGY, RELOAD_MS } from '../config.js';
+import { MAX_AMMO, GRENADE_ENERGY_COST, MAX_ENERGY, WEAPONS } from '../config.js';
 import { player } from '../entities/player.js';
 import { sprayHeat } from '../combat/shoot.js';
 
@@ -20,7 +20,8 @@ export function drawRings() {
 
   // ── Ammo ring ──────────────────────────────────────────────────────────
   const ammoR = 34 * vs, ammoW = 5 * vs;
-  const ammoPct   = player.ammo / MAX_AMMO;
+  const curMaxAmmo = WEAPONS[player.weapon]?.maxAmmo ?? MAX_AMMO;
+  const ammoPct   = player.ammo / curMaxAmmo;
   const ammoAngle = ammoPct * Math.PI * 2;
   const { r: aR, g: aG } = healthColor(ammoPct);
 
@@ -49,8 +50,8 @@ export function drawRings() {
     hudCtx.stroke();
     hudCtx.lineCap = 'butt';
 
-    for (let i = 0; i < MAX_AMMO; i++) {
-      const a = -Math.PI / 2 + (i / MAX_AMMO) * Math.PI * 2;
+    for (let i = 0; i < curMaxAmmo; i++) {
+      const a = -Math.PI / 2 + (i / curMaxAmmo) * Math.PI * 2;
       hudCtx.beginPath();
       hudCtx.moveTo(cx + Math.cos(a) * (ammoR - ammoW * 0.5), cy + Math.sin(a) * (ammoR - ammoW * 0.5));
       hudCtx.lineTo(cx + Math.cos(a) * (ammoR + ammoW * 0.5), cy + Math.sin(a) * (ammoR + ammoW * 0.5));
@@ -91,7 +92,7 @@ export function drawRings() {
 
   // ── Reload ring ────────────────────────────────────────────────────────
   if (player.reloading) {
-    const rp = 1 - player.reloadTimer / RELOAD_MS;
+    const rp = player.reloadTotal > 0 ? 1 - player.reloadTimer / player.reloadTotal : 0;
     const reloadR = energyR + energyW + 5 * vs;
     hudCtx.beginPath();
     hudCtx.arc(cx, cy, reloadR, 0, Math.PI * 2);

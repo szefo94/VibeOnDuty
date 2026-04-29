@@ -1,10 +1,11 @@
 import { player } from '../entities/player.js';
 import { camera } from '../scene.js';
-import { MAX_HP } from '../config.js';
+import { MAX_HP, WEAPONS } from '../config.js';
 
 export function updateHUD() {
   document.getElementById('ammo-cur').textContent = player.ammo;
   document.getElementById('ammo-rsv').textContent = player.reserve;
+  document.getElementById('weapon-name').textContent = WEAPONS[player.weapon]?.name ?? 'M4A1';
   const hpPct = player.hp / MAX_HP;
   document.getElementById('hp-num').textContent = Math.round(player.hp);
   const hpCol = player.hp > 50 ? '#2ecc71' : player.hp > 25 ? '#e67e22' : '#e74c3c';

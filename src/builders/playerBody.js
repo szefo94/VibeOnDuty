@@ -15,7 +15,7 @@ const mVisor  = mm(0x0a1520, 0.10, 0.75);   // visor
 const mGlove  = mm(0x1a1a1a, 0.70, 0.08);   // gloves
 const mBoots  = mm(0x111111, 0.78, 0.10);   // boots
 const mGun    = mm(0x0f0f0f, 0.25, 0.80);   // rifle body
-const mGunW   = mm(0x1a1410, 0.55, 0.12);   // rifle wood/grip
+const mGunW   = mm(0x1a1410, 0.55, 0.12);   // reserved (unused after weapon3p)
 const mPad    = mm(0x4a6741, 0.80, 0.03);   // knee/elbow pads
 
 function p(geo, mat, x, y, z, rx = 0, ry = 0, rz = 0) {
@@ -98,22 +98,7 @@ p(box(0.04, 0.16, 0.04), mHelm,  0.16, 1.55, 0);
 // ── Visor ─────────────────────────────────────────────────────────
 p(box(0.28, 0.07, 0.04), mVisor, 0, 1.62, -0.17);
 
-// ── Assault rifle (held at hip, pointing forward) ─────────────────
-// receiver body
-p(box(0.055, 0.055, 0.44), mGun,  0.30, 0.90, -0.18);
-// stock
-p(box(0.045, 0.065, 0.18), mGunW, 0.30, 0.90,  0.14);
-// grip
-p(box(0.034, 0.12, 0.038), mGunW, 0.30, 0.82, -0.04);
-// handguard
-p(box(0.048, 0.045, 0.20), mUnifD, 0.30, 0.91, -0.28);
-// barrel
-const barrelGeo = cyl(0.012, 0.014, 0.28, 6);
-p(barrelGeo, mGun, 0.30, 0.91, -0.46);
-// magazine
-p(box(0.032, 0.14, 0.038), mGun,  0.30, 0.80, -0.10);
-// scope rail
-p(box(0.052, 0.022, 0.18), mUnifD, 0.30, 0.93, -0.18);
+// weapon3p group is added here by main.js after assets load
 
 playerBody.visible = false;
 scene.add(playerBody);
