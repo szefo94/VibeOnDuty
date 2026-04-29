@@ -47,12 +47,23 @@ function randomPatrol(sc, sr, rad = 2) {
 }
 const NUM_ENEMIES = 10;
 
+// ── Weapon roles ──────────────────────────────────────────────────────
+const _RAND_ROLES = ['assault', 'assault', 'assault', 'smg', 'smg', 'sniper'];
+function randomRole() { return _RAND_ROLES[Math.floor(Math.random() * _RAND_ROLES.length)]; }
+
+// S&D team compositions (index 0-4 = friendly, 5-9 = enemy)
+const SND_ROLES = [
+  'assault', 'smg',    'assault', 'sniper', 'assault', // friendly team
+  'assault', 'smg',    'sniper',  'assault', 'assault', // enemy team
+];
+
 // ── Enemies array ─────────────────────────────────────────────────
 /**
  * @param {import('../../types/entities').Enemy} e
  * @param {[number,number]|null} [forcedCell]
  */
-export function spawnEnemyIntoSlot(e, forcedCell = null) {
+export function spawnEnemyIntoSlot(e, forcedCell = null, role = null) {
+  role = role ?? e.weaponRole ?? randomRole();
   if (e.mesh) scene.remove(e.mesh);
   if (e.mixer) e.mixer.stopAllAction();
   let mc, mr;
@@ -67,7 +78,8 @@ export function spawnEnemyIntoSlot(e, forcedCell = null) {
   const patrol = randomPatrol(mc, mr, 2);
   const { mesh, muzzleFlash, mixer, actions, facingOffset = 0 } = buildEnemyMesh(
     mc * CELL + CELL / 2,
-    mr * CELL + CELL / 2
+    mr * CELL + CELL / 2,
+    role
   );
   Object.assign(e, {
     mesh,
@@ -75,6 +87,7 @@ export function spawnEnemyIntoSlot(e, forcedCell = null) {
     mixer,
     actions,
     facingOffset,
+    weaponRole: role,
     currentClip: 'idle',
     x: mc * CELL + CELL / 2,
     z: mr * CELL + CELL / 2,
@@ -116,9 +129,11 @@ export const enemies = Array.from({ length: NUM_ENEMIES }, (_) => {
   const [mc, mr] = randomSpawnCell(usedCells);
   usedCells.push([mc, mr]);
   const patrol = randomPatrol(mc, mr, 2);
+  const role = randomRole();
   const { mesh, muzzleFlash, mixer, actions, facingOffset = 0 } = buildEnemyMesh(
     mc * CELL + CELL / 2,
-    mr * CELL + CELL / 2
+    mr * CELL + CELL / 2,
+    role
   );
   return {
     mesh,
@@ -126,6 +141,7 @@ export const enemies = Array.from({ length: NUM_ENEMIES }, (_) => {
     mixer,
     actions,
     facingOffset,
+    weaponRole: role,
     currentClip: 'idle',
     x: mc * CELL + CELL / 2,
     z: mr * CELL + CELL / 2,
@@ -192,21 +208,22 @@ function openNear(cx, cz) {
 }
 
 export function spawnSndEnemies(sitePositions) {
-  const role = _snd?.getPlayerRole() ?? 'attack';
+  const playerRole = _snd?.getPlayerRole() ?? 'attack';
   const NUM_FRIENDS = 5;
   enemies.forEach((e, i) => {
+    const weaponRole = SND_ROLES[i] ?? 'assault';
     if (i < NUM_FRIENDS) {
       // ── Friendly team ──
-      if (role === 'attack') {
+      if (playerRole === 'attack') {
         // Rush to sites with player (east side)
-        spawnEnemyIntoSlot(e, ATTACKER_SLOTS[i % ATTACKER_SLOTS.length]);
+        spawnEnemyIntoSlot(e, ATTACKER_SLOTS[i % ATTACKER_SLOTS.length], weaponRole);
       } else {
         // Defend near sites
         const siteIdx = i < 3 ? 0 : 1;
         const [sx, sz] = sitePositions[siteIdx];
         const [dc, dr] = DEFENDER_FRIEND_OFFSETS[i];
         const [fc, fr] = openNear(Math.floor(sx / CELL) + dc, Math.floor(sz / CELL) + dr);
-        spawnEnemyIntoSlot(e, [fc, fr]);
+        spawnEnemyIntoSlot(e, [fc, fr], weaponRole);
       }
       e.sndTeam = 'friend';
       e.sndSiteTarget = i % 2;
@@ -222,16 +239,16 @@ export function spawnSndEnemies(sitePositions) {
     } else {
       // ── Enemy team ──
       const j = i - NUM_FRIENDS;
-      if (role === 'attack') {
+      if (playerRole === 'attack') {
         // Defenders at sites
         const siteIdx = j < 2 ? 0 : 1;
         const [sx, sz] = sitePositions[siteIdx];
         const [dc, dr] = SND_DEF_OFFSETS[j];
         const [fc, fr] = openNear(Math.floor(sx / CELL) + dc, Math.floor(sz / CELL) + dr);
-        spawnEnemyIntoSlot(e, [fc, fr]);
+        spawnEnemyIntoSlot(e, [fc, fr], weaponRole);
       } else {
         // Attackers — spawn east side, rush sites
-        spawnEnemyIntoSlot(e, ATTACKER_SLOTS[j % ATTACKER_SLOTS.length]);
+        spawnEnemyIntoSlot(e, ATTACKER_SLOTS[j % ATTACKER_SLOTS.length], weaponRole);
         alertEnemy(e);
       }
       e.sndTeam = 'enemy';

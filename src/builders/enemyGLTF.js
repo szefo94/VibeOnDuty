@@ -16,7 +16,7 @@ import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.j
 import { scene } from '../scene.js';
 import { buildEnemy } from './enemy.js';
 import { buildEnemyMixer, attachSkeletonDebug } from './enemyAnimations.js';
-import { attachPistolToHand } from './enemyWeapon.js';
+import { attachEnemyWeapon } from './enemyWeapon.js';
 import { attachWeapons3pToHand } from './weaponFBX.js';
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -176,7 +176,7 @@ export async function tryLoadEnemyGLTF() {
 // ── Build ─────────────────────────────────────────────────────────────────
 // Returns { mesh, muzzleFlash, mixer, actions, facingOffset }
 // facingOffset: 0 for procedural (faces -Z), Math.PI for GLTF (faces +Z by export default)
-export function buildEnemyMesh(wx, wz) {
+export function buildEnemyMesh(wx, wz, role = 'assault') {
 
   // ── Procedural fallback ───────────────────────────────────────────────
   if (!usingGLTF || !gltfTemplate) {
@@ -249,7 +249,7 @@ export function buildEnemyMesh(wx, wz) {
   }
 
   attachSkeletonDebug(clone);
-  attachPistolToHand(clone);
+  attachEnemyWeapon(clone, role);
 
   // Quaternius mannequin faces +Z at rotation.y=0; game convention is -Z forward.
   // Callers add facingOffset to e.mesh.rotation.y so enemies face the right direction.

@@ -203,6 +203,11 @@ _sndStartBtn.disabled = true;
 _startBtn.textContent    = 'LOADING...';
 _sndStartBtn.textContent = 'LOADING...';
 
+// Attach player 3p weapon to body BEFORE async block so buildPlayerMesh()
+// can reparent it to hand_r without immediately losing it.
+weapon3p.position.set(0.30, 0.90, -0.18);
+playerBody.add(weapon3p);
+
 (async () => {
   const assets = await loadAll();
   _startBtn.textContent    = 'DEPLOY';
@@ -213,7 +218,5 @@ _sndStartBtn.textContent = 'LOADING...';
     rebuildAllEnemies();
     buildPlayerMesh();
   }
-  weapon3p.position.set(0.30, 0.90, -0.18);
-  playerBody.add(weapon3p);
   startLoop();
 })();

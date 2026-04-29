@@ -91,3 +91,64 @@ export function attachPistolToHand(enemyRoot) {
   if (!hand) { console.warn('[EnemyWeapon] hand_r not found in enemy mesh'); return; }
   hand.add(_template.clone());
 }
+
+// ── Procedural enemy weapons (role-based 3p models) ───────────────────────
+const _eGun  = new THREE.MeshStandardMaterial({ color: 0x1a1c1e, roughness: 0.35, metalness: 0.85 });
+const _eGun2 = new THREE.MeshStandardMaterial({ color: 0x201810, roughness: 0.70, metalness: 0.20 });
+const _eScope= new THREE.MeshStandardMaterial({ color: 0x0e1218, roughness: 0.18, metalness: 0.80 });
+
+function _mesh(geo, mat, x, y, z, rx = 0) {
+  const m = new THREE.Mesh(geo, mat);
+  m.position.set(x, y, z);
+  if (rx) m.rotation.x = rx;
+  return m;
+}
+
+export function buildEnemyWeapon3p(role = 'assault') {
+  const g = new THREE.Group();
+  const P2 = Math.PI / 2;
+  switch (role) {
+    case 'smg':
+      g.add(_mesh(new THREE.BoxGeometry(0.050, 0.048, 0.28), _eGun,  0,  0,      0));
+      g.add(_mesh(new THREE.BoxGeometry(0.038, 0.020, 0.22), _eGun,  0,  0.028, -0.02)); // top feed
+      g.add(_mesh(new THREE.BoxGeometry(0.028, 0.058, 0.026),_eGun2, 0, -0.044,  0.04)); // grip
+      g.add(_mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.18, 6), _eGun, 0, 0.005, -0.22, P2));
+      break;
+    case 'sniper':
+      g.add(_mesh(new THREE.BoxGeometry(0.042, 0.048, 0.50), _eGun,  0,  0,      0));
+      g.add(_mesh(new THREE.BoxGeometry(0.035, 0.048, 0.20), _eGun2, 0,  0,      0.30)); // stock
+      g.add(_mesh(new THREE.BoxGeometry(0.028, 0.028, 0.16), _eScope,0,  0.038, -0.01)); // scope
+      g.add(_mesh(new THREE.BoxGeometry(0.026, 0.058, 0.026),_eGun2, 0, -0.058,  0.06)); // grip
+      g.add(_mesh(new THREE.CylinderGeometry(0.007, 0.009, 0.55, 6), _eGun, 0, 0.005, -0.50, P2));
+      break;
+    case 'pistol':
+      g.add(_mesh(new THREE.BoxGeometry(0.032, 0.048, 0.16), _eGun,  0,  0,      0));
+      g.add(_mesh(new THREE.BoxGeometry(0.028, 0.062, 0.028),_eGun2, 0, -0.052,  0.04)); // grip
+      g.add(_mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.12, 6), _eGun, 0, 0.005, -0.15, P2));
+      break;
+    default: // assault
+      g.add(_mesh(new THREE.BoxGeometry(0.055, 0.055, 0.38), _eGun,  0,  0,      0));
+      g.add(_mesh(new THREE.BoxGeometry(0.025, 0.088, 0.024),_eGun2, 0, -0.066,  0.05)); // magazine
+      g.add(_mesh(new THREE.BoxGeometry(0.030, 0.058, 0.026),_eGun2, 0, -0.052, -0.04)); // grip
+      g.add(_mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.30, 6), _eGun, 0, 0.010, -0.28, P2));
+      break;
+  }
+  return g;
+}
+
+const _WPN_ROT  = new THREE.Euler(Math.PI / 2, 0, Math.PI / 2);
+const _WPN_GRIP = {
+  assault: new THREE.Vector3(0.02, 0.0, 0.04),
+  smg:     new THREE.Vector3(0.01, 0.0, 0.02),
+  sniper:  new THREE.Vector3(0.02, 0.0, 0.05),
+  pistol:  new THREE.Vector3(0.05, 0.0, 0.01),
+};
+
+export function attachEnemyWeapon(enemyRoot, role = 'assault') {
+  const hand = enemyRoot.getObjectByName('hand_r');
+  if (!hand) return;
+  const wpn = (role === 'pistol' && _template) ? _template.clone() : buildEnemyWeapon3p(role);
+  wpn.rotation.copy(_WPN_ROT);
+  wpn.position.copy(_WPN_GRIP[role] ?? _WPN_GRIP.assault);
+  hand.add(wpn);
+}
