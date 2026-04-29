@@ -70,6 +70,7 @@ export const bunkerMapDef = {
     { id: 'A', x: 8 * CELL + CELL / 2, z: 7  * CELL + CELL / 2 },
     { id: 'B', x: 8 * CELL + CELL / 2, z: 17 * CELL + CELL / 2 },
   ],
+  spawnPlayer:   { x: 11 * CELL + CELL / 2, z: 11 * CELL + CELL / 2 },
   spawnAttacker: { x: 16 * CELL + CELL / 2, z: 11 * CELL + CELL / 2 },
   spawnDefender: { x: 7  * CELL + CELL / 2, z: 11 * CELL + CELL / 2 },
   fog: { color: 0xc8b89a, density: 0.016 },

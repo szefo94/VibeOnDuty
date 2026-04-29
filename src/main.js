@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { MOUSE_SENS, MAX_AMMO } from './config.js';
+import { MOUSE_SENS, MAX_AMMO, PLAYER_H } from './config.js';
 import { camera } from './scene.js';
 import { debugLines } from './level.js';
 import { locked, gameRunning, setGameRunning, setLocked } from './input.js';
@@ -104,6 +104,9 @@ document.addEventListener('mouseup', (e) => {
 // ── Start button ───────────────────────────────────────────────────
 document.getElementById('startbtn').addEventListener('click', () => {
   _activateMap();
+  if (_selectedMap.spawnPlayer) {
+    camera.position.set(_selectedMap.spawnPlayer.x, PLAYER_H, _selectedMap.spawnPlayer.z);
+  }
   document.getElementById('overlay').style.display = 'none';
   if (isTouchDevice) {
     setLocked(true);

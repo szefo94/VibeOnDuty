@@ -45,12 +45,14 @@ const rtRubble  = mm(0x888888, 0.97, 0.00);
 
 export const rooftopMapDef = {
   name: 'Rooftop District',
+  style: 'rooftop',
   tiles: TILES,
   heightmap: HEIGHTMAP,
   width: 24,
   height: 24,
   H1,
   H2,
+  spawnPlayer: { x: 11 * CELL + CELL / 2, z: 11 * CELL + CELL / 2 },
   sites: [
     // NW corner — behind the HVAC cluster at rows 4-5
     { id: 'A', x: 4 * CELL + CELL / 2, z: 3 * CELL + CELL / 2 },
