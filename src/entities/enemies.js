@@ -432,10 +432,10 @@ export function updateEnemies(ts, dt) {
         if (e.crouchTimer <= 0) e.crouching = false;
       }
       e.jumpCd = Math.max(0, e.jumpCd - dt);
-      if (e.onGround && e.jumpCd <= 0 && Math.random() < 0.004) {
+      if (e.onGround && e.jumpCd <= 0 && Math.random() < 0.0008) {
         e.velY = 5.5;
         e.onGround = false;
-        e.jumpCd = 3 + Math.random() * 3;
+        e.jumpCd = 10 + Math.random() * 8;
       }
     } else {
       e.crouching = false;
