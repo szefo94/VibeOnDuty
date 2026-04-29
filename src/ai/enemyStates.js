@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import {
-  CELL, PLAYER_H, ENEMY_SPEED, ENEMY_ROT_SPD, ENEMY_SIGHT,
-  ENEMY_SHOOT_RANGE, ENEMY_SHOOT_CD, ENEMY_DAMAGE, REACT_MIN, REACT_MAX, AIM_THRESH,
+  CELL, PLAYER_H, ENEMY_SPEED, ENEMY_ROT_SPD, ENEMY_SHOOT_RANGE,
 } from '../config.js';
+import { getDifficulty } from '../difficulty.js';
 import { hAt, canMoveTo } from '../map.js';
 import { slerp, normA } from '../math.js';
 import { astar } from '../astar.js';
@@ -15,7 +15,7 @@ import { spawnTracer } from '../fx/tracers.js';
 import { on } from '../events.js';
 
 // S&D API injected at runtime via 'snd:configure' event (avoids circular dep).
-// null in wave mode — all _snd?.foo() calls return undefined (falsy) safely.
+// null in wave/TDM mode — all _snd?.foo() calls return undefined (falsy) safely.
 let _snd = null;
 on('snd:configure', api => { _snd = api; });
 
@@ -59,13 +59,14 @@ export function semiAlertEnemy(e) {
 // Returns isMoving.
 function _tickMovement(e, dt, ctx, speedMult, rotMult) {
   const { ts, eGround, pdx, pdz, distP } = ctx;
-  const bombPos        = _snd?.getBombPos() ?? null;
-  const isEnemyAtk     = _snd?.isActive() && e.sndTeam === 'enemy' && _snd?.getPlayerRole() === 'defend';
-  const sitePos        = isEnemyAtk ? _snd?.getSitePositions()[e.sndSiteAttack ?? 0] : null;
-  const goalX          = sitePos ? sitePos[0] : bombPos ? bombPos[0] : camera.position.x;
-  const goalZ          = sitePos ? sitePos[1] : bombPos ? bombPos[1] : camera.position.z;
-  const goalCell       = [Math.floor(goalX / CELL), Math.floor(goalZ / CELL)];
-  const goalChanged    = !e.pathGoal || e.pathGoal[0] !== goalCell[0] || e.pathGoal[1] !== goalCell[1];
+  const d                = getDifficulty();
+  const bombPos          = _snd?.getBombPos() ?? null;
+  const isEnemyAtk       = _snd?.isActive() && e.sndTeam === 'enemy' && _snd?.getPlayerRole() === 'defend';
+  const sitePos          = isEnemyAtk ? _snd?.getSitePositions()[e.sndSiteAttack ?? 0] : null;
+  const goalX            = sitePos ? sitePos[0] : bombPos ? bombPos[0] : camera.position.x;
+  const goalZ            = sitePos ? sitePos[1] : bombPos ? bombPos[1] : camera.position.z;
+  const goalCell         = [Math.floor(goalX / CELL), Math.floor(goalZ / CELL)];
+  const goalChanged      = !e.pathGoal || e.pathGoal[0] !== goalCell[0] || e.pathGoal[1] !== goalCell[1];
 
   if (e.path.length === 0 || e.pathTick <= 0 || goalChanged) {
     e.path = astar(e.x, e.z, goalX, goalZ);
@@ -87,8 +88,8 @@ function _tickMovement(e, dt, ctx, speedMult, rotMult) {
     if (sdx * sdx + sdz * sdz < pr * pr) _snd.markPlanting(e.x, e.z);
   }
 
-  // Bot-vs-bot shooting (S&D)
-  if (_snd?.isActive() && ts - (e.botShootCd ?? 0) > ENEMY_SHOOT_CD) {
+  // Bot-vs-bot shooting (S&D / TDM)
+  if (ts - (e.botShootCd ?? 0) > d.shootCd) {
     for (const friend of ctx.enemies) {
       if (friend.dead || friend.sndTeam !== 'friend') continue;
       const fdx = friend.x - e.x, fdz = friend.z - e.z;
@@ -97,7 +98,7 @@ function _tickMovement(e, dt, ctx, speedMult, rotMult) {
       if (!hasLOS(e.x, eGround + PLAYER_H * 0.85, e.z, friend.x, fGround + PLAYER_H * 0.85, friend.z)) continue;
       e.botShootCd   = ts;
       e.muzzleFlashT = 55;
-      friend.takeDamage(ENEMY_DAMAGE + Math.floor(Math.random() * 7), ctx.killEnemy);
+      friend.takeDamage(d.damage + Math.floor(Math.random() * 5), ctx.killEnemy);
       break;
     }
   }
@@ -111,7 +112,7 @@ function _tickMovement(e, dt, ctx, speedMult, rotMult) {
     if (dd < 0.18) {
       e.path.shift();
     } else {
-      const spd = ENEMY_SPEED * speedMult;
+      const spd = ENEMY_SPEED * speedMult * d.speedMult;
       e.velX += ((ddx / dd) * spd - e.velX) * 12 * dt;
       e.velZ += ((ddz / dd) * spd - e.velZ) * 12 * dt;
       const nx = e.x + e.velX * dt, nz = e.z + e.velZ * dt;
@@ -132,16 +133,41 @@ function _tickMovement(e, dt, ctx, speedMult, rotMult) {
   return isMoving;
 }
 
+// Lateral strafing — applies perpendicular velocity during attack.
+// Direction flips on a random timer; chance and speed scale with difficulty.
+function _tickStrafe(e, dt, ctx) {
+  const d = getDifficulty();
+  if ((e.strafeT ?? 0) <= 0) {
+    e.strafeDir = Math.random() < d.strafeChance ? (Math.random() < 0.5 ? 1 : -1) : 0;
+    e.strafeT   = 0.35 + Math.random() * 0.65;
+  }
+  e.strafeT = Math.max(0, e.strafeT - dt);
+  if (!e.strafeDir) return;
+
+  const { pdx, pdz, eGround } = ctx;
+  const len = Math.sqrt(pdx * pdx + pdz * pdz);
+  if (len < 0.1) return;
+
+  // Perpendicular to player direction
+  const perpX = -pdz / len, perpZ = pdx / len;
+  const spd   = ENEMY_SPEED * d.speedMult * 0.55 * e.strafeDir;
+  const sx    = perpX * spd * dt;
+  const sz    = perpZ * spd * dt;
+  if (canMoveTo(e.x + sx, e.z, eGround)) e.x += sx;
+  if (canMoveTo(e.x, e.z + sz, eGround)) e.z += sz;
+}
+
 function _tickPlayerShoot(e, ctx) {
   const { ts, eGround, canSee, distP, desiredY } = ctx;
-  if (_snd?.getBombPos()) return;                                 // rushing bomb — don't stop
+  const d = getDifficulty();
+  if (_snd?.getBombPos()) return;                                     // rushing bomb — don't stop
   if (distP >= ENEMY_SHOOT_RANGE || !canSee) return;
-  if (Math.abs(normA(e.facingY - desiredY)) >= AIM_THRESH) return;
-  if (ts - e.shootCd <= ENEMY_SHOOT_CD) return;
+  if (Math.abs(normA(e.facingY - desiredY)) >= d.aimThresh) return;
+  if (ts - e.shootCd <= d.shootCd) return;
   if (!hasLOS(e.x, eGround + PLAYER_H * 0.85, e.z, camera.position.x, camera.position.y, camera.position.z)) return;
 
   e.shootCd = ts;
-  player.hp = Math.max(0, player.hp - ENEMY_DAMAGE - Math.floor(Math.random() * 7));
+  player.hp = Math.max(0, player.hp - d.damage - Math.floor(Math.random() * 5));
   triggerHitFlash(e.x, e.z);
   triggerScreenShake(0.45);
   updateHUD();
@@ -177,7 +203,8 @@ export const PATROL_STATE = {
         e.patrolWp = (e.patrolWp + 1) % e.patrol.length;
         e.wpWait   = WP_WAITS[e.patrolWp % WP_WAITS.length];
       } else {
-        const spd2 = ENEMY_SPEED * 0.42 * dt;
+        const d    = getDifficulty();
+        const spd2 = ENEMY_SPEED * d.speedMult * 0.42 * dt;
         const nx = e.x + (ddx / dd) * spd2, nz = e.z + (ddz / dd) * spd2;
         if (canMoveTo(nx, e.z, ctx.eGround)) e.x = nx;
         if (canMoveTo(e.x, nz, ctx.eGround)) e.z = nz;
@@ -192,7 +219,10 @@ export const PATROL_STATE = {
 
 export const SPOTTED_STATE = {
   name: 'spotted',
-  enter(e) { e.reactDelay = REACT_MIN + Math.random() * (REACT_MAX - REACT_MIN); },
+  enter(e) {
+    const d = getDifficulty();
+    e.reactDelay = d.reactMin + Math.random() * (d.reactMax - d.reactMin);
+  },
   tick(e, dt, ctx) {
     if (ctx.canSee) {
       e.alertTimer = 9000;
@@ -219,6 +249,7 @@ export const ATTACK_STATE = {
       if (e.alertTimer <= 0) { transitionTo(e, PATROL_STATE, ctx); return false; }
     }
     const isMoving = _tickMovement(e, dt, ctx, 1.0, 2.5);
+    _tickStrafe(e, dt, ctx);
     _tickPlayerShoot(e, ctx);
     return isMoving;
   },

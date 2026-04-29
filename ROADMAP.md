@@ -25,27 +25,29 @@ src/
     bunker.js           — Greek Columns mapDef (complex arena, ramps, cracks, torches)
     rooftop.js          — Rooftop District mapDef (outdoor, HVAC cover, daylight)
     concept.js          — Column Arena mapDef (marble pillar prototype)
+  difficulty.js         — setDifficulty/getDifficulty; active preset singleton
   modes/
     modeManager.js      — setMode/getMode/isAnyModeActive (zero-dep registry)
     snd.js              — S&D match state machine, round lifecycle, bomb logic
+    tdm.js              — Team Deathmatch — score, respawn queues, 10-min timer
   ai/
     enemyStates.js      — PATROL/SPOTTED/ATTACK + transitionTo, alertEnemy, semiAlertEnemy
   builders/
-    weapon.js           — player weapon model
-    playerBody.js       — full soldier body
+    weapon.js           — player weapon model — 4 weapons (m4/p90/awp/pistol), 1p+3p sub-groups, show1pWeapon/show3pWeapon
+    playerBody.js       — full soldier body (weapon3p parented here; reparented to hand_r by GLTF loader)
     enemy.js            — ground soldier model (procedural fallback)
     drone.js            — drone model (procedural)
-    enemyGLTF.js        — GLTF enemy + player mesh loader
+    enemyGLTF.js        — GLTF enemy + player mesh loader; buildEnemyMesh(wx,wz,role)
     enemyAnimations.js  — AnimationMixer crossfade
-    enemyWeapon.js      — enemy pistol GLTF
-    weaponFBX.js        — player M4/P90 FBX loader
+    enemyWeapon.js      — role-based procedural enemy weapons (assault/smg/sniper/pistol); FBX pistol fallback
+    weaponFBX.js        — player M4/P90 FBX loader; attachWeapons3pToHand
     assetManager.js     — register/loadAll parallel asset registry
   combat/
-    shoot.js            — bullet physics, hit detection, weapon anim, spray
+    shoot.js            — bullet physics, hit detection, weapon anim, spray — per-weapon damage/fireRate/sprayMax
     damage.js           — grenade falloff, entity/player damage formulas
   entities/
     entityBase.js       — applyEntityBase mixin (isAlive, takeDamage)
-    player.js           — player state, movement, dive, lean, reload
+    player.js           — player state, movement, dive, lean, reload; per-weapon ammo/reserve/weaponAmmo map
     enemies.js          — enemy AI loop, S&D team spawn, kill/death events
     friendlyBots.js     — allied bot AI (A*, LOS, bot-vs-bot shooting)
     drone.js            — drone runtime (AI, EMP, orbit, S&D recon drones)
@@ -101,6 +103,10 @@ types/
 | 24 | Gamepad API (`gamepad.js`), viewport-relative HUD ring scaling in `rings.js` |
 | bugfix | Dance animation set to `LoopOnce`; `finished` event auto-clears `player.dancing` |
 | 21 | Three maps: Greek Columns (original arena), Rooftop District, Column Arena concept. `buildLevel(mapDef)` refactor, `setActiveMap` live bindings, per-map spawn/sites/lighting/fog. Map selector overlay with 3 cards. Fixed rooftop player spawn + HVAC pillar rendering. |
+| 18 | 4-weapon system — M4A1 / P90 / AWP / Pistol on keys 1–4. Per-weapon config in `config.js` (damage, fireRate, sprayMax, sprayGrow, reload, maxAmmo, reserve, adsZoom). Per-weapon ammo state in `player.weaponAmmo`/`weaponReserve`, saved/restored on switch. Weapon name in HUD; ammo ring scales to active weapon mag. ADS FOV per weapon. `show1pWeapon`/`show3pWeapon` toggle sub-group visibility. Status feedback on every key press including same-weapon re-press. Reload bar driven by `player.reloadTotal`. |
+| 18+ | Enemy weapon roles — `buildEnemyWeapon3p(role)` generates assault/smg/sniper/pistol procedural meshes; `attachEnemyWeapon(root, role)` replaces per-enemy pistol. `buildEnemyMesh` accepts `role` param passed through from `spawnEnemyIntoSlot`. S&D fixed `SND_ROLES[10]` array specialises each bot slot (sniper holds, SMG rushes). 3p player weapon fix: `weapon3p` added to `playerBody` before async IIFE so `attachWeapons3pToHand` can correctly reparent it to `hand_r`. |
+| 35 (partial) | **Team Deathmatch** — `src/modes/tdm.js`. First to 50 kills wins or 10-minute timer. Player respawns after 3 s; enemies respawn after 3 s via queue in TDM tick. `enemy:killed` / `player:died` events drive score tracking and respawn. `getMode()?.name` gating in `killEnemy` and `triggerDeath` ensures S&D round events don't fire in TDM. v1: 10 enemies vs player solo (no friendly bots in TDM yet). |
+| 39 (partial) | **Difficulty system** — `src/difficulty.js` + `DIFFICULTY_PRESETS` in `config.js`. 4 tiers (Recruit / Regular / Veteran / Elite) each define `reactMin/Max`, `shootCd`, `damage`, `speedMult`, `aimThresh`, `hp`, `sight`, `strafeChance`. Enemy AI in `enemyStates.js` reads `getDifficulty()` live — reaction delay, shoot cooldown, damage, aim threshold, speed. `_tickStrafe()` added to `ATTACK_STATE`: perpendicular velocity applied each frame, direction flips on timer, active only when `strafeChance > 0`. Recruit: stands still, slow, 70 HP, 16 m sight. Elite: 60–150 ms reaction, 420 ms shoot CD, always strafing, 160 HP, 30 m sight. Picker on main overlay; `setDifficulty` called on card click. `rebuildAllEnemies()` called at game start (not just asset load) so chosen HP applies immediately. |
 
 ---
 
@@ -123,18 +129,13 @@ Web Audio API with spatial sound via `PannerNode` (positioned relative to camera
 
 ---
 
-### Phase 18 — Weapon expansion
+### ~~Phase 18 — Weapon expansion~~ ✅ Done
 
-The P90 FBX loader already exists (`weaponFBX.js`) but the P90 is never selectable. Make weapons a first-class concept.
-
-- Per-weapon config block in `config.js` (damage, fire rate, spray pattern, mag size, reload time, ADS FOV)
-- Key `1`/`2` to switch M4 ↔ P90; pistol as tertiary (`3`)
-- Weapon indicator in HUD (icon + active ammo ring)
-- S&D round reset applies full loadout per weapon
+See Completed table — 4-weapon system with per-weapon config, ammo, reload, spray, ADS FOV, HUD indicator, and S&D team role specialisation.
 
 ---
 
-### Phase 19 — Weapon buy menu (S&D)
+### Phase 19 — Weapon buy menu + Grenade arsenal (S&D)
 
 Counter-Strike style buy phase at the start of each round. Player spawns with a pistol only; the buy window is open for the first 10 s of the round (or until the player leaves spawn).
 
@@ -243,7 +244,7 @@ Browser E ──WS──┘
 #### Lobby & matchmaking
 
 - Room code system: host generates a 4-char code, shares it out-of-band. Clients join via `?room=XXXX` query param.
-- Overlay gets a **[ HOST ]** and **[ JOIN ]** button alongside DROP IN / S&D. Join flow: enter room code → connect → wait in lobby until host starts the match.
+- Overlay gets a **[ HOST ]** and **[ JOIN ]** button alongside INCURSION / TDM / S&D. Join flow: enter room code → connect → wait in lobby until host starts the match.
 - Lobby shows connected players (name = browser-generated adjective-noun, e.g. "SilentViper"), team assignment, ready state.
 
 #### Bot fill
@@ -456,19 +457,14 @@ Same map geometry, radically different atmosphere — doubles map count without 
 - **Night variant**: low ambient (`0.12 * Math.PI`), no sun, flashlight attached to camera (`THREE.SpotLight` following `camera.position`). Enemies also carry flashlights — visible from across the map, breaks stealth.
 - **Rain**: `src/fx/rain.js` — `Points` geometry with ~2000 streaks falling per frame, slight fog increase, puddle-reflection `MeshStandardMaterial` on the floor plane.
 - **Dust storm**: heavy `FogExp2` density (0.06), desaturated sand tones — sightlines drop to ~15 m. Fundamentally changes how S&D plays.
-- Map variant is chosen randomly at round start in S&D, or selectable in Drop In via a second row in the map selector.
+- Map variant is chosen randomly at round start in S&D, or selectable in Incursion/TDM via a second row in the map selector.
 
 ---
 
-### Phase 35 — Additional game modes
+### Phase 35 — Additional game modes *(TDM shipped; CTF pending)*
 
-Two new modes alongside Drop In and S&D, sharing all existing entity and combat infrastructure.
-
-#### Team Deathmatch (TDM)
-- 5v5, first team to 50 kills wins or highest score after 10 minutes.
-- No bomb, no sites, no round structure. Respawn 3 s after death at a random spawn point.
-- `src/modes/tdm.js` — minimal state machine: score counters, respawn queue, match timer.
-- Kill feed already exists; score shown in `snd-match-header` repurposed (hide round/bomb rows).
+#### ~~Team Deathmatch~~ ✅ Done
+First to 50 kills, 10-minute timer, 3-second respawn for player and enemies, score bar in HUD. See Completed table. **Remaining TDM work:** friendly bot team (4 bots with `sndTeam:'friend'`), per-player kill score vs team kill score split.
 
 #### Capture the Flag (CTF)
 - Two flags at opposing team bases (glowing `THREE.Mesh` cylinder + emissive material). Carry enemy flag to your base to score.
@@ -502,28 +498,25 @@ Let players build and share custom maps without touching code.
 
 ---
 
-### Phase 38 — Sniper rifle & weapon archetypes
+### Phase 38 — Sniper polish & advanced weapon feel *(partially done)*
 
-Introduce a high-skill weapon that changes how long-range engagements feel.
+**Already implemented (Phase 18):** AWP exists with `adsZoom: 30`, 140 damage, 10-round mag, 5 reserve. Weapon archetypes (rifle/SMG/sniper/pistol) formalised in `config.js`. S&D bot sniper role holds long positions via `SND_ROLES`.
 
-- **Sniper rifle** (`AWP`-style): 1-shot kill to body, 140 damage. Bolt action — 1.4 s between shots, 5-round mag, 1 spare mag. RMB scopes in with narrow FOV (30°) and slight sway that settles after 0.6 s hold-breath (hold `Shift` while ADS).
-- **Weapon archetypes** formalised in `config.js`:
-
-| Archetype | Example | Role |
-|-----------|---------|------|
-| Rifle | M4A1 | All-round, medium range |
-| SMG | P90 | Fast TTK, short range, large mag |
-| Sniper | AWP | One-shot, long range, slow |
-| Pistol | Default | Sidearm, low damage |
-
-- Scope visual: `renderer.setPixelRatio` bump + FOV tween via `camera.fov`; vignette overlay via CSS.
-- Bullet drop added for sniper only: vertical velocity decreases by `9.8 * t²` in `shoot.js`; enemies at >30 m require aiming slightly high.
-- Bots equipped with snipers hold long-range positions; they never rush with an AWP.
+**Remaining:**
+- Bolt-action mechanic — force 1.4 s `fireRate` cooldown enforced visually (bolt pull animation or model hide/show)
+- Hold-breath: `Shift` while ADS reduces sway; `player.holdBreath` flag settles a sway oscillator over 0.6 s
+- Sway oscillator added to `shoot.js` spray calc — AWP-specific, overrides normal spray curve
+- Scope vignette overlay — CSS ring mask shown when `player.aiming && player.weapon === 'awp'`
+- Bullet drop for sniper only: `b.velY -= 9.8 * dt` in `tickBullets` when `b.isSniper` flag set
+- Enemy sniper bots: hold position when `weaponRole === 'sniper'`, never advance to site
 
 ---
 
-### Phase 39 — Adaptive difficulty AI
+### Phase 39 — Adaptive difficulty AI *(static tiers shipped; adaptive pending)*
 
+**Already implemented:** 4 static difficulty tiers (Recruit / Regular / Veteran / Elite) with picker on main overlay. Full parameter table per tier — see Completed table. Strafing movement pattern active at Veteran+ difficulty.
+
+**Remaining — adaptive runtime nudging:**
 The game silently tracks player performance and nudges bot behaviour so the session stays fun — not too easy, not too hard.
 
 - **Performance score**: rolling 60-second window of `(kills − deaths) / shots_fired`. Updated in `waveSystem.js` or a new `src/ai/difficultyAdapter.js`.
@@ -535,3 +528,96 @@ The game silently tracks player performance and nudges bot behaviour so the sess
 - **Target feel**: player should win ~55% of 1v1 engagements. If they're winning 80%+, dial up one lever per 60 s. If dying 3× in 30 s, dial down.
 - No UI — the adaptation is invisible. Players just feel "the enemies got smarter" or "finally had a good round" without knowing why.
 - Hard cap: never exceeds the `Aggressive` bot personality ceiling (Phase 26) or drops below `Passive` floor.
+
+---
+
+## Idea Slogan Backlog
+
+Tags — **complexity:** `easy` `medium` `hard` `very hard` · **player demand:** `hot` `solid` `niche` · **feel:** `juicy` `tactical` `polish` `content` `meta`
+
+### Combat feel
+
+| # | Idea | complexity | demand | feel |
+|---|------|-----------|--------|------|
+| 1 | Aim punch — camera kicks slightly on every hit received. | `easy` | `hot` | `juicy` |
+| 2 | Distinct headshot vs. body-hit sound so you know the shot quality without looking at the marker. | `easy` | `hot` | `juicy` |
+| 3 | Counter-strafe snaps accuracy to zero instantly when you stop moving, rewarding sharp inputs. | `medium` | `hot` | `tactical` |
+| 4 | Reload cancel — tapping fire mid-reload chambers the one remaining round and interrupts the animation. | `medium` | `hot` | `juicy` |
+| 5 | Grenade cook — hold the throw key to keep the pin out; release at the last moment for a contact burst. | `medium` | `hot` | `tactical` |
+| 6 | Grenade preview arc — while winding up, dots trace the flight path in world space. | `medium` | `hot` | `polish` |
+| 7 | Kill distance shown in the kill feed after every sniper kill ("47 m"). | `easy` | `solid` | `polish` |
+| 8 | Tactical reload — different animation when the mag still has rounds (keep one in the chamber, faster). | `medium` | `solid` | `juicy` |
+| 9 | Spray-transfer discipline — first 5 bullets are guaranteed dead-accurate before cone kicks in. | `medium` | `solid` | `tactical` |
+| 10 | Peek advantage — pre-aim an angle and step out faster than the enemy can react, modelling real CS timing. | `hard` | `solid` | `tactical` |
+| 11 | Bullet penetration — rounds pass through thin walls at 40% reduced damage, flagged with a `[WALLBANG]` marker. | `hard` | `hot` | `tactical` |
+| 12 | Ricochet off angled metal surfaces at reduced damage, max one bounce per bullet. | `hard` | `niche` | `juicy` |
+| 13 | Scope glint — the AWP lens catches light and flickers for ~0.3 s before the shot, visible at range. | `medium` | `solid` | `tactical` |
+| 14 | Weapon inspect animation plays when the player is idle for 10 s. | `easy` | `solid` | `polish` |
+
+### Audio & perception
+
+| # | Idea | complexity | demand | feel |
+|---|------|-----------|--------|------|
+| 15 | Footstep sounds vary by surface — concrete thud, metal clang, grass hush. | `medium` | `hot` | `juicy` |
+| 16 | Sound occlusion — gunshots are muffled when the source is on the other side of a wall. | `hard` | `hot` | `tactical` |
+| 17 | Footstep directionality — enemies heard louder from behind, quieter ahead, using `PannerNode` cones. | `hard` | `hot` | `tactical` |
+| 18 | Bomb beep pitch rises as the defuse deadline approaches, turning audio into a countdown. | `easy` | `hot` | `juicy` |
+| 19 | Dynamic music that intensifies the moment a bomb is planted and resolves on defuse or explosion. | `medium` | `hot` | `juicy` |
+| 20 | Killstreak voice announcer — "DOUBLE KILL", "ACE", "FLAWLESS" barked at the player. | `easy` | `solid` | `juicy` |
+| 21 | Friendly bot voice lines for callouts — "SITE A CLEAR", "PLANTING NOW", "ENEMY BEHIND YOU". | `medium` | `solid` | `content` |
+
+### Visuals & polish
+
+| # | Idea | complexity | demand | feel |
+|---|------|-----------|--------|------|
+| 22 | Post-processing bloom on muzzle flash and fire zones — cheap and makes everything feel louder. | `easy` | `hot` | `juicy` |
+| 23 | Bullet hole decals on walls that persist until the round resets. | `medium` | `solid` | `polish` |
+| 24 | Player model shadow leaks around corners and gives away position before the body does. | `medium` | `niche` | `tactical` |
+| 25 | Time dilation — final kill of the round plays at 0.25× speed for exactly one second, then snaps back. | `medium` | `hot` | `juicy` |
+| 26 | Bomb carrier has a subtle glow on their model visible only to their own team on radar. | `easy` | `solid` | `polish` |
+| 27 | Hot zone pulse — bomb sites pulse with a red halo on the minimap the entire time the bomb is live. | `easy` | `solid` | `polish` |
+| 28 | Enemy death ragdoll using simple per-bone velocity inheritance, no external physics engine needed. | `hard` | `hot` | `juicy` |
+| 29 | Tracer rounds briefly illuminate the scene along the bullet path like a flashlight streak. | `easy` | `solid` | `juicy` |
+
+### Tactical / S&D depth
+
+| # | Idea | complexity | demand | feel |
+|---|------|-----------|--------|------|
+| 30 | Spectator mode — dead players watch from any live teammate's first-person POV, switchable with Tab. | `medium` | `hot` | `content` |
+| 31 | Team economy display during buy phase — see each bot's cash so you know if they can afford rifles. | `easy` | `hot` | `meta` |
+| 32 | Surrender vote — team can forfeit remaining rounds when down 0-7; requires unanimous agreement. | `easy` | `solid` | `meta` |
+| 33 | Interactive bomb defuse mini-game — tap the correct key sequence instead of hold-F. | `medium` | `niche` | `content` |
+| 34 | Decoy grenade routes enemies toward the throw site, giving the planting team a free flank. | `medium` | `solid` | `tactical` |
+| 35 | Spawn protection bubble — first 1.5 s after spawn you cannot be shot and cannot shoot, prevents spawn-kill cheese. | `easy` | `solid` | `tactical` |
+| 36 | Ghost round — every 5th round footsteps are silent for both teams, rewarding visual awareness over audio. | `easy` | `niche` | `content` |
+| 37 | Friendly fire toggle per lobby for hardcore mode where every bullet counts. | `easy` | `niche` | `meta` |
+| 38 | Wallbang check key — hold `Alt` to highlight penetrable surfaces in view with a colour overlay. | `medium` | `solid` | `tactical` |
+| 39 | Round-end MVP card — highest-impact player gets a solo model shot with their stats overlaid. | `medium` | `solid` | `juicy` |
+
+### Progression & meta
+
+| # | Idea | complexity | demand | feel |
+|---|------|-----------|--------|------|
+| 40 | Challenge cards each round — "3 pistol kills = +$500 bonus" drives creative play. | `medium` | `hot` | `meta` |
+| 41 | Loadout presets — save up to 3 buy configurations and trigger with Ctrl+1/2/3 in buy phase. | `easy` | `solid` | `meta` |
+| 42 | Spray pattern unlock — completing 100 kills with a weapon reveals its ideal counter-pull pattern on the firing range. | `medium` | `solid` | `meta` |
+| 43 | Crosshair customiser — shape, colour, gap, dot, thickness, all stored in `localStorage`. | `easy` | `hot` | `polish` |
+| 44 | Kill verification ping — distinct visual pop on the kill shot separate from the regular hitmarker. | `easy` | `hot` | `juicy` |
+| 45 | Seasonal map variant — Christmas lights on rooftop in December, skull decorations on bunker in October. | `medium` | `solid` | `content` |
+
+### AI & bots
+
+| # | Idea | complexity | demand | feel |
+|---|------|-----------|--------|------|
+| 46 | Enemy bots call out their own position over a fake radio when spotted, misdirecting naive players. | `medium` | `niche` | `content` |
+| 47 | Body drag — walk up to a fresh corpse and pull it behind cover to deny enemies a death-position read. | `hard` | `niche` | `tactical` |
+| 48 | Bots remember where they were last killed and avoid that exact spot for two rounds. | `medium` | `solid` | `tactical` |
+| 49 | Sniper bot holds the angle they first acquired a kill from and never moves — genuinely terrifying. | `easy` | `solid` | `tactical` |
+
+### Long-shot / dream
+
+| # | Idea | complexity | demand | feel |
+|---|------|-----------|--------|------|
+| 50 | Grappling hook as a one-per-round ability — hard to aim, huge vertical mobility, zero second chances. | `hard` | `hot` | `content` |
+| 51 | Procedurally generated map variant each match — same tile palette, randomised layout, never the same twice. | `very hard` | `niche` | `content` |
+| 52 | Ammo type swap — switch between FMJ (penetration) and hollow-point (extra damage, no wallbang) on the fly. | `hard` | `niche` | `tactical` |

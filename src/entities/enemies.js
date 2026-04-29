@@ -3,6 +3,7 @@ import { scene, camera } from '../scene.js';
 import { applyEntityBase } from './entityBase.js';
 import { initEnemyState, alertEnemy, STATE_MAP, PATROL_STATE } from '../ai/enemyStates.js';
 import { CELL, PLAYER_H, ENEMY_HP, ENEMY_SIGHT, GRAVITY } from '../config.js';
+import { getDifficulty } from '../difficulty.js';
 import { MAP_W, MAP_H, MAP, isRamp, mapCell, canMoveTo, hAt } from '../map.js';
 import { buildEnemyMesh } from '../builders/enemyGLTF.js';
 import { crossfade, tickEnemyAnimation } from '../builders/enemyAnimations.js';
@@ -12,7 +13,7 @@ import { player } from './player.js';
 import { spawnAmmoDrop } from './ammoDrops.js';
 import { showMsg, showKillFeed } from '../hud/overlay.js';
 import { setGameRunning } from '../input.js';
-import { isAnyModeActive } from '../modes/modeManager.js';
+import { isAnyModeActive, getMode } from '../modes/modeManager.js';
 import { wave } from './waveSystem.js';
 import { on, emit } from '../events.js';
 
@@ -91,9 +92,9 @@ export function spawnEnemyIntoSlot(e, forcedCell = null, role = null) {
     currentClip: 'idle',
     x: mc * CELL + CELL / 2,
     z: mr * CELL + CELL / 2,
-    hp: ENEMY_HP,
-    maxHp: ENEMY_HP,
-    hpDrain: ENEMY_HP,
+    hp: getDifficulty().hp,
+    maxHp: getDifficulty().hp,
+    hpDrain: getDifficulty().hp,
     state: 'patrol',
     facingY: Math.random() * Math.PI * 2,
     alertTimer: 0,
@@ -145,9 +146,9 @@ export const enemies = Array.from({ length: NUM_ENEMIES }, (_) => {
     currentClip: 'idle',
     x: mc * CELL + CELL / 2,
     z: mr * CELL + CELL / 2,
-    hp: ENEMY_HP,
-    maxHp: ENEMY_HP,
-    hpDrain: ENEMY_HP,
+    hp: getDifficulty().hp,
+    maxHp: getDifficulty().hp,
+    hpDrain: getDifficulty().hp,
     state: 'patrol',
     facingY: Math.random() * Math.PI * 2,
     alertTimer: 0,
@@ -261,11 +262,14 @@ export function spawnSndEnemies(sitePositions) {
 // ── triggerDeath lives here because it reads wave ─────────────────
 export function triggerDeath() {
   player.dead = true;
+  emit('player:died');
   if (isAnyModeActive()) {
     document.exitPointerLock?.();
-    const allFriendsDead = enemies.every((en) => en.dead || en.sndTeam !== 'friend');
-    if (allFriendsDead) emit('round:friendTeamWiped');
-    // else game continues — friendlies still alive
+    if (getMode()?.name === 'snd') {
+      const allFriendsDead = enemies.every((en) => en.dead || en.sndTeam !== 'friend');
+      if (allFriendsDead) emit('round:friendTeamWiped');
+    }
+    // TDM / other modes handle 'player:died' themselves
     return;
   }
   setGameRunning(false);
@@ -293,7 +297,8 @@ export function killEnemy(e) {
     } else {
       scene.remove(e.mesh);
     }
-    if (isAnyModeActive() && player.dead && enemies.every((en) => en.dead || en.sndTeam !== 'friend'))
+    emit('friendly:killed', e);
+    if (getMode()?.name === 'snd' && player.dead && enemies.every((en) => en.dead || en.sndTeam !== 'friend'))
       emit('round:friendTeamWiped');
     return;
   }
@@ -312,11 +317,12 @@ export function killEnemy(e) {
     scene.remove(e.mesh);
   }
 
-  if (isAnyModeActive()) {
+  emit('enemy:killed', e);
+  if (getMode()?.name === 'snd') {
     if (enemies.every((en) => en.dead || en.sndTeam !== 'enemy')) emit('round:enemyTeamWiped');
     return;
   }
-  if (enemies.every((en) => en.dead)) emit('wave:end');
+  if (!isAnyModeActive() && enemies.every((en) => en.dead)) emit('wave:end');
 }
 
 // ── Enemy AI ──────────────────────────────────────────────────────
@@ -330,7 +336,7 @@ export function updateEnemies(ts, dt) {
     const distP = Math.sqrt(pdx * pdx + pdz * pdz);
     const eGround = hAt(Math.floor(e.x / CELL), Math.floor(e.z / CELL));
     const canSee =
-      distP < ENEMY_SIGHT &&
+      distP < getDifficulty().sight &&
       hasLOS(
         e.x,
         eGround + PLAYER_H * 0.9,

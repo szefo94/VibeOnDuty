@@ -46,6 +46,67 @@ export const WEAPONS = {
 };
 export const DEFAULT_WEAPON = 'm4';
 
+// ── Difficulty presets ─────────────────────────────────────────────────────
+// Each tier controls every parameter that makes enemies harder:
+//   reactMin/Max  — ms before enemy fires after spotting player
+//   shootCd       — ms between shots
+//   damage        — hp per hit (random +0..5 added on top in enemyStates)
+//   speedMult     — multiplier on ENEMY_SPEED
+//   aimThresh     — max angle error (rad) allowed before shooting; smaller = better aim
+//   hp            — enemy health points
+//   sight         — detection range in world units
+//   strafeChance  — 0‒1 probability of strafing each movement phase
+export const DIFFICULTY_PRESETS = {
+  recruit: {
+    label: 'RECRUIT',
+    desc: 'slow reaction · bad aim · low damage',
+    reactMin: 900, reactMax: 1800,
+    shootCd: 2200,
+    damage: 6,
+    speedMult: 0.60,
+    aimThresh: 0.18,
+    hp: 70,
+    sight: 16,
+    strafeChance: 0.0,
+  },
+  regular: {
+    label: 'REGULAR',
+    desc: 'standard threat · reacts under 1 s',
+    reactMin: 400, reactMax: 950,
+    shootCd: 1200,
+    damage: 10,
+    speedMult: 1.0,
+    aimThresh: 0.055,
+    hp: 100,
+    sight: 22,
+    strafeChance: 0.25,
+  },
+  veteran: {
+    label: 'VETERAN',
+    desc: 'fast reaction · strafes · tight aim',
+    reactMin: 150, reactMax: 380,
+    shootCd: 700,
+    damage: 16,
+    speedMult: 1.25,
+    aimThresh: 0.028,
+    hp: 130,
+    sight: 26,
+    strafeChance: 0.60,
+  },
+  elite: {
+    label: 'ELITE',
+    desc: 'near-instant · constant movement · lethal',
+    reactMin: 60, reactMax: 150,
+    shootCd: 420,
+    damage: 22,
+    speedMult: 1.50,
+    aimThresh: 0.012,
+    hp: 160,
+    sight: 30,
+    strafeChance: 1.0,
+  },
+};
+
 // ── S&D constants ──────────────────────────────────────────────────────────
 export const SND_PLANT_RANGE  = 2.5;
 export const SND_DEFUSE_RANGE = 2.2;

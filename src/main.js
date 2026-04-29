@@ -13,6 +13,8 @@ import { flashMeleeRing } from './fx/meleeRange.js';
 import { updateHUD, showMsg, showStatus } from './hud/overlay.js';
 import { startLoop, setThirdPerson, getThirdPerson, toggleTpSide } from './loop.js';
 import { startSnd, nextRound, getSndSitePositions, isMatchOver, setSndMap } from './modes/snd.js';
+import { startTdm } from './modes/tdm.js';
+import { setDifficulty } from './difficulty.js';
 import { tryLoadEnemyGLTF, buildPlayerMesh } from './builders/enemyGLTF.js';
 import { show1pWeapon, show3pWeapon, weapon3p } from './builders/weapon.js';
 import { playerBody } from './builders/playerBody.js';
@@ -28,6 +30,15 @@ import { conceptMapDef } from './maps/concept.js';
 
 const _euler = new THREE.Euler(0, 0, 0, 'YXZ');
 let debugVisible = true;
+
+// ── Difficulty selection ───────────────────────────────────────────────
+document.querySelectorAll('.diff-card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.diff-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    setDifficulty(card.dataset.diff);
+  });
+});
 
 // ── Map selection ──────────────────────────────────────────────────────
 const _mapRegistry = { bunker: bunkerMapDef, rooftop: rooftopMapDef, concept: conceptMapDef };
@@ -129,9 +140,10 @@ document.addEventListener('mouseup', (e) => {
   if (e.button === 2) player.aiming = false;
 });
 
-// ── Start button ───────────────────────────────────────────────────
+// ── INCURSION (wave) start ─────────────────────────────────────────
 document.getElementById('startbtn').addEventListener('click', () => {
   _activateMap();
+  rebuildAllEnemies();                     // re-spawn with chosen difficulty HP
   if (_selectedMap.spawnPlayer) {
     camera.position.set(_selectedMap.spawnPlayer.x, PLAYER_H, _selectedMap.spawnPlayer.z);
   }
@@ -146,7 +158,7 @@ document.getElementById('startbtn').addEventListener('click', () => {
   show1pWeapon(player.weapon);
   show3pWeapon(player.weapon);
   spawnNewDrone();
-  showMsg('VIBE ON DUTY — LOCK AND LOAD', 2500);
+  showMsg('INCURSION — HOLD THE ZONE', 2500);
   showStatus(`[1] ${WEAPONS[player.weapon].name}`);
 });
 document.getElementById('c').addEventListener('click', () => {
@@ -169,8 +181,27 @@ function sndStart() {
   showStatus(`[1] ${WEAPONS[player.weapon].name}`);
 }
 
+function tdmStart() {
+  _activateMap();
+  rebuildAllEnemies();                       // apply difficulty HP
+  const sp = _selectedMap.spawnPlayer ?? { x: 10, z: 10 };
+  camera.position.set(sp.x, PLAYER_H, sp.z);
+  document.getElementById('overlay').style.display = 'none';
+  if (isTouchDevice) { setLocked(true); } else { document.getElementById('c').requestPointerLock(); }
+  setGameRunning(true);
+  updateHUD();
+  show1pWeapon(player.weapon);
+  show3pWeapon(player.weapon);
+  spawnNewDrone();
+  startTdm(sp.x, sp.z);
+  showStatus(`[1] ${WEAPONS[player.weapon].name}`);
+}
+
 // ── S&D mode start ─────────────────────────────────────────────────
 document.getElementById('snd-startbtn').addEventListener('click', sndStart);
+
+// ── TDM mode start ─────────────────────────────────────────────────
+document.getElementById('tdm-startbtn').addEventListener('click', tdmStart);
 
 // ── S&D next round ─────────────────────────────────────────────────
 document.getElementById('snd-next-btn').addEventListener('click', () => {
@@ -198,10 +229,13 @@ window.loadGLTF = tryLoadEnemyGLTF;
 
 const _startBtn    = document.getElementById('startbtn');
 const _sndStartBtn = document.getElementById('snd-startbtn');
+const _tdmStartBtn = document.getElementById('tdm-startbtn');
 _startBtn.disabled    = true;
 _sndStartBtn.disabled = true;
+_tdmStartBtn.disabled = true;
 _startBtn.textContent    = 'LOADING...';
 _sndStartBtn.textContent = 'LOADING...';
+_tdmStartBtn.textContent = 'LOADING...';
 
 // Attach player 3p weapon to body BEFORE async block so buildPlayerMesh()
 // can reparent it to hand_r without immediately losing it.
@@ -210,10 +244,12 @@ playerBody.add(weapon3p);
 
 (async () => {
   const assets = await loadAll();
-  _startBtn.textContent    = 'DEPLOY';
+  _startBtn.textContent    = 'INCURSION';
   _sndStartBtn.textContent = 'S&D — START';
+  _tdmStartBtn.textContent = 'TEAM DEATHMATCH';
   _startBtn.disabled    = false;
   _sndStartBtn.disabled = false;
+  _tdmStartBtn.disabled = false;
   if (assets['enemy-glb']) {
     rebuildAllEnemies();
     buildPlayerMesh();

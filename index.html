@@ -17,6 +17,16 @@
   <div id="msg"></div><div id="status"></div>
   <div id="kill-feed"></div>
 
+  <!-- TDM HUD -->
+  <div id="tdm-bar" style="display:none">
+    <div id="tdm-header">
+      <span id="tdm-label">TDM</span>
+      <span id="tdm-score"><span id="tdm-us">0</span> &ndash; <span id="tdm-them">0</span></span>
+      <span id="tdm-timer">10:00</span>
+      <span id="tdm-limit">FIRST TO 50</span>
+    </div>
+  </div>
+
   <!-- S&D HUD -->
   <div id="snd-bar" style="display:none">
     <div id="snd-match-header">
@@ -71,6 +81,30 @@
     <div class="ctrl"><span class="key">F3</span><div class="desc">DEBUG</div></div>
     <div class="ctrl"><span class="key">G</span><div class="desc">PLANT</div></div>
   </div>
+
+  <!-- Difficulty picker -->
+  <div id="diff-selector">
+    <div class="diff-label">DIFFICULTY</div>
+    <div id="diff-cards">
+      <div class="diff-card" data-diff="recruit">
+        <div class="diff-name">RECRUIT</div>
+        <div class="diff-desc">slow · weak · forgiving</div>
+      </div>
+      <div class="diff-card selected" data-diff="regular">
+        <div class="diff-name">REGULAR</div>
+        <div class="diff-desc">standard threat · reacts &lt;1 s</div>
+      </div>
+      <div class="diff-card" data-diff="veteran">
+        <div class="diff-name">VETERAN</div>
+        <div class="diff-desc">fast · strafes · tight aim</div>
+      </div>
+      <div class="diff-card" data-diff="elite">
+        <div class="diff-name">ELITE</div>
+        <div class="diff-desc">instant · lethal · relentless</div>
+      </div>
+    </div>
+  </div>
+
   <div id="map-selector">
     <div class="map-card selected" data-map="bunker">
       <div class="map-thumb bunker-thumb"></div>
@@ -88,8 +122,9 @@
       <div class="map-sub">Concept · Marble · Open</div>
     </div>
   </div>
-  <div style="display:flex;gap:16px">
+  <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
     <button id="startbtn">[ DROP IN ]</button>
+    <button id="tdm-startbtn">[ TEAM DEATHMATCH ]</button>
     <button id="snd-startbtn">[ S&amp;D MODE ]</button>
   </div>
 </div>
