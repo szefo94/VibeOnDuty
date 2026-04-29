@@ -48,7 +48,9 @@ function _activateMap() {
 
 // ── Weapon switching ───────────────────────────────────────────────
 function switchWeapon(key) {
-  if (!WEAPONS[key] || player.weapon === key || player.dead) return;
+  if (!WEAPONS[key] || player.dead) return;
+  showStatus(`[${['m4','p90','awp','pistol'].indexOf(key)+1}] ${WEAPONS[key].name}`);
+  if (player.weapon === key) return;
   if (player.reloading) {
     player.reloading = false;
     document.getElementById('reloadwrap').style.display = 'none';
@@ -62,7 +64,6 @@ function switchWeapon(key) {
   show1pWeapon(key);
   show3pWeapon(key);
   updateHUD();
-  showStatus(WEAPONS[key].name);
 }
 
 // ── Input: game-action handlers ────────────────────────────────────
@@ -142,8 +143,11 @@ document.getElementById('startbtn').addEventListener('click', () => {
   }
   setGameRunning(true);
   updateHUD();
+  show1pWeapon(player.weapon);
+  show3pWeapon(player.weapon);
   spawnNewDrone();
   showMsg('VIBE ON DUTY — LOCK AND LOAD', 2500);
+  showStatus(`[1] ${WEAPONS[player.weapon].name}`);
 });
 document.getElementById('c').addEventListener('click', () => {
   if (gameRunning && !player.dead && !locked) document.getElementById('c').requestPointerLock();
@@ -159,7 +163,10 @@ function sndStart() {
   spawnSndEnemies(getSndSitePositions());
   spawnSndDrones();
   updateHUD();
+  show1pWeapon(player.weapon);
+  show3pWeapon(player.weapon);
   showMsg('S&D — PLANT AT SITE A OR B (HOLD G)', 3500);
+  showStatus(`[1] ${WEAPONS[player.weapon].name}`);
 }
 
 // ── S&D mode start ─────────────────────────────────────────────────
