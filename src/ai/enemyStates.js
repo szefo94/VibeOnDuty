@@ -11,6 +11,7 @@ import { player } from '../entities/player.js';
 import { hasLOS } from '../utils/los.js';
 import { triggerHitFlash, updateHUD } from '../hud/overlay.js';
 import { triggerScreenShake } from '../fx/screenShake.js';
+import { spawnDamageNumber } from '../fx/damageNumbers.js';
 import { spawnTracer } from '../fx/tracers.js';
 import { on } from '../events.js';
 
@@ -168,7 +169,9 @@ function _tickPlayerShoot(e, ctx) {
   if (!hasLOS(e.x, eGround + PLAYER_H * 0.85, e.z, camera.position.x, camera.position.y, camera.position.z)) return;
 
   e.shootCd = ts;
-  player.hp = Math.max(0, player.hp - d.damage - Math.floor(Math.random() * 5));
+  const dmgDealt = d.damage + Math.floor(Math.random() * 5);
+  player.hp = Math.max(0, player.hp - dmgDealt);
+  spawnDamageNumber(camera.position.x, camera.position.y + 0.3, camera.position.z, dmgDealt, true);
   triggerHitFlash(e.x, e.z);
   triggerScreenShake(0.45);
   updateHUD();

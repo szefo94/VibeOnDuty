@@ -11,6 +11,7 @@ import { alertEnemy } from '../ai/enemyStates.js';
 import { activeDrone, killDrone } from '../entities/drone.js';
 import { spawnHitMarker } from '../hud/hitmarker.js';
 import { updateHUD } from '../hud/overlay.js';
+import { spawnDamageNumber } from '../fx/damageNumbers.js';
 
 // ── Weapon animation state ────────────────────────────────────────────
 export let muzzleT = 0;
@@ -125,6 +126,7 @@ export function tickBullets(dt) {
         e.velZ = kd.z * 4;
         e.stunTimer = 0.28;
         spawnHitMarker();
+        spawnDamageNumber(ePos.x, ePos.y + 0.4, ePos.z, dmg);
         e.takeDamage(dmg, killEnemy);
         _removeBullet(i);
         hit = true;

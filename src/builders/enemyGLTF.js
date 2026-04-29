@@ -299,8 +299,10 @@ export function buildPlayerMesh() {
 // applies an emissive tint (preserves GLTF textures). Falls back to color.
 function _applyTint(mat, col) {
   const c = mat.clone();
-  if (c.emissive !== undefined) { c.emissive.set(col); c.emissiveIntensity = 0.4; }
-  else { c.color.set(col); }
+  // Set base color for full-body recolor (multiplies with texture if present)
+  if (c.color !== undefined) c.color.set(col);
+  // Add mild emissive so team color reads in dark areas
+  if (c.emissive !== undefined) { c.emissive.set(col); c.emissiveIntensity = 0.18; }
   return c;
 }
 
