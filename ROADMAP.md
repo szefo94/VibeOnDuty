@@ -342,3 +342,123 @@ Pure visual customisation — no pay-to-win. Gives players identity and a reason
 - **Kill card**: a short particle burst style unique to each operator when they get a kill (orange sparks vs. blue sparks vs. green sparks). `src/fx/killCard.js`, reads `player.operatorStyle`.
 - **Player nameplate**: floating text above allied bots using `THREE.Sprite` + canvas texture — shows squad callsign ("ALPHA-1"). Toggle with F3.
 - All unlocks stored in `localStorage` alongside Phase 25 progression data.
+
+---
+
+### Phase 32 — Training range
+
+A dedicated offline mode for warming up aim and learning spray patterns — no enemies, no pressure.
+
+- New overlay tab **[ RANGE ]** launches a standalone scene with a flat floor, 10 pop-up target dummies at varying distances (5–40 m), and an infinite ammo state.
+- **Target modes**: Static (dummies stand still), Moving (strafe left/right on a rail at configurable speed), Reaction (random pop-up with 1.5 s window — miss = target resets).
+- **Spray trainer**: project the bullet-impact positions onto a 2D canvas panel beside the target after each mag. Overlays the theoretical ideal pattern so players can compare their pull to the correct compensation.
+- **Stats HUD**: hits / shots fired, accuracy %, average reaction time, headshot %, best streak. Shown live and summarised on session end.
+- `src/modes/trainingRange.js` — owns scene setup, target lifecycle, stats accumulation. Shares `tryShoot` and `startReload` with the main game unchanged.
+
+---
+
+### Phase 33 — Grenade arsenal
+
+Extend the existing grenade system (currently one type) into a full tactical toolkit.
+
+| Grenade | Key | Effect |
+|---------|-----|--------|
+| Frag (existing) | MMB | Explosive — 60 damage falloff over 4 m |
+| **Flashbang** | `4` | Blind all entities (player + enemies) in LOS for 2 s; white screen fade, `player.blinded` flag |
+| **Smoke** | `5` | 4 m sphere of fog for 15 s; `hasLOS` returns false through smoke volume |
+| **Molotov** | `6` | 3 m fire zone for 8 s; 8 damage/s to any entity standing inside |
+| **Decoy** | `7` | Emits fake gunshot audio + muzzle flash for 3 s; enemies in earshot enter SPOTTED state toward the decoy position |
+
+- `src/entities/grenades.js` gains a `grenadeType` param; `damage.js` gets `applyFireDamage(zone, dt)`.
+- Carry limit: 1 of each type. Replenish at buy phase or ammo drops.
+- HUD shows grenade slots bottom-left with active counts.
+
+---
+
+### Phase 34 — Weather & time-of-day variants
+
+Same map geometry, radically different atmosphere — doubles map count without doubling map work.
+
+- Each `mapDef` gains an optional `variants[]` array of lighting/fog/sky overrides: `{ name, skyColor, fogColor, fogDensity, sunAngle, sunColor, ambientColor, rain }`.
+- **Night variant**: low ambient (`0.12 * Math.PI`), no sun, flashlight attached to camera (`THREE.SpotLight` following `camera.position`). Enemies also carry flashlights — visible from across the map, breaks stealth.
+- **Rain**: `src/fx/rain.js` — `Points` geometry with ~2000 streaks falling per frame, slight fog increase, puddle-reflection `MeshStandardMaterial` on the floor plane.
+- **Dust storm**: heavy `FogExp2` density (0.06), desaturated sand tones — sightlines drop to ~15 m. Fundamentally changes how S&D plays.
+- Map variant is chosen randomly at round start in S&D, or selectable in Drop In via a second row in the map selector.
+
+---
+
+### Phase 35 — Additional game modes
+
+Two new modes alongside Drop In and S&D, sharing all existing entity and combat infrastructure.
+
+#### Team Deathmatch (TDM)
+- 5v5, first team to 50 kills wins or highest score after 10 minutes.
+- No bomb, no sites, no round structure. Respawn 3 s after death at a random spawn point.
+- `src/modes/tdm.js` — minimal state machine: score counters, respawn queue, match timer.
+- Kill feed already exists; score shown in `snd-match-header` repurposed (hide round/bomb rows).
+
+#### Capture the Flag (CTF)
+- Two flags at opposing team bases (glowing `THREE.Mesh` cylinder + emissive material). Carry enemy flag to your base to score.
+- Flag carrier is slowed 15% and cannot sprint. Drop on death; flag auto-returns after 20 s idle.
+- `src/entities/flag.js` — flag state machine: `AT_BASE → CARRIED → DROPPED → RETURNING`.
+- Radar shows flag position with a distinct icon; `sndHud.js` repurposed to show flag status.
+
+---
+
+### Phase 36 — Ping / communication system
+
+Apex Legends-style contextual pings — full team communication with zero voice setup.
+
+- **Ping key**: `Z` (currently dive — move dive to double-tap `CTRL`). Raycast from camera centre; classify hit surface into: Enemy spotted, Go here, Watch out, Defend, Attack.
+- Ping appears as a `THREE.Sprite` billboard at the hit point (colour-coded by type), visible through walls on minimap, auto-expires after 6 s.
+- Audio bark plays on ping: short synthesised voice line per type (Web Audio `OscillatorNode` shaped to sound vaguely like a word — or just a distinct tone per type as v1).
+- Bots respond to player pings: `Go here` triggers a reroute in their A* path; `Defend` makes them hold current position; `Attack` makes them push the nearest site.
+- `src/net/ping.js` — ping state list, tick (expire), render; emits `ping:placed` event consumed by `friendlyBots.js`.
+
+---
+
+### Phase 37 — In-browser map editor
+
+Let players build and share custom maps without touching code.
+
+- **Editor mode**: new overlay button **[ EDITOR ]** launches a top-down 2D grid view of a 24×24 tile canvas.
+- **Toolbar**: paint tiles by type — Floor (0), Wall (1), Crack-H (2), Crack-V (3), Ramp N/S/E/W (4–7), Site A, Site B, Spawn Attacker, Spawn Defender.
+- **Preview**: `P` toggles into 3D first-person mode using the current tile grid — live `buildLevel` call. Press `P` again to return to editor.
+- **Export/Import**: serialize grid to a compact base-64 string; copy-to-clipboard button. Paste string into the import field to load. Community maps can be shared as URL query params (`?map=<b64>`).
+- `src/editor/mapEditor.js` — 2D canvas renderer, mouse tile painting, undo stack (last 50 ops). Reads/writes the same `mapDef` shape as existing maps — no special case in `buildLevel`.
+
+---
+
+### Phase 38 — Sniper rifle & weapon archetypes
+
+Introduce a high-skill weapon that changes how long-range engagements feel.
+
+- **Sniper rifle** (`AWP`-style): 1-shot kill to body, 140 damage. Bolt action — 1.4 s between shots, 5-round mag, 1 spare mag. RMB scopes in with narrow FOV (30°) and slight sway that settles after 0.6 s hold-breath (hold `Shift` while ADS).
+- **Weapon archetypes** formalised in `config.js`:
+
+| Archetype | Example | Role |
+|-----------|---------|------|
+| Rifle | M4A1 | All-round, medium range |
+| SMG | P90 | Fast TTK, short range, large mag |
+| Sniper | AWP | One-shot, long range, slow |
+| Pistol | Default | Sidearm, low damage |
+
+- Scope visual: `renderer.setPixelRatio` bump + FOV tween via `camera.fov`; vignette overlay via CSS.
+- Bullet drop added for sniper only: vertical velocity decreases by `9.8 * t²` in `shoot.js`; enemies at >30 m require aiming slightly high.
+- Bots equipped with snipers hold long-range positions; they never rush with an AWP.
+
+---
+
+### Phase 39 — Adaptive difficulty AI
+
+The game silently tracks player performance and nudges bot behaviour so the session stays fun — not too easy, not too hard.
+
+- **Performance score**: rolling 60-second window of `(kills − deaths) / shots_fired`. Updated in `waveSystem.js` or a new `src/ai/difficultyAdapter.js`.
+- **Levers the system pulls** (all already exist as config values):
+  - `ENEMY_REACTION_DELAY` — how fast enemies react to seeing the player (150–600 ms)
+  - `ENEMY_ACCURACY` — spray cone multiplier (0.6 tight → 1.8 wide)
+  - `ENEMY_SPEED` — patrol and chase speed
+  - Patrol density — number of active patrollers in the scene
+- **Target feel**: player should win ~55% of 1v1 engagements. If they're winning 80%+, dial up one lever per 60 s. If dying 3× in 30 s, dial down.
+- No UI — the adaptation is invisible. Players just feel "the enemies got smarter" or "finally had a good round" without knowing why.
+- Hard cap: never exceeds the `Aggressive` bot personality ceiling (Phase 26) or drops below `Passive` floor.
