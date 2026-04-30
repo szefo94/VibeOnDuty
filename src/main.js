@@ -184,7 +184,7 @@ function sndStart() {
 function tdmStart() {
   _activateMap();
   spawnTdmEnemies(_selectedMap);             // 5 friendly bots + 5 enemies
-  const sp = _selectedMap.spawnPlayer ?? { x: 10, z: 10 };
+  const sp = _selectedMap.spawnAttacker ?? _selectedMap.spawnPlayer ?? { x: 10, z: 10 };
   camera.position.set(sp.x, PLAYER_H, sp.z);
   document.getElementById('overlay').style.display = 'none';
   if (isTouchDevice) { setLocked(true); } else { document.getElementById('c').requestPointerLock(); }

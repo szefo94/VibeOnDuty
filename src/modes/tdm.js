@@ -67,7 +67,9 @@ function _respawnPlayer(spawnX, spawnZ) {
   player.hp       = MAX_HP;
   player.ammo     = WEAPONS[player.weapon].maxAmmo;
   player.reloading = false;
-  camera.position.set(spawnX, PLAYER_H, spawnZ);
+  const jx = (Math.random() - 0.5) * 10;
+  const jz = (Math.random() - 0.5) * 10;
+  camera.position.set(spawnX + jx, PLAYER_H, spawnZ + jz);
   updateHUD();
   setGameRunning(true);
   show1pWeapon(player.weapon);
