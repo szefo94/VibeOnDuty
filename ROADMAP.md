@@ -137,14 +137,94 @@ See Completed table — 4-weapon system with per-weapon config, ammo, reload, sp
 
 ### Phase 19 — Weapon buy menu + Grenade arsenal (S&D)
 
-Counter-Strike style buy phase at the start of each round. Player spawns with a pistol only; the buy window is open for the first 10 s of the round (or until the player leaves spawn).
+Counter-Strike style buy phase at the start of each S&D round. Player spawns with pistol only; every other weapon must be purchased. Buy window is open for the first **10 s** of the round, or closes early if the player **moves out of spawn radius** (forces commitment). Grenade slots are separate from weapon slots — player can carry one primary, one sidearm, and up to two grenades simultaneously.
 
-- **Buy menu UI** — press `B` to open a fullscreen overlay listing available weapons grouped by category (rifles, SMGs, pistols, equipment). Clicking a row purchases it and closes the menu; `ESC` closes without buying.
-- **Economy** — each player starts a match with $800. Kills earn $300, planting earns $300, defusing earns $300, winning a round earns $900, losing earns $1 400 (loss bonus, same as CS). Balance shown in HUD top-left during buy phase.
-- **Weapon prices** — examples: M4A1 $2 900, P90 $2 350, pistol $500, grenade $200. Prices stored per-weapon in `config.js`.
-- **Bot economy** — friendly bots auto-buy the best weapon they can afford; enemy bots follow the same rule (creates eco rounds naturally).
-- **Carry-over** — weapons and remaining balance carry between rounds; death resets weapon to pistol but keeps $500 minimum floor.
-- **Implementation sketch** — `src/modes/buyMenu.js` owns the DOM panel and economy state; emits `buy:weaponSelected` event consumed by `player.js` and `friendlyBots.js`. S&D round start emits `round:buyPhase` with a deadline timestamp; buy menu disables itself when deadline passes.
+#### Buy phase flow
+
+1. Round starts → `round:buyPhase` event emits with `{ deadline: timestamp }`.
+2. Player sees a **"BUY PHASE — 10s"** countdown banner and cash balance in the top-left HUD.
+3. `B` opens the buy overlay (pointer lock released, game paused for player only — bots still move).
+4. Player clicks a weapon or grenade row → purchase confirmed → menu closes → pointer lock re-acquired.
+5. Timer expires OR player crosses spawn boundary → buy phase ends, `round:buyPhaseEnd` emits → menu force-closes, weapon locked in for the round.
+6. On death mid-round: weapon drops to pistol, cash unchanged.
+
+#### Economy
+
+| Event | Cash delta |
+|---|---|
+| Match start | +$800 |
+| Kill enemy | +$300 |
+| Plant bomb | +$300 |
+| Defuse bomb | +$300 |
+| Win round | +$900 |
+| Lose round (1st consecutive loss) | +$1 400 |
+| Lose round (2nd consecutive loss) | +$1 900 |
+| Lose round (3+ consecutive losses) | +$2 400 |
+| Death (no reset, pistol cost refunded) | — |
+
+Loss bonus caps at $2 400 (3+ streak) and resets to $1 400 on a win — same cadence as CS2. Max balance capped at **$16 000**. Minimum floor after any round: **$500** (always able to buy a grenade).
+
+Balance displayed in HUD top-left only during buy phase; hidden during active play to reduce clutter.
+
+#### Weapon & equipment price list
+
+| Item | Key | Price | Notes |
+|---|---|---|---|
+| M4A1 | `m4` | $2 900 | Full-auto rifle |
+| P90 | `p90` | $2 350 | SMG, 50-round mag |
+| AWP | `awp` | $4 750 | One-shot bolt-action |
+| Pistol | `pistol` | $500 | Default sidearm, free on first round |
+| Frag grenade | `frag` | $200 | Classic lethal throw |
+| Smoke grenade | `smoke` | $300 | Opaque sphere, 8 s duration, blocks LOS for bots too |
+| Flashbang | `flash` | $200 | Blinds player + bots in cone for 1.5 s |
+| Molotov | `molotov` | $400 | Burning floor zone, 4 s, deals tick damage |
+
+Prices live in `config.js` under each weapon's entry (`WEAPONS['m4'].price = 2900`). Grenades get their own `GRENADES` map in `config.js`.
+
+#### Grenade arsenal detail
+
+The player can carry a **max of two grenade slots** (e.g. one smoke + one frag). Each grenade type can only be carried once. Throw mechanic is already in place (middle mouse / `G`); the buy menu just gates access and charges cash.
+
+| Type | Visual | Behaviour |
+|---|---|---|
+| Frag | Red sphere | Explodes after 3 s or on impact; lethal radius 3 m, damage falloff |
+| Smoke | Grey-white expanding sphere | `MeshBasicMaterial` semi-transparent sphere; bot `hasLOS` returns false through it |
+| Flashbang | White burst | Fullscreen white overlay + FOV distortion on any entity within 8 m and LOS |
+| Molotov | Orange particle floor | Particle emitter + floor plane; tick damage 8/s to any entity standing in it |
+
+Smoke and molotov require new visual FX. Frag and flashbang reuse/extend the existing grenade system.
+
+#### Bot economy & auto-buy logic
+
+Bots share the same economy table as the player. On `round:buyPhase`, each bot runs:
+
+```
+if (cash >= AWP.price && role === 'sniper')   → buy AWP
+else if (cash >= M4.price)                    → buy M4
+else if (cash >= P90.price)                   → buy P90
+else                                          → eco round (pistol only)
+remaining cash → buy frag first, then smoke
+```
+
+Enemy bots follow the same rule — low-cash rounds produce visible eco rounds (pistol-only bots), making economy reads meaningful for the player.
+
+#### Implementation sketch
+
+```
+src/modes/buyMenu.js      — DOM panel, economy state, buy phase timer
+src/modes/economy.js      — cash ledger: addCash(n), spendCash(n), getCash()
+                            emits 'economy:updated' for HUD
+src/entities/grenades.js  — extend with smoke / flash / molotov logic
+config.js                 — add price field to WEAPONS, add GRENADES map
+```
+
+Event contracts:
+- `round:buyPhase { deadline }` → buyMenu opens countdown, bots auto-buy
+- `round:buyPhaseEnd` → buyMenu force-closes, movement unblocked
+- `buy:weapon { key }` → player.js equips weapon, economy.js deducts cost
+- `buy:grenade { key }` → grenades.js adds to carry slots, economy.js deducts
+- `economy:updated { cash }` → HUD re-renders cash display
+- `round:end { playerWon, killCount }` → economy.js computes round payout
 
 ---
 
