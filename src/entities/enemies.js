@@ -228,6 +228,7 @@ export function spawnSndEnemies(sitePositions) {
       }
       e.sndTeam = 'friend';
       e.sndSiteTarget = i % 2;
+      tintEnemyMesh(e.mesh, 0x00bb44);
       // Remove old world-space indicator before creating fresh one
       if (e._friendIndicator) { scene.remove(e._friendIndicator); e._friendIndicator = null; }
       const ind = new THREE.Mesh(
@@ -254,6 +255,7 @@ export function spawnSndEnemies(sitePositions) {
       }
       e.sndTeam = 'enemy';
       e.sndSiteAttack = j < 3 ? 0 : 1;
+      tintEnemyMesh(e.mesh, 0xcc2200);
       if (e._friendIndicator) { scene.remove(e._friendIndicator); e._friendIndicator = null; }
     }
   });

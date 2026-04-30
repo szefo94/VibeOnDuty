@@ -16,7 +16,7 @@ import { startSnd, nextRound, getSndSitePositions, isMatchOver, setSndMap } from
 import { toggleBuyPanel, isBuyPhaseActive } from './modes/buyMenu.js';
 import { startTdm } from './modes/tdm.js';
 import { setDifficulty } from './difficulty.js';
-import { tryLoadEnemyGLTF, buildPlayerMesh } from './builders/enemyGLTF.js';
+import { tryLoadEnemyGLTF, buildPlayerMesh, tintEnemyMesh, playerMesh } from './builders/enemyGLTF.js';
 import { show1pWeapon, show3pWeapon, weapon3p } from './builders/weapon.js';
 import { playerBody } from './builders/playerBody.js';
 import { tryLoadWeaponFBX, tryLoadP90ForHand } from './builders/weaponFBX.js';
@@ -170,6 +170,7 @@ document.getElementById('c').addEventListener('click', () => {
 function sndStart() {
   _activateMap();
   setSndMap(_selectedMap);
+  tintEnemyMesh(playerMesh, 0x00bb44);
   document.getElementById('overlay').style.display = 'none';
   if (isTouchDevice) { setLocked(true); } else { document.getElementById('c').requestPointerLock(); }
   setGameRunning(true);
@@ -185,6 +186,7 @@ function sndStart() {
 
 function tdmStart() {
   _activateMap();
+  tintEnemyMesh(playerMesh, 0x00bb44);
   spawnTdmEnemies(_selectedMap);             // 5 friendly bots + 5 enemies
   const sp = _selectedMap.spawnAttacker ?? _selectedMap.spawnPlayer ?? { x: 10, z: 10 };
   camera.position.set(sp.x, PLAYER_H, sp.z);
