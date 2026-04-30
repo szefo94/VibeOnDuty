@@ -39,10 +39,10 @@ export const PUNCH_RANGE = 1.8,
 
 // ── Weapon definitions ─────────────────────────────────────────────────────
 export const WEAPONS = {
-  m4:     { name: 'M4A1', maxAmmo: 30, reserve: 90,  damage: 28, fireRate: 88,   reload: 1800, sprayMax: 0.055, sprayGrow: 0.08,  adsZoom: 50 },
-  p90:    { name: 'P90',  maxAmmo: 50, reserve: 150, damage: 20, fireRate: 55,   reload: 2000, sprayMax: 0.090, sprayGrow: 0.12,  adsZoom: 52 },
-  awp:    { name: 'AWP',  maxAmmo: 5,  reserve: 20,  damage: 95, fireRate: 1100, reload: 2500, sprayMax: 0.005, sprayGrow: 0.003, adsZoom: 20 },
-  pistol: { name: 'M9',   maxAmmo: 12, reserve: 36,  damage: 38, fireRate: 280,  reload: 1200, sprayMax: 0.040, sprayGrow: 0.05,  adsZoom: 55 },
+  m4:     { name: 'M4A1', maxAmmo: 30, reserve: 90,  damage: 28, fireRate: 88,   reload: 1800, sprayMax: 0.055, sprayGrow: 0.08,  adsZoom: 50, price: 2900 },
+  p90:    { name: 'P90',  maxAmmo: 50, reserve: 150, damage: 20, fireRate: 55,   reload: 2000, sprayMax: 0.090, sprayGrow: 0.12,  adsZoom: 52, price: 2350 },
+  awp:    { name: 'AWP',  maxAmmo: 5,  reserve: 20,  damage: 95, fireRate: 1100, reload: 2500, sprayMax: 0.005, sprayGrow: 0.003, adsZoom: 20, price: 4750 },
+  pistol: { name: 'M9',   maxAmmo: 12, reserve: 36,  damage: 38, fireRate: 280,  reload: 1200, sprayMax: 0.040, sprayGrow: 0.05,  adsZoom: 55, price:    0 },
 };
 export const DEFAULT_WEAPON = 'm4';
 

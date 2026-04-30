@@ -16,6 +16,8 @@ import {
 import { setGameRunning } from '../input.js';
 import { on, emit } from '../events.js';
 import { setMode } from './modeManager.js';
+import { resetEconomy, onKill, onPlant, onDefuse, onRoundEnd } from './economy.js';
+import { startBuyPhase, tickBuyPhase, endBuyPhase } from './buyMenu.js';
 
 export function getSndPlantRange()  { return SND_PLANT_RANGE; }
 export function getSndDefuseRange() { return SND_DEFUSE_RANGE; }
@@ -79,6 +81,7 @@ export function onAllFriendsDead() {
 
 on('round:enemyTeamWiped', onAllEnemyTeamDead);
 on('round:friendTeamWiped', onAllFriendsDead);
+on('enemy:killed', () => { if (isSndActive()) onKill(); });
 
 export function isSndActive() { return sndState !== 'idle' && sndState !== 'over'; }
 export function getSndBombPos() { return sndState === 'planted' ? [bombWorldX, bombWorldZ] : null; }
@@ -93,6 +96,7 @@ export function startSnd() {
   enemyScore  = 0;
   playerRole  = 'attack';
   _matchOver  = false;
+  resetEconomy();
   setMode({ name: 'snd', tick: tickSnd });
   emit('snd:configure', {
     isActive:        isSndActive,
@@ -121,10 +125,9 @@ function _startRound() {
 
   player.dead      = false;
   player.hp        = MAX_HP;
-  player.ammo      = MAX_AMMO;
-  player.reserve   = RESERVE_AMMO;
   player.reloading = false;
   player.energy    = 0;
+  startBuyPhase(10);   // resets weapon to pistol, opens buy window
   updateHUD();
   const spawn = playerRole === 'attack' ? _attackerSpawn : _defenderSpawn;
   camera.position.set(spawn.x, PLAYER_H, spawn.z);
@@ -156,6 +159,7 @@ export function nextRound() {
 // ── Tick ──────────────────────────────────────────────────────────────────
 export function tickSnd(dt, keys) {
   if (sndState === 'idle' || sndState === 'over') return;
+  tickBuyPhase(dt);
 
   if (sndState === 'planted') {
     _tickPlanted(dt, keys);
@@ -211,7 +215,7 @@ function _tickPlanted(dt, keys) {
       playerDefuseProg = Math.min(1, playerDefuseProg + dt / SND_DEFUSE_TIME);
       updateDefuseBar(playerDefuseProg);
       showPlantHint('HOLD G — DEFUSING');
-      if (playerDefuseProg >= 1) { endRound('bomb_defused'); return; }
+      if (playerDefuseProg >= 1) { onDefuse(); endRound('bomb_defused'); return; }
     } else {
       playerDefuseProg = Math.max(0, playerDefuseProg - dt * 0.3);
       if (playerDefuseProg < 0.01) hidePlantHint();
@@ -237,6 +241,7 @@ function _tickAttackerPlant(dt, keys) {
     plantProgress = Math.min(1, plantProgress + dt / SND_PLANT_TIME);
     updatePlantBar(plantProgress);
     if (plantProgress >= 1) {
+      onPlant();
       _plantBomb(nearSite.x, nearSite.z, nearSite);
     }
   } else {
@@ -302,6 +307,8 @@ function endRound(result) {
     (result === 'timeout'       && playerRole === 'defend');
 
   if (playerWins) playerScore++; else enemyScore++;
+  onRoundEnd(playerWins);
+  endBuyPhase();
 
   _matchOver = playerScore >= SND_WINS_NEEDED || enemyScore >= SND_WINS_NEEDED || matchRound >= SND_TOTAL_ROUNDS;
   const [title, sub, color] = _roundResultText(result, playerWins, _matchOver);

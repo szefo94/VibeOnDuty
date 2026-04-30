@@ -13,6 +13,7 @@ import { flashMeleeRing } from './fx/meleeRange.js';
 import { updateHUD, showMsg, showStatus } from './hud/overlay.js';
 import { startLoop, setThirdPerson, getThirdPerson, toggleTpSide } from './loop.js';
 import { startSnd, nextRound, getSndSitePositions, isMatchOver, setSndMap } from './modes/snd.js';
+import { toggleBuyPanel, isBuyPhaseActive } from './modes/buyMenu.js';
 import { startTdm } from './modes/tdm.js';
 import { setDifficulty } from './difficulty.js';
 import { tryLoadEnemyGLTF, buildPlayerMesh } from './builders/enemyGLTF.js';
@@ -99,6 +100,7 @@ document.addEventListener('keydown', (e) => {
   if (e.code === 'KeyB' && getThirdPerson()) {
     showStatus(toggleTpSide() === 1 ? 'SHOULDER: RIGHT' : 'SHOULDER: LEFT');
   }
+  if (e.code === 'KeyB' && !getThirdPerson()) toggleBuyPanel();
   if (e.code === 'KeyT' && !player.dead) {
     player.dancing = !player.dancing;
     showStatus(player.dancing ? '🕺 DANCE' : '');
