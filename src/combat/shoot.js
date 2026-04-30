@@ -20,6 +20,38 @@ export let bobT = 0;
 export let sprayHeat = 0;
 export const SPRAY_COOL = 0.5;
 
+// ── First-person death drop ───────────────────────────────────────────
+const DEATH_DUR = 0.65;
+let _dying = false;
+let _deathT = 0;
+let _prevDead = false;
+
+export function updateWeaponDeath(dt) {
+  const justDied    = player.dead && !_prevDead;
+  const justRevived = !player.dead && _prevDead;
+  _prevDead = player.dead;
+
+  if (justRevived) {
+    _dying = false;
+    _deathT = 0;
+    wpn.rotation.set(0, 0, 0);
+    return;
+  }
+  if (justDied) _dying = true;
+  if (!_dying) return;
+
+  _deathT = Math.min(1, _deathT + dt / DEATH_DUR);
+  const t = _deathT * _deathT; // ease-in — gravity feel
+  wpn.position.set(
+    0.11  + t * 0.10,   // slide right (hand going limp)
+    -0.105 - t * 0.45,  // drop down
+    -0.2  + t * 0.06    // creep forward
+  );
+  wpn.rotation.x = t * 1.6;   // barrel pitches down
+  wpn.rotation.z = t * 0.30;  // slight roll outward
+  if (_deathT >= 1) wpn.visible = false;
+}
+
 export function coolSpray(dt) {
   sprayHeat = Math.max(0, sprayHeat - SPRAY_COOL * dt);
 }

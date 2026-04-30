@@ -14,6 +14,7 @@ import { drawHUD, setDebugAnimClip, setDebugFrameMs } from './hud/hud.js';
 import { tickMeleeRing } from './fx/meleeRange.js';
 import { getMode } from './modes/modeManager.js';
 import { tickScreenShake } from './fx/screenShake.js';
+import { updateWeaponDeath } from './combat/shoot.js';
 import { tickGamepad } from './gamepad.js';
 import { drawMinimap } from './hud/radar.js';
 import { playerMesh, playerMixer, playerActions } from './builders/enemyGLTF.js';
@@ -200,10 +201,14 @@ export function loop(ts) {
   // ── Player mixer ticks even when dead so death animation plays ───
   if (playerMesh && playerMixer) playerMixer.update(dt);
 
+  // ── 1p weapon death drop (runs even when dead) ───────────────────
+  updateWeaponDeath(dt);
+
   // ── Transition lerp + visibility handoff ─────────────────────────
   tpTransition += (tpTarget - tpTransition) * Math.min(1, TP_SPEED * dt);
   const bodyVisible = tpTransition > 0.05;
-  wpn.visible = tpTransition < 0.15;
+  // Don't override wpn.visible while death-drop is playing
+  if (!player.dead) wpn.visible = tpTransition < 0.15;
   // Show GLTF player when loaded, hide procedural fallback, or show procedural if no GLTF
   if (playerMesh) {
     playerMesh.visible = bodyVisible;
