@@ -8,7 +8,7 @@ function _set(n) {
   emit('economy:updated', _cash);
 }
 
-export function resetEconomy() { _lossStreak = 0; _set(800); }
+export function resetEconomy() { _lossStreak = 0; _set(3000); }
 export function getCash()      { return _cash; }
 export function canAfford(n)   { return _cash >= n; }
 

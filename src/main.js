@@ -13,7 +13,7 @@ import { flashMeleeRing } from './fx/meleeRange.js';
 import { updateHUD, showMsg, showStatus } from './hud/overlay.js';
 import { startLoop, setThirdPerson, getThirdPerson, toggleTpSide } from './loop.js';
 import { startSnd, nextRound, getSndSitePositions, isMatchOver, setSndMap } from './modes/snd.js';
-import { toggleBuyPanel, isBuyPhaseActive } from './modes/buyMenu.js';
+import { toggleBuyPanel, isBuyPhaseActive, isBuyPanelOpen, buyWeapon } from './modes/buyMenu.js';
 import { startTdm } from './modes/tdm.js';
 import { setDifficulty } from './difficulty.js';
 import { tryLoadEnemyGLTF, buildPlayerMesh, tintEnemyMesh, playerMesh } from './builders/enemyGLTF.js';
@@ -106,10 +106,10 @@ document.addEventListener('keydown', (e) => {
     showStatus(player.dancing ? '🕺 DANCE' : '');
   }
   if (e.code === 'KeyG') return; // G handled via keys state in tickSnd
-  if (e.code === 'Digit1' && gameRunning && !player.dead) switchWeapon('m4');
-  if (e.code === 'Digit2' && gameRunning && !player.dead) switchWeapon('p90');
-  if (e.code === 'Digit3' && gameRunning && !player.dead) switchWeapon('awp');
-  if (e.code === 'Digit4' && gameRunning && !player.dead) switchWeapon('pistol');
+  if (e.code === 'Digit1' && gameRunning && !player.dead) { if (!buyWeapon('m4'))     switchWeapon('m4'); }
+  if (e.code === 'Digit2' && gameRunning && !player.dead) { if (!buyWeapon('p90'))    switchWeapon('p90'); }
+  if (e.code === 'Digit3' && gameRunning && !player.dead) { if (!buyWeapon('awp'))    switchWeapon('awp'); }
+  if (e.code === 'Digit4' && gameRunning && !player.dead) { if (!buyWeapon('pistol')) switchWeapon('pistol'); }
   if (e.code === 'KeyF' && !player.dead && !player.punching) {
     player.punching = true;
     player.punchClip = player.punchClip === 'punch_cross' ? 'punch_jab' : 'punch_cross';
@@ -129,7 +129,7 @@ document.addEventListener('mousemove', (e) => {
 });
 document.addEventListener('mousedown', (e) => {
   if (e.button === 0) {
-    if (!locked && gameRunning) {
+    if (!locked && gameRunning && !isBuyPanelOpen()) {
       document.getElementById('c').requestPointerLock();
       return;
     }
@@ -164,7 +164,7 @@ document.getElementById('startbtn').addEventListener('click', () => {
   showStatus(`[1] ${WEAPONS[player.weapon].name}`);
 });
 document.getElementById('c').addEventListener('click', () => {
-  if (gameRunning && !player.dead && !locked) document.getElementById('c').requestPointerLock();
+  if (gameRunning && !player.dead && !locked && !isBuyPanelOpen()) document.getElementById('c').requestPointerLock();
 });
 
 function sndStart() {

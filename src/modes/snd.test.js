@@ -51,6 +51,21 @@ vi.mock('../hud/sndHud.js', () => ({
 
 vi.mock('../input.js', () => ({ setGameRunning: vi.fn() }));
 vi.mock('../events.js', () => ({ on: vi.fn(), off: vi.fn(), emit: vi.fn() }));
+vi.mock('./economy.js', () => ({
+  resetEconomy: vi.fn(),
+  onKill:       vi.fn(),
+  onPlant:      vi.fn(),
+  onDefuse:     vi.fn(),
+  onRoundEnd:   vi.fn(),
+}));
+vi.mock('./buyMenu.js', () => ({
+  startBuyPhase:    vi.fn(),
+  tickBuyPhase:     vi.fn(),
+  endBuyPhase:      vi.fn(),
+  isBuyPhaseActive: vi.fn(() => false),
+  toggleBuyPanel:   vi.fn(),
+  isBuyPanelOpen:   vi.fn(() => false),
+}));
 
 import * as snd from './snd.js';
 const { startSnd, nextRound, onAllEnemyTeamDead, onAllFriendsDead, tickSnd,

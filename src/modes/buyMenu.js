@@ -22,7 +22,7 @@ function _buildDOM() {
     '<span class="buy-label">BUY PHASE</span>' +
     '<span id="buy-cd">10</span>s' +
     '<span id="buy-cash-hud">$800</span>' +
-    '<span class="buy-hint">[B] SHOP</span>';
+    '<span class="buy-hint">[1/2/3] BUY  [B] SHOP</span>';
   banner.style.display = 'none';
   document.body.appendChild(banner);
 
@@ -36,6 +36,7 @@ function _buildDOM() {
       '<span class="buy-phint">[B / ESC] CLOSE</span>' +
     '</div>' +
     '<div id="buy-rows"></div>';
+  panel.addEventListener('mousedown', (e) => e.stopPropagation());
   document.body.appendChild(panel);
 
   _buildRows();
@@ -55,9 +56,9 @@ function _buildDOM() {
 }
 
 const _ITEMS = [
-  { sep: 'RIFLES' },   { key: 'm4'     },
-  { sep: 'SMGs' },     { key: 'p90'    },
-  { sep: 'SNIPERS' },  { key: 'awp'    },
+  { sep: 'RIFLES' },   { key: 'm4',  bind: '1' },
+  { sep: 'SMGs' },     { key: 'p90', bind: '2' },
+  { sep: 'SNIPERS' },  { key: 'awp', bind: '3' },
 ];
 
 function _buildRows() {
@@ -77,6 +78,7 @@ function _buildRows() {
     row.className = 'buy-row';
     row.dataset.key = item.key;
     row.innerHTML =
+      `<span class="buy-wbind">[${item.bind}]</span>` +
       `<span class="buy-wname">${w.name}</span>` +
       `<span class="buy-wprice">$${w.price.toLocaleString()}</span>`;
     row.addEventListener('click', () => _buy(item.key));
@@ -119,6 +121,11 @@ function _buy(key) {
 function _openPanel() {
   _panelOpen = true;
   document.exitPointerLock?.();
+  const fmt = `$${getCash().toLocaleString()}`;
+  const hh = document.getElementById('buy-cash-hud');
+  const pp = document.getElementById('buy-pcash');
+  if (hh) hh.textContent = fmt;
+  if (pp) pp.textContent = fmt;
   _refreshRows();
   const p = document.getElementById('buy-panel');
   if (p) p.style.display = 'flex';
@@ -178,3 +185,10 @@ export function toggleBuyPanel() {
 }
 
 export function isBuyPhaseActive() { return _active; }
+export function isBuyPanelOpen()   { return _panelOpen; }
+
+export function buyWeapon(key) {
+  if (!_active) return false;
+  _buy(key);
+  return true;
+}
