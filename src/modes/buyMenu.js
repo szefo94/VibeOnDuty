@@ -155,6 +155,11 @@ export function startBuyPhase(duration = 10) {
   show1pWeapon('pistol');
   show3pWeapon('pistol');
   updateHUD();
+  const fmt = `$${getCash().toLocaleString()}`;
+  const hh = document.getElementById('buy-cash-hud');
+  const pp = document.getElementById('buy-pcash');
+  if (hh) hh.textContent = fmt;
+  if (pp) pp.textContent = fmt;
   const b = document.getElementById('buy-banner');
   if (b) { b.style.display = 'flex'; _tick_banner(); }
 }
