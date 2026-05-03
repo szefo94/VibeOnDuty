@@ -29,6 +29,23 @@ const TARGET_DEFS = [
 // ── Drill constants ───────────────────────────────────────────────────────
 const DRILLS     = ['free', 'flick', 'reaction'];
 const DRILL_NAMES = { free: 'FREE PRACTICE', flick: 'FLICK DRILL', reaction: 'REACTION DRILL' };
+
+// ── Presets ───────────────────────────────────────────────────────────────
+const PRESETS = [
+  { id: 'all',     label: 'FULL RANGE',   desc: '9 targets · all zones'       },
+  { id: 'short',   label: 'SHORT RANGE',  desc: 'Close quarters · 5–15 m'     },
+  { id: 'medium',  label: 'MEDIUM RANGE', desc: 'Mid range · 17–35 m'         },
+  { id: 'long',    label: 'LONG RANGE',   desc: 'Long range · 40–60 m'        },
+  { id: 'hostile', label: 'HOSTILE ONLY', desc: 'No hostages · pure accuracy'  },
+];
+
+function _presetMatch(t, id) {
+  if (id === 'short')   return t.zone === 'short';
+  if (id === 'medium')  return t.zone === 'medium';
+  if (id === 'long')    return t.zone === 'long';
+  if (id === 'hostile') return t.type === 'hostile';
+  return true;
+}
 const FLICK_DUR  = 60;    // seconds per flick session
 const FLICK_WIN  = 0.80;  // 800 ms to hit the lit target
 const REACT_POPS = 20;    // total target appearances in reaction drill
@@ -37,9 +54,11 @@ const REACT_GAP_MIN = 0.4;
 const REACT_GAP_MAX = 1.8;
 
 // ── State ─────────────────────────────────────────────────────────────────
-let _active     = false;
-let _drillIdx   = 0;
-let _drill      = 'free';
+let _active          = false;
+let _drillIdx        = 0;
+let _drill           = 'free';
+let _presetIdx       = 0;
+let _presetPanelOpen = false;
 
 // Shared stats (reset per drill start)
 let _shots = 0, _hits = 0, _hs = 0, _streak = 0, _bestStreak = 0, _penalties = 0;
@@ -62,6 +81,7 @@ let _reactActive = [];  // targets currently up (with their expiry timer)
 // DOM
 let _domBuilt = false;
 let _hudEl, _drillEl, _timerEl, _hitsEl, _accEl, _hsEl, _streakEl, _reactEl, _penEl;
+let _presetPanelEl;
 
 // ── Public API ────────────────────────────────────────────────────────────
 
@@ -73,6 +93,7 @@ export function startTrainingRange() {
   for (const t of rangeTargets) t.onHit = _onTargetHit;
 
   _buildHUD();
+  _buildPresetPanel();
   _startDrill('free');
   setMode({ name: 'range', tick: tickRange });
   showMsg('TRAINING RANGE — [TAB] CHANGE DRILL', 3000);
@@ -83,9 +104,12 @@ export function startTrainingRange() {
 
 export function stopTrainingRange() {
   _active = false;
+  _presetPanelOpen = false;
+  _presetIdx = 0;
   document.removeEventListener('keydown', _onKey);
   clearRangeTargets();
   if (_hudEl) { _hudEl.remove(); _hudEl = null; _domBuilt = false; }
+  if (_presetPanelEl) { _presetPanelEl.remove(); _presetPanelEl = null; }
 }
 
 export function isRangeActive() { return _active; }
@@ -232,12 +256,12 @@ function _startDrill(name) {
   _drillIdx = DRILLS.indexOf(name);
 
   if (name === 'free') {
-    for (const t of rangeTargets) popUpTarget(t);
+    for (const t of rangeTargets) if (!t.disabled) popUpTarget(t);
 
   } else if (name === 'flick') {
     _flickTimer = FLICK_DUR;
     _flickTarget = null;
-    for (const t of rangeTargets) if (t.type === 'hostage') popUpTarget(t);
+    for (const t of rangeTargets) if (!t.disabled && t.type === 'hostage') popUpTarget(t);
 
   } else if (name === 'reaction') {
     _reactPopped = 0;
@@ -265,8 +289,8 @@ function _endReaction() {
 }
 
 function _pickFlickTarget() {
-  const ups = rangeTargets.filter(t => t.state === 'down' && t.type === 'hostile');
-  if (!ups.length) { for (const t of rangeTargets) if (t.type === 'hostile') dropTarget(t); return; }
+  const ups = rangeTargets.filter(t => t.state === 'down' && t.type === 'hostile' && !t.disabled);
+  if (!ups.length) { for (const t of rangeTargets) if (t.type === 'hostile' && !t.disabled) dropTarget(t); return; }
   const t = ups[Math.floor(Math.random() * ups.length)];
   popUpTarget(t);
   setTargetActive(t, true);
@@ -275,14 +299,83 @@ function _pickFlickTarget() {
 }
 
 function _randomDownTarget() {
-  const pool = rangeTargets.filter(t => t.state === 'down');
+  const pool = rangeTargets.filter(t => t.state === 'down' && !t.disabled);
   if (!pool.length) return null;
   return pool[Math.floor(Math.random() * pool.length)];
+}
+
+// ── Preset panel ─────────────────────────────────────────────────────────
+function _openPresetPanel() {
+  _presetPanelOpen = true;
+  document.exitPointerLock?.();
+  _refreshPresetRows();
+  if (_presetPanelEl) _presetPanelEl.style.display = 'flex';
+}
+
+function _closePresetPanel() {
+  _presetPanelOpen = false;
+  if (_presetPanelEl) _presetPanelEl.style.display = 'none';
+  if (_active) document.getElementById('c')?.requestPointerLock();
+}
+
+function _applyPreset(idx) {
+  _presetIdx = idx;
+  const id = PRESETS[idx].id;
+  for (const t of rangeTargets) t.disabled = !_presetMatch(t, id);
+  _startDrill(_drill);
+  _closePresetPanel();
+  _refreshPresetRows();
+}
+
+function _refreshPresetRows() {
+  document.querySelectorAll('.rp-row').forEach((row, i) => {
+    row.classList.toggle('rp-active', i === _presetIdx);
+  });
+}
+
+function _buildPresetPanel() {
+  if (_presetPanelEl) return;
+  _presetPanelEl = document.createElement('div');
+  _presetPanelEl.id = 'range-preset-panel';
+  _presetPanelEl.style.display = 'none';
+
+  let rows = '';
+  PRESETS.forEach((p, i) => {
+    rows += `<div class="rp-row" data-idx="${i}">` +
+      `<span class="rp-bind">[${i + 1}]</span>` +
+      `<span class="rp-label">${p.label}</span>` +
+      `<span class="rp-desc">${p.desc}</span>` +
+      `</div>`;
+  });
+
+  _presetPanelEl.innerHTML =
+    `<div class="rp-header"><span>TARGET PRESETS</span><span class="rp-close">[P / ESC] CLOSE</span></div>` +
+    `<div class="rp-rows">${rows}</div>`;
+  _presetPanelEl.addEventListener('mousedown', e => e.stopPropagation());
+  document.body.appendChild(_presetPanelEl);
+
+  _presetPanelEl.querySelectorAll('.rp-row').forEach((row, i) => {
+    row.addEventListener('click', () => _applyPreset(i));
+  });
 }
 
 // ── Key handler ───────────────────────────────────────────────────────────
 function _onKey(e) {
   if (!_active) return;
+
+  if (e.code === 'KeyP') {
+    e.preventDefault();
+    _presetPanelOpen ? _closePresetPanel() : _openPresetPanel();
+    return;
+  }
+
+  if (_presetPanelOpen) {
+    const n = parseInt(e.key);
+    if (n >= 1 && n <= PRESETS.length) _applyPreset(n - 1);
+    if (e.code === 'Escape') _closePresetPanel();
+    return;
+  }
+
   if (e.code === 'Tab') {
     e.preventDefault();
     _drillIdx = (_drillIdx + 1) % DRILLS.length;
@@ -312,7 +405,7 @@ function _buildHUD() {
     <div class="range-stat-row"><span>STREAK</span><span id="rng-streak">×0</span></div>
     <div class="range-stat-row"><span>AVG REACT</span><span id="rng-react">—</span></div>
     <div class="range-stat-row"><span>PENALTIES</span><span id="rng-pen">0</span></div>
-    <div id="range-hint">[TAB] NEXT DRILL &nbsp;·&nbsp; [ESC] EXIT</div>
+    <div id="range-hint">[TAB] DRILL &nbsp;·&nbsp; [P] PRESETS &nbsp;·&nbsp; [ESC] EXIT</div>
   `;
   document.body.appendChild(_hudEl);
 
