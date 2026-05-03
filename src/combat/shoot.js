@@ -7,6 +7,8 @@ import { spawnImpact } from '../fx/impacts.js';
 import { groundElevation } from '../map.js';
 import { player, startReload } from '../entities/player.js';
 import { enemies, killEnemy } from '../entities/enemies.js';
+import { rangeTargets, registerHit } from '../entities/targetDummy.js';
+import { notifyShot, isRangeActive } from '../modes/trainingRange.js';
 import { alertEnemy } from '../ai/enemyStates.js';
 import { activeDrone, killDrone } from '../entities/drone.js';
 import { spawnHitMarker } from '../hud/hitmarker.js';
@@ -178,6 +180,24 @@ export function tickBullets(dt) {
         continue;
       }
     }
+
+    for (const t of rangeTargets) {
+      if (t.state !== 'up') continue;
+      const bodyY = t.group.position.y + 0.85;
+      const headY = t.group.position.y + 1.58;
+      const bodyC = new THREE.Vector3(t.x, bodyY, t.z);
+      const headC = new THREE.Vector3(t.x, headY, t.z);
+      const isHead = b.pos.distanceTo(headC) < 0.28;
+      if (isHead || b.pos.distanceTo(bodyC) < 0.45) {
+        registerHit(t, isHead);
+        spawnHitMarker();
+        spawnDamageNumber(bodyC.x, bodyC.y + 0.4, bodyC.z, isHead ? b.damage * 4 : b.damage);
+        _removeBullet(i);
+        hit = true;
+        break;
+      }
+    }
+    if (hit) continue;
   }
 }
 
@@ -224,6 +244,7 @@ export function tryShoot() {
   player.shootCd = now;
   player.ammo--;
   updateHUD();
+  if (isRangeActive()) notifyShot();
   muzzleT = 62;
   recoilT = 1;
   sprayHeat = Math.min(1, sprayHeat + wDef.sprayGrow);

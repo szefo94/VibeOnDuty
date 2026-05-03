@@ -5,7 +5,7 @@ import { debugLines } from './level.js';
 import { locked, gameRunning, setGameRunning, setLocked } from './input.js';
 import { initTouch, isTouchDevice } from './touch.js';
 import { player, startReload } from './entities/player.js';
-import { rebuildAllEnemies, spawnSndEnemies, spawnTdmEnemies } from './entities/enemies.js';
+import { rebuildAllEnemies, spawnSndEnemies, spawnTdmEnemies, deactivateAllEnemies } from './entities/enemies.js';
 import { spawnNewDrone, spawnSndDrones, clearSndDrones } from './entities/drone.js';
 import { tryThrowGrenade } from './entities/grenades.js';
 import { tryShoot, tryPunchDamage } from './combat/shoot.js';
@@ -28,6 +28,8 @@ import { buildLevel } from './level.js';
 import { bunkerMapDef } from './maps/bunker.js';
 import { rooftopMapDef } from './maps/rooftop.js';
 import { conceptMapDef } from './maps/concept.js';
+import { rangeMapDef } from './maps/range.js';
+import { startTrainingRange } from './modes/trainingRange.js';
 
 const _euler = new THREE.Euler(0, 0, 0, 'YXZ');
 let debugVisible = true;
@@ -201,11 +203,28 @@ function tdmStart() {
   showStatus(`[1] ${WEAPONS[player.weapon].name}`);
 }
 
+function rangeStart() {
+  setActiveMap(rangeMapDef);
+  buildLevel(rangeMapDef);
+  if (debugLines) debugLines.visible = debugVisible;
+  deactivateAllEnemies();
+  camera.position.set(rangeMapDef.spawnPlayer.x, PLAYER_H, rangeMapDef.spawnPlayer.z);
+  document.getElementById('overlay').style.display = 'none';
+  if (isTouchDevice) { setLocked(true); } else { document.getElementById('c').requestPointerLock(); }
+  setGameRunning(true);
+  show1pWeapon(player.weapon);
+  show3pWeapon(player.weapon);
+  startTrainingRange();
+}
+
 // ── S&D mode start ─────────────────────────────────────────────────
 document.getElementById('snd-startbtn').addEventListener('click', sndStart);
 
 // ── TDM mode start ─────────────────────────────────────────────────
 document.getElementById('tdm-startbtn').addEventListener('click', tdmStart);
+
+// ── Training range start ────────────────────────────────────────────
+document.getElementById('range-startbtn').addEventListener('click', rangeStart);
 
 // ── S&D next round ─────────────────────────────────────────────────
 document.getElementById('snd-next-btn').addEventListener('click', () => {
@@ -231,15 +250,18 @@ register('player-p90', tryLoadP90ForHand);
 // ── Kick off ───────────────────────────────────────────────────────
 window.loadGLTF = tryLoadEnemyGLTF;
 
-const _startBtn    = document.getElementById('startbtn');
-const _sndStartBtn = document.getElementById('snd-startbtn');
-const _tdmStartBtn = document.getElementById('tdm-startbtn');
+const _startBtn      = document.getElementById('startbtn');
+const _sndStartBtn   = document.getElementById('snd-startbtn');
+const _tdmStartBtn   = document.getElementById('tdm-startbtn');
+const _rangeStartBtn = document.getElementById('range-startbtn');
 _startBtn.disabled    = true;
 _sndStartBtn.disabled = true;
 _tdmStartBtn.disabled = true;
+_rangeStartBtn.disabled = true;
 _startBtn.textContent    = 'LOADING...';
 _sndStartBtn.textContent = 'LOADING...';
 _tdmStartBtn.textContent = 'LOADING...';
+_rangeStartBtn.textContent = 'LOADING...';
 
 // Attach player 3p weapon to body BEFORE async block so buildPlayerMesh()
 // can reparent it to hand_r without immediately losing it.
@@ -248,12 +270,14 @@ playerBody.add(weapon3p);
 
 (async () => {
   const assets = await loadAll();
-  _startBtn.textContent    = 'INCURSION';
-  _sndStartBtn.textContent = 'S&D — START';
-  _tdmStartBtn.textContent = 'TEAM DEATHMATCH';
+  _startBtn.textContent      = 'INCURSION';
+  _sndStartBtn.textContent   = 'S&D — START';
+  _tdmStartBtn.textContent   = 'TEAM DEATHMATCH';
+  _rangeStartBtn.textContent = 'TRAINING RANGE';
   _startBtn.disabled    = false;
   _sndStartBtn.disabled = false;
   _tdmStartBtn.disabled = false;
+  _rangeStartBtn.disabled = false;
   if (assets['enemy-glb']) {
     rebuildAllEnemies();
     buildPlayerMesh();

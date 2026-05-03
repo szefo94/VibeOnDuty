@@ -511,3 +511,10 @@ export function updateEnemies(ts, dt) {
     }
   }
 }
+
+export function deactivateAllEnemies() {
+  for (const e of enemies) {
+    e.dead = true;
+    if (e.mesh) e.mesh.visible = false;
+  }
+}
