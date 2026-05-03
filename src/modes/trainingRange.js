@@ -69,9 +69,11 @@ let _drillIdx        = 0;
 let _drill           = 'free';
 let _presetIdx       = 0;
 let _presetPanelOpen = false;
-let _diffIdx = 1;       // default: NORMAL
-let _moveH   = false;
-let _moveV   = false;
+let _diffIdx     = 1;
+let _moveH       = false;
+let _moveV       = false;
+let _moveHMode   = 'sine';   // 'sine' | 'spring'
+let _moveHSpeed  = 0;        // 0=slow 1=medium 2=fast
 
 // Difficulty-adjustable params (NORMAL defaults)
 let _flickWin    = 1.5;
@@ -117,8 +119,8 @@ export function stopTrainingRange() {
   _presetPanelOpen = false;
   _presetIdx = 0;
   _diffIdx = 1;
-  _moveH = false;
-  _moveV = false;
+  _moveH = false; _moveV = false;
+  _moveHMode = 'sine'; _moveHSpeed = 0;
   setTargetMoveMode({ h: false, v: false });
   document.removeEventListener('keydown', _onKey);
   clearRangeTargets();
@@ -319,13 +321,20 @@ function _setDiff(idx) {
   _refreshPanel();
 }
 
+function _applyMove() {
+  setTargetMoveMode({ h: _moveH, v: _moveV, hMode: _moveHMode, hSpeed: _moveHSpeed });
+  _refreshPanel();
+}
+
 function _toggleMove(axis) {
   if (axis === 'h') _moveH = !_moveH;
   else if (axis === 'v') _moveV = !_moveV;
-  else { _moveH = false; _moveV = false; } // 'static' resets both
-  setTargetMoveMode({ h: _moveH, v: _moveV });
-  _refreshPanel();
+  else { _moveH = false; _moveV = false; }
+  _applyMove();
 }
+
+function _setHMode(mode) { _moveHMode = mode; _applyMove(); }
+function _setHSpeed(idx) { _moveHSpeed = idx; _applyMove(); }
 
 function _refreshPanel() {
   if (!_presetPanelEl) return;
@@ -342,6 +351,12 @@ function _refreshPanel() {
     const v = r.dataset.val;
     const on = v === 'h' ? _moveH : v === 'v' ? _moveV : (!_moveH && !_moveV);
     r.classList.toggle('rp-active', on);
+  });
+  _presetPanelEl.querySelectorAll('.rp-row[data-section="hmode"]').forEach(r => {
+    r.classList.toggle('rp-active', r.dataset.val === _moveHMode);
+  });
+  _presetPanelEl.querySelectorAll('.rp-row[data-section="hspeed"]').forEach((r, i) => {
+    r.classList.toggle('rp-active', i === _moveHSpeed);
   });
 }
 
@@ -378,6 +393,17 @@ function _buildPresetPanel() {
     ['v',      'VERTICAL',   'Up / down · toggle'],
   ].map(([v, l, d]) => mkRow('move', v, l, d)).join('');
 
+  const hmodeRows = [
+    ['sine',   'SINE',   'Smooth wave traversal'],
+    ['spring', 'SPRING', 'Spring strafing — picks random goals'],
+  ].map(([v, l, d]) => mkRow('hmode', v, l, d)).join('');
+
+  const hspeedRows = [
+    ['0', 'SLOW',   'Lazy crawl'],
+    ['1', 'MEDIUM', 'Combat pace'],
+    ['2', 'FAST',   'Erratic sprint'],
+  ].map(([v, l, d]) => mkRow('hspeed', v, l, d)).join('');
+
   _presetPanelEl.innerHTML =
     `<div class="rp-header"><span>TRAINING PRESETS</span><span class="rp-close">[P / ESC]</span></div>` +
     `<div class="rp-body">` +
@@ -385,6 +411,8 @@ function _buildPresetPanel() {
     `<div class="rp-section-hdr">DIFFICULTY</div>${diffRows}` +
     `<div class="rp-section-hdr">TARGETS</div>${presetRows}` +
     `<div class="rp-section-hdr">MOVEMENT</div>${moveRows}` +
+    `<div class="rp-section-hdr">H PATTERN</div>${hmodeRows}` +
+    `<div class="rp-section-hdr">H SPEED</div>${hspeedRows}` +
     `</div>`;
 
   _presetPanelEl.addEventListener('mousedown', e => e.stopPropagation());
@@ -406,6 +434,12 @@ function _buildPresetPanel() {
   });
   _presetPanelEl.querySelectorAll('.rp-row[data-section="move"]').forEach(row => {
     row.addEventListener('click', () => _toggleMove(row.dataset.val));
+  });
+  _presetPanelEl.querySelectorAll('.rp-row[data-section="hmode"]').forEach(row => {
+    row.addEventListener('click', () => _setHMode(row.dataset.val));
+  });
+  _presetPanelEl.querySelectorAll('.rp-row[data-section="hspeed"]').forEach((row, i) => {
+    row.addEventListener('click', () => _setHSpeed(i));
   });
 }
 

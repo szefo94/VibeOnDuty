@@ -10,20 +10,40 @@ const POP_DUR  = 0.13;
 const DROP_DUR = 0.10;
 
 // Range map is 14 tiles wide; interior runs from 1.5 tiles to 12.5 tiles
-const H_MIN    = CELL * 1.5;           // ≈ 6 m
-const H_MAX    = 14 * CELL - CELL * 1.5; // ≈ 50 m
-const H_CENTER = (H_MIN + H_MAX) / 2;  // 28 m — map centre
-const H_HALF   = (H_MAX - H_MIN) / 2;  // 22 m
-const MOVE_H_FREQ = 0.18;  // Hz — one full crossing every ~5.5 s
-const MOVE_V_AMP  = 0.55;  // vertical bob height (m)
-const MOVE_V_FREQ = 0.65;  // Hz
+const H_MIN    = CELL * 1.5;
+const H_MAX    = 14 * CELL - CELL * 1.5;
+const H_CENTER = (H_MIN + H_MAX) / 2;
+const H_HALF   = (H_MAX - H_MIN) / 2;
+
+// Sine speeds: Hz per speed index (slow / medium / fast)
+const H_SINE_FREQS = [0.04, 0.10, 0.22];
+
+// Spring configs per speed index
+const H_SPRING = [
+  { k: 1.2, damp: 3.5, maxV:  4, intMin: 3.5, intMax: 6.0 }, // slow
+  { k: 3.0, damp: 4.0, maxV:  8, intMin: 1.5, intMax: 3.0 }, // medium
+  { k: 6.5, damp: 3.0, maxV: 16, intMin: 0.4, intMax: 1.5 }, // fast
+];
+
+const MOVE_V_AMP  = 0.55;
+const MOVE_V_FREQ = 0.65;
 
 let _moveH = false, _moveV = false;
-export function setTargetMoveMode({ h, v }) {
-  if (!h && _moveH) for (const t of rangeTargets) t.group.position.x = t.x;
+let _moveHMode  = 'sine';  // 'sine' | 'spring'
+let _moveHSpeed = 0;       // 0=slow 1=medium 2=fast
+
+export function setTargetMoveMode({ h, v, hMode = 'sine', hSpeed = 0 }) {
+  const modeChange = h && hMode !== _moveHMode;
+  if ((!h && _moveH) || modeChange) {
+    for (const t of rangeTargets) {
+      t.group.position.x = modeChange ? t.group.position.x : t.x;
+      t.springX  = t.group.position.x;
+      t.springVX = 0;
+      t.springT  = t.id * 0.5;
+    }
+  }
   if (!v && _moveV) for (const t of rangeTargets) if (t.state === 'up') t.group.position.y = 0;
-  _moveH = !!h;
-  _moveV = !!v;
+  _moveH = !!h; _moveV = !!v; _moveHMode = hMode; _moveHSpeed = hSpeed;
 }
 
 // Materials (cloned per target so each can flash independently)
@@ -58,8 +78,12 @@ export function spawnRangeTargets(defs) {
       state:    'down',  // 'down' | 'popping' | 'up' | 'dropping'
       popT:     0,
       flashT:   0,
-      moveT:    def.id * 1.1,  // phase offset per target so they don't sync
-      active:   false,
+      moveT:      def.id * 1.1,
+      springX:    def.x,
+      springVX:   0,
+      springGoalX: def.x,
+      springT:    def.id * 0.5,
+      active:     false,
       disabled: false,
       group,
       bodyMesh,
@@ -133,7 +157,23 @@ export function tickDummies(dt) {
     // Movement while up
     if (t.state === 'up' && (_moveH || _moveV)) {
       t.moveT += dt;
-      if (_moveH) t.group.position.x = H_CENTER + Math.sin(t.moveT * MOVE_H_FREQ * Math.PI * 2) * H_HALF;
+      if (_moveH) {
+        if (_moveHMode === 'spring') {
+          const cfg = H_SPRING[_moveHSpeed] ?? H_SPRING[0];
+          t.springT -= dt;
+          if (t.springT <= 0) {
+            t.springGoalX = H_CENTER + (Math.random() * 2 - 1) * H_HALF * 0.85;
+            t.springT = cfg.intMin + Math.random() * (cfg.intMax - cfg.intMin);
+          }
+          t.springVX += (t.springGoalX - t.springX) * cfg.k * dt;
+          t.springVX *= 1 - cfg.damp * dt;
+          t.springVX = Math.max(-cfg.maxV, Math.min(cfg.maxV, t.springVX));
+          t.springX = Math.max(H_MIN, Math.min(H_MAX, t.springX + t.springVX * dt));
+          t.group.position.x = t.springX;
+        } else {
+          t.group.position.x = H_CENTER + Math.sin(t.moveT * H_SINE_FREQS[_moveHSpeed] * Math.PI * 2) * H_HALF;
+        }
+      }
       if (_moveV) t.group.position.y = UP_Y + (Math.sin(t.moveT * MOVE_V_FREQ * Math.PI * 2) * 0.5 + 0.5) * MOVE_V_AMP;
     }
   }
