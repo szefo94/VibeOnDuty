@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { scene } from '../scene.js';
+import { CELL } from '../config.js';
 
 export const rangeTargets = [];
 
@@ -8,8 +9,12 @@ const UP_Y    =  0;
 const POP_DUR  = 0.13;
 const DROP_DUR = 0.10;
 
-const MOVE_H_AMP  = 1.4;   // horizontal swing radius (m)
-const MOVE_H_FREQ = 0.45;  // Hz
+// Range map is 14 tiles wide; interior runs from 1.5 tiles to 12.5 tiles
+const H_MIN    = CELL * 1.5;           // ≈ 6 m
+const H_MAX    = 14 * CELL - CELL * 1.5; // ≈ 50 m
+const H_CENTER = (H_MIN + H_MAX) / 2;  // 28 m — map centre
+const H_HALF   = (H_MAX - H_MIN) / 2;  // 22 m
+const MOVE_H_FREQ = 0.18;  // Hz — one full crossing every ~5.5 s
 const MOVE_V_AMP  = 0.55;  // vertical bob height (m)
 const MOVE_V_FREQ = 0.65;  // Hz
 
@@ -128,7 +133,7 @@ export function tickDummies(dt) {
     // Movement while up
     if (t.state === 'up' && (_moveH || _moveV)) {
       t.moveT += dt;
-      if (_moveH) t.group.position.x = t.x + Math.sin(t.moveT * MOVE_H_FREQ * Math.PI * 2) * MOVE_H_AMP;
+      if (_moveH) t.group.position.x = H_CENTER + Math.sin(t.moveT * MOVE_H_FREQ * Math.PI * 2) * H_HALF;
       if (_moveV) t.group.position.y = UP_Y + (Math.sin(t.moveT * MOVE_V_FREQ * Math.PI * 2) * 0.5 + 0.5) * MOVE_V_AMP;
     }
   }
