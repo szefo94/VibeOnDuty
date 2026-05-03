@@ -25,11 +25,15 @@ src/
     bunker.js           — Greek Columns mapDef (complex arena, ramps, cracks, torches)
     rooftop.js          — Rooftop District mapDef (outdoor, HVAC cover, daylight)
     concept.js          — Column Arena mapDef (marble pillar prototype)
+    range.js            — Training Range mapDef (56×80 m flat hall, 9 target slots, strip lights)
   difficulty.js         — setDifficulty/getDifficulty; active preset singleton
   modes/
     modeManager.js      — setMode/getMode/isAnyModeActive (zero-dep registry)
     snd.js              — S&D match state machine, round lifecycle, bomb logic
     tdm.js              — Team Deathmatch — score, respawn queues, 10-min timer
+    trainingRange.js    — Training Range drills (free/flick/reaction/hostage), preset panel, HUD
+    economy.js          — S&D cash ledger (kill/plant/defuse bonuses, loss streak)
+    buyMenu.js          — S&D buy phase UI, weapon shop, 10 s countdown
   ai/
     enemyStates.js      — PATROL/SPOTTED/ATTACK + transitionTo, alertEnemy, semiAlertEnemy
   builders/
@@ -48,12 +52,13 @@ src/
   entities/
     entityBase.js       — applyEntityBase mixin (isAlive, takeDamage)
     player.js           — player state, movement, dive, lean, reload; per-weapon ammo/reserve/weaponAmmo map
-    enemies.js          — enemy AI loop, S&D team spawn, kill/death events
+    enemies.js          — enemy AI loop, S&D team spawn, kill/death events; deactivateAllEnemies
     friendlyBots.js     — allied bot AI (A*, LOS, bot-vs-bot shooting)
     drone.js            — drone runtime (AI, EMP, orbit, S&D recon drones)
     waveSystem.js       — wave state, tickWave, triggerWaveEnd
     ammoDrops.js        — ammo pickup spawn and collection
     grenades.js         — grenade throw, flight, explosion
+    targetDummy.js      — range target mesh, pop/drop animation, hit flash, spring/sine movement
   utils/
     los.js              — hasLOS raycaster utility
   fx/
@@ -107,6 +112,7 @@ types/
 | 18+ | Enemy weapon roles — `buildEnemyWeapon3p(role)` generates assault/smg/sniper/pistol procedural meshes; `attachEnemyWeapon(root, role)` replaces per-enemy pistol. `buildEnemyMesh` accepts `role` param passed through from `spawnEnemyIntoSlot`. S&D fixed `SND_ROLES[10]` array specialises each bot slot (sniper holds, SMG rushes). 3p player weapon fix: `weapon3p` added to `playerBody` before async IIFE so `attachWeapons3pToHand` can correctly reparent it to `hand_r`. |
 | 35 (partial) | **Team Deathmatch** — `src/modes/tdm.js`. First to 50 kills wins or 10-minute timer. Player respawns after 3 s; enemies respawn after 3 s via queue in TDM tick. `enemy:killed` / `player:died` events drive score tracking and respawn. `getMode()?.name` gating in `killEnemy` and `triggerDeath` ensures S&D round events don't fire in TDM. v1: 10 enemies vs player solo (no friendly bots in TDM yet). |
 | 39 (partial) | **Difficulty system** — `src/difficulty.js` + `DIFFICULTY_PRESETS` in `config.js`. 4 tiers (Recruit / Regular / Veteran / Elite) each define `reactMin/Max`, `shootCd`, `damage`, `speedMult`, `aimThresh`, `hp`, `sight`, `strafeChance`. Enemy AI in `enemyStates.js` reads `getDifficulty()` live — reaction delay, shoot cooldown, damage, aim threshold, speed. `_tickStrafe()` added to `ATTACK_STATE`: perpendicular velocity applied each frame, direction flips on timer, active only when `strafeChance > 0`. Recruit: stands still, slow, 70 HP, 16 m sight. Elite: 60–150 ms reaction, 420 ms shoot CD, always strafing, 160 HP, 30 m sight. Picker on main overlay; `setDifficulty` called on card click. `rebuildAllEnemies()` called at game start (not just asset load) so chosen HP applies immediately. |
+| 32 | **Training Range** — `src/modes/trainingRange.js` + `src/entities/targetDummy.js` + `src/maps/range.js`. Dedicated 56×80 m flat hall with 9 procedural targets (3 short / 3 medium / 3 long zone). Four drill modes: Free Practice (all targets up, 1.5 s respawn), Flick Drill (60 s; one lit hostile at a time, hit within difficulty window), Reaction Drill (20 pop appearances with configurable up-time window), Hostage Gauntlet (free practice with live +1/−1 score). Hostile targets have red-glowing heads; hostage targets have green-glowing heads. Hit flash, hitmarker, floating damage numbers. Preset panel (`P` key, pointer-lock released) with 6 sections: DRILL, DIFFICULTY (Beginner 2.5 s / Normal 1.5 s / Hard 0.8 s / Elite 0.4 s), TARGETS (Full/Short/Medium/Long/Hostile Only), MOVEMENT (H+V independent checkboxes), H PATTERN (Sine / Spring strafe physics), H SPEED (Slow / Medium / Fast). Horizontal movement sweeps full corridor width (6–50 m). Spring mode uses spring-damper physics with per-speed configs (k, damp, maxV, goal interval). Sine mode: 0.04/0.10/0.22 Hz per speed index. Vertical: sinusoidal bob 0–0.55 m at 0.65 Hz. Live HUD: drill name, timer/score (Hostage Gauntlet shows coloured score), hit count, accuracy, headshots, streak, avg reaction, penalties. `Tab` cycles drills. Infinite ammo. Enemies deactivated via `deactivateAllEnemies()`. |
 
 ---
 
@@ -426,88 +432,9 @@ Pure visual customisation — no pay-to-win. Gives players identity and a reason
 
 ---
 
-### Phase 32 — Training range
+### ~~Phase 32 — Training range~~ ✅ Done
 
-A dedicated offline mode for warming up aim and learning spray patterns. The player can load straight into the range from the overlay without starting a match — it's a pressure-free sandbox that also happens to be the game's best tutorial.
-
-#### Scene layout
-
-A long rectangular hall, ~60 m deep × 30 m wide. Divided into four zones left-to-right:
-
-```
-[  SPRAY WALL  |  SHORT RANGE  |  MEDIUM RANGE  |  LONG LANE  ]
-    0–4 m          5–15 m           16–30 m          31–60 m
-```
-
-- **Spray wall**: blank flat surface right in front of the spawn. Every bullet leaves a persistent decal dot. Used for mag dumps without aiming — purely to see the raw recoil pattern before compensation.
-- **Short range**: 3 pop-up mannequin targets at 5, 8, 12 m. Best for CQB drills and flick training.
-- **Medium range**: 4 targets at 16, 20, 25, 30 m on horizontal sliding rails (2 m travel each direction). Simulates holding an angle while the enemy peeks.
-- **Long lane**: narrow 3 m-wide corridor, 2 static targets at 40 m and 55 m. Only headshots register on the far one — body is too small to reliably hit at that range, forcing precision.
-
-The floor is a neutral grey concrete (no rubble, no ramps — zero visual noise). Overhead strip lighting, no torch flicker. The goal is that nothing distracts from the aim itself.
-
-#### Drill modes
-
-Selectable from a panel on the left wall (interact with `F`):
-
-| Mode | Description | Ends when |
-|------|-------------|-----------|
-| **Free practice** | All targets up, infinite ammo, no timer | Player exits |
-| **Flick drill** | One random target lights up red. Hit it within 800 ms, next one lights. Miss = no penalty, just resets | 60 s — score = hits |
-| **Tracking drill** | One moving target at medium range. Hold crosshair on it — score accumulates per ms on-target | 30 s — score = % time on target |
-| **Reaction drill** | Targets hidden behind cover panels, pop up for exactly 400 ms then drop. Miss window = target counts as kill | 20 targets total — score = hits/20 |
-| **Spray control** | Close-range static wall. After each mag the wall resets; ideal M4 pattern is drawn in green, player's dots in white | Per-mag — score = average deviation from ideal |
-| **1-tap drill** | Single tap only (game enforces it — holding fire does nothing). Targets pop up 1 at a time at random distances | 90 s — score = accuracy % |
-
-Between drills the player sees a 5-second score card with their result and personal best before the next drill starts automatically.
-
-#### Target behaviour
-
-Each target is a `THREE.Group`: torso box + head sphere, each with a separate `Raycast` mesh. Headshots glow briefly yellow; body hits glow white. A miss within 15 cm of the target shows a near-miss flash (orange) — close enough to be encouraging, far enough to sting.
-
-Pop-up animation: target rises from a slot in the floor over 80 ms using a linear position tween. Drops back in 60 ms on timeout. The fast drop is intentional — a barely-missed target feels like it dodged, which is more fun than it just disappearing.
-
-Moving targets run on a `userData.phase` sine wave: `x = rail_center + Math.sin(userData.phase) * rail_half`. Speed is configurable per drill. Fast setting (0.8× player strafe speed) is genuinely difficult — comparable to a real opponent speed-peeking.
-
-#### Spray pattern visualiser
-
-After each mag in Free Practice or Spray Control mode, a 2D canvas panel (`src/fx/sprayVisualiser.js`) appears floating beside the spray wall:
-
-- Player's impact positions recorded in **aim-space** — each bullet's deviation from the crosshair centre in mrad, not world space. This makes the pattern weapon-relative regardless of where the player was aiming.
-- Rendered as white dots on black background, scaled so the full M4 pattern fits the panel.
-- Ideal pattern for the current weapon overlaid as green dots with connecting lines — this is the pattern the player needs to **counter-pull** against.
-- Panel persists until next mag starts. Tap `R` to dismiss early.
-- Deviation score: average distance from each player dot to its ideal counterpart. <15 mrad = gold, <25 = silver, <40 = bronze.
-
-#### Stats tracking
-
-Live HUD in the top-left corner during any drill:
-
-```
-HITS       42 / 58
-ACCURACY   72.4%
-HEADSHOTS  18  (42.8%)
-AVG REACT  387 ms
-STREAK     ×7
-```
-
-Session summary on exit: all five metrics plus a per-drill breakdown. Stored in `localStorage` as `range_pb` — personal bests persist between sessions and show as a thin gold line on the score card.
-
-If the player beats a personal best, the score card flashes gold and shows `NEW BEST` — a small dopamine hit that makes people come back the next day to warm up.
-
-#### Weapon selection
-
-Wall rack on the right side of the spawn: silhouettes of each available weapon. Walk up to one and press `F` to equip. Switching weapon mid-drill is allowed — useful for comparing M4 vs P90 spray at the same distance. Infinite reserve ammo always. Reload still takes real time (no fast reload cheat) because reload speed is part of the skill being trained.
-
-#### Implementation sketch
-
-```
-src/modes/trainingRange.js   — scene setup, drill state machine, target spawning
-src/fx/sprayVisualiser.js    — records aim-space impact offsets, draws canvas panel
-src/entities/targetDummy.js  — Group (torso + head), pop/drop tween, hit callbacks
-```
-
-`trainingRange.js` calls `buildLevel` with a purpose-built `rangeDef` (flat floor, strip lights, no fog). It reuses `tryShoot`, `startReload`, `updateHUD` unchanged — the range is not a separate game, just a different scene with different entities. Exiting calls `location.reload()` cleanly (same as S&D match-over).
+See Completed table — full Training Range with 4 drills (Free Practice, Flick, Reaction, Hostage Gauntlet), hostile/hostage target types, preset panel (`P`) with drill/difficulty/targets/movement/H-pattern/H-speed sections, spring physics and sine movement across the full corridor (6–50 m), live HUD stats.
 
 ---
 

@@ -1,6 +1,6 @@
 # VIBE ON DUTY
 
-A browser-based first-person shooter built with Three.js. Survive endless waves of armed infantry, coordinate with your squad in Team Deathmatch, or go head-to-head in Search & Destroy.
+A browser-based first-person shooter built with Three.js. Survive endless waves of armed infantry, coordinate with your squad in Team Deathmatch, go head-to-head in Search & Destroy, or sharpen your aim in the Training Range.
 
 **[Play in browser →](https://szefo94.github.io/VibeOnDuty/)**
 
@@ -39,6 +39,37 @@ Best-of-7 match. Rounds 1–3: you attack — plant the bomb at Site A or B and 
 
 Starting cash: **$3,000**. Cap: $16,000.
 
+### Training Range
+A dedicated 56×80 m shooting hall. 9 targets across short / medium / long zones. Hostile targets have red glowing heads — hostage targets have green. Hit hostages for a penalty; hit hostiles for score.
+
+Press `P` to open the preset menu:
+
+**DRILL** — select practice mode:
+| Drill | Description |
+|-------|-------------|
+| Free Practice | All enabled targets up; respawn 1.5 s after hit |
+| Flick Drill | 60 s session; one lit (red) hostile at a time; hit within your difficulty window |
+| Reaction Drill | 20 pop appearances; targets stay up for a brief window |
+| Hostage Gauntlet | Free practice with live score: +1 hostile / −1 hostage |
+
+**DIFFICULTY** — scales the flick / reaction timing window:
+| Level | Flick window | Target up time |
+|-------|-------------|---------------|
+| Beginner | 2.5 s | 0.8 s |
+| Normal | 1.5 s | 0.5 s |
+| Hard | 0.8 s | 0.4 s |
+| Elite | 0.4 s | 0.25 s |
+
+**TARGETS** — enable a zone/type filter:
+Full Range · Short Range (5–15 m) · Medium Range (17–35 m) · Long Range (40–60 m) · Hostile Only
+
+**MOVEMENT** — independent H/V toggles + per-axis settings:
+- Horizontal: Sine (smooth wall-to-wall) or **Spring** (strafe physics — spring-damper toward random goals)
+- Vertical: sinusoidal bob (0–0.55 m)
+- H Speed: Slow / Medium / Fast
+
+`Tab` cycles drills · `Esc` exits to menu · Infinite ammo
+
 ---
 
 ## Controls
@@ -62,6 +93,8 @@ Starting cash: **$3,000**. Cap: $16,000.
 | `1–4` | Switch weapon (M4 · P90 · AWP · Pistol) |
 | `V` | Toggle 3rd person camera |
 | `T` | Dance |
+| `P` | Training Range preset menu |
+| `Tab` | Training Range: cycle drill |
 | `F3` | Toggle debug overlay |
 
 ### Movement tricks
@@ -77,10 +110,11 @@ Starting cash: **$3,000**. Cap: $16,000.
 ## Features
 
 ### World
-- **Three maps**: Greek Columns (indoor CQB), Rooftop District (outdoor), Column Arena (open marble)
-- **24×24 tile map** — solid walls, cracked walls (crawl gaps), ramps, pillars, multi-level heightmap terrain
+- **Four maps**: Greek Columns (indoor CQB), Rooftop District (outdoor), Column Arena (open marble), Training Range (flat shooting hall)
+- **24×24 tile arena / 14×20 training range** — solid walls, cracked walls (crawl gaps), ramps, pillars, multi-level heightmap terrain
 - Two bomb sites (A / B) with pulsing ring markers and point lights in S&D mode
 - Torch lights with flicker, PCF soft shadows, exponential fog, ACES filmic tone mapping
+- Overhead strip lights and coloured distance markers (green/yellow/red) in the training range
 
 ### Player
 - Full movement system: walk, sprint, crouch, slide, slide-cancel jump, dive, lean
@@ -128,8 +162,9 @@ Four selectable tiers affect reaction time, aim accuracy, health, speed, and str
 - Minimap radar: sweep animation, fog of war, enemy/drone/ammo blips
 - Plant bar, defuse bar, bomb fuse countdown, round result overlay
 - Kill counter, hit flash, damage vignette, status messages
-- **Damage numbers** — floating world-projected values (yellow for enemy hits, red for player hits)
-- **Buy phase banner** — countdown timer + current cash
+- Floating world-space damage numbers (yellow enemy / red player)
+- Buy phase banner — countdown timer + current cash
+- Training Range HUD — drill name, timer/score, hits, accuracy, headshots, streak, avg reaction, penalties
 
 ### Weapons
 
@@ -169,13 +204,13 @@ src/
   loop.js               — game loop, 3rd-person camera, lean offset, drone ticks
   config.js             — all game constants (player, enemy, weapons, S&D, physics)
   events.js             — 4-line pub/sub event bus (on/off/emit)
-  map.js                — MAP data, heightmap, pathability
+  map.js                — MAP data, heightmap, pathability, setActiveMap
   math.js               — normA, slerp
   astar.js              — A* pathfinding with dev-mode failure logging
   scene.js              — renderer, scene, camera
   materials.js          — shared MeshStandardMaterials
   lighting.js           — torches, ambient, sun
-  level.js              — level geometry, wall meshes, debug lines
+  level.js              — buildLevel(mapDef) — exports wallMeshes, debugLines
   input.js              — keyboard, mouse, pointer lock state
   touch.js              — mobile touch controls
   difficulty.js         — difficulty preset selection + application
@@ -184,12 +219,14 @@ src/
     bunker.js           — Greek Columns map definition
     rooftop.js          — Rooftop District map definition
     concept.js          — Column Arena map definition
+    range.js            — Training Range map definition (14×20 flat hall)
   modes/
     modeManager.js      — setMode/getMode/isAnyModeActive (zero-dep registry)
     snd.js              — S&D match state machine, bomb logic, round lifecycle
     tdm.js              — TDM score tracking, respawn, timer
     economy.js          — S&D cash ledger (kill/plant/defuse bonuses, loss streak)
     buyMenu.js          — S&D buy phase UI, weapon shop, 10 s countdown
+    trainingRange.js    — Training Range drills, preset panel, HUD, hit callbacks
   ai/
     enemyStates.js      — PATROL/SPOTTED/ATTACK state objects + transition helpers
   builders/
@@ -203,7 +240,7 @@ src/
     weaponFBX.js        — player M4 / P90 FBX loader
     assetManager.js     — register/loadAll parallel asset registry
   combat/
-    shoot.js            — bullet physics, hit detection, weapon animation, death drop
+    shoot.js            — bullet physics, hit detection (enemies + range targets), weapon animation
     damage.js           — grenade falloff formulas
   entities/
     entityBase.js       — applyEntityBase mixin (isAlive, takeDamage)
@@ -214,6 +251,7 @@ src/
     waveSystem.js       — wave state, tickWave, triggerWaveEnd
     ammoDrops.js        — ammo pickup spawning and collection
     grenades.js         — grenade throw, flight, explosion
+    targetDummy.js      — range target mesh, pop/drop animation, hit flash, spring movement
   utils/
     los.js              — hasLOS raycaster utility
   fx/
