@@ -15,15 +15,15 @@ const SPAWN_X = rangeMapDef.width / 2 * CELL;   // 28
 const SPAWN_Z = 2.5 * CELL;                       // 10
 
 const TARGET_DEFS = [
-  { id: 0, x: SPAWN_X - 4, z: SPAWN_Z +  5, zone: 'short'  },
-  { id: 1, x: SPAWN_X,     z: SPAWN_Z +  8, zone: 'short'  },
-  { id: 2, x: SPAWN_X + 4, z: SPAWN_Z + 11, zone: 'short'  },
-  { id: 3, x: SPAWN_X - 6, z: SPAWN_Z + 17, zone: 'medium' },
-  { id: 4, x: SPAWN_X + 5, z: SPAWN_Z + 22, zone: 'medium' },
-  { id: 5, x: SPAWN_X - 4, z: SPAWN_Z + 27, zone: 'medium' },
-  { id: 6, x: SPAWN_X + 4, z: SPAWN_Z + 31, zone: 'medium' },
-  { id: 7, x: SPAWN_X,     z: SPAWN_Z + 41, zone: 'long'   },
-  { id: 8, x: SPAWN_X,     z: SPAWN_Z + 56, zone: 'long'   },
+  { id: 0, x: SPAWN_X - 4, z: SPAWN_Z +  5, zone: 'short',  type: 'hostile' },
+  { id: 1, x: SPAWN_X,     z: SPAWN_Z +  8, zone: 'short',  type: 'hostage' },
+  { id: 2, x: SPAWN_X + 4, z: SPAWN_Z + 11, zone: 'short',  type: 'hostile' },
+  { id: 3, x: SPAWN_X - 6, z: SPAWN_Z + 17, zone: 'medium', type: 'hostage' },
+  { id: 4, x: SPAWN_X + 5, z: SPAWN_Z + 22, zone: 'medium', type: 'hostile' },
+  { id: 5, x: SPAWN_X - 4, z: SPAWN_Z + 27, zone: 'medium', type: 'hostile' },
+  { id: 6, x: SPAWN_X + 4, z: SPAWN_Z + 31, zone: 'medium', type: 'hostage' },
+  { id: 7, x: SPAWN_X,     z: SPAWN_Z + 41, zone: 'long',   type: 'hostile' },
+  { id: 8, x: SPAWN_X,     z: SPAWN_Z + 56, zone: 'long',   type: 'hostile' },
 ];
 
 // ── Drill constants ───────────────────────────────────────────────────────
@@ -42,7 +42,7 @@ let _drillIdx   = 0;
 let _drill      = 'free';
 
 // Shared stats (reset per drill start)
-let _shots = 0, _hits = 0, _hs = 0, _streak = 0, _bestStreak = 0;
+let _shots = 0, _hits = 0, _hs = 0, _streak = 0, _bestStreak = 0, _penalties = 0;
 let _reactTimes = [];
 
 // Free practice — per-target respawn timers
@@ -61,7 +61,7 @@ let _reactActive = [];  // targets currently up (with their expiry timer)
 
 // DOM
 let _domBuilt = false;
-let _hudEl, _drillEl, _timerEl, _hitsEl, _accEl, _hsEl, _streakEl, _reactEl;
+let _hudEl, _drillEl, _timerEl, _hitsEl, _accEl, _hsEl, _streakEl, _reactEl, _penEl;
 
 // ── Public API ────────────────────────────────────────────────────────────
 
@@ -173,6 +173,21 @@ function _tickReaction(dt) {
 // ── Hit callback (all drills) ─────────────────────────────────────────────
 
 function _onTargetHit(target, isHead) {
+  if (target.type === 'hostage') {
+    _penalties++;
+    _streak = 0;
+    showMsg('HOSTAGE HIT!', 1200);
+    if (_drill === 'free') {
+      dropTarget(target);
+      _respawnQ.push({ target, t: 1.5 });
+    } else if (_drill === 'reaction') {
+      const idx = _reactActive.findIndex(r => r.target === target);
+      if (idx !== -1) { dropTarget(target); _reactActive.splice(idx, 1); }
+    }
+    // In flick: hostage stays up (distractor) — no drop
+    return;
+  }
+
   _hits++;
   if (isHead) _hs++;
   _streak++;
@@ -194,7 +209,7 @@ function _onTargetHit(target, isHead) {
   } else if (_drill === 'reaction') {
     const idx = _reactActive.findIndex(r => r.target === target);
     if (idx !== -1) {
-      _reactTimes.push(_reactActive[idx].timer); // time remaining = fast hit
+      _reactTimes.push(_reactActive[idx].timer);
       dropTarget(target);
       _reactActive.splice(idx, 1);
     }
@@ -210,7 +225,7 @@ function _startDrill(name) {
   _flickTarget  = null;
   _reactActive.length = 0;
 
-  _shots = 0; _hits = 0; _hs = 0; _streak = 0; _bestStreak = 0;
+  _shots = 0; _hits = 0; _hs = 0; _streak = 0; _bestStreak = 0; _penalties = 0;
   _reactTimes = [];
   _flickScore = 0;
   _drill = name;
@@ -222,6 +237,7 @@ function _startDrill(name) {
   } else if (name === 'flick') {
     _flickTimer = FLICK_DUR;
     _flickTarget = null;
+    for (const t of rangeTargets) if (t.type === 'hostage') popUpTarget(t);
 
   } else if (name === 'reaction') {
     _reactPopped = 0;
@@ -249,8 +265,8 @@ function _endReaction() {
 }
 
 function _pickFlickTarget() {
-  const ups = rangeTargets.filter(t => t.state === 'down');
-  if (!ups.length) { for (const t of rangeTargets) dropTarget(t); return; }
+  const ups = rangeTargets.filter(t => t.state === 'down' && t.type === 'hostile');
+  if (!ups.length) { for (const t of rangeTargets) if (t.type === 'hostile') dropTarget(t); return; }
   const t = ups[Math.floor(Math.random() * ups.length)];
   popUpTarget(t);
   setTargetActive(t, true);
@@ -295,6 +311,7 @@ function _buildHUD() {
     <div class="range-stat-row"><span>HEADSHOTS</span><span id="rng-hs">0</span></div>
     <div class="range-stat-row"><span>STREAK</span><span id="rng-streak">×0</span></div>
     <div class="range-stat-row"><span>AVG REACT</span><span id="rng-react">—</span></div>
+    <div class="range-stat-row"><span>PENALTIES</span><span id="rng-pen">0</span></div>
     <div id="range-hint">[TAB] NEXT DRILL &nbsp;·&nbsp; [ESC] EXIT</div>
   `;
   document.body.appendChild(_hudEl);
@@ -306,6 +323,7 @@ function _buildHUD() {
   _hsEl     = document.getElementById('rng-hs');
   _streakEl = document.getElementById('rng-streak');
   _reactEl  = document.getElementById('rng-react');
+  _penEl    = document.getElementById('rng-pen');
 }
 
 function _updateHUD() {
@@ -334,5 +352,9 @@ function _updateHUD() {
     } else {
       _reactEl.textContent = '—';
     }
+  }
+  if (_penEl) {
+    _penEl.textContent = _penalties;
+    _penEl.style.color = _penalties > 0 ? '#ff4422' : '#e8e8e8';
   }
 }
