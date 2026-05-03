@@ -183,15 +183,13 @@ export function tickBullets(dt) {
 
     for (const t of rangeTargets) {
       if (t.state !== 'up') continue;
-      const bodyY = t.group.position.y + 0.85;
-      const headY = t.group.position.y + 1.58;
-      const bodyC = new THREE.Vector3(t.x, bodyY, t.z);
-      const headC = new THREE.Vector3(t.x, headY, t.z);
-      const isHead = b.pos.distanceTo(headC) < 0.28;
-      if (isHead || b.pos.distanceTo(bodyC) < 0.45) {
+      const midY  = t.group.position.y + 1.0;
+      const mid   = new THREE.Vector3(t.x, midY, t.z);
+      if (b.pos.distanceTo(mid) < 0.60) {
+        const isHead = b.pos.y > t.group.position.y + 1.30;
         registerHit(t, isHead);
         spawnHitMarker();
-        spawnDamageNumber(bodyC.x, bodyC.y + 0.4, bodyC.z, isHead ? b.damage * 4 : b.damage);
+        spawnDamageNumber(mid.x, mid.y + 0.3, mid.z, isHead ? b.damage * 4 : b.damage);
         _removeBullet(i);
         hit = true;
         break;
