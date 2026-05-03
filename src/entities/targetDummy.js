@@ -13,8 +13,13 @@ const MOVE_H_FREQ = 0.45;  // Hz
 const MOVE_V_AMP  = 0.55;  // vertical bob height (m)
 const MOVE_V_FREQ = 0.65;  // Hz
 
-let _moveMode = 'static';
-export function setTargetMoveMode(mode) { _moveMode = mode; }
+let _moveH = false, _moveV = false;
+export function setTargetMoveMode({ h, v }) {
+  if (!h && _moveH) for (const t of rangeTargets) t.group.position.x = t.x;
+  if (!v && _moveV) for (const t of rangeTargets) if (t.state === 'up') t.group.position.y = 0;
+  _moveH = !!h;
+  _moveV = !!v;
+}
 
 // Materials (cloned per target so each can flash independently)
 const _mkBodyHostile  = () => new THREE.MeshStandardMaterial({ color: 0xaa2200, roughness: 0.55, metalness: 0.1 });
@@ -121,13 +126,10 @@ export function tickDummies(dt) {
     }
 
     // Movement while up
-    if (t.state === 'up' && _moveMode !== 'static') {
+    if (t.state === 'up' && (_moveH || _moveV)) {
       t.moveT += dt;
-      if (_moveMode === 'horizontal') {
-        t.group.position.x = t.x + Math.sin(t.moveT * MOVE_H_FREQ * Math.PI * 2) * MOVE_H_AMP;
-      } else {
-        t.group.position.y = UP_Y + (Math.sin(t.moveT * MOVE_V_FREQ * Math.PI * 2) * 0.5 + 0.5) * MOVE_V_AMP;
-      }
+      if (_moveH) t.group.position.x = t.x + Math.sin(t.moveT * MOVE_H_FREQ * Math.PI * 2) * MOVE_H_AMP;
+      if (_moveV) t.group.position.y = UP_Y + (Math.sin(t.moveT * MOVE_V_FREQ * Math.PI * 2) * 0.5 + 0.5) * MOVE_V_AMP;
     }
   }
 }

@@ -69,8 +69,9 @@ let _drillIdx        = 0;
 let _drill           = 'free';
 let _presetIdx       = 0;
 let _presetPanelOpen = false;
-let _diffIdx         = 1;       // default: NORMAL
-let _moveMode        = 'static';
+let _diffIdx = 1;       // default: NORMAL
+let _moveH   = false;
+let _moveV   = false;
 
 // Difficulty-adjustable params (NORMAL defaults)
 let _flickWin    = 1.5;
@@ -116,8 +117,9 @@ export function stopTrainingRange() {
   _presetPanelOpen = false;
   _presetIdx = 0;
   _diffIdx = 1;
-  _moveMode = 'static';
-  setTargetMoveMode('static');
+  _moveH = false;
+  _moveV = false;
+  setTargetMoveMode({ h: false, v: false });
   document.removeEventListener('keydown', _onKey);
   clearRangeTargets();
   if (_hudEl) { _hudEl.remove(); _hudEl = null; _domBuilt = false; }
@@ -317,9 +319,11 @@ function _setDiff(idx) {
   _refreshPanel();
 }
 
-function _setMoveMode(mode) {
-  _moveMode = mode;
-  setTargetMoveMode(mode);
+function _toggleMove(axis) {
+  if (axis === 'h') _moveH = !_moveH;
+  else if (axis === 'v') _moveV = !_moveV;
+  else { _moveH = false; _moveV = false; } // 'static' resets both
+  setTargetMoveMode({ h: _moveH, v: _moveV });
   _refreshPanel();
 }
 
@@ -335,7 +339,9 @@ function _refreshPanel() {
     r.classList.toggle('rp-active', i === _presetIdx);
   });
   _presetPanelEl.querySelectorAll('.rp-row[data-section="move"]').forEach(r => {
-    r.classList.toggle('rp-active', r.dataset.val === _moveMode);
+    const v = r.dataset.val;
+    const on = v === 'h' ? _moveH : v === 'v' ? _moveV : (!_moveH && !_moveV);
+    r.classList.toggle('rp-active', on);
   });
 }
 
@@ -367,9 +373,9 @@ function _buildPresetPanel() {
   ).join('');
 
   const moveRows = [
-    ['static',     'STATIC',     'Targets stand still'],
-    ['horizontal', 'HORIZONTAL', 'Side-to-side oscillation'],
-    ['vertical',   'VERTICAL',   'Up / down bobbing'],
+    ['static', 'STATIC',     'Turn off movement'],
+    ['h',      'HORIZONTAL', 'Side-to-side · toggle'],
+    ['v',      'VERTICAL',   'Up / down · toggle'],
   ].map(([v, l, d]) => mkRow('move', v, l, d)).join('');
 
   _presetPanelEl.innerHTML =
@@ -399,7 +405,7 @@ function _buildPresetPanel() {
     });
   });
   _presetPanelEl.querySelectorAll('.rp-row[data-section="move"]').forEach(row => {
-    row.addEventListener('click', () => _setMoveMode(row.dataset.val));
+    row.addEventListener('click', () => _toggleMove(row.dataset.val));
   });
 }
 
