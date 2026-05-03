@@ -8,6 +8,14 @@ const UP_Y    =  0;
 const POP_DUR  = 0.13;
 const DROP_DUR = 0.10;
 
+const MOVE_H_AMP  = 1.4;   // horizontal swing radius (m)
+const MOVE_H_FREQ = 0.45;  // Hz
+const MOVE_V_AMP  = 0.55;  // vertical bob height (m)
+const MOVE_V_FREQ = 0.65;  // Hz
+
+let _moveMode = 'static';
+export function setTargetMoveMode(mode) { _moveMode = mode; }
+
 // Materials (cloned per target so each can flash independently)
 const _mkBodyHostile  = () => new THREE.MeshStandardMaterial({ color: 0xaa2200, roughness: 0.55, metalness: 0.1 });
 const _mkHeadHostile  = () => new THREE.MeshStandardMaterial({ color: 0xff1100, roughness: 0.4,  metalness: 0.1, emissive: 0xff1100, emissiveIntensity: 0.3 });
@@ -35,12 +43,14 @@ export function spawnRangeTargets(defs) {
       id:      def.id,
       x:       def.x,
       z:       def.z,
-      zone:    def.zone,
-      type:    def.type ?? 'hostile',
-      state:   'down',  // 'down' | 'popping' | 'up' | 'dropping'
-      popT:    0,
-      flashT:  0,
-      active:  false,
+      zone:     def.zone,
+      type:     def.type ?? 'hostile',
+      state:    'down',  // 'down' | 'popping' | 'up' | 'dropping'
+      popT:     0,
+      flashT:   0,
+      moveT:    def.id * 1.1,  // phase offset per target so they don't sync
+      active:   false,
+      disabled: false,
       group,
       bodyMesh,
       headMesh,
@@ -67,6 +77,8 @@ export function dropTarget(t) {
   t.state  = 'dropping';
   t.popT   = 0;
   t.active = false;
+  t.group.position.x = t.x;
+  t.group.position.z = t.z;
   _restoreMats(t);
 }
 
@@ -106,6 +118,16 @@ export function tickDummies(dt) {
       t.popT = Math.min(1, t.popT + dt / DROP_DUR);
       t.group.position.y = UP_Y + (DOWN_Y - UP_Y) * _easeIn(t.popT);
       if (t.popT >= 1) { t.group.position.y = DOWN_Y; t.state = 'down'; }
+    }
+
+    // Movement while up
+    if (t.state === 'up' && _moveMode !== 'static') {
+      t.moveT += dt;
+      if (_moveMode === 'horizontal') {
+        t.group.position.x = t.x + Math.sin(t.moveT * MOVE_H_FREQ * Math.PI * 2) * MOVE_H_AMP;
+      } else {
+        t.group.position.y = UP_Y + (Math.sin(t.moveT * MOVE_V_FREQ * Math.PI * 2) * 0.5 + 0.5) * MOVE_V_AMP;
+      }
     }
   }
 }

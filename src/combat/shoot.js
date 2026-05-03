@@ -184,7 +184,7 @@ export function tickBullets(dt) {
     for (const t of rangeTargets) {
       if (t.state !== 'up') continue;
       const midY  = t.group.position.y + 1.0;
-      const mid   = new THREE.Vector3(t.x, midY, t.z);
+      const mid   = new THREE.Vector3(t.group.position.x, midY, t.group.position.z);
       if (b.pos.distanceTo(mid) < 0.60) {
         const isHead = b.pos.y > t.group.position.y + 1.30;
         registerHit(t, isHead);
