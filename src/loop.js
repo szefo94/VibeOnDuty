@@ -19,6 +19,7 @@ import { tickGamepad } from './gamepad.js';
 import { drawMinimap } from './hud/radar.js';
 import { playerMesh, playerMixer, playerActions } from './builders/enemyGLTF.js';
 import { crossfade } from './builders/enemyAnimations.js';
+import { tickKillcam, isKillcamActive } from './replay/killcam.js';
 
 // Shared animation state object for the player — same shape crossfade() expects
 const playerAnim = { actions: null, currentClip: 'idle' };
@@ -260,11 +261,18 @@ export function loop(ts) {
   }
 
   setDebugFrameMs(performance.now() - _t0);
-  tickScreenShake(dt);
+
+  // Killcam overrides camera after normal placement; skip eye-restore while active
+  if (isKillcamActive()) {
+    tickKillcam(dt);
+  } else {
+    tickScreenShake(dt);
+  }
+
   renderer.render(scene, camera);
 
   // restore eye position (camera.position must stay at player eye for movement)
-  camera.position.set(eyeX, eyeY, eyeZ);
+  if (!isKillcamActive()) camera.position.set(eyeX, eyeY, eyeZ);
 
   drawHUD();
   requestAnimationFrame(loop);

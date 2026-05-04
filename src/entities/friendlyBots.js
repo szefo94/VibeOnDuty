@@ -5,6 +5,7 @@ import { astar } from '../astar.js';
 import { hasLOS } from '../utils/los.js';
 import { tickEnemyAnimation } from '../builders/enemyAnimations.js';
 import { getSndBombPos, getSndSitePositions } from '../modes/snd.js';
+import { addAllyDmg } from '../replay/damageTracker.js';
 import { getMode } from '../modes/modeManager.js';
 
 // ── Shared helpers ────────────────────────────────────────────────────────
@@ -50,6 +51,7 @@ function _tryShoot(e, eGround, allEnemies, killEnemy) {
     e.shootCd      = ENEMY_SHOOT_CD;
     e.facingY      = Math.atan2(e.x - target.x, e.z - target.z);
     e.muzzleFlashT = 55;
+    addAllyDmg(ENEMY_DAMAGE);
     target.takeDamage(ENEMY_DAMAGE, killEnemy);
     break;
   }

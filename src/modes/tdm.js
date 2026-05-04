@@ -10,6 +10,8 @@ import { setGameRunning } from '../input.js';
 import { isTouchDevice } from '../touch.js';
 import { show1pWeapon, show3pWeapon } from '../builders/weapon.js';
 import { alertEnemy } from '../ai/enemyStates.js';
+import { resetDamage, getSummary } from '../replay/damageTracker.js';
+import { startKillcam } from '../replay/killcam.js';
 
 const KILL_LIMIT    = 50;
 const MATCH_SECS    = 600;   // 10 minutes
@@ -45,28 +47,42 @@ function _showBar(visible) {
 function _endMatch(reason) {
   _active = false;
   _showBar(false);
-  setGameRunning(false);
-  document.exitPointerLock?.();
-  const won    = _playerScore > _enemyScore;
-  const result = document.getElementById('snd-result');
-  const title  = document.getElementById('snd-result-title');
-  const sub    = document.getElementById('snd-result-sub');
-  const btn    = document.getElementById('snd-next-btn');
-  if (!result) { location.reload(); return; }
-  title.textContent  = won ? 'VICTORY' : 'DEFEAT';
-  title.style.color  = won ? '#2ecc71' : '#e74c3c';
-  sub.textContent    = `${_playerScore} — ${_enemyScore} | ${reason}`;
-  btn.textContent    = '[ PLAY AGAIN ]';
-  btn.onclick        = () => location.reload();
-  result.style.display = 'flex';
+  const won = _playerScore > _enemyScore;
+  const { player: pd, ally: ad, enemy: ed } = getSummary();
+  const _show = () => {
+    setGameRunning(false);
+    document.exitPointerLock?.();
+    const result = document.getElementById('snd-result');
+    const title  = document.getElementById('snd-result-title');
+    const sub    = document.getElementById('snd-result-sub');
+    const dmgEl  = document.getElementById('snd-dmg-panel');
+    const btn    = document.getElementById('snd-next-btn');
+    if (!result) { location.reload(); return; }
+    title.textContent  = won ? 'VICTORY' : 'DEFEAT';
+    title.style.color  = won ? '#2ecc71' : '#e74c3c';
+    sub.textContent    = `${_playerScore} — ${_enemyScore} | ${reason}`;
+    if (dmgEl) dmgEl.innerHTML =
+      `<div class="dmg-panel-title">DAMAGE DEALT</div>`
+      + `<div class="dmg-round-row"><span>YOU</span><span>${pd}</span><span>ALLIES</span><span>${ad}</span><span>ENEMIES</span><span>${ed}</span></div>`;
+    btn.textContent = '[ PLAY AGAIN ]';
+    btn.onclick     = () => location.reload();
+    result.style.display = 'flex';
+  };
+  const killer = player.lastAttacker;
+  if (!won && killer && !killer.dead) {
+    startKillcam(killer, _show);
+  } else {
+    _show();
+  }
 }
 
 // ── Player respawn ────────────────────────────────────────────────────────
 function _respawnPlayer(spawnX, spawnZ) {
   player.dead     = false;
-  player.hp       = MAX_HP;
-  player.ammo     = WEAPONS[player.weapon].maxAmmo;
-  player.reloading = false;
+  player.hp           = MAX_HP;
+  player.ammo         = WEAPONS[player.weapon].maxAmmo;
+  player.reloading    = false;
+  player.lastAttacker = null;
   const jx = (Math.random() - 0.5) * 10;
   const jz = (Math.random() - 0.5) * 10;
   camera.position.set(spawnX + jx, PLAYER_H, spawnZ + jz);
@@ -135,6 +151,8 @@ export function startTdm(spawnX, spawnZ) {
   _active    = true;
   _spawnX    = spawnX;
   _spawnZ    = spawnZ;
+  resetDamage();
+  player.lastAttacker = null;
 
   setMode({ name: 'tdm', tick });
   _showBar(true);

@@ -13,6 +13,7 @@ import { triggerHitFlash, updateHUD } from '../hud/overlay.js';
 import { triggerScreenShake } from '../fx/screenShake.js';
 import { spawnDamageNumber } from '../fx/damageNumbers.js';
 import { spawnTracer } from '../fx/tracers.js';
+import { addEnemyDmg } from '../replay/damageTracker.js';
 import { on } from '../events.js';
 
 // S&D API injected at runtime via 'snd:configure' event (avoids circular dep).
@@ -170,6 +171,8 @@ function _tickPlayerShoot(e, ctx) {
 
   e.shootCd = ts;
   const dmgDealt = d.damage + Math.floor(Math.random() * 5);
+  player.lastAttacker = e;
+  addEnemyDmg(dmgDealt);
   player.hp = Math.max(0, player.hp - dmgDealt);
   spawnDamageNumber(camera.position.x, camera.position.y + 0.3, camera.position.z, dmgDealt, true);
   triggerHitFlash(e.x, e.z);

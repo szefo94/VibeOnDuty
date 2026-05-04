@@ -38,6 +38,7 @@ export const player = /** @type {any} */ ({
   reloadTotal: 0,
   shootCd: 0,
   dead: false,
+  lastAttacker: null,
   yaw: 0,
   pitch: 0,
   lastHitTime: 0,

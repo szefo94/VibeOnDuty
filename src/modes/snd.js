@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { scene, camera } from '../scene.js';
 import {
-  CELL, PLAYER_H, MAX_HP, MAX_AMMO, RESERVE_AMMO,
+  CELL, PLAYER_H, MAX_HP, MAX_AMMO, RESERVE_AMMO, WEAPONS,
   SND_PLANT_RANGE, SND_DEFUSE_RANGE, SND_PLANT_TIME, SND_DEFUSE_TIME,
   SND_BOMB_FUSE, SND_ROUND_TIMER, SND_ROUNDS_PER_HALF, SND_TOTAL_ROUNDS, SND_WINS_NEEDED,
 } from '../config.js';
@@ -17,10 +17,58 @@ import { setGameRunning } from '../input.js';
 import { on, emit } from '../events.js';
 import { setMode } from './modeManager.js';
 import { resetEconomy, onKill, onPlant, onDefuse, onRoundEnd } from './economy.js';
-import { startBuyPhase, tickBuyPhase, endBuyPhase } from './buyMenu.js';
+import { startBuyPhase, tickBuyPhase, endBuyPhase, isBuyPhaseActive } from './buyMenu.js';
+import { resetDamage, newRound, getSummary, getRoundBreakdown } from '../replay/damageTracker.js';
+import { startKillcam } from '../replay/killcam.js';
 
 export function getSndPlantRange()  { return SND_PLANT_RANGE; }
 export function getSndDefuseRange() { return SND_DEFUSE_RANGE; }
+
+// ── Bot economy ───────────────────────────────────────────────────────────
+// Mirrors player economy: slot 0-4 = friendly team, 5-9 = enemy team.
+// Preferred role per slot — determines max weapon willing to buy.
+const _BOT_PREF = [
+  'assault', 'smg', 'assault', 'sniper', 'assault',  // friendly (0-4)
+  'assault', 'smg', 'sniper',  'assault', 'assault',  // enemy (5-9)
+];
+let _botCash = new Array(10).fill(3000);
+let _friendLoss = 0, _enemyLoss = 0;
+
+function _resetBotEconomy() {
+  _botCash = new Array(10).fill(3000);
+  _friendLoss = _enemyLoss = 0;
+}
+
+function _onBotRoundEnd(playerWon) {
+  if (playerWon) {
+    for (let i = 0; i < 5; i++) _botCash[i] = Math.min(16000, _botCash[i] + 900);
+    _friendLoss = 0;
+    const eb = _enemyLoss >= 2 ? 2400 : _enemyLoss === 1 ? 1900 : 1400;
+    _enemyLoss = Math.min(_enemyLoss + 1, 3);
+    for (let i = 5; i < 10; i++) _botCash[i] = Math.min(16000, _botCash[i] + eb);
+  } else {
+    for (let i = 5; i < 10; i++) _botCash[i] = Math.min(16000, _botCash[i] + 900);
+    _enemyLoss = 0;
+    const fb = _friendLoss >= 2 ? 2400 : _friendLoss === 1 ? 1900 : 1400;
+    _friendLoss = Math.min(_friendLoss + 1, 3);
+    for (let i = 0; i < 5; i++) _botCash[i] = Math.min(16000, _botCash[i] + fb);
+  }
+}
+
+// Compute and deduct weapon buy for one bot slot; call at each round start.
+export function computeBotRole(idx) {
+  const pref = _BOT_PREF[idx];
+  const cash = _botCash[idx];
+  let role, cost;
+  if (cash >= WEAPONS.awp.price && pref === 'sniper') { role = 'sniper';  cost = WEAPONS.awp.price;  }
+  else if (cash >= WEAPONS.m4.price)                  { role = 'assault'; cost = WEAPONS.m4.price;   }
+  else if (cash >= WEAPONS.p90.price)                 { role = 'smg';     cost = WEAPONS.p90.price;  }
+  else                                                 { role = 'pistol';  cost = 0; }
+  _botCash[idx] = Math.max(0, Math.min(16000, cash - cost));
+  return role;
+}
+
+const SPAWN_LEAVE_RADIUS = 7;  // units; leaving this radius during buy phase closes the shop
 
 // ── Sites and spawns — updated by setSndMap() before each game ────────────
 let _sites = [
@@ -97,6 +145,8 @@ export function startSnd() {
   playerRole  = 'attack';
   _matchOver  = false;
   resetEconomy();
+  _resetBotEconomy();
+  resetDamage();
   setMode({ name: 'snd', tick: tickSnd });
   emit('snd:configure', {
     isActive:        isSndActive,
@@ -123,10 +173,12 @@ function _startRound() {
   enemyPlantX = enemyPlantZ = 0;
   bombWorldX  = bombWorldZ  = 0;
 
-  player.dead      = false;
-  player.hp        = MAX_HP;
-  player.reloading = false;
-  player.energy    = 0;
+  player.dead         = false;
+  player.hp           = MAX_HP;
+  player.reloading    = false;
+  player.energy       = 0;
+  player.lastAttacker = null;
+  newRound();
   startBuyPhase(10);   // resets weapon to pistol, opens buy window
   updateHUD();
   const spawn = playerRole === 'attack' ? _attackerSpawn : _defenderSpawn;
@@ -160,6 +212,11 @@ export function nextRound() {
 export function tickSnd(dt, keys) {
   if (sndState === 'idle' || sndState === 'over') return;
   tickBuyPhase(dt);
+  if (isBuyPhaseActive()) {
+    const spawn = playerRole === 'attack' ? _attackerSpawn : _defenderSpawn;
+    const dx = camera.position.x - spawn.x, dz = camera.position.z - spawn.z;
+    if (dx * dx + dz * dz > SPAWN_LEAVE_RADIUS * SPAWN_LEAVE_RADIUS) endBuyPhase();
+  }
 
   if (sndState === 'planted') {
     _tickPlanted(dt, keys);
@@ -293,13 +350,9 @@ function endRound(result) {
   sndState = 'over';
   removeBombMesh();
   removeSiteMarkers();
-  setGameRunning(false);
-  document.exitPointerLock?.();
   hideBombBarWrap(); hideDefuseBar(); hidePlantBar(); hidePlantHint();
+  endBuyPhase();
 
-  // team_eliminated = enemy bots (always opposing side) are all dead → player always wins
-  // bomb_exploded   = attacker wins → player wins iff attacking
-  // bomb_defused / timeout / friend_team_wiped = defender wins → player wins iff defending
   const playerWins =
     result === 'team_eliminated' ||
     (result === 'bomb_exploded' && playerRole === 'attack') ||
@@ -308,11 +361,24 @@ function endRound(result) {
 
   if (playerWins) playerScore++; else enemyScore++;
   onRoundEnd(playerWins);
-  endBuyPhase();
+  _onBotRoundEnd(playerWins);
 
   _matchOver = playerScore >= SND_WINS_NEEDED || enemyScore >= SND_WINS_NEEDED || matchRound >= SND_TOTAL_ROUNDS;
   const [title, sub, color] = _roundResultText(result, playerWins, _matchOver);
-  showSndResult(title, sub, color, _matchOver);
+  const dmgStats = { summary: getSummary(), rounds: getRoundBreakdown() };
+
+  const doResult = () => {
+    setGameRunning(false);
+    document.exitPointerLock?.();
+    showSndResult(title, sub, color, _matchOver, dmgStats);
+  };
+
+  const killer = player.lastAttacker;
+  if (killer && !killer.dead) {
+    startKillcam(killer, doResult);
+  } else {
+    doResult();
+  }
 }
 
 function _roundResultText(result, playerWins, matchOver) {

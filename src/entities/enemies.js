@@ -16,6 +16,8 @@ import { setGameRunning } from '../input.js';
 import { isAnyModeActive, getMode } from '../modes/modeManager.js';
 import { wave } from './waveSystem.js';
 import { on, emit } from '../events.js';
+import { startKillcam } from '../replay/killcam.js';
+import { getSummary } from '../replay/damageTracker.js';
 
 // S&D API injected at runtime via 'snd:configure' event (avoids circular dep).
 let _snd = null;
@@ -208,11 +210,11 @@ function openNear(cx, cz) {
   return (c === 0 || isRamp(c)) ? [cc, cr] : [Math.floor(cx), Math.floor(cz)];
 }
 
-export function spawnSndEnemies(sitePositions) {
+export function spawnSndEnemies(sitePositions, roleOverrides = null) {
   const playerRole = _snd?.getPlayerRole() ?? 'attack';
   const NUM_FRIENDS = 5;
   enemies.forEach((e, i) => {
-    const weaponRole = SND_ROLES[i] ?? 'assault';
+    const weaponRole = roleOverrides?.[i] ?? SND_ROLES[i] ?? 'assault';
     if (i < NUM_FRIENDS) {
       // ── Friendly team ──
       if (playerRole === 'attack') {
@@ -323,11 +325,21 @@ export function triggerDeath() {
     // TDM / other modes handle 'player:died' themselves
     return;
   }
-  setGameRunning(false);
   document.exitPointerLock?.();
-  const ov = document.getElementById('overlay');
-  ov.style.display = 'flex';
-  ov.innerHTML = `<div class="dead-h">KILLED IN ACTION</div><div class="stat">Kills: ${player.kills}</div><div class="stat" style="color:#333;margin-top:6px">Wave ${wave} — the vibes remain hostile</div><button onclick="location.reload()" style="margin-top:28px;padding:12px 52px;background:#e74c3c;color:#fff;border:none;font-family:'Courier New',monospace;font-size:14px;letter-spacing:4px;cursor:pointer">[ REDEPLOY ]</button>`;
+  const _showWaveOver = () => {
+    setGameRunning(false);
+    const { player: pd, ally: ad, enemy: ed } = getSummary();
+    const dmgLine = `<div class="stat" style="margin-top:10px;color:#aaa;font-size:11px">DMG: YOU ${pd} · ALLIES ${ad} · ENEMIES ${ed}</div>`;
+    const ov = document.getElementById('overlay');
+    ov.style.display = 'flex';
+    ov.innerHTML = `<div class="dead-h">KILLED IN ACTION</div><div class="stat">Kills: ${player.kills}</div><div class="stat" style="color:#555;margin-top:6px">Wave ${wave} — the vibes remain hostile</div>${dmgLine}<button onclick="location.reload()" style="margin-top:28px;padding:12px 52px;background:#e74c3c;color:#fff;border:none;font-family:'Courier New',monospace;font-size:14px;letter-spacing:4px;cursor:pointer">[ REDEPLOY ]</button>`;
+  };
+  const killer = player.lastAttacker;
+  if (killer && !killer.dead) {
+    startKillcam(killer, _showWaveOver);
+  } else {
+    _showWaveOver();
+  }
 }
 
 // ── Dying list — dead enemies whose death animation still needs to play ──

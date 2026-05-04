@@ -12,7 +12,9 @@ import { tryShoot, tryPunchDamage } from './combat/shoot.js';
 import { flashMeleeRing } from './fx/meleeRange.js';
 import { updateHUD, showMsg, showStatus } from './hud/overlay.js';
 import { startLoop, setThirdPerson, getThirdPerson, toggleTpSide } from './loop.js';
-import { startSnd, nextRound, getSndSitePositions, isMatchOver, setSndMap } from './modes/snd.js';
+import { startSnd, nextRound, getSndSitePositions, isMatchOver, setSndMap, computeBotRole } from './modes/snd.js';
+import { on } from './events.js';
+import { getMode } from './modes/modeManager.js';
 import { toggleBuyPanel, isBuyPhaseActive, isBuyPanelOpen, buyWeapon } from './modes/buyMenu.js';
 import { startTdm } from './modes/tdm.js';
 import { setDifficulty } from './difficulty.js';
@@ -33,6 +35,17 @@ import { startTrainingRange } from './modes/trainingRange.js';
 
 const _euler = new THREE.Euler(0, 0, 0, 'YXZ');
 let debugVisible = true;
+
+// ── S&D: drop to pistol on death mid-round ────────────────────────────────
+on('player:died', () => {
+  if (getMode()?.name !== 'snd') return;
+  player.weapon  = 'pistol';
+  player.ammo    = WEAPONS.pistol.maxAmmo;
+  player.reserve = WEAPONS.pistol.reserve;
+  show1pWeapon('pistol');
+  show3pWeapon('pistol');
+  updateHUD();
+});
 
 // ── Difficulty selection ───────────────────────────────────────────────
 document.querySelectorAll('.diff-card').forEach(card => {
@@ -177,7 +190,7 @@ function sndStart() {
   if (isTouchDevice) { setLocked(true); } else { document.getElementById('c').requestPointerLock(); }
   setGameRunning(true);
   startSnd();
-  spawnSndEnemies(getSndSitePositions());
+  spawnSndEnemies(getSndSitePositions(), Array.from({ length: 10 }, (_, i) => computeBotRole(i)));
   spawnSndDrones();
   updateHUD();
   show1pWeapon(player.weapon);
@@ -231,7 +244,7 @@ document.getElementById('snd-next-btn').addEventListener('click', () => {
   if (isMatchOver()) { location.reload(); return; }
   clearSndDrones();
   nextRound();
-  spawnSndEnemies(getSndSitePositions());
+  spawnSndEnemies(getSndSitePositions(), Array.from({ length: 10 }, (_, i) => computeBotRole(i)));
   spawnSndDrones();
   updateHUD();
   setGameRunning(true);

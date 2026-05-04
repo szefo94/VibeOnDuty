@@ -14,6 +14,7 @@ import { activeDrone, killDrone } from '../entities/drone.js';
 import { spawnHitMarker } from '../hud/hitmarker.js';
 import { updateHUD } from '../hud/overlay.js';
 import { spawnDamageNumber } from '../fx/damageNumbers.js';
+import { addPlayerDmg } from '../replay/damageTracker.js';
 
 // ── Weapon animation state ────────────────────────────────────────────
 export let muzzleT = 0;
@@ -159,6 +160,7 @@ export function tickBullets(dt) {
         e.velX = kd.x * 4;
         e.velZ = kd.z * 4;
         e.stunTimer = 0.28;
+        addPlayerDmg(dmg);
         spawnHitMarker();
         spawnDamageNumber(ePos.x, ePos.y + 0.4, ePos.z, dmg);
         e.takeDamage(dmg, killEnemy);
@@ -173,6 +175,7 @@ export function tickBullets(dt) {
       const dPos = new THREE.Vector3(activeDrone.x, activeDrone.y, activeDrone.z);
       if (b.pos.distanceTo(dPos) < 1.2) {
         const dmg = b.damage;
+        addPlayerDmg(dmg);
         player.energy = Math.min(MAX_ENERGY, player.energy + dmg * ENERGY_PER_DMG);
         spawnHitMarker();
         activeDrone.takeDamage(dmg, killDrone);
