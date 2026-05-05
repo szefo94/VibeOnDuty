@@ -154,7 +154,10 @@ export function buildLevel(mapDef) {
     }
   }
 
-  // ── Elevated terrain slabs ───────────────────────────────────────────
+  // ── Elevated floor slabs — thin panel at height h, open underneath ───
+  // Thickness: 0.3 m so the slab top is at exactly y=h and players can
+  // walk freely below (under Floor 1 at 3 m, under Floor 2 at 6 m, etc.)
+  const SLAB_T   = 0.3;
   const elevMat  = mm(0xb8a070, 0.94, 0.01);
   const elevSide = mm(0x8a7050, 0.96, 0.01);
   const built = new Set();
@@ -175,11 +178,15 @@ export function buildLevel(mapDef) {
       }
       for (let dr = 0; dr < d; dr++) for (let dc = 0; dc < ww; dc++) built.add(`${c + dc},${r + dr}`);
       const pw = ww * CELL, pd = d * CELL, cx2 = (c + ww / 2) * CELL, cz2 = (r + d / 2) * CELL;
-      const slab = new THREE.Mesh(new THREE.BoxGeometry(pw, h, pd), [elevSide, elevSide, elevMat, elevMat, elevSide, elevSide]);
-      slab.position.set(cx2, h / 2, cz2);
+      // Thin slab: top surface at y=h, underside at y=h-SLAB_T
+      const slab = new THREE.Mesh(
+        new THREE.BoxGeometry(pw, SLAB_T, pd),
+        [elevSide, elevSide, elevMat, elevMat, elevSide, elevSide]
+      );
+      slab.position.set(cx2, h - SLAB_T / 2, cz2);
       slab.receiveShadow = slab.castShadow = true;
       _levelGroup.add(slab);
-      debugLineData.push({ x: cx2 - pw / 2, y: 0, z: cz2 - pd / 2, w: pw, h, d: pd, col: 0x00ff88 });
+      debugLineData.push({ x: cx2 - pw / 2, y: h - SLAB_T, z: cz2 - pd / 2, w: pw, h: SLAB_T, d: pd, col: 0x00ff88 });
     }
   }
 
