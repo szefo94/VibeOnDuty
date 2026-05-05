@@ -7,19 +7,33 @@ import { torchLights, ambientLight, sunLight } from './lighting.js';
 export const wallMeshes = [];
 export let debugLines = null;
 
+let _levelGroup = null;
+
+// Remove and dispose all geometry added by the last buildLevel call.
+export function clearLevel() {
+  if (!_levelGroup) return;
+  _levelGroup.traverse(obj => {
+    if (obj.geometry) obj.geometry.dispose();
+  });
+  scene.remove(_levelGroup);
+  _levelGroup = null;
+  wallMeshes.length = 0;
+  torchLights.length = 0;
+}
+
 const _isRamp  = (c) => c >= 4 && c <= 7;
 const _isCrack = (c) => c === 2 || c === 3;
 
 export function buildLevel(mapDef) {
+  clearLevel();
+  _levelGroup = new THREE.Group();
+
   const {
     tiles, heightmap, width, height,
     wallHeight: WH, materials: mats,
     fog, skyColor, showRubble,
   } = mapDef;
 
-  // Reset
-  wallMeshes.length = 0;
-  torchLights.length = 0;
   const debugLineData = [];
 
   // Apply scene theme
@@ -42,7 +56,7 @@ export function buildLevel(mapDef) {
   fl.rotation.x = -Math.PI / 2;
   fl.position.set((width * CELL) / 2, 0, (height * CELL) / 2);
   fl.receiveShadow = true;
-  scene.add(fl);
+  _levelGroup.add(fl);
 
   // ── Tile geometry ─────────────────────────────────────────────────────
   for (let row = 0; row < height; row++) {
@@ -62,14 +76,14 @@ export function buildLevel(mapDef) {
           );
           shaft.position.set(wx, (WH + 0.8) / 2, wz);
           shaft.castShadow = shaft.receiveShadow = true;
-          scene.add(shaft);
+          _levelGroup.add(shaft);
           wallMeshes.push(shaft);
           const cap = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.35, 1.4), mats.wallTop);
           cap.position.set(wx, WH + 0.8, wz);
-          scene.add(cap);
+          _levelGroup.add(cap);
           const base = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.22, 1.5), mats.wallTop);
           base.position.set(wx, 0.11, wz);
-          scene.add(base);
+          _levelGroup.add(base);
           debugLineData.push({ x: wx - 0.7, y: 0, z: wz - 0.7, w: 1.4, h: WH + 0.8, d: 1.4, col: 0xff8800 });
         } else {
           const wm = new THREE.Mesh(new THREE.BoxGeometry(CELL, WH, CELL), [
@@ -77,11 +91,11 @@ export function buildLevel(mapDef) {
           ]);
           wm.position.set(wx, WH / 2, wz);
           wm.castShadow = wm.receiveShadow = true;
-          scene.add(wm);
+          _levelGroup.add(wm);
           wallMeshes.push(wm);
           const t = new THREE.Mesh(new THREE.BoxGeometry(CELL, 0.18, CELL), mats.trim);
           t.position.set(wx, 0.09, wz);
-          scene.add(t);
+          _levelGroup.add(t);
           debugLineData.push({ x: wx - CELL / 2, y: 0, z: wz - CELL / 2, w: CELL, h: WH, d: CELL, col: 0xff3300 });
         }
       } else if (_isCrack(cell)) {
@@ -90,12 +104,12 @@ export function buildLevel(mapDef) {
         const lo = new THREE.Mesh(new THREE.BoxGeometry(gw, loH, gd), mats.crack);
         lo.position.set(wx, loH / 2, wz);
         lo.castShadow = lo.receiveShadow = true;
-        scene.add(lo);
+        _levelGroup.add(lo);
         wallMeshes.push(lo);
         const up = new THREE.Mesh(new THREE.BoxGeometry(gw, upH, gd), mats.crack);
         up.position.set(wx, PLAYER_H + 0.28 + upH / 2, wz);
         up.castShadow = true;
-        scene.add(up);
+        _levelGroup.add(up);
         wallMeshes.push(up);
         debugLineData.push({ x: wx - gw / 2, y: 0, z: wz - gd / 2, w: gw, h: loH, d: gd, col: 0x0088ff });
         debugLineData.push({ x: wx - gw / 2, y: PLAYER_H + 0.28, z: wz - gd / 2, w: gw, h: upH, d: gd, col: 0x0088ff });
@@ -117,7 +131,7 @@ export function buildLevel(mapDef) {
         const rm = new THREE.Mesh(rampGeo, rampMat);
         rm.position.set(wx, 0, wz);
         rm.castShadow = rm.receiveShadow = true;
-        scene.add(rm);
+        _levelGroup.add(rm);
         debugLineData.push({ x: wx - CELL / 2, y: 0, z: wz - CELL / 2, w: CELL, h: H2, d: CELL, col: 0xffee00 });
       }
     }
@@ -136,7 +150,7 @@ export function buildLevel(mapDef) {
       rb.rotation.y = Math.random() * Math.PI;
       rb.rotation.z = (Math.random() - 0.5) * 0.3;
       rb.receiveShadow = rb.castShadow = true;
-      scene.add(rb);
+      _levelGroup.add(rb);
     }
   }
 
@@ -164,7 +178,7 @@ export function buildLevel(mapDef) {
       const slab = new THREE.Mesh(new THREE.BoxGeometry(pw, h, pd), [elevSide, elevSide, elevMat, elevMat, elevSide, elevSide]);
       slab.position.set(cx2, h / 2, cz2);
       slab.receiveShadow = slab.castShadow = true;
-      scene.add(slab);
+      _levelGroup.add(slab);
       debugLineData.push({ x: cx2 - pw / 2, y: 0, z: cz2 - pd / 2, w: pw, h, d: pd, col: 0x00ff88 });
     }
   }
@@ -191,5 +205,7 @@ export function buildLevel(mapDef) {
   }
   debugLines = grp;
   debugLines.visible = false;
-  scene.add(debugLines);
+  _levelGroup.add(debugLines);
+
+  scene.add(_levelGroup);
 }

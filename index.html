@@ -16,6 +16,7 @@
   <div id="hitflash"></div><div id="vignette"></div>
   <div id="msg"></div><div id="status"></div>
   <div id="kill-feed"></div>
+  <div id="ed-preview-hint" style="display:none">CUSTOM MAP PREVIEW &nbsp;·&nbsp; [P] TO RETURN TO EDITOR</div>
 
   <!-- TDM HUD -->
   <div id="tdm-bar" style="display:none">
@@ -129,6 +130,58 @@
     <button id="tdm-startbtn">[ TEAM DEATHMATCH ]</button>
     <button id="snd-startbtn">[ S&amp;D MODE ]</button>
     <button id="range-startbtn">[ TRAINING RANGE ]</button>
+    <button id="editor-startbtn">[ MAP EDITOR ]</button>
+  </div>
+</div>
+
+<!-- Map Editor Overlay -->
+<div id="editor-overlay" style="display:none">
+  <div id="ed-toolbar">
+    <div class="ed-title">MAP EDITOR</div>
+
+    <div class="ed-section">TILES</div>
+    <button class="ed-tool selected" data-tile="0">Floor</button>
+    <button class="ed-tool" data-tile="1">Wall</button>
+    <button class="ed-tool" data-tile="2">Crack-H</button>
+    <button class="ed-tool" data-tile="3">Crack-V</button>
+    <button class="ed-tool" data-tile="4">Ramp N</button>
+    <button class="ed-tool" data-tile="5">Ramp S</button>
+    <button class="ed-tool" data-tile="6">Ramp W</button>
+    <button class="ed-tool" data-tile="7">Ramp E</button>
+
+    <div class="ed-section">MARKERS</div>
+    <button class="ed-tool" data-tile="spawn_p">Spawn [P]</button>
+    <button class="ed-tool" data-tile="spawn_a">Attack Spawn</button>
+    <button class="ed-tool" data-tile="spawn_d">Defend Spawn</button>
+    <button class="ed-tool" data-tile="site_a">Site A</button>
+    <button class="ed-tool" data-tile="site_b">Site B</button>
+
+    <div class="ed-section">ACTIONS</div>
+    <button id="ed-undo">Undo (Ctrl+Z)</button>
+    <button id="ed-clear">Clear Grid</button>
+    <button id="ed-preview">Preview [P]</button>
+
+    <div class="ed-section">SHARE</div>
+    <button id="ed-export">Export Map</button>
+    <div id="ed-export-msg"></div>
+    <textarea id="ed-share-field" placeholder="Paste base64 to import…" rows="3"></textarea>
+    <button id="ed-import-btn">Import</button>
+
+    <div style="flex:1"></div>
+    <button id="ed-back">[ BACK TO MENU ]</button>
+  </div>
+
+  <div id="ed-main">
+    <canvas id="editor-canvas"></canvas>
+    <div id="ed-status">hover over grid to inspect</div>
+    <div id="ed-legend">
+      <span style="color:#5c4e3e">■</span> Wall &nbsp;
+      <span style="color:#2a5578">■</span> Crack-H &nbsp;
+      <span style="color:#1e4a66">■</span> Crack-V &nbsp;
+      <span style="color:#7a5c28">■</span> Ramp &nbsp;
+      <span style="color:#2ecc71">■</span> Spawn &nbsp;
+      <span style="color:#ff8800">■</span> Site
+    </div>
   </div>
 </div>
 <!-- Touch controls — display:none until initTouch() enables on touch devices -->

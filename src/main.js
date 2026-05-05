@@ -32,6 +32,7 @@ import { rooftopMapDef } from './maps/rooftop.js';
 import { conceptMapDef } from './maps/concept.js';
 import { rangeMapDef } from './maps/range.js';
 import { startTrainingRange } from './modes/trainingRange.js';
+import { initEditor, openEditor } from './editor/mapEditor.js';
 
 const _euler = new THREE.Euler(0, 0, 0, 'YXZ');
 let debugVisible = true;
@@ -239,6 +240,9 @@ document.getElementById('tdm-startbtn').addEventListener('click', tdmStart);
 // ── Training range start ────────────────────────────────────────────
 document.getElementById('range-startbtn').addEventListener('click', rangeStart);
 
+// ── Map editor ──────────────────────────────────────────────────────
+document.getElementById('editor-startbtn').addEventListener('click', openEditor);
+
 // ── S&D next round ─────────────────────────────────────────────────
 document.getElementById('snd-next-btn').addEventListener('click', () => {
   if (isMatchOver()) { location.reload(); return; }
@@ -263,18 +267,21 @@ register('player-p90', tryLoadP90ForHand);
 // ── Kick off ───────────────────────────────────────────────────────
 window.loadGLTF = tryLoadEnemyGLTF;
 
-const _startBtn      = document.getElementById('startbtn');
-const _sndStartBtn   = document.getElementById('snd-startbtn');
-const _tdmStartBtn   = document.getElementById('tdm-startbtn');
-const _rangeStartBtn = document.getElementById('range-startbtn');
+const _startBtn       = document.getElementById('startbtn');
+const _sndStartBtn    = document.getElementById('snd-startbtn');
+const _tdmStartBtn    = document.getElementById('tdm-startbtn');
+const _rangeStartBtn  = document.getElementById('range-startbtn');
+const _editorStartBtn = document.getElementById('editor-startbtn');
 _startBtn.disabled    = true;
 _sndStartBtn.disabled = true;
 _tdmStartBtn.disabled = true;
-_rangeStartBtn.disabled = true;
+_rangeStartBtn.disabled  = true;
+_editorStartBtn.disabled = true;
 _startBtn.textContent    = 'LOADING...';
 _sndStartBtn.textContent = 'LOADING...';
 _tdmStartBtn.textContent = 'LOADING...';
-_rangeStartBtn.textContent = 'LOADING...';
+_rangeStartBtn.textContent  = 'LOADING...';
+_editorStartBtn.textContent = 'LOADING...';
 
 // Attach player 3p weapon to body BEFORE async block so buildPlayerMesh()
 // can reparent it to hand_r without immediately losing it.
@@ -283,17 +290,20 @@ playerBody.add(weapon3p);
 
 (async () => {
   const assets = await loadAll();
-  _startBtn.textContent      = 'INCURSION';
-  _sndStartBtn.textContent   = 'S&D — START';
-  _tdmStartBtn.textContent   = 'TEAM DEATHMATCH';
-  _rangeStartBtn.textContent = 'TRAINING RANGE';
-  _startBtn.disabled    = false;
-  _sndStartBtn.disabled = false;
-  _tdmStartBtn.disabled = false;
-  _rangeStartBtn.disabled = false;
+  _startBtn.textContent       = 'INCURSION';
+  _sndStartBtn.textContent    = 'S&D — START';
+  _tdmStartBtn.textContent    = 'TEAM DEATHMATCH';
+  _rangeStartBtn.textContent  = 'TRAINING RANGE';
+  _editorStartBtn.textContent = 'MAP EDITOR';
+  _startBtn.disabled     = false;
+  _sndStartBtn.disabled  = false;
+  _tdmStartBtn.disabled  = false;
+  _rangeStartBtn.disabled  = false;
+  _editorStartBtn.disabled = false;
   if (assets['enemy-glb']) {
     rebuildAllEnemies();
     buildPlayerMesh();
   }
+  initEditor();
   startLoop();
 })();
