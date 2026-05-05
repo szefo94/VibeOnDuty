@@ -7,7 +7,7 @@ import { setGameRunning } from '../input.js';
 import { deactivateAllEnemies } from '../entities/enemies.js';
 
 const GRID_W = 24, GRID_H = 24;
-const FLOOR1 = 0.7, FLOOR2 = 1.4; // heightmap levels matching bunker H1/H2
+const FLOOR1 = 3.0, FLOOR2 = 6.0; // one storey ≈ 3 m, two storeys ≈ 6 m
 
 // ── Height tool identifiers and values ───────────────────────────────────
 const _HEIGHT_TOOLS = new Set(['h0', 'h1', 'h2']);
@@ -272,7 +272,7 @@ function _buildMapDef() {
     tiles:     _tiles.map(row => [...row]),
     heightmap: _heightmap.map(row => [...row]),
     width: GRID_W, height: GRID_H,
-    H1: FLOOR1, H2: FLOOR2,
+    H1: FLOOR1 / 2, H2: FLOOR1,   // ramps go 0 → Floor 1 (3 m)
     spawnPlayer:   toWorld(_markers.spawn_p),
     spawnAttacker: toWorld(_markers.spawn_a),
     spawnDefender: toWorld(_markers.spawn_d),
@@ -282,7 +282,7 @@ function _buildMapDef() {
     ],
     fog: { color: 0x2a3a4a, density: 0.010 },
     skyColor: 0x4a6070,
-    wallHeight: 3,
+    wallHeight: 3.5,  // slightly taller than 1 storey — cover from ground, open to Floor 1
     showRubble: false,
     materials: {
       floor: matFloor, wall: matWall, wallDark: matWallD,
