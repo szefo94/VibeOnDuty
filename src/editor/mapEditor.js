@@ -49,6 +49,29 @@ function _blankGrid() {
   );
 }
 
+// Arrow direction for each ramp tile: which side is the HIGH end
+// 4=Ramp N → high at south (↓), 5=Ramp S → high at north (↑)
+// 6=Ramp W → high at east  (→), 7=Ramp E → high at west  (←)
+const _RAMP_ARROW = { 4: 'down', 5: 'up', 6: 'right', 7: 'left' };
+
+function _drawRampArrow(c, r, cpx, cpy, dir) {
+  const cx = (c + 0.5) * cpx, cy = (r + 0.5) * cpy;
+  const hw = cpx * 0.28, hh = cpy * 0.28; // half-width / half-height of arrow head
+  _ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  _ctx.beginPath();
+  if (dir === 'up') {
+    _ctx.moveTo(cx, cy - hh); _ctx.lineTo(cx + hw, cy + hh); _ctx.lineTo(cx - hw, cy + hh);
+  } else if (dir === 'down') {
+    _ctx.moveTo(cx, cy + hh); _ctx.lineTo(cx - hw, cy - hh); _ctx.lineTo(cx + hw, cy - hh);
+  } else if (dir === 'left') {
+    _ctx.moveTo(cx - hw, cy); _ctx.lineTo(cx + hw, cy - hh); _ctx.lineTo(cx + hw, cy + hh);
+  } else {
+    _ctx.moveTo(cx + hw, cy); _ctx.lineTo(cx - hw, cy - hh); _ctx.lineTo(cx - hw, cy + hh);
+  }
+  _ctx.closePath();
+  _ctx.fill();
+}
+
 // ── Canvas drawing ────────────────────────────────────────────────────────
 function _draw() {
   if (!_ctx) return;
@@ -59,8 +82,10 @@ function _draw() {
   // Tiles
   for (let r = 0; r < GRID_H; r++) {
     for (let c = 0; c < GRID_W; c++) {
-      _ctx.fillStyle = _TILE_COLORS[_tiles[r][c]] ?? '#111';
+      const tile = _tiles[r][c];
+      _ctx.fillStyle = _TILE_COLORS[tile] ?? '#111';
       _ctx.fillRect(c * cpx + 0.5, r * cpy + 0.5, cpx - 1, cpy - 1);
+      if (_RAMP_ARROW[tile]) _drawRampArrow(c, r, cpx, cpy, _RAMP_ARROW[tile]);
     }
   }
 
@@ -215,7 +240,7 @@ function _buildMapDef() {
     tiles: _tiles.map(row => [...row]),
     heightmap: Array.from({ length: GRID_H }, () => new Array(GRID_W).fill(0)),
     width: GRID_W, height: GRID_H,
-    H1: 0, H2: 0,
+    H1: 0.7, H2: 1.4,
     spawnPlayer:   toWorld(_markers.spawn_p),
     spawnAttacker: toWorld(_markers.spawn_a),
     spawnDefender: toWorld(_markers.spawn_d),
