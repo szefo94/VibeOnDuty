@@ -7,40 +7,37 @@ import { setGameRunning } from '../input.js';
 import { deactivateAllEnemies } from '../entities/enemies.js';
 
 const GRID_W = 24, GRID_H = 24;
+const FLOOR1 = 0.7, FLOOR2 = 1.4; // heightmap levels matching bunker H1/H2
 
-// Tool descriptor tables
-const TILE_TOOLS = [
-  { id: 0, label: 'Floor',   color: '#1a1a1a' },
-  { id: 1, label: 'Wall',    color: '#5c4e3e' },
-  { id: 2, label: 'Crack-H', color: '#2a5578' },
-  { id: 3, label: 'Crack-V', color: '#1e4a66' },
-  { id: 4, label: 'Ramp N',  color: '#7a5c28' },
-  { id: 5, label: 'Ramp S',  color: '#6a4c18' },
-  { id: 6, label: 'Ramp W',  color: '#8a6c38' },
-  { id: 7, label: 'Ramp E',  color: '#5a4008' },
-];
-const MARKER_TOOLS = [
-  { id: 'spawn_p', label: 'Spawn P', color: '#2ecc71', letter: 'P' },
-  { id: 'spawn_a', label: 'Attack',  color: '#e74c3c', letter: 'A' },
-  { id: 'spawn_d', label: 'Defend',  color: '#3498db', letter: 'D' },
-  { id: 'site_a',  label: 'Site A',  color: '#ff8800', letter: '①' },
-  { id: 'site_b',  label: 'Site B',  color: '#ff6600', letter: '②' },
-];
+// ── Height tool identifiers and values ───────────────────────────────────
+const _HEIGHT_TOOLS = new Set(['h0', 'h1', 'h2']);
+const _HEIGHT_VAL   = { h0: 0, h1: FLOOR1, h2: FLOOR2 };
+
+// Tile canvas colors
 const _TILE_COLORS  = ['#1a1a1a','#5c4e3e','#2a5578','#1e4a66','#7a5c28','#6a4c18','#8a6c38','#5a4008'];
 const _MARKER_COLOR = { spawn_p:'#2ecc71', spawn_a:'#e74c3c', spawn_d:'#3498db', site_a:'#ff8800', site_b:'#ff6600' };
 const _MARKER_LETTER= { spawn_p:'P', spawn_a:'A', spawn_d:'D', site_a:'①', site_b:'②' };
 
-let _tiles   = null;
-let _markers = { spawn_p: null, spawn_a: null, spawn_d: null, site_a: null, site_b: null };
-let _tool    = 0;        // number (tile) or string (marker key)
-let _undo    = [];
+// Arrow direction for each ramp tile — points toward the HIGH end of the slope
+// 4=Ramp N → high at south (↓), 5=Ramp S → high at north (↑)
+// 6=Ramp W → high at east  (→), 7=Ramp E → high at west  (←)
+const _RAMP_ARROW = { 4: 'down', 5: 'up', 6: 'right', 7: 'left' };
+
+// Rotate cycle: ramps 4→5→6→7→4, cracks 2→3→2
+const _ROTATE_NEXT = { 4: 5, 5: 6, 6: 7, 7: 4, 2: 3, 3: 2 };
+
+let _tiles    = null;
+let _heightmap = null;
+let _markers  = { spawn_p: null, spawn_a: null, spawn_d: null, site_a: null, site_b: null };
+let _tool     = 0;
+let _undo     = [];
 let _painting = false;
 let _paintBtn = 0;
 let _inPreview = false;
-let _canvas  = null;
-let _ctx     = null;
+let _canvas   = null;
+let _ctx      = null;
 
-// ── Grid factory ──────────────────────────────────────────────────────────
+// ── Grid factories ────────────────────────────────────────────────────────
 function _blankGrid() {
   return Array.from({ length: GRID_H }, (_, r) =>
     Array.from({ length: GRID_W }, (_, c) =>
@@ -48,16 +45,15 @@ function _blankGrid() {
     )
   );
 }
+function _blankHeightmap() {
+  return Array.from({ length: GRID_H }, () => new Array(GRID_W).fill(0));
+}
 
-// Arrow direction for each ramp tile: which side is the HIGH end
-// 4=Ramp N → high at south (↓), 5=Ramp S → high at north (↑)
-// 6=Ramp W → high at east  (→), 7=Ramp E → high at west  (←)
-const _RAMP_ARROW = { 4: 'down', 5: 'up', 6: 'right', 7: 'left' };
-
+// ── Canvas helpers ────────────────────────────────────────────────────────
 function _drawRampArrow(c, r, cpx, cpy, dir) {
   const cx = (c + 0.5) * cpx, cy = (r + 0.5) * cpy;
-  const hw = cpx * 0.28, hh = cpy * 0.28; // half-width / half-height of arrow head
-  _ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  const hw = cpx * 0.28, hh = cpy * 0.28;
+  _ctx.fillStyle = 'rgba(255,255,255,0.72)';
   _ctx.beginPath();
   if (dir === 'up') {
     _ctx.moveTo(cx, cy - hh); _ctx.lineTo(cx + hw, cy + hh); _ctx.lineTo(cx - hw, cy + hh);
@@ -86,6 +82,23 @@ function _draw() {
       _ctx.fillStyle = _TILE_COLORS[tile] ?? '#111';
       _ctx.fillRect(c * cpx + 0.5, r * cpy + 0.5, cpx - 1, cpy - 1);
       if (_RAMP_ARROW[tile]) _drawRampArrow(c, r, cpx, cpy, _RAMP_ARROW[tile]);
+    }
+  }
+
+  // Height overlay — tint floor cells that have elevated heightmap values
+  _ctx.textAlign = 'right';
+  _ctx.textBaseline = 'top';
+  for (let r = 0; r < GRID_H; r++) {
+    for (let c = 0; c < GRID_W; c++) {
+      const h = _heightmap[r][c];
+      if (!h) continue;
+      const isHigh = h >= FLOOR2;
+      _ctx.fillStyle = isHigh ? 'rgba(200,160,50,0.42)' : 'rgba(160,120,40,0.28)';
+      _ctx.fillRect(c * cpx + 0.5, r * cpy + 0.5, cpx - 1, cpy - 1);
+      // small floor level badge in top-right corner
+      _ctx.fillStyle = isHigh ? 'rgba(255,200,60,0.85)' : 'rgba(200,160,60,0.75)';
+      _ctx.font = `bold ${Math.max(7, Math.floor(cpx * 0.34))}px monospace`;
+      _ctx.fillText(isHigh ? '2' : '1', (c + 1) * cpx - 2, r * cpy + 1.5);
     }
   }
 
@@ -130,7 +143,15 @@ function _paint(e) {
   const { col, row } = _cellAt(e);
   const erase = _paintBtn === 2;
 
-  if (typeof _tool === 'string') {
+  if (_HEIGHT_TOOLS.has(_tool)) {
+    // Height painting
+    const next = erase ? 0 : _HEIGHT_VAL[_tool];
+    const prev = _heightmap[row][col];
+    if (prev === next) return;
+    _undoPush({ type: 'height', row, col, from: prev, to: next });
+    _heightmap[row][col] = next;
+  } else if (typeof _tool === 'string') {
+    // Marker placement
     const key = _tool;
     const prev = _markers[key];
     if (erase) {
@@ -145,6 +166,7 @@ function _paint(e) {
       _markers[key] = next;
     }
   } else {
+    // Tile painting
     const next = erase ? 0 : _tool;
     const prev = _tiles[row][col];
     if (prev === next) return;
@@ -162,17 +184,23 @@ function _undoPush(op) {
 function _doUndo() {
   if (!_undo.length) return;
   const op = _undo.pop();
-  if (op.type === 'tile') _tiles[op.row][op.col] = op.from;
+  if (op.type === 'tile')   _tiles[op.row][op.col] = op.from;
+  else if (op.type === 'height') _heightmap[op.row][op.col] = op.from;
   else _markers[op.key] = op.from;
   _draw();
 }
 
-// ── Tool button selection ─────────────────────────────────────────────────
+// ── Tool selection + rotate ───────────────────────────────────────────────
 function _selectTool(raw) {
   _tool = isNaN(+raw) ? raw : +raw;
   document.querySelectorAll('.ed-tool').forEach(b => {
     b.classList.toggle('selected', (isNaN(+b.dataset.tile) ? b.dataset.tile : +b.dataset.tile) === _tool);
   });
+}
+
+function _rotateTool() {
+  const next = _ROTATE_NEXT[_tool];
+  if (next !== undefined) _selectTool(next);
 }
 
 // ── Export / Import ───────────────────────────────────────────────────────
@@ -181,6 +209,7 @@ function _encode() {
   return btoa(JSON.stringify({
     w: GRID_W, h: GRID_H,
     t: _tiles.flat(),
+    hm: _heightmap.flat(),
     sp: mk(_markers.spawn_p), sa: mk(_markers.spawn_a),
     sd: mk(_markers.spawn_d), sA: mk(_markers.site_a), sB: mk(_markers.site_b),
   }));
@@ -190,6 +219,9 @@ function _decode(b64) {
   const d = JSON.parse(atob(b64));
   const w = d.w ?? 24, h = d.h ?? 24;
   _tiles = Array.from({ length: h }, (_, r) => d.t.slice(r * w, r * w + w));
+  _heightmap = d.hm
+    ? Array.from({ length: h }, (_, r) => d.hm.slice(r * w, r * w + w))
+    : _blankHeightmap();
   const mk = (arr) => arr ? { col: arr[0], row: arr[1] } : null;
   _markers = { spawn_p: mk(d.sp), spawn_a: mk(d.sa), spawn_d: mk(d.sd), site_a: mk(d.sA), site_b: mk(d.sB) };
   _undo = [];
@@ -234,13 +266,13 @@ function _buildMapDef() {
     ? { x: pos.col * CELL + CELL / 2, z: pos.row * CELL + CELL / 2 }
     : { x: cx, z: cz };
 
-  const { siteA, siteB } = { siteA: _markers.site_a, siteB: _markers.site_b };
+  const siteA = _markers.site_a, siteB = _markers.site_b;
   return {
     name: 'Custom Map',
-    tiles: _tiles.map(row => [...row]),
-    heightmap: Array.from({ length: GRID_H }, () => new Array(GRID_W).fill(0)),
+    tiles:     _tiles.map(row => [...row]),
+    heightmap: _heightmap.map(row => [...row]),
     width: GRID_W, height: GRID_H,
-    H1: 0.7, H2: 1.4,
+    H1: FLOOR1, H2: FLOOR2,
     spawnPlayer:   toWorld(_markers.spawn_p),
     spawnAttacker: toWorld(_markers.spawn_a),
     spawnDefender: toWorld(_markers.spawn_d),
@@ -276,8 +308,9 @@ export function closeEditor() {
 export function isEditorPreview() { return _inPreview; }
 
 export function initEditor() {
-  _tiles   = _blankGrid();
-  _markers = { spawn_p: null, spawn_a: null, spawn_d: null, site_a: null, site_b: null };
+  _tiles     = _blankGrid();
+  _heightmap = _blankHeightmap();
+  _markers   = { spawn_p: null, spawn_a: null, spawn_d: null, site_a: null, site_b: null };
 
   _canvas = document.getElementById('editor-canvas');
   _ctx    = _canvas.getContext('2d');
@@ -295,8 +328,9 @@ export function initEditor() {
   _canvas.addEventListener('mousemove', e => {
     if (_painting) _paint(e);
     const { col, row } = _cellAt(e);
+    const h = _heightmap[row][col];
     const st = document.getElementById('ed-status');
-    if (st) st.textContent = `col ${col}  row ${row}  tile ${_tiles[row][col]}`;
+    if (st) st.textContent = `col ${col}  row ${row}  tile ${_tiles[row][col]}  height ${h ? h.toFixed(1) : '0'}`;
   });
   _canvas.addEventListener('mouseup',    () => { _painting = false; });
   _canvas.addEventListener('mouseleave', () => { _painting = false; });
@@ -308,11 +342,13 @@ export function initEditor() {
 
   // ── Action buttons ───────────────────────────────────────────────────
   document.getElementById('ed-undo').addEventListener('click', _doUndo);
+  document.getElementById('ed-rotate').addEventListener('click', _rotateTool);
 
   document.getElementById('ed-clear').addEventListener('click', () => {
-    _tiles   = _blankGrid();
-    _markers = { spawn_p: null, spawn_a: null, spawn_d: null, site_a: null, site_b: null };
-    _undo    = [];
+    _tiles     = _blankGrid();
+    _heightmap = _blankHeightmap();
+    _markers   = { spawn_p: null, spawn_a: null, spawn_d: null, site_a: null, site_b: null };
+    _undo      = [];
     _draw();
   });
 
@@ -328,7 +364,6 @@ export function initEditor() {
       msg.textContent = 'Copied!';
       setTimeout(() => { msg.textContent = ''; }, 2000);
     }
-    // Mirror to URL bar without reloading
     const url = new URL(window.location.href);
     url.searchParams.set('map', b64);
     window.history.replaceState(null, '', url.toString());
@@ -341,9 +376,8 @@ export function initEditor() {
 
   document.getElementById('ed-back').addEventListener('click', closeEditor);
 
-  // ── Keyboard shortcuts (active when editor overlay visible or previewing) ──
+  // ── Keyboard shortcuts ───────────────────────────────────────────────
   document.addEventListener('keydown', e => {
-    // Exit preview
     if (_inPreview && (e.code === 'KeyP' || e.code === 'Escape')) {
       exitEditorPreview();
       return;
@@ -352,6 +386,7 @@ export function initEditor() {
     if (!overlay || overlay.style.display === 'none') return;
     if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') { e.preventDefault(); _doUndo(); }
     if (e.code === 'KeyP') _preview();
+    if (e.code === 'KeyR') _rotateTool();
   });
 
   // ── URL map param ────────────────────────────────────────────────────
@@ -360,7 +395,6 @@ export function initEditor() {
   if (mapParam) {
     try {
       _decode(mapParam);
-      // Auto-open editor when a map is in the URL
       requestAnimationFrame(() => openEditor());
     } catch (_) {}
   }

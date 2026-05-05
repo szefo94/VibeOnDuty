@@ -251,7 +251,12 @@ body{background:#000;overflow:hidden;font-family:'Courier New',monospace}
 .ed-tool{width:100%;padding:5px 8px;background:#1a1a1a;color:#aaa;border:1px solid #2a2a2a;font-family:'Courier New',monospace;font-size:11px;letter-spacing:1px;cursor:pointer;text-align:left}
 .ed-tool:hover{background:#252525;color:#fff}
 .ed-tool.selected{background:#e8c84a;color:#000;border-color:#e8c84a}
-#ed-undo,#ed-clear,#ed-preview,#ed-export,#ed-import-btn,#ed-back{width:100%;padding:6px 8px;background:#1a1a1a;color:#aaa;border:1px solid #2a2a2a;font-family:'Courier New',monospace;font-size:11px;letter-spacing:1px;cursor:pointer;text-align:left}
+#ed-undo,#ed-clear,#ed-preview,#ed-export,#ed-import-btn,#ed-back,#ed-rotate{width:100%;padding:6px 8px;background:#1a1a1a;color:#aaa;border:1px solid #2a2a2a;font-family:'Courier New',monospace;font-size:11px;letter-spacing:1px;cursor:pointer;text-align:left}
+.ed-tool[data-tile="h0"]{color:#888}
+.ed-tool[data-tile="h1"]{color:#c8a050}
+.ed-tool[data-tile="h2"]{color:#f0c040}
+.ed-tool[data-tile="h1"].selected,.ed-tool[data-tile="h2"].selected{background:#c8a050;color:#000;border-color:#c8a050}
+#ed-rotate{color:#c8a050}
 #ed-undo:hover,#ed-clear:hover,#ed-export:hover,#ed-import-btn:hover{background:#252525;color:#fff}
 #ed-preview{background:#1a3a1a;color:#2ecc71;border-color:#1a3a1a}
 #ed-preview:hover{background:#2ecc71;color:#000}
