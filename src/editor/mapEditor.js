@@ -7,35 +7,63 @@ import { setGameRunning } from '../input.js';
 import { deactivateAllEnemies } from '../entities/enemies.js';
 
 const GRID_W = 24, GRID_H = 24;
-const FLOOR1 = 3.0, FLOOR2 = 6.0; // one storey ≈ 3 m, two storeys ≈ 6 m
+const FLOOR1 = 3.0, FLOOR2 = 6.0;
 
-// ── Height tool identifiers and values ───────────────────────────────────
-const _HEIGHT_TOOLS = new Set(['h0', 'h1', 'h2']);
-const _HEIGHT_VAL   = { h0: 0, h1: FLOOR1, h2: FLOOR2 };
+// Height tool identifiers and values (floor painting sets tile=0 + heightmap)
+const _HEIGHT_TOOLS = new Set(['h0', 'h05', 'h1m', 'h15', 'h2m', 'h1', 'h2']);
+const _HEIGHT_VAL   = { h0: 0, h05: 0.5, h1m: 1.0, h15: 1.5, h2m: 2.0, h1: FLOOR1, h2: FLOOR2 };
 
-// Tile canvas colors
-const _TILE_COLORS  = ['#1a1a1a','#5c4e3e','#2a5578','#1e4a66','#7a5c28','#6a4c18','#8a6c38','#5a4008'];
-const _MARKER_COLOR = { spawn_p:'#2ecc71', spawn_a:'#e74c3c', spawn_d:'#3498db', site_a:'#ff8800', site_b:'#ff6600' };
-const _MARKER_LETTER= { spawn_p:'P', spawn_a:'A', spawn_d:'D', site_a:'①', site_b:'②' };
+const _MARKER_COLOR  = { spawn_p:'#2ecc71', spawn_a:'#e74c3c', spawn_d:'#3498db', site_a:'#ff8800', site_b:'#ff6600' };
+const _MARKER_LETTER = { spawn_p:'P', spawn_a:'A', spawn_d:'D', site_a:'①', site_b:'②' };
 
-// Arrow direction for each ramp tile — points toward the HIGH end of the slope
-// 4=Ramp N → high at south (↓), 5=Ramp S → high at north (↑)
-// 6=Ramp W → high at east  (→), 7=Ramp E → high at west  (←)
-const _RAMP_ARROW = { 4: 'down', 5: 'up', 6: 'right', 7: 'left' };
+// Per-group canvas colors for ramp tiles (group = Math.floor((tile-4)/4))
+const _RAMP_GROUP_COLOR = ['#7a5c28','#c8901a','#3e2c10','#503c1e','#604c2e','#706040'];
 
-// Rotate cycle: ramps 4→5→6→7→4, cracks 2→3→2
-const _ROTATE_NEXT = { 4: 5, 5: 6, 6: 7, 7: 4, 2: 3, 3: 2 };
+function _getTileColor(tile) {
+  if (tile === 0) return '#1a1a1a';
+  if (tile === 1) return '#5c4e3e';
+  if (tile === 2) return '#2a5578';
+  if (tile === 3) return '#1e4a66';
+  if (tile >= 4 && tile <= 27) return _RAMP_GROUP_COLOR[Math.floor((tile - 4) / 4)] ?? '#7a5c28';
+  return '#111';
+}
 
-let _tiles    = null;
+function _heightLabel(h) {
+  if (!h) return '';
+  if (h >= FLOOR2) return 'F2';
+  if (h >= FLOOR1) return 'F1';
+  if (h >= 2.0) return '2';
+  if (h >= 1.5) return '1½';
+  if (h >= 1.0) return '1';
+  return '½';
+}
+
+function _heightTint(h) {
+  if (h >= FLOOR2) return 'rgba(200,160,50,0.52)';
+  if (h >= FLOOR1) return 'rgba(160,120,30,0.44)';
+  if (h >= 2.0)    return 'rgba(130,100,25,0.36)';
+  if (h >= 1.5)    return 'rgba(110,84,20,0.30)';
+  if (h >= 1.0)    return 'rgba(90,70,15,0.26)';
+  return 'rgba(70,55,10,0.20)';
+}
+
+let _tiles     = null;
 let _heightmap = null;
-let _markers  = { spawn_p: null, spawn_a: null, spawn_d: null, site_a: null, site_b: null };
-let _tool     = 0;
-let _undo     = [];
-let _painting = false;
-let _paintBtn = 0;
+let _markers   = { spawn_p: null, spawn_a: null, spawn_d: null, site_a: null, site_b: null };
+let _tool      = 'h0';   // current active tool (number = tile id, string = height/marker key)
+let _undo      = [];
+let _painting  = false;
+let _paintBtn  = 0;
 let _inPreview = false;
-let _canvas   = null;
-let _ctx      = null;
+let _canvas    = null;
+let _ctx       = null;
+
+// Compound toolbar state
+let _typeMode  = 'floor';  // 'floor' | 'ramp' | 'wall' | 'crack'
+let _rampDir   = 0;         // 0=N 1=S 2=W 3=E
+let _rampRange = 0;         // 0-5 → ramp tile groups
+let _crackTile = 2;         // 2=H 3=V
+let _floorHKey = 'h0';      // active height key
 
 // ── Grid factories ────────────────────────────────────────────────────────
 function _blankGrid() {
@@ -79,9 +107,12 @@ function _draw() {
   for (let r = 0; r < GRID_H; r++) {
     for (let c = 0; c < GRID_W; c++) {
       const tile = _tiles[r][c];
-      _ctx.fillStyle = _TILE_COLORS[tile] ?? '#111';
+      _ctx.fillStyle = _getTileColor(tile);
       _ctx.fillRect(c * cpx + 0.5, r * cpy + 0.5, cpx - 1, cpy - 1);
-      if (_RAMP_ARROW[tile]) _drawRampArrow(c, r, cpx, cpy, _RAMP_ARROW[tile]);
+      if (tile >= 4 && tile <= 27) {
+        const dir = (tile - 4) % 4;
+        _drawRampArrow(c, r, cpx, cpy, ['down','up','right','left'][dir]);
+      }
     }
   }
 
@@ -92,13 +123,14 @@ function _draw() {
     for (let c = 0; c < GRID_W; c++) {
       const h = _heightmap[r][c];
       if (!h) continue;
-      const isHigh = h >= FLOOR2;
-      _ctx.fillStyle = isHigh ? 'rgba(200,160,50,0.42)' : 'rgba(160,120,40,0.28)';
+      _ctx.fillStyle = _heightTint(h);
       _ctx.fillRect(c * cpx + 0.5, r * cpy + 0.5, cpx - 1, cpy - 1);
-      // small floor level badge in top-right corner
-      _ctx.fillStyle = isHigh ? 'rgba(255,200,60,0.85)' : 'rgba(200,160,60,0.75)';
-      _ctx.font = `bold ${Math.max(7, Math.floor(cpx * 0.34))}px monospace`;
-      _ctx.fillText(isHigh ? '2' : '1', (c + 1) * cpx - 2, r * cpy + 1.5);
+      const lbl = _heightLabel(h);
+      if (lbl) {
+        _ctx.fillStyle = h >= FLOOR1 ? 'rgba(255,200,60,0.9)' : 'rgba(200,160,60,0.8)';
+        _ctx.font = `bold ${Math.max(7, Math.floor(cpx * 0.34))}px monospace`;
+        _ctx.fillText(lbl, (c + 1) * cpx - 2, r * cpy + 1.5);
+      }
     }
   }
 
@@ -144,12 +176,14 @@ function _paint(e) {
   const erase = _paintBtn === 2;
 
   if (_HEIGHT_TOOLS.has(_tool)) {
-    // Height painting
-    const next = erase ? 0 : _HEIGHT_VAL[_tool];
-    const prev = _heightmap[row][col];
-    if (prev === next) return;
-    _undoPush({ type: 'height', row, col, from: prev, to: next });
-    _heightmap[row][col] = next;
+    // Floor painting: clears tile to 0 and sets heightmap
+    const nextH = erase ? 0 : _HEIGHT_VAL[_tool];
+    const prevH = _heightmap[row][col];
+    const prevT = _tiles[row][col];
+    if (prevH === nextH && prevT === 0) return;
+    _undoPush({ type: 'cell', row, col, fromT: prevT, toT: 0, fromH: prevH, toH: nextH });
+    _heightmap[row][col] = nextH;
+    _tiles[row][col] = 0;
   } else if (typeof _tool === 'string') {
     // Marker placement
     const key = _tool;
@@ -166,7 +200,7 @@ function _paint(e) {
       _markers[key] = next;
     }
   } else {
-    // Tile painting
+    // Tile painting (ramp, wall, crack)
     const next = erase ? 0 : _tool;
     const prev = _tiles[row][col];
     if (prev === next) return;
@@ -184,23 +218,64 @@ function _undoPush(op) {
 function _doUndo() {
   if (!_undo.length) return;
   const op = _undo.pop();
-  if (op.type === 'tile')   _tiles[op.row][op.col] = op.from;
-  else if (op.type === 'height') _heightmap[op.row][op.col] = op.from;
-  else _markers[op.key] = op.from;
+  if (op.type === 'tile') {
+    _tiles[op.row][op.col] = op.from;
+  } else if (op.type === 'cell') {
+    _tiles[op.row][op.col] = op.fromT;
+    _heightmap[op.row][op.col] = op.fromH;
+  } else if (op.type === 'height') {
+    _heightmap[op.row][op.col] = op.from; // legacy
+  } else {
+    _markers[op.key] = op.from;
+  }
   _draw();
 }
 
-// ── Tool selection + rotate ───────────────────────────────────────────────
-function _selectTool(raw) {
-  _tool = isNaN(+raw) ? raw : +raw;
-  document.querySelectorAll('.ed-tool').forEach(b => {
-    b.classList.toggle('selected', (isNaN(+b.dataset.tile) ? b.dataset.tile : +b.dataset.tile) === _tool);
-  });
+// ── Compound toolbar state → _tool ───────────────────────────────────────
+function _computeToolFromCompound() {
+  switch (_typeMode) {
+    case 'floor': _tool = _floorHKey; break;
+    case 'ramp':  _tool = 4 + _rampRange * 4 + _rampDir; break;
+    case 'wall':  _tool = 1; break;
+    case 'crack': _tool = _crackTile; break;
+  }
+}
+
+function _updateCompoundUI() {
+  document.getElementById('ed-floor-sub').style.display = _typeMode === 'floor' ? '' : 'none';
+  document.getElementById('ed-ramp-sub').style.display  = _typeMode === 'ramp'  ? '' : 'none';
+  document.getElementById('ed-crack-sub').style.display = _typeMode === 'crack' ? '' : 'none';
+  document.querySelectorAll('.ed-type-btn').forEach(b =>
+    b.classList.toggle('selected', b.dataset.type === _typeMode));
+  document.querySelectorAll('.ed-sublvl-btn').forEach(b =>
+    b.classList.toggle('selected', b.dataset.h === _floorHKey));
+  document.querySelectorAll('.ed-subfacing-btn').forEach(b =>
+    b.classList.toggle('selected', +b.dataset.dir === _rampDir));
+  document.querySelectorAll('.ed-subrange-btn').forEach(b =>
+    b.classList.toggle('selected', +b.dataset.range === _rampRange));
+  document.querySelectorAll('.ed-subcrack-btn').forEach(b =>
+    b.classList.toggle('selected', +b.dataset.crack === _crackTile));
+  // Clear marker tool selection when a build type is active
+  document.querySelectorAll('.ed-tool').forEach(b => b.classList.remove('selected'));
+}
+
+function _selectMarkerTool(key) {
+  _tool = key;
+  document.querySelectorAll('.ed-type-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('.ed-tool').forEach(b =>
+    b.classList.toggle('selected', b.dataset.tile === key));
 }
 
 function _rotateTool() {
-  const next = _ROTATE_NEXT[_tool];
-  if (next !== undefined) _selectTool(next);
+  if (_typeMode === 'ramp') {
+    _rampDir = (_rampDir + 1) % 4;
+    _computeToolFromCompound();
+    _updateCompoundUI();
+  } else if (_typeMode === 'crack') {
+    _crackTile = _crackTile === 2 ? 3 : 2;
+    _computeToolFromCompound();
+    _updateCompoundUI();
+  }
 }
 
 // ── Export / Import ───────────────────────────────────────────────────────
@@ -297,6 +372,7 @@ export function openEditor() {
   document.getElementById('overlay').style.display = 'none';
   document.getElementById('editor-overlay').style.display = 'flex';
   _draw();
+  _updateCompoundUI();
 }
 
 export function closeEditor() {
@@ -311,6 +387,12 @@ export function initEditor() {
   _tiles     = _blankGrid();
   _heightmap = _blankHeightmap();
   _markers   = { spawn_p: null, spawn_a: null, spawn_d: null, site_a: null, site_b: null };
+  _typeMode  = 'floor';
+  _rampDir   = 0;
+  _rampRange = 0;
+  _crackTile = 2;
+  _floorHKey = 'h0';
+  _computeToolFromCompound();
 
   _canvas = document.getElementById('editor-canvas');
   _ctx    = _canvas.getContext('2d');
@@ -329,15 +411,55 @@ export function initEditor() {
     if (_painting) _paint(e);
     const { col, row } = _cellAt(e);
     const h = _heightmap[row][col];
+    const t = _tiles[row][col];
+    const tDesc = t >= 4 && t <= 27
+      ? `ramp-${['N','S','W','E'][(t-4)%4]} grp${Math.floor((t-4)/4)}`
+      : ['floor','wall','crack-H','crack-V'][t] ?? `tile${t}`;
     const st = document.getElementById('ed-status');
-    if (st) st.textContent = `col ${col}  row ${row}  tile ${_tiles[row][col]}  height ${h ? h.toFixed(1) : '0'}`;
+    if (st) st.textContent = `col ${col}  row ${row}  ${tDesc}  h=${h ? h.toFixed(1) : '0'}m`;
   });
   _canvas.addEventListener('mouseup',    () => { _painting = false; });
   _canvas.addEventListener('mouseleave', () => { _painting = false; });
 
-  // ── Toolbar buttons ──────────────────────────────────────────────────
+  // ── Compound build toolbar ───────────────────────────────────────────
+  document.querySelectorAll('.ed-type-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _typeMode = btn.dataset.type;
+      _computeToolFromCompound();
+      _updateCompoundUI();
+    });
+  });
+  document.querySelectorAll('.ed-sublvl-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _floorHKey = btn.dataset.h;
+      if (_typeMode === 'floor') { _computeToolFromCompound(); }
+      _updateCompoundUI();
+    });
+  });
+  document.querySelectorAll('.ed-subfacing-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _rampDir = +btn.dataset.dir;
+      if (_typeMode === 'ramp') { _computeToolFromCompound(); }
+      _updateCompoundUI();
+    });
+  });
+  document.querySelectorAll('.ed-subrange-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _rampRange = +btn.dataset.range;
+      if (_typeMode === 'ramp') { _computeToolFromCompound(); }
+      _updateCompoundUI();
+    });
+  });
+  document.querySelectorAll('.ed-subcrack-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _crackTile = +btn.dataset.crack;
+      if (_typeMode === 'crack') { _computeToolFromCompound(); }
+      _updateCompoundUI();
+    });
+  });
+  // ── Marker tools ─────────────────────────────────────────────────────
   document.querySelectorAll('.ed-tool').forEach(btn => {
-    btn.addEventListener('click', () => _selectTool(btn.dataset.tile));
+    btn.addEventListener('click', () => _selectMarkerTool(btn.dataset.tile));
   });
 
   // ── Action buttons ───────────────────────────────────────────────────
@@ -400,4 +522,5 @@ export function initEditor() {
   }
 
   _draw();
+  _updateCompoundUI();
 }

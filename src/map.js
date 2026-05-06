@@ -19,8 +19,17 @@ export function setActiveMap(def) {
   H2    = def.H2 ?? 0;
 }
 
-export const isRamp  = (c) => c >= 4 && c <= 7;
+export const isRamp  = (c) => c >= 4 && c <= 27;
 export const isCrack = (c) => c === 2 || c === 3;
+
+const _RAMP_PROFILE = [
+  [0, null],   // 4-7:  0 → H2 (dynamic)
+  [3.0, 6.0],  // 8-11: F1 → F2
+  [0,   0.5],  // 12-15: 0 → 0.5 m
+  [0.5, 1.0],  // 16-19: 0.5 → 1.0 m
+  [1.0, 1.5],  // 20-23: 1.0 → 1.5 m
+  [1.5, 2.0],  // 24-27: 1.5 → 2.0 m
+];
 
 export function mapCell(mx, mz) {
   if (mx < 0 || mz < 0 || mx >= MAP_W || mz >= MAP_H) return 1;
@@ -39,10 +48,14 @@ export function groundElevation(wx, wz) {
   const c0 = Math.floor(cx), r0 = Math.floor(cz);
   const tx = cx - c0, tz = cz - r0;
   const cell = mapCell(c0, r0);
-  if (cell === 4) return H2 * tz;
-  if (cell === 5) return H2 * (1 - tz);
-  if (cell === 6) return H2 * tx;
-  if (cell === 7) return H2 * (1 - tx);
+  if (isRamp(cell)) {
+    const dir = (cell - 4) % 4;
+    const grp = Math.floor((cell - 4) / 4);
+    const [loY, hiYRaw] = _RAMP_PROFILE[grp];
+    const hiY = hiYRaw ?? H2;
+    const frac = dir === 0 ? tz : dir === 1 ? (1 - tz) : dir === 2 ? tx : (1 - tx);
+    return loY + (hiY - loY) * frac;
+  }
   const h   = hAt(c0, r0);
   const h10 = mapCell(c0 + 1, r0) === 1 ? h : hAt(c0 + 1, r0);
   const h01 = mapCell(c0, r0 + 1) === 1 ? h : hAt(c0, r0 + 1);

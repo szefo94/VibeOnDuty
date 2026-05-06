@@ -21,8 +21,18 @@ export function clearLevel() {
   torchLights.length = 0;
 }
 
-const _isRamp  = (c) => c >= 4 && c <= 7;
+const _isRamp  = (c) => c >= 4 && c <= 27;
 const _isCrack = (c) => c === 2 || c === 3;
+
+// [loY, hiY] per ramp group; null hiY = use mapDef.H2 (backward compat for tiles 4-7)
+const _RAMP_PROFILE = [
+  [0, null],   // 4-7:  0 → H2
+  [3.0, 6.0],  // 8-11: F1 → F2
+  [0,   0.5],  // 12-15: 0 → 0.5 m
+  [0.5, 1.0],  // 16-19: 0.5 → 1.0 m
+  [1.0, 1.5],  // 20-23: 1.0 → 1.5 m
+  [1.5, 2.0],  // 24-27: 1.5 → 2.0 m
+];
 
 export function buildLevel(mapDef) {
   clearLevel();
@@ -115,11 +125,15 @@ export function buildLevel(mapDef) {
         debugLineData.push({ x: wx - gw / 2, y: PLAYER_H + 0.28, z: wz - gd / 2, w: gw, h: upH, d: gd, col: 0x0088ff });
       } else if (_isRamp(cell)) {
         const H = CELL / 2;
+        const dir = (cell - 4) % 4;
+        const grp = Math.floor((cell - 4) / 4);
+        const [loY, hiYRaw] = _RAMP_PROFILE[grp];
+        const hiY = hiYRaw ?? H2;
         let A, B, C, D, E, F;
-        if (cell === 4)      { A=[-H,0,-H]; B=[H,0,-H]; C=[H,H2,H]; D=[-H,H2,H]; E=[-H,0,H]; F=[H,0,H]; }
-        else if (cell === 5) { A=[-H,0,H];  B=[H,0,H];  C=[H,H2,-H]; D=[-H,H2,-H]; E=[-H,0,-H]; F=[H,0,-H]; }
-        else if (cell === 6) { A=[-H,0,-H]; B=[-H,0,H];  C=[H,H2,H]; D=[H,H2,-H]; E=[H,0,-H]; F=[H,0,H]; }
-        else                 { A=[H,0,H];   B=[H,0,-H];  C=[-H,H2,-H]; D=[-H,H2,H]; E=[-H,0,H]; F=[-H,0,-H]; }
+        if (dir === 0)      { A=[-H,loY,-H]; B=[H,loY,-H]; C=[H,hiY,H];  D=[-H,hiY,H];  E=[-H,loY,H];  F=[H,loY,H];  }
+        else if (dir === 1) { A=[-H,loY,H];  B=[H,loY,H];  C=[H,hiY,-H]; D=[-H,hiY,-H]; E=[-H,loY,-H]; F=[H,loY,-H]; }
+        else if (dir === 2) { A=[-H,loY,-H]; B=[-H,loY,H]; C=[H,hiY,H];  D=[H,hiY,-H];  E=[H,loY,-H];  F=[H,loY,H];  }
+        else                { A=[H,loY,H];   B=[H,loY,-H]; C=[-H,hiY,-H]; D=[-H,hiY,H]; E=[-H,loY,H];  F=[-H,loY,-H]; }
         const verts = [...D,...C,...B,...D,...B,...A,...A,...B,...F,...A,...F,...E,...A,...E,...D,...B,...C,...F,...D,...E,...F,...D,...F,...C];
         const rampGeo = new THREE.BufferGeometry();
         rampGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(verts), 3));
@@ -132,7 +146,7 @@ export function buildLevel(mapDef) {
         rm.position.set(wx, 0, wz);
         rm.castShadow = rm.receiveShadow = true;
         _levelGroup.add(rm);
-        debugLineData.push({ x: wx - CELL / 2, y: 0, z: wz - CELL / 2, w: CELL, h: H2, d: CELL, col: 0xffee00 });
+        debugLineData.push({ x: wx - CELL / 2, y: loY, z: wz - CELL / 2, w: CELL, h: hiY - loY, d: CELL, col: 0xffee00 });
       }
     }
   }
