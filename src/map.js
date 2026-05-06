@@ -34,7 +34,8 @@ const _RAMP_PROFILE = [
 
 export function mapCell(mx, mz) {
   if (mx < 0 || mz < 0 || mx >= MAP_W || mz >= MAP_H) return 1;
-  return MAP[mz][mx];
+  const c = MAP[mz][mx];
+  return c === 28 ? 1 : c;  // column (28) is solid for collision purposes
 }
 
 // Height levels — ramp geometry uses H2; see groundElevation below.

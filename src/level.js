@@ -76,10 +76,11 @@ export function buildLevel(mapDef) {
       if (cell === 0) continue;
       const wx = col * CELL + CELL / 2, wz = row * CELL + CELL / 2;
 
-      if (cell === 1) {
+      if (cell === 1 || cell === 28) {
         const n = getCell(col, row - 1), s = getCell(col, row + 1);
         const e = getCell(col + 1, row), w = getCell(col - 1, row);
-        const isPillar = n === 0 && s === 0 && e === 0 && w === 0 && mapDef.style !== 'rooftop';
+        const isPillar = cell === 28 ||
+          (n === 0 && s === 0 && e === 0 && w === 0 && mapDef.style !== 'rooftop');
         if (isPillar) {
           const shaft = new THREE.Mesh(
             new THREE.CylinderGeometry(0.55, 0.62, WH + 0.8, 12),

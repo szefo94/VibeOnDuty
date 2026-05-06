@@ -21,10 +21,11 @@ const _MARKER_LETTER = { spawn_p:'P', spawn_a:'A', spawn_d:'D', site_a:'①', si
 const _RAMP_GROUP_COLOR = ['#7a5c28','#c8901a','#3e2c10','#503c1e','#604c2e','#706040'];
 
 function _getTileColor(tile) {
-  if (tile === 0) return '#1a1a1a';
-  if (tile === 1) return '#5c4e3e';
-  if (tile === 2) return '#2a5578';
-  if (tile === 3) return '#1e4a66';
+  if (tile === 0)  return '#1a1a1a';
+  if (tile === 1)  return '#5c4e3e';
+  if (tile === 2)  return '#2a5578';
+  if (tile === 3)  return '#1e4a66';
+  if (tile === 28) return '#7a5030';  // column — distinct from wall
   if (tile >= 4 && tile <= 27) return _RAMP_GROUP_COLOR[Math.floor((tile - 4) / 4)] ?? '#7a5c28';
   return '#111';
 }
@@ -113,18 +114,11 @@ function _draw() {
         const dir = (tile - 4) % 4;
         _drawRampArrow(c, r, cpx, cpy, ['down','up','right','left'][dir]);
       }
-      // Isolated wall tile → renders as column in 3D; show as circle here
-      if (tile === 1) {
-        const above = r > 0 ? _tiles[r-1][c] : 1;
-        const below = r < GRID_H-1 ? _tiles[r+1][c] : 1;
-        const left  = c > 0 ? _tiles[r][c-1] : 1;
-        const right = c < GRID_W-1 ? _tiles[r][c+1] : 1;
-        if (above === 0 && below === 0 && left === 0 && right === 0) {
-          _ctx.fillStyle = '#a07850';
-          _ctx.beginPath();
-          _ctx.arc((c + 0.5) * cpx, (r + 0.5) * cpy, Math.min(cpx, cpy) * 0.36, 0, Math.PI * 2);
-          _ctx.fill();
-        }
+      if (tile === 28) {
+        _ctx.fillStyle = '#c08050';
+        _ctx.beginPath();
+        _ctx.arc((c + 0.5) * cpx, (r + 0.5) * cpy, Math.min(cpx, cpy) * 0.36, 0, Math.PI * 2);
+        _ctx.fill();
       }
     }
   }
@@ -250,7 +244,7 @@ function _computeToolFromCompound() {
     case 'floor':  _tool = _floorHKey; break;
     case 'ramp':   _tool = 4 + _rampRange * 4 + _rampDir; break;
     case 'wall':   _tool = 1; break;
-    case 'column': _tool = 1; break;  // column = isolated wall tile (auto-detected in 3D)
+    case 'column': _tool = 28; break;  // dedicated column tile, always renders as pillar in 3D
     case 'crack':  _tool = _crackTile; break;
   }
 }
@@ -426,14 +420,9 @@ export function initEditor() {
     const { col, row } = _cellAt(e);
     const h = _heightmap[row][col];
     const t = _tiles[row][col];
-    const isColumn = t === 1 &&
-      (row > 0 ? _tiles[row-1][col] : 1) === 0 &&
-      (row < GRID_H-1 ? _tiles[row+1][col] : 1) === 0 &&
-      (col > 0 ? _tiles[row][col-1] : 1) === 0 &&
-      (col < GRID_W-1 ? _tiles[row][col+1] : 1) === 0;
     const tDesc = t >= 4 && t <= 27
       ? `ramp-${['N','S','W','E'][(t-4)%4]} [${['0→F1','F1→F2','0→F½','F½→F1','F1→F1½','F1½→F2'][Math.floor((t-4)/4)]}]`
-      : isColumn ? 'column' : ['floor','wall','crack-H','crack-V'][t] ?? `tile${t}`;
+      : ({ 0:'floor', 1:'wall', 2:'crack-H', 3:'crack-V', 28:'column' })[t] ?? `tile${t}`;
     const st = document.getElementById('ed-status');
     if (st) st.textContent = `col ${col}  row ${row}  ${tDesc}  h=${h ? h.toFixed(1) : '0'}m`;
   });
