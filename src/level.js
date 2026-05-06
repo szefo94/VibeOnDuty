@@ -149,6 +149,27 @@ export function buildLevel(mapDef) {
         rm.castShadow = rm.receiveShadow = true;
         _levelGroup.add(rm);
         debugLineData.push({ x: wx - CELL / 2, y: loY, z: wz - CELL / 2, w: CELL, h: hiY - loY, d: CELL, col: 0xffee00 });
+      } else if (cell >= 29 && cell <= 32) {
+        // Side wall: 18 cm thick panel on one edge of the cell, full wall height
+        const WALL_T = 0.18;
+        let mx, mz, pw, pd;
+        if (cell === 29) {        // N edge (low Z)
+          mx = wx; mz = row * CELL + WALL_T / 2; pw = CELL; pd = WALL_T;
+        } else if (cell === 30) { // S edge (high Z)
+          mx = wx; mz = (row + 1) * CELL - WALL_T / 2; pw = CELL; pd = WALL_T;
+        } else if (cell === 31) { // W edge (low X)
+          mx = col * CELL + WALL_T / 2; mz = wz; pw = WALL_T; pd = CELL;
+        } else {                   // E edge (high X)
+          mx = (col + 1) * CELL - WALL_T / 2; mz = wz; pw = WALL_T; pd = CELL;
+        }
+        const sw = new THREE.Mesh(new THREE.BoxGeometry(pw, WH, pd), [
+          mats.wallDark, mats.wallDark, mats.wallTop, mats.floor, mats.wall, mats.wall,
+        ]);
+        sw.position.set(mx, WH / 2, mz);
+        sw.castShadow = sw.receiveShadow = true;
+        _levelGroup.add(sw);
+        wallMeshes.push(sw);
+        debugLineData.push({ x: mx - pw / 2, y: 0, z: mz - pd / 2, w: pw, h: WH, d: pd, col: 0x6090ff });
       }
     }
   }

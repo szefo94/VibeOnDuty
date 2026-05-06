@@ -25,7 +25,8 @@ function _getTileColor(tile) {
   if (tile === 1)  return '#5c4e3e';
   if (tile === 2)  return '#2a5578';
   if (tile === 3)  return '#1e4a66';
-  if (tile === 28) return '#7a5030';  // column — distinct from wall
+  if (tile === 28) return '#7a5030';  // column
+  if (tile >= 29 && tile <= 32) return '#18181e';  // side wall — floor-like bg, edge drawn separately
   if (tile >= 4 && tile <= 27) return _RAMP_GROUP_COLOR[Math.floor((tile - 4) / 4)] ?? '#7a5c28';
   return '#111';
 }
@@ -60,11 +61,12 @@ let _canvas    = null;
 let _ctx       = null;
 
 // Compound toolbar state
-let _typeMode  = 'floor';  // 'floor' | 'ramp' | 'wall' | 'column' | 'crack'
-let _rampDir   = 0;         // 0=N 1=S 2=W 3=E
-let _rampRange = 0;         // 0-5 → ramp tile groups
-let _crackTile = 2;         // 2=H 3=V
-let _floorHKey = 'h0';      // active height key
+let _typeMode   = 'floor';  // 'floor' | 'ramp' | 'wall' | 'column' | 'swall' | 'crack'
+let _rampDir    = 0;         // 0=N 1=S 2=W 3=E
+let _rampRange  = 0;         // 0-5 → ramp tile groups
+let _crackTile  = 2;         // 2=H 3=V
+let _swallDir   = 0;         // side-wall edge: 0=N 1=S 2=W 3=E
+let _floorHKey  = 'h0';      // active height key
 
 // ── Grid factories ────────────────────────────────────────────────────────
 function _blankGrid() {
@@ -119,6 +121,14 @@ function _draw() {
         _ctx.beginPath();
         _ctx.arc((c + 0.5) * cpx, (r + 0.5) * cpy, Math.min(cpx, cpy) * 0.36, 0, Math.PI * 2);
         _ctx.fill();
+      }
+      if (tile >= 29 && tile <= 32) {
+        const ew = Math.max(3, Math.round(Math.min(cpx, cpy) * 0.20));
+        _ctx.fillStyle = '#6090d0';
+        if (tile === 29)      _ctx.fillRect(c * cpx + 1,            r * cpy + 1,            cpx - 2, ew);
+        else if (tile === 30) _ctx.fillRect(c * cpx + 1,            (r + 1) * cpy - ew - 1, cpx - 2, ew);
+        else if (tile === 31) _ctx.fillRect(c * cpx + 1,            r * cpy + 1,            ew,      cpy - 2);
+        else                  _ctx.fillRect((c + 1) * cpx - ew - 1, r * cpy + 1,            ew,      cpy - 2);
       }
     }
   }
@@ -244,15 +254,17 @@ function _computeToolFromCompound() {
     case 'floor':  _tool = _floorHKey; break;
     case 'ramp':   _tool = 4 + _rampRange * 4 + _rampDir; break;
     case 'wall':   _tool = 1; break;
-    case 'column': _tool = 28; break;  // dedicated column tile, always renders as pillar in 3D
+    case 'column': _tool = 28; break;
+    case 'swall':  _tool = 29 + _swallDir; break;  // 29=N 30=S 31=W 32=E
     case 'crack':  _tool = _crackTile; break;
   }
 }
 
 function _updateCompoundUI() {
-  document.getElementById('ed-floor-sub').style.display = _typeMode === 'floor'  ? '' : 'none';
-  document.getElementById('ed-ramp-sub').style.display  = _typeMode === 'ramp'   ? '' : 'none';
-  document.getElementById('ed-crack-sub').style.display = _typeMode === 'crack'  ? '' : 'none';
+  document.getElementById('ed-floor-sub').style.display  = _typeMode === 'floor'  ? '' : 'none';
+  document.getElementById('ed-ramp-sub').style.display   = _typeMode === 'ramp'   ? '' : 'none';
+  document.getElementById('ed-swall-sub').style.display  = _typeMode === 'swall'  ? '' : 'none';
+  document.getElementById('ed-crack-sub').style.display  = _typeMode === 'crack'  ? '' : 'none';
   document.querySelectorAll('.ed-type-btn').forEach(b =>
     b.classList.toggle('selected', b.dataset.type === _typeMode));
   document.querySelectorAll('.ed-sublvl-btn').forEach(b =>
@@ -261,9 +273,10 @@ function _updateCompoundUI() {
     b.classList.toggle('selected', +b.dataset.dir === _rampDir));
   document.querySelectorAll('.ed-subrange-btn').forEach(b =>
     b.classList.toggle('selected', +b.dataset.range === _rampRange));
+  document.querySelectorAll('.ed-swdir-btn').forEach(b =>
+    b.classList.toggle('selected', +b.dataset.dir === _swallDir));
   document.querySelectorAll('.ed-subcrack-btn').forEach(b =>
     b.classList.toggle('selected', +b.dataset.crack === _crackTile));
-  // Clear marker tool selection when a build type is active
   document.querySelectorAll('.ed-tool').forEach(b => b.classList.remove('selected'));
 }
 
@@ -277,13 +290,13 @@ function _selectMarkerTool(key) {
 function _rotateTool() {
   if (_typeMode === 'ramp') {
     _rampDir = (_rampDir + 1) % 4;
-    _computeToolFromCompound();
-    _updateCompoundUI();
+  } else if (_typeMode === 'swall') {
+    _swallDir = (_swallDir + 1) % 4;
   } else if (_typeMode === 'crack') {
     _crackTile = _crackTile === 2 ? 3 : 2;
-    _computeToolFromCompound();
-    _updateCompoundUI();
-  }
+  } else return;
+  _computeToolFromCompound();
+  _updateCompoundUI();
 }
 
 // ── Export / Import ───────────────────────────────────────────────────────
@@ -399,7 +412,8 @@ export function initEditor() {
   _rampDir   = 0;
   _rampRange = 0;
   _crackTile = 2;
-  _floorHKey = 'h0';   // h0=Gnd, hF05=F½(1.5m), h1=F1(3m), hF15=F1½(4.5m), h2=F2(6m)
+  _swallDir  = 0;
+  _floorHKey = 'h0';
   _computeToolFromCompound();
 
   _canvas = document.getElementById('editor-canvas');
@@ -422,7 +436,9 @@ export function initEditor() {
     const t = _tiles[row][col];
     const tDesc = t >= 4 && t <= 27
       ? `ramp-${['N','S','W','E'][(t-4)%4]} [${['0→F1','F1→F2','0→F½','F½→F1','F1→F1½','F1½→F2'][Math.floor((t-4)/4)]}]`
-      : ({ 0:'floor', 1:'wall', 2:'crack-H', 3:'crack-V', 28:'column' })[t] ?? `tile${t}`;
+      : (t >= 29 && t <= 32)
+        ? `swall-${['N','S','W','E'][t - 29]}`
+        : ({ 0:'floor', 1:'wall', 2:'crack-H', 3:'crack-V', 28:'column' })[t] ?? `tile${t}`;
     const st = document.getElementById('ed-status');
     if (st) st.textContent = `col ${col}  row ${row}  ${tDesc}  h=${h ? h.toFixed(1) : '0'}m`;
   });
@@ -455,6 +471,13 @@ export function initEditor() {
     btn.addEventListener('click', () => {
       _rampRange = +btn.dataset.range;
       if (_typeMode === 'ramp') { _computeToolFromCompound(); }
+      _updateCompoundUI();
+    });
+  });
+  document.querySelectorAll('.ed-swdir-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _swallDir = +btn.dataset.dir;
+      if (_typeMode === 'swall') { _computeToolFromCompound(); }
       _updateCompoundUI();
     });
   });
