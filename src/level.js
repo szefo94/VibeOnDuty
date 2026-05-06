@@ -25,13 +25,14 @@ const _isRamp  = (c) => c >= 4 && c <= 27;
 const _isCrack = (c) => c === 2 || c === 3;
 
 // [loY, hiY] per ramp group; null hiY = use mapDef.H2 (backward compat for tiles 4-7)
+// F½=1.5 m (FLOOR1/2), F1=3 m, F1½=4.5 m ((F1+F2)/2), F2=6 m
 const _RAMP_PROFILE = [
-  [0, null],   // 4-7:  0 → H2
+  [0,   null], // 4-7:  0 → F1 (H2 from mapDef)
   [3.0, 6.0],  // 8-11: F1 → F2
-  [0,   0.5],  // 12-15: 0 → 0.5 m
-  [0.5, 1.0],  // 16-19: 0.5 → 1.0 m
-  [1.0, 1.5],  // 20-23: 1.0 → 1.5 m
-  [1.5, 2.0],  // 24-27: 1.5 → 2.0 m
+  [0,   1.5],  // 12-15: 0 → F½
+  [1.5, 3.0],  // 16-19: F½ → F1
+  [3.0, 4.5],  // 20-23: F1 → F1½
+  [4.5, 6.0],  // 24-27: F1½ → F2
 ];
 
 export function buildLevel(mapDef) {

@@ -10,8 +10,9 @@ const GRID_W = 24, GRID_H = 24;
 const FLOOR1 = 3.0, FLOOR2 = 6.0;
 
 // Height tool identifiers and values (floor painting sets tile=0 + heightmap)
-const _HEIGHT_TOOLS = new Set(['h0', 'h05', 'h1m', 'h15', 'h2m', 'h1', 'h2']);
-const _HEIGHT_VAL   = { h0: 0, h05: 0.5, h1m: 1.0, h15: 1.5, h2m: 2.0, h1: FLOOR1, h2: FLOOR2 };
+// Floor fractions: F½ = FLOOR1/2 = 1.5 m, F1½ = (FLOOR1+FLOOR2)/2 = 4.5 m
+const _HEIGHT_TOOLS = new Set(['h0', 'hF05', 'h1', 'hF15', 'h2']);
+const _HEIGHT_VAL   = { h0: 0, hF05: FLOOR1 / 2, h1: FLOOR1, hF15: (FLOOR1 + FLOOR2) / 2, h2: FLOOR2 };
 
 const _MARKER_COLOR  = { spawn_p:'#2ecc71', spawn_a:'#e74c3c', spawn_d:'#3498db', site_a:'#ff8800', site_b:'#ff6600' };
 const _MARKER_LETTER = { spawn_p:'P', spawn_a:'A', spawn_d:'D', site_a:'①', site_b:'②' };
@@ -31,11 +32,10 @@ function _getTileColor(tile) {
 function _heightLabel(h) {
   if (!h) return '';
   if (h >= FLOOR2) return 'F2';
+  if (h >= (FLOOR1 + FLOOR2) / 2) return 'F1½';
   if (h >= FLOOR1) return 'F1';
-  if (h >= 2.0) return '2';
-  if (h >= 1.5) return '1½';
-  if (h >= 1.0) return '1';
-  return '½';
+  if (h >= FLOOR1 / 2) return 'F½';
+  return '?';
 }
 
 function _heightTint(h) {
@@ -59,7 +59,7 @@ let _canvas    = null;
 let _ctx       = null;
 
 // Compound toolbar state
-let _typeMode  = 'floor';  // 'floor' | 'ramp' | 'wall' | 'crack'
+let _typeMode  = 'floor';  // 'floor' | 'ramp' | 'wall' | 'column' | 'crack'
 let _rampDir   = 0;         // 0=N 1=S 2=W 3=E
 let _rampRange = 0;         // 0-5 → ramp tile groups
 let _crackTile = 2;         // 2=H 3=V
@@ -112,6 +112,19 @@ function _draw() {
       if (tile >= 4 && tile <= 27) {
         const dir = (tile - 4) % 4;
         _drawRampArrow(c, r, cpx, cpy, ['down','up','right','left'][dir]);
+      }
+      // Isolated wall tile → renders as column in 3D; show as circle here
+      if (tile === 1) {
+        const above = r > 0 ? _tiles[r-1][c] : 1;
+        const below = r < GRID_H-1 ? _tiles[r+1][c] : 1;
+        const left  = c > 0 ? _tiles[r][c-1] : 1;
+        const right = c < GRID_W-1 ? _tiles[r][c+1] : 1;
+        if (above === 0 && below === 0 && left === 0 && right === 0) {
+          _ctx.fillStyle = '#a07850';
+          _ctx.beginPath();
+          _ctx.arc((c + 0.5) * cpx, (r + 0.5) * cpy, Math.min(cpx, cpy) * 0.36, 0, Math.PI * 2);
+          _ctx.fill();
+        }
       }
     }
   }
@@ -234,17 +247,18 @@ function _doUndo() {
 // ── Compound toolbar state → _tool ───────────────────────────────────────
 function _computeToolFromCompound() {
   switch (_typeMode) {
-    case 'floor': _tool = _floorHKey; break;
-    case 'ramp':  _tool = 4 + _rampRange * 4 + _rampDir; break;
-    case 'wall':  _tool = 1; break;
-    case 'crack': _tool = _crackTile; break;
+    case 'floor':  _tool = _floorHKey; break;
+    case 'ramp':   _tool = 4 + _rampRange * 4 + _rampDir; break;
+    case 'wall':   _tool = 1; break;
+    case 'column': _tool = 1; break;  // column = isolated wall tile (auto-detected in 3D)
+    case 'crack':  _tool = _crackTile; break;
   }
 }
 
 function _updateCompoundUI() {
-  document.getElementById('ed-floor-sub').style.display = _typeMode === 'floor' ? '' : 'none';
-  document.getElementById('ed-ramp-sub').style.display  = _typeMode === 'ramp'  ? '' : 'none';
-  document.getElementById('ed-crack-sub').style.display = _typeMode === 'crack' ? '' : 'none';
+  document.getElementById('ed-floor-sub').style.display = _typeMode === 'floor'  ? '' : 'none';
+  document.getElementById('ed-ramp-sub').style.display  = _typeMode === 'ramp'   ? '' : 'none';
+  document.getElementById('ed-crack-sub').style.display = _typeMode === 'crack'  ? '' : 'none';
   document.querySelectorAll('.ed-type-btn').forEach(b =>
     b.classList.toggle('selected', b.dataset.type === _typeMode));
   document.querySelectorAll('.ed-sublvl-btn').forEach(b =>
@@ -391,7 +405,7 @@ export function initEditor() {
   _rampDir   = 0;
   _rampRange = 0;
   _crackTile = 2;
-  _floorHKey = 'h0';
+  _floorHKey = 'h0';   // h0=Gnd, hF05=F½(1.5m), h1=F1(3m), hF15=F1½(4.5m), h2=F2(6m)
   _computeToolFromCompound();
 
   _canvas = document.getElementById('editor-canvas');
@@ -412,9 +426,14 @@ export function initEditor() {
     const { col, row } = _cellAt(e);
     const h = _heightmap[row][col];
     const t = _tiles[row][col];
+    const isColumn = t === 1 &&
+      (row > 0 ? _tiles[row-1][col] : 1) === 0 &&
+      (row < GRID_H-1 ? _tiles[row+1][col] : 1) === 0 &&
+      (col > 0 ? _tiles[row][col-1] : 1) === 0 &&
+      (col < GRID_W-1 ? _tiles[row][col+1] : 1) === 0;
     const tDesc = t >= 4 && t <= 27
-      ? `ramp-${['N','S','W','E'][(t-4)%4]} grp${Math.floor((t-4)/4)}`
-      : ['floor','wall','crack-H','crack-V'][t] ?? `tile${t}`;
+      ? `ramp-${['N','S','W','E'][(t-4)%4]} [${['0→F1','F1→F2','0→F½','F½→F1','F1→F1½','F1½→F2'][Math.floor((t-4)/4)]}]`
+      : isColumn ? 'column' : ['floor','wall','crack-H','crack-V'][t] ?? `tile${t}`;
     const st = document.getElementById('ed-status');
     if (st) st.textContent = `col ${col}  row ${row}  ${tDesc}  h=${h ? h.toFixed(1) : '0'}m`;
   });
