@@ -240,7 +240,14 @@ export function updatePlayer(dt) {
       }
     }
   } else {
-    camera.position.y += (eyeFloor - camera.position.y) * Math.min(1, dt * 14);
+    const drop = camera.position.y - eyeFloor;
+    if (drop > 0.4) {
+      // Walked off a ledge — enter free fall with current horizontal velocity
+      player.onGround = false;
+      player.velY = 0;
+    } else {
+      camera.position.y += (eyeFloor - camera.position.y) * Math.min(1, dt * 14);
+    }
   }
 
   if (moving && player.onGround) {
