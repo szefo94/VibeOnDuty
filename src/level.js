@@ -136,42 +136,40 @@ export function buildLevel(mapDef) {
           debugLineData.push({ x: wx - gw / 2, y: BASE, z: wz - gd / 2, w: gw, h: loH, d: gd, col: 0x0088ff });
           debugLineData.push({ x: wx - gw / 2, y: BASE + PLAYER_H + 0.28, z: wz - gd / 2, w: gw, h: upH, d: gd, col: 0x0088ff });
         } else if (_isRamp(cell)) {
-          const H = CELL / 2;
           const dir = (cell - 4) % 4;
           const grp = Math.floor((cell - 4) / 4);
           const [loY, hiYRaw] = _RAMP_PROFILE[grp];
           const hiY = hiYRaw ?? H2;
-          let A, B, C, D, E, F;
-          if (dir === 0)      { A=[-H,loY,-H]; B=[H,loY,-H]; C=[H,hiY,H];  D=[-H,hiY,H];  E=[-H,loY,H];  F=[H,loY,H];  }
-          else if (dir === 1) { A=[-H,loY,H];  B=[H,loY,H];  C=[H,hiY,-H]; D=[-H,hiY,-H]; E=[-H,loY,-H]; F=[H,loY,-H]; }
-          else if (dir === 2) { A=[-H,loY,-H]; B=[-H,loY,H]; C=[H,hiY,H];  D=[H,hiY,-H];  E=[H,loY,-H];  F=[H,loY,H];  }
-          else                { A=[H,loY,H];   B=[H,loY,-H]; C=[-H,hiY,-H]; D=[-H,hiY,H]; E=[-H,loY,H];  F=[-H,loY,-H]; }
-          const verts = [...D,...C,...B,...D,...B,...A,...A,...B,...F,...A,...F,...E,...A,...E,...D,...B,...C,...F,...D,...E,...F,...D,...F,...C];
-          const rampGeo = new THREE.BufferGeometry();
-          rampGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(verts), 3));
-          rampGeo.computeVertexNormals();
+          // Thin tilted slab — no triangular ends.
+          const RAMP_T   = 0.10;
+          const slopeLen = Math.sqrt(CELL * CELL + (hiY - loY) * (hiY - loY));
+          const angle    = Math.atan2(hiY - loY, CELL);
+          const centerY  = (loY + hiY) / 2;
+          const rampGeo  = (dir === 0 || dir === 1)
+            ? new THREE.BoxGeometry(CELL, RAMP_T, slopeLen)
+            : new THREE.BoxGeometry(slopeLen, RAMP_T, CELL);
           const rampMat = new THREE.MeshStandardMaterial({
             color: mats.ramp.color, roughness: mats.ramp.roughness,
-            metalness: mats.ramp.metalness, side: THREE.DoubleSide,
+            metalness: mats.ramp.metalness,
           });
           const rm = new THREE.Mesh(rampGeo, rampMat);
-          rm.position.set(wx, 0, wz);  // ramp Y already absolute in profile
+          rm.position.set(wx, centerY, wz);
+          // rotation: +angle tilts the high end upward along the run axis
+          if      (dir === 0) rm.rotation.x =  angle;   // high at +Z
+          else if (dir === 1) rm.rotation.x = -angle;   // high at -Z
+          else if (dir === 2) rm.rotation.z =  angle;   // high at +X
+          else                rm.rotation.z = -angle;   // high at -X
           rm.castShadow = rm.receiveShadow = true;
           _levelGroup.add(rm);
           debugLineData.push({ x: wx - CELL / 2, y: loY, z: wz - CELL / 2, w: CELL, h: hiY - loY, d: CELL, col: 0xffee00 });
         } else if (cell >= 29 && cell <= 32) {
-          // Side wall: 18 cm thick panel on one edge of the cell, full wall height
+          // Legacy swall tile (pre-swallBits maps) — still rendered for compat.
           const WALL_T = 0.18;
           let mx, mz, pw, pd;
-          if (cell === 29) {        // N edge (low Z)
-            mx = wx; mz = row * CELL + WALL_T / 2; pw = CELL; pd = WALL_T;
-          } else if (cell === 30) { // S edge (high Z)
-            mx = wx; mz = (row + 1) * CELL - WALL_T / 2; pw = CELL; pd = WALL_T;
-          } else if (cell === 31) { // W edge (low X)
-            mx = col * CELL + WALL_T / 2; mz = wz; pw = WALL_T; pd = CELL;
-          } else {                   // E edge (high X)
-            mx = (col + 1) * CELL - WALL_T / 2; mz = wz; pw = WALL_T; pd = CELL;
-          }
+          if (cell === 29) {        mx = wx; mz = row * CELL + WALL_T / 2;        pw = CELL; pd = WALL_T; }
+          else if (cell === 30) {   mx = wx; mz = (row + 1) * CELL - WALL_T / 2; pw = CELL; pd = WALL_T; }
+          else if (cell === 31) {   mx = col * CELL + WALL_T / 2; mz = wz;        pw = WALL_T; pd = CELL; }
+          else {                    mx = (col + 1) * CELL - WALL_T / 2; mz = wz;  pw = WALL_T; pd = CELL; }
           const sw = new THREE.Mesh(new THREE.BoxGeometry(pw, WH, pd), [
             mats.wallDark, mats.wallDark, mats.wallTop, mats.floor, mats.wall, mats.wall,
           ]);
@@ -180,6 +178,34 @@ export function buildLevel(mapDef) {
           _levelGroup.add(sw);
           wallMeshes.push(sw);
           debugLineData.push({ x: mx - pw / 2, y: BASE, z: mz - pd / 2, w: pw, h: WH, d: pd, col: 0x6090ff });
+        }
+      }
+    }
+
+    // ── Side walls from swallBits (bitmask: bit0=N, bit1=S, bit2=W, bit3=E) ─
+    if (flDef.swallBits) {
+      const WALL_T = 0.18;
+      const swMat = [mats.wallDark, mats.wallDark, mats.wallTop, mats.floor, mats.wall, mats.wall];
+      for (let r = 0; r < height; r++) {
+        for (let c = 0; c < width; c++) {
+          const bits = flDef.swallBits[r][c];
+          if (!bits) continue;
+          const wx2 = c * CELL + CELL / 2, wz2 = r * CELL + CELL / 2;
+          const edgeDefs = [
+            [1, wx2,                      r * CELL + WALL_T / 2,        CELL,   WALL_T], // N
+            [2, wx2,                      (r + 1) * CELL - WALL_T / 2,  CELL,   WALL_T], // S
+            [4, c * CELL + WALL_T / 2,    wz2,                          WALL_T, CELL  ], // W
+            [8, (c + 1) * CELL - WALL_T / 2, wz2,                       WALL_T, CELL  ], // E
+          ];
+          for (const [bit, mx, mz, pw, pd] of edgeDefs) {
+            if (!(bits & bit)) continue;
+            const sw = new THREE.Mesh(new THREE.BoxGeometry(pw, WH, pd), swMat);
+            sw.position.set(mx, BASE + WH / 2, mz);
+            sw.castShadow = sw.receiveShadow = true;
+            _levelGroup.add(sw);
+            wallMeshes.push(sw);
+            debugLineData.push({ x: mx - pw / 2, y: BASE, z: mz - pd / 2, w: pw, h: WH, d: pd, col: 0x6090ff });
+          }
         }
       }
     }

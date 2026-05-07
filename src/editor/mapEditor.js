@@ -83,8 +83,16 @@ function _blankGrid() {
 function _blankHeightmap() {
   return Array.from({ length: GRID_H }, () => new Array(GRID_W).fill(0));
 }
+function _blankSwallBits() {
+  return Array.from({ length: GRID_H }, () => new Array(GRID_W).fill(0));
+}
 function _blankFloors() {
-  return _FLOOR_DEFS.map(fd => ({ base: fd.base, tiles: _blankGrid(), heightmap: _blankHeightmap() }));
+  return _FLOOR_DEFS.map(fd => ({
+    base: fd.base,
+    tiles:     _blankGrid(),
+    heightmap: _blankHeightmap(),
+    swallBits: _blankSwallBits(),
+  }));
 }
 
 let _floors   = null;   // [{base, tiles, heightmap}]  — 3 entries
@@ -107,9 +115,10 @@ let _swallDir   = 0;         // side-wall edge: 0=N 1=S 2=W 3=E
 let _floorHKey  = 'h0';      // active height key for current floor
 
 // ── Convenience accessors ─────────────────────────────────────────────────────
-const _curFloor   = () => _floors[_floorIdx];
-const _curTiles   = () => _floors[_floorIdx].tiles;
-const _curHmap    = () => _floors[_floorIdx].heightmap;
+const _curFloor     = () => _floors[_floorIdx];
+const _curTiles     = () => _floors[_floorIdx].tiles;
+const _curHmap      = () => _floors[_floorIdx].heightmap;
+const _curSwallBits = () => _floors[_floorIdx].swallBits;
 
 // ── Canvas helpers ────────────────────────────────────────────────────────────
 function _drawRampArrow(c, r, cpx, cpy, dir) {
@@ -147,6 +156,7 @@ function _drawFloorTiles(fl, cpx, cpy, alpha) {
         _ctx.arc((c + 0.5) * cpx, (r + 0.5) * cpy, Math.min(cpx, cpy) * 0.36, 0, Math.PI * 2);
         _ctx.fill();
       }
+      // legacy swall tiles — shouldn't appear in new maps but draw if present
       if (tile >= 29 && tile <= 32) {
         const ew = Math.max(3, Math.round(Math.min(cpx, cpy) * 0.20));
         _ctx.fillStyle = alpha < 1 ? 'rgba(96,144,208,0.4)' : '#6090d0';
@@ -157,6 +167,23 @@ function _drawFloorTiles(fl, cpx, cpy, alpha) {
       }
     }
   }
+  // Side-wall bitmask overlay (bit0=N, bit1=S, bit2=W, bit3=E)
+  if (fl.swallBits) {
+    const swColor = alpha < 1 ? 'rgba(96,144,208,0.35)' : '#6090d0';
+    _ctx.fillStyle = swColor;
+    for (let r = 0; r < GRID_H; r++) {
+      for (let c = 0; c < GRID_W; c++) {
+        const bits = fl.swallBits[r][c];
+        if (!bits) continue;
+        const ew = Math.max(3, Math.round(Math.min(cpx, cpy) * 0.22));
+        if (bits & 1) _ctx.fillRect(c * cpx + 1,             r * cpy + 1,             cpx - 2, ew);       // N
+        if (bits & 2) _ctx.fillRect(c * cpx + 1,             (r + 1) * cpy - ew - 1,  cpx - 2, ew);       // S
+        if (bits & 4) _ctx.fillRect(c * cpx + 1,             r * cpy + 1,             ew,      cpy - 2);  // W
+        if (bits & 8) _ctx.fillRect((c + 1) * cpx - ew - 1,  r * cpy + 1,             ew,      cpy - 2);  // E
+      }
+    }
+  }
+
   // Height overlay for this floor
   if (alpha >= 1) {
     _ctx.textAlign = 'right';
@@ -238,6 +265,19 @@ function _paint(e) {
   const fi = _floorIdx;
   const tiles = _curTiles(), hmap = _curHmap();
 
+  // ── SWall: bitmask painting — each direction is an independent bit ────
+  if (_typeMode === 'swall') {
+    const swallMap = _curSwallBits();
+    const bit = 1 << _swallDir;  // 0=N(1), 1=S(2), 2=W(4), 3=E(8)
+    const prev = swallMap[row][col];
+    const next = erase ? (prev & ~bit) : (prev | bit);
+    if (prev === next) return;
+    _undoPush({ type: 'swall', fi, row, col, from: prev, to: next });
+    swallMap[row][col] = next;
+    _draw();
+    return;
+  }
+
   if (_HEIGHT_TOOLS.has(_tool)) {
     const nextH = erase ? 0 : _HEIGHT_VAL[_tool];
     const prevH = hmap[row][col];
@@ -287,6 +327,8 @@ function _doUndo() {
     _floors[op.fi].heightmap[op.row][op.col] = op.fromH;
   } else if (op.type === 'height') {
     _floors[op.fi ?? 0].heightmap[op.row][op.col] = op.from;
+  } else if (op.type === 'swall') {
+    _floors[op.fi].swallBits[op.row][op.col] = op.from;
   } else {
     _markers[op.key] = op.from;
   }
@@ -300,7 +342,7 @@ function _computeToolFromCompound() {
     case 'ramp':   _tool = 4 + _rampRange * 4 + _rampDir; break;
     case 'wall':   _tool = 1; break;
     case 'column': _tool = 28; break;
-    case 'swall':  _tool = 29 + _swallDir; break;  // 29=N 30=S 31=W 32=E
+    case 'swall':  _tool = 'swall'; break;  // painting handled via swallBits, not tile id
     case 'crack':  _tool = _crackTile; break;
   }
 }
@@ -369,6 +411,7 @@ function _encode() {
       base: fl.base,
       t:  fl.tiles.flat(),
       hm: fl.heightmap.flat(),
+      sw: fl.swallBits.flat(),
     })),
     sp: mk(_markers.spawn_p), sa: mk(_markers.spawn_a),
     sd: mk(_markers.spawn_d), sA: mk(_markers.site_a), sB: mk(_markers.site_b),
@@ -381,17 +424,30 @@ function _decode(b64) {
   const mk = (arr) => arr ? { col: arr[0], row: arr[1] } : null;
   if (d.v === 2 && d.floors) {
     _floors = d.floors.map(fd => ({
-      base: fd.base,
-      tiles:     Array.from({ length: h }, (_, r) => fd.t.slice(r * w, r * w + w)),
-      heightmap: Array.from({ length: h }, (_, r) => fd.hm.slice(r * w, r * w + w)),
+      base:      fd.base,
+      tiles:     Array.from({ length: h }, (_, r) => Array.from(fd.t.slice(r * w, r * w + w))),
+      heightmap: Array.from({ length: h }, (_, r) => Array.from(fd.hm.slice(r * w, r * w + w))),
+      swallBits: fd.sw
+        ? Array.from({ length: h }, (_, r) => Array.from(fd.sw.slice(r * w, r * w + w)))
+        : _blankSwallBits(),
     }));
   } else {
-    // Legacy v1: single floor
+    // Legacy v1: single floor — migrate old swall tile IDs (29-32) to swallBits
     _floors = _blankFloors();
-    _floors[0].tiles     = Array.from({ length: h }, (_, r) => d.t.slice(r * w, r * w + w));
+    _floors[0].tiles     = Array.from({ length: h }, (_, r) => Array.from(d.t.slice(r * w, r * w + w)));
     _floors[0].heightmap = d.hm
-      ? Array.from({ length: h }, (_, r) => d.hm.slice(r * w, r * w + w))
+      ? Array.from({ length: h }, (_, r) => Array.from(d.hm.slice(r * w, r * w + w)))
       : _blankHeightmap();
+    // Convert old swall tile IDs to swallBits
+    for (let r = 0; r < h; r++) {
+      for (let c2 = 0; c2 < w; c2++) {
+        const t = _floors[0].tiles[r][c2];
+        if (t >= 29 && t <= 32) {
+          _floors[0].swallBits[r][c2] = 1 << (t - 29);
+          _floors[0].tiles[r][c2] = 0;
+        }
+      }
+    }
   }
   _markers = { spawn_p: mk(d.sp), spawn_a: mk(d.sa), spawn_d: mk(d.sd), site_a: mk(d.sA), site_b: mk(d.sB) };
   _undo = [];
@@ -444,6 +500,7 @@ function _buildMapDef() {
       wallHeight: _FLOOR_DEFS[i].wallHeight,
       tiles:      fl.tiles.map(row => [...row]),
       heightmap:  fl.heightmap.map(row => [...row]),
+      swallBits:  fl.swallBits.map(row => [...row]),
     })),
     // Backward-compat fields for code that reads mapDef.tiles directly
     tiles:     _floors[0].tiles.map(row => [...row]),
@@ -515,14 +572,16 @@ export function initEditor() {
     const { col, row } = _cellAt(e);
     const h = _curHmap()[row][col];
     const t = _curTiles()[row][col];
+    const swBits = _curSwallBits()[row][col];
+    const swDesc = swBits
+      ? ' swall:' + ['N','S','W','E'].filter((_, i) => swBits & (1 << i)).join('+')
+      : '';
     const tDesc = t >= 4 && t <= 27
       ? `ramp-${['N','S','W','E'][(t-4)%4]} [${['0→F1','F1→F2','0→F½','F½→F1','F1→F1½','F1½→F2'][Math.floor((t-4)/4)]}]`
-      : (t >= 29 && t <= 32)
-        ? `swall-${['N','S','W','E'][t - 29]}`
-        : ({ 0:'floor', 1:'wall', 2:'crack-H', 3:'crack-V', 28:'column' })[t] ?? `tile${t}`;
+      : ({ 0:'floor', 1:'wall', 2:'crack-H', 3:'crack-V', 28:'column' })[t] ?? `tile${t}`;
     const flLabel = _FLOOR_DEFS[_floorIdx].label;
     const st = document.getElementById('ed-status');
-    if (st) st.textContent = `[${flLabel}] col ${col}  row ${row}  ${tDesc}  h=${h ? h.toFixed(1) : '0'}m`;
+    if (st) st.textContent = `[${flLabel}] col ${col}  row ${row}  ${tDesc}${swDesc}  h=${h ? h.toFixed(1) : '0'}m`;
   });
   _canvas.addEventListener('mouseup',    () => { _painting = false; });
   _canvas.addEventListener('mouseleave', () => { _painting = false; });
@@ -592,7 +651,7 @@ export function initEditor() {
   document.getElementById('ed-rotate').addEventListener('click', _rotateTool);
 
   document.getElementById('ed-clear').addEventListener('click', () => {
-    _floors  = _blankFloors();
+    _floors  = _blankFloors();  // blankFloors already includes blank swallBits
     _markers = { spawn_p: null, spawn_a: null, spawn_d: null, site_a: null, site_b: null };
     _undo    = [];
     _draw();
