@@ -16,7 +16,7 @@ import {
   WEAPONS,
   DEFAULT_WEAPON,
 } from '../config.js';
-import { MAP_W, MAP_H, hAt, groundElevation, canMoveTo } from '../map.js';
+import { MAP_W, MAP_H, groundElevation, canMoveTo } from '../map.js';
 import { keys, locked, mouseHeld } from '../input.js';
 import { tickImpacts } from '../fx/impacts.js';
 import { tickTracers } from '../fx/tracers.js';
@@ -138,8 +138,8 @@ export function updatePlayer(dt) {
   }
   player.crouching = wantCrouch && !player.sliding;
 
-  const groundH = hAt(Math.floor(camera.position.x / CELL), Math.floor(camera.position.z / CELL));
-  const groundHSmooth = groundElevation(camera.position.x, camera.position.z);
+  const groundHSmooth = groundElevation(camera.position.x, camera.position.z, camera.position.y);
+  const groundH = groundHSmooth;
   const targetH = player.sliding ? PLAYER_H_CROUCH : player.crouching ? PLAYER_H_CROUCH : PLAYER_H;
   const eyeFloor = groundHSmooth + targetH;
 

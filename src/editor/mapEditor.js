@@ -9,10 +9,31 @@ import { deactivateAllEnemies } from '../entities/enemies.js';
 const GRID_W = 24, GRID_H = 24;
 const FLOOR1 = 3.0, FLOOR2 = 6.0;
 
-// Height tool identifiers and values (floor painting sets tile=0 + heightmap)
-// Floor fractions: F½ = FLOOR1/2 = 1.5 m, F1½ = (FLOOR1+FLOOR2)/2 = 4.5 m
-const _HEIGHT_TOOLS = new Set(['h0', 'hF05', 'h1', 'hF15', 'h2']);
-const _HEIGHT_VAL   = { h0: 0, hF05: FLOOR1 / 2, h1: FLOOR1, hF15: (FLOOR1 + FLOOR2) / 2, h2: FLOOR2 };
+// ── Floor definitions ─────────────────────────────────────────────────────────
+// Each floor has a base Y, a wall height (= one storey = FLOOR1), and 2 height keys.
+const _FLOOR_DEFS = [
+  { base: 0,      wallHeight: FLOOR1, label: 'Ground', hKeys: ['h0',  'hF05'] },
+  { base: FLOOR1, wallHeight: FLOOR1, label: 'F1 (3m)', hKeys: ['h1',  'hF15'] },
+  { base: FLOOR2, wallHeight: FLOOR1, label: 'F2 (6m)', hKeys: ['h2',  'hF25'] },
+];
+
+// Height tool identifiers → absolute Y values
+const _HEIGHT_TOOLS = new Set(['h0','hF05','h1','hF15','h2','hF25']);
+const _HEIGHT_VAL = {
+  h0:   0,
+  hF05: FLOOR1 / 2,                // 1.5 m
+  h1:   FLOOR1,                    // 3.0 m
+  hF15: (FLOOR1 + FLOOR2) / 2,     // 4.5 m
+  h2:   FLOOR2,                    // 6.0 m
+  hF25: FLOOR2 + FLOOR1 / 2,       // 7.5 m
+};
+
+// Labels shown in the height sub-panel per floor
+const _FLOOR_H_LABELS = [
+  { h0: 'Gnd', hF05: 'F½' },
+  { h1: 'F1',  hF15: 'F1½' },
+  { h2: 'F2',  hF25: 'F2½' },
+];
 
 const _MARKER_COLOR  = { spawn_p:'#2ecc71', spawn_a:'#e74c3c', spawn_d:'#3498db', site_a:'#ff8800', site_b:'#ff6600' };
 const _MARKER_LETTER = { spawn_p:'P', spawn_a:'A', spawn_d:'D', site_a:'①', site_b:'②' };
@@ -26,13 +47,14 @@ function _getTileColor(tile) {
   if (tile === 2)  return '#2a5578';
   if (tile === 3)  return '#1e4a66';
   if (tile === 28) return '#7a5030';  // column
-  if (tile >= 29 && tile <= 32) return '#18181e';  // side wall — floor-like bg, edge drawn separately
+  if (tile >= 29 && tile <= 32) return '#18181e';  // side wall — floor-like bg
   if (tile >= 4 && tile <= 27) return _RAMP_GROUP_COLOR[Math.floor((tile - 4) / 4)] ?? '#7a5c28';
   return '#111';
 }
 
 function _heightLabel(h) {
   if (!h) return '';
+  if (h >= FLOOR2 + FLOOR1 / 2) return 'F2½';
   if (h >= FLOOR2) return 'F2';
   if (h >= (FLOOR1 + FLOOR2) / 2) return 'F1½';
   if (h >= FLOOR1) return 'F1';
@@ -41,6 +63,7 @@ function _heightLabel(h) {
 }
 
 function _heightTint(h) {
+  if (h >= FLOOR2 + FLOOR1 / 2) return 'rgba(255,140,40,0.55)';
   if (h >= FLOOR2) return 'rgba(200,160,50,0.52)';
   if (h >= FLOOR1) return 'rgba(160,120,30,0.44)';
   if (h >= 2.0)    return 'rgba(130,100,25,0.36)';
@@ -49,26 +72,7 @@ function _heightTint(h) {
   return 'rgba(70,55,10,0.20)';
 }
 
-let _tiles     = null;
-let _heightmap = null;
-let _markers   = { spawn_p: null, spawn_a: null, spawn_d: null, site_a: null, site_b: null };
-let _tool      = 'h0';   // current active tool (number = tile id, string = height/marker key)
-let _undo      = [];
-let _painting  = false;
-let _paintBtn  = 0;
-let _inPreview = false;
-let _canvas    = null;
-let _ctx       = null;
-
-// Compound toolbar state
-let _typeMode   = 'floor';  // 'floor' | 'ramp' | 'wall' | 'column' | 'swall' | 'crack'
-let _rampDir    = 0;         // 0=N 1=S 2=W 3=E
-let _rampRange  = 0;         // 0-5 → ramp tile groups
-let _crackTile  = 2;         // 2=H 3=V
-let _swallDir   = 0;         // side-wall edge: 0=N 1=S 2=W 3=E
-let _floorHKey  = 'h0';      // active height key
-
-// ── Grid factories ────────────────────────────────────────────────────────
+// ── Multi-floor state ─────────────────────────────────────────────────────────
 function _blankGrid() {
   return Array.from({ length: GRID_H }, (_, r) =>
     Array.from({ length: GRID_W }, (_, c) =>
@@ -79,8 +83,35 @@ function _blankGrid() {
 function _blankHeightmap() {
   return Array.from({ length: GRID_H }, () => new Array(GRID_W).fill(0));
 }
+function _blankFloors() {
+  return _FLOOR_DEFS.map(fd => ({ base: fd.base, tiles: _blankGrid(), heightmap: _blankHeightmap() }));
+}
 
-// ── Canvas helpers ────────────────────────────────────────────────────────
+let _floors   = null;   // [{base, tiles, heightmap}]  — 3 entries
+let _floorIdx = 0;      // which floor the user is currently editing (0/1/2)
+let _markers  = { spawn_p: null, spawn_a: null, spawn_d: null, site_a: null, site_b: null };
+let _tool     = 'h0';   // current active tool (number = tile id, string = height/marker key)
+let _undo     = [];
+let _painting = false;
+let _paintBtn = 0;
+let _inPreview = false;
+let _canvas   = null;
+let _ctx      = null;
+
+// Compound toolbar state
+let _typeMode   = 'floor';  // 'floor' | 'ramp' | 'wall' | 'column' | 'swall' | 'crack'
+let _rampDir    = 0;         // 0=N 1=S 2=W 3=E
+let _rampRange  = 0;         // 0-5 → ramp tile groups
+let _crackTile  = 2;         // 2=H 3=V
+let _swallDir   = 0;         // side-wall edge: 0=N 1=S 2=W 3=E
+let _floorHKey  = 'h0';      // active height key for current floor
+
+// ── Convenience accessors ─────────────────────────────────────────────────────
+const _curFloor   = () => _floors[_floorIdx];
+const _curTiles   = () => _floors[_floorIdx].tiles;
+const _curHmap    = () => _floors[_floorIdx].heightmap;
+
+// ── Canvas helpers ────────────────────────────────────────────────────────────
 function _drawRampArrow(c, r, cpx, cpy, dir) {
   const cx = (c + 0.5) * cpx, cy = (r + 0.5) * cpy;
   const hw = cpx * 0.28, hh = cpy * 0.28;
@@ -99,17 +130,11 @@ function _drawRampArrow(c, r, cpx, cpy, dir) {
   _ctx.fill();
 }
 
-// ── Canvas drawing ────────────────────────────────────────────────────────
-function _draw() {
-  if (!_ctx) return;
-  const cw = _canvas.width, ch = _canvas.height;
-  const cpx = cw / GRID_W, cpy = ch / GRID_H;
-  _ctx.clearRect(0, 0, cw, ch);
-
-  // Tiles
+function _drawFloorTiles(fl, cpx, cpy, alpha) {
+  _ctx.globalAlpha = alpha;
   for (let r = 0; r < GRID_H; r++) {
     for (let c = 0; c < GRID_W; c++) {
-      const tile = _tiles[r][c];
+      const tile = fl.tiles[r][c];
       _ctx.fillStyle = _getTileColor(tile);
       _ctx.fillRect(c * cpx + 0.5, r * cpy + 0.5, cpx - 1, cpy - 1);
       if (tile >= 4 && tile <= 27) {
@@ -117,14 +142,14 @@ function _draw() {
         _drawRampArrow(c, r, cpx, cpy, ['down','up','right','left'][dir]);
       }
       if (tile === 28) {
-        _ctx.fillStyle = '#c08050';
+        _ctx.fillStyle = alpha < 1 ? 'rgba(192,128,80,0.4)' : '#c08050';
         _ctx.beginPath();
         _ctx.arc((c + 0.5) * cpx, (r + 0.5) * cpy, Math.min(cpx, cpy) * 0.36, 0, Math.PI * 2);
         _ctx.fill();
       }
       if (tile >= 29 && tile <= 32) {
         const ew = Math.max(3, Math.round(Math.min(cpx, cpy) * 0.20));
-        _ctx.fillStyle = '#6090d0';
+        _ctx.fillStyle = alpha < 1 ? 'rgba(96,144,208,0.4)' : '#6090d0';
         if (tile === 29)      _ctx.fillRect(c * cpx + 1,            r * cpy + 1,            cpx - 2, ew);
         else if (tile === 30) _ctx.fillRect(c * cpx + 1,            (r + 1) * cpy - ew - 1, cpx - 2, ew);
         else if (tile === 31) _ctx.fillRect(c * cpx + 1,            r * cpy + 1,            ew,      cpy - 2);
@@ -132,26 +157,45 @@ function _draw() {
       }
     }
   }
-
-  // Height overlay — tint floor cells that have elevated heightmap values
-  _ctx.textAlign = 'right';
-  _ctx.textBaseline = 'top';
-  for (let r = 0; r < GRID_H; r++) {
-    for (let c = 0; c < GRID_W; c++) {
-      const h = _heightmap[r][c];
-      if (!h) continue;
-      _ctx.fillStyle = _heightTint(h);
-      _ctx.fillRect(c * cpx + 0.5, r * cpy + 0.5, cpx - 1, cpy - 1);
-      const lbl = _heightLabel(h);
-      if (lbl) {
-        _ctx.fillStyle = h >= FLOOR1 ? 'rgba(255,200,60,0.9)' : 'rgba(200,160,60,0.8)';
-        _ctx.font = `bold ${Math.max(7, Math.floor(cpx * 0.34))}px monospace`;
-        _ctx.fillText(lbl, (c + 1) * cpx - 2, r * cpy + 1.5);
+  // Height overlay for this floor
+  if (alpha >= 1) {
+    _ctx.textAlign = 'right';
+    _ctx.textBaseline = 'top';
+    for (let r = 0; r < GRID_H; r++) {
+      for (let c = 0; c < GRID_W; c++) {
+        const h = fl.heightmap[r][c];
+        if (!h) continue;
+        _ctx.fillStyle = _heightTint(h);
+        _ctx.fillRect(c * cpx + 0.5, r * cpy + 0.5, cpx - 1, cpy - 1);
+        const lbl = _heightLabel(h);
+        if (lbl) {
+          _ctx.fillStyle = h >= FLOOR1 ? 'rgba(255,200,60,0.9)' : 'rgba(200,160,60,0.8)';
+          _ctx.font = `bold ${Math.max(7, Math.floor(cpx * 0.34))}px monospace`;
+          _ctx.fillText(lbl, (c + 1) * cpx - 2, r * cpy + 1.5);
+        }
       }
     }
   }
+  _ctx.globalAlpha = 1;
+}
 
-  // Markers
+// ── Canvas drawing ────────────────────────────────────────────────────────────
+function _draw() {
+  if (!_ctx) return;
+  const cw = _canvas.width, ch = _canvas.height;
+  const cpx = cw / GRID_W, cpy = ch / GRID_H;
+  _ctx.clearRect(0, 0, cw, ch);
+
+  // Ghost floors (non-active) at low opacity
+  for (let fi = 0; fi < _floors.length; fi++) {
+    if (fi === _floorIdx) continue;
+    _drawFloorTiles(_floors[fi], cpx, cpy, 0.22);
+  }
+
+  // Current floor at full opacity
+  _drawFloorTiles(_curFloor(), cpx, cpy, 1.0);
+
+  // Markers (on top)
   _ctx.textAlign = 'center';
   _ctx.textBaseline = 'middle';
   for (const [key, pos] of Object.entries(_markers)) {
@@ -176,7 +220,7 @@ function _draw() {
   }
 }
 
-// ── Cell hit-test ─────────────────────────────────────────────────────────
+// ── Cell hit-test ─────────────────────────────────────────────────────────────
 function _cellAt(e) {
   const rect = _canvas.getBoundingClientRect();
   const col = Math.floor((e.clientX - rect.left) / rect.width  * GRID_W);
@@ -187,22 +231,23 @@ function _cellAt(e) {
   };
 }
 
-// ── Paint logic ───────────────────────────────────────────────────────────
+// ── Paint logic ───────────────────────────────────────────────────────────────
 function _paint(e) {
   const { col, row } = _cellAt(e);
   const erase = _paintBtn === 2;
+  const fi = _floorIdx;
+  const tiles = _curTiles(), hmap = _curHmap();
 
   if (_HEIGHT_TOOLS.has(_tool)) {
-    // Floor painting: clears tile to 0 and sets heightmap
     const nextH = erase ? 0 : _HEIGHT_VAL[_tool];
-    const prevH = _heightmap[row][col];
-    const prevT = _tiles[row][col];
+    const prevH = hmap[row][col];
+    const prevT = tiles[row][col];
     if (prevH === nextH && prevT === 0) return;
-    _undoPush({ type: 'cell', row, col, fromT: prevT, toT: 0, fromH: prevH, toH: nextH });
-    _heightmap[row][col] = nextH;
-    _tiles[row][col] = 0;
+    _undoPush({ type: 'cell', fi, row, col, fromT: prevT, toT: 0, fromH: prevH, toH: nextH });
+    hmap[row][col] = nextH;
+    tiles[row][col] = 0;
   } else if (typeof _tool === 'string') {
-    // Marker placement
+    // Marker placement (markers are floor-agnostic)
     const key = _tool;
     const prev = _markers[key];
     if (erase) {
@@ -217,38 +262,38 @@ function _paint(e) {
       _markers[key] = next;
     }
   } else {
-    // Tile painting (ramp, wall, crack)
+    // Tile painting (ramp, wall, crack, column, swall)
     const next = erase ? 0 : _tool;
-    const prev = _tiles[row][col];
+    const prev = tiles[row][col];
     if (prev === next) return;
-    _undoPush({ type: 'tile', row, col, from: prev, to: next });
-    _tiles[row][col] = next;
+    _undoPush({ type: 'tile', fi, row, col, from: prev, to: next });
+    tiles[row][col] = next;
   }
   _draw();
 }
 
 function _undoPush(op) {
   _undo.push(op);
-  if (_undo.length > 50) _undo.shift();
+  if (_undo.length > 80) _undo.shift();
 }
 
 function _doUndo() {
   if (!_undo.length) return;
   const op = _undo.pop();
   if (op.type === 'tile') {
-    _tiles[op.row][op.col] = op.from;
+    _floors[op.fi].tiles[op.row][op.col] = op.from;
   } else if (op.type === 'cell') {
-    _tiles[op.row][op.col] = op.fromT;
-    _heightmap[op.row][op.col] = op.fromH;
+    _floors[op.fi].tiles[op.row][op.col] = op.fromT;
+    _floors[op.fi].heightmap[op.row][op.col] = op.fromH;
   } else if (op.type === 'height') {
-    _heightmap[op.row][op.col] = op.from; // legacy
+    _floors[op.fi ?? 0].heightmap[op.row][op.col] = op.from;
   } else {
     _markers[op.key] = op.from;
   }
   _draw();
 }
 
-// ── Compound toolbar state → _tool ───────────────────────────────────────
+// ── Compound toolbar state → _tool ───────────────────────────────────────────
 function _computeToolFromCompound() {
   switch (_typeMode) {
     case 'floor':  _tool = _floorHKey; break;
@@ -260,6 +305,22 @@ function _computeToolFromCompound() {
   }
 }
 
+function _updateFloorTabs() {
+  document.querySelectorAll('.ed-floor-tab').forEach(b =>
+    b.classList.toggle('selected', +b.dataset.floor === _floorIdx));
+}
+
+function _updateHeightButtons() {
+  const validKeys = new Set(_FLOOR_DEFS[_floorIdx].hKeys);
+  const labels = _FLOOR_H_LABELS[_floorIdx];
+  document.querySelectorAll('.ed-sublvl-btn').forEach(b => {
+    const visible = validKeys.has(b.dataset.h);
+    b.style.display = visible ? '' : 'none';
+    if (visible && labels[b.dataset.h]) b.textContent = labels[b.dataset.h];
+    b.classList.toggle('selected', b.dataset.h === _floorHKey);
+  });
+}
+
 function _updateCompoundUI() {
   document.getElementById('ed-floor-sub').style.display  = _typeMode === 'floor'  ? '' : 'none';
   document.getElementById('ed-ramp-sub').style.display   = _typeMode === 'ramp'   ? '' : 'none';
@@ -267,8 +328,7 @@ function _updateCompoundUI() {
   document.getElementById('ed-crack-sub').style.display  = _typeMode === 'crack'  ? '' : 'none';
   document.querySelectorAll('.ed-type-btn').forEach(b =>
     b.classList.toggle('selected', b.dataset.type === _typeMode));
-  document.querySelectorAll('.ed-sublvl-btn').forEach(b =>
-    b.classList.toggle('selected', b.dataset.h === _floorHKey));
+  _updateHeightButtons();
   document.querySelectorAll('.ed-subfacing-btn').forEach(b =>
     b.classList.toggle('selected', +b.dataset.dir === _rampDir));
   document.querySelectorAll('.ed-subrange-btn').forEach(b =>
@@ -278,6 +338,7 @@ function _updateCompoundUI() {
   document.querySelectorAll('.ed-subcrack-btn').forEach(b =>
     b.classList.toggle('selected', +b.dataset.crack === _crackTile));
   document.querySelectorAll('.ed-tool').forEach(b => b.classList.remove('selected'));
+  _updateFloorTabs();
 }
 
 function _selectMarkerTool(key) {
@@ -299,13 +360,16 @@ function _rotateTool() {
   _updateCompoundUI();
 }
 
-// ── Export / Import ───────────────────────────────────────────────────────
+// ── Export / Import ───────────────────────────────────────────────────────────
 function _encode() {
   const mk = (pos) => pos ? [pos.col, pos.row] : null;
   return btoa(JSON.stringify({
-    w: GRID_W, h: GRID_H,
-    t: _tiles.flat(),
-    hm: _heightmap.flat(),
+    v: 2, w: GRID_W, h: GRID_H,
+    floors: _floors.map(fl => ({
+      base: fl.base,
+      t:  fl.tiles.flat(),
+      hm: fl.heightmap.flat(),
+    })),
     sp: mk(_markers.spawn_p), sa: mk(_markers.spawn_a),
     sd: mk(_markers.spawn_d), sA: mk(_markers.site_a), sB: mk(_markers.site_b),
   }));
@@ -314,17 +378,27 @@ function _encode() {
 function _decode(b64) {
   const d = JSON.parse(atob(b64));
   const w = d.w ?? 24, h = d.h ?? 24;
-  _tiles = Array.from({ length: h }, (_, r) => d.t.slice(r * w, r * w + w));
-  _heightmap = d.hm
-    ? Array.from({ length: h }, (_, r) => d.hm.slice(r * w, r * w + w))
-    : _blankHeightmap();
   const mk = (arr) => arr ? { col: arr[0], row: arr[1] } : null;
+  if (d.v === 2 && d.floors) {
+    _floors = d.floors.map(fd => ({
+      base: fd.base,
+      tiles:     Array.from({ length: h }, (_, r) => fd.t.slice(r * w, r * w + w)),
+      heightmap: Array.from({ length: h }, (_, r) => fd.hm.slice(r * w, r * w + w)),
+    }));
+  } else {
+    // Legacy v1: single floor
+    _floors = _blankFloors();
+    _floors[0].tiles     = Array.from({ length: h }, (_, r) => d.t.slice(r * w, r * w + w));
+    _floors[0].heightmap = d.hm
+      ? Array.from({ length: h }, (_, r) => d.hm.slice(r * w, r * w + w))
+      : _blankHeightmap();
+  }
   _markers = { spawn_p: mk(d.sp), spawn_a: mk(d.sa), spawn_d: mk(d.sd), site_a: mk(d.sA), site_b: mk(d.sB) };
   _undo = [];
   _draw();
 }
 
-// ── 3D Preview ────────────────────────────────────────────────────────────
+// ── 3D Preview ────────────────────────────────────────────────────────────────
 function _preview() {
   if (_inPreview) return;
   _inPreview = true;
@@ -354,7 +428,7 @@ export function exitEditorPreview() {
   document.getElementById('editor-overlay').style.display = 'flex';
 }
 
-// ── mapDef builder ────────────────────────────────────────────────────────
+// ── mapDef builder ────────────────────────────────────────────────────────────
 function _buildMapDef() {
   const cx = (GRID_W / 2) * CELL + CELL / 2;
   const cz = (GRID_H / 2) * CELL + CELL / 2;
@@ -365,10 +439,17 @@ function _buildMapDef() {
   const siteA = _markers.site_a, siteB = _markers.site_b;
   return {
     name: 'Custom Map',
-    tiles:     _tiles.map(row => [...row]),
-    heightmap: _heightmap.map(row => [...row]),
+    floors: _floors.map((fl, i) => ({
+      base:       fl.base,
+      wallHeight: _FLOOR_DEFS[i].wallHeight,
+      tiles:      fl.tiles.map(row => [...row]),
+      heightmap:  fl.heightmap.map(row => [...row]),
+    })),
+    // Backward-compat fields for code that reads mapDef.tiles directly
+    tiles:     _floors[0].tiles.map(row => [...row]),
+    heightmap: _floors[0].heightmap.map(row => [...row]),
     width: GRID_W, height: GRID_H,
-    H1: FLOOR1 / 2, H2: FLOOR1,   // ramps go 0 → Floor 1 (3 m)
+    H1: FLOOR1 / 2, H2: FLOOR1,
     spawnPlayer:   toWorld(_markers.spawn_p),
     spawnAttacker: toWorld(_markers.spawn_a),
     spawnDefender: toWorld(_markers.spawn_d),
@@ -378,7 +459,7 @@ function _buildMapDef() {
     ],
     fog: { color: 0x2a3a4a, density: 0.010 },
     skyColor: 0x4a6070,
-    wallHeight: 3.5,  // slightly taller than 1 storey — cover from ground, open to Floor 1
+    wallHeight: _FLOOR_DEFS[0].wallHeight,
     showRubble: false,
     materials: {
       floor: matFloor, wall: matWall, wallDark: matWallD,
@@ -388,7 +469,7 @@ function _buildMapDef() {
   };
 }
 
-// ── Public API ────────────────────────────────────────────────────────────
+// ── Public API ────────────────────────────────────────────────────────────────
 export function openEditor() {
   document.getElementById('overlay').style.display = 'none';
   document.getElementById('editor-overlay').style.display = 'flex';
@@ -405,15 +486,15 @@ export function closeEditor() {
 export function isEditorPreview() { return _inPreview; }
 
 export function initEditor() {
-  _tiles     = _blankGrid();
-  _heightmap = _blankHeightmap();
+  _floors    = _blankFloors();
+  _floorIdx  = 0;
   _markers   = { spawn_p: null, spawn_a: null, spawn_d: null, site_a: null, site_b: null };
   _typeMode  = 'floor';
   _rampDir   = 0;
   _rampRange = 0;
   _crackTile = 2;
   _swallDir  = 0;
-  _floorHKey = 'h0';
+  _floorHKey = _FLOOR_DEFS[0].hKeys[0];
   _computeToolFromCompound();
 
   _canvas = document.getElementById('editor-canvas');
@@ -432,18 +513,30 @@ export function initEditor() {
   _canvas.addEventListener('mousemove', e => {
     if (_painting) _paint(e);
     const { col, row } = _cellAt(e);
-    const h = _heightmap[row][col];
-    const t = _tiles[row][col];
+    const h = _curHmap()[row][col];
+    const t = _curTiles()[row][col];
     const tDesc = t >= 4 && t <= 27
       ? `ramp-${['N','S','W','E'][(t-4)%4]} [${['0→F1','F1→F2','0→F½','F½→F1','F1→F1½','F1½→F2'][Math.floor((t-4)/4)]}]`
       : (t >= 29 && t <= 32)
         ? `swall-${['N','S','W','E'][t - 29]}`
         : ({ 0:'floor', 1:'wall', 2:'crack-H', 3:'crack-V', 28:'column' })[t] ?? `tile${t}`;
+    const flLabel = _FLOOR_DEFS[_floorIdx].label;
     const st = document.getElementById('ed-status');
-    if (st) st.textContent = `col ${col}  row ${row}  ${tDesc}  h=${h ? h.toFixed(1) : '0'}m`;
+    if (st) st.textContent = `[${flLabel}] col ${col}  row ${row}  ${tDesc}  h=${h ? h.toFixed(1) : '0'}m`;
   });
   _canvas.addEventListener('mouseup',    () => { _painting = false; });
   _canvas.addEventListener('mouseleave', () => { _painting = false; });
+
+  // ── Floor tab buttons ────────────────────────────────────────────────
+  document.querySelectorAll('.ed-floor-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _floorIdx  = +btn.dataset.floor;
+      _floorHKey = _FLOOR_DEFS[_floorIdx].hKeys[0];
+      if (_typeMode === 'floor') _computeToolFromCompound();
+      _updateCompoundUI();
+      _draw();
+    });
+  });
 
   // ── Compound build toolbar ───────────────────────────────────────────
   document.querySelectorAll('.ed-type-btn').forEach(btn => {
@@ -456,38 +549,39 @@ export function initEditor() {
   document.querySelectorAll('.ed-sublvl-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       _floorHKey = btn.dataset.h;
-      if (_typeMode === 'floor') { _computeToolFromCompound(); }
+      if (_typeMode === 'floor') _computeToolFromCompound();
       _updateCompoundUI();
     });
   });
   document.querySelectorAll('.ed-subfacing-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       _rampDir = +btn.dataset.dir;
-      if (_typeMode === 'ramp') { _computeToolFromCompound(); }
+      if (_typeMode === 'ramp') _computeToolFromCompound();
       _updateCompoundUI();
     });
   });
   document.querySelectorAll('.ed-subrange-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       _rampRange = +btn.dataset.range;
-      if (_typeMode === 'ramp') { _computeToolFromCompound(); }
+      if (_typeMode === 'ramp') _computeToolFromCompound();
       _updateCompoundUI();
     });
   });
   document.querySelectorAll('.ed-swdir-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       _swallDir = +btn.dataset.dir;
-      if (_typeMode === 'swall') { _computeToolFromCompound(); }
+      if (_typeMode === 'swall') _computeToolFromCompound();
       _updateCompoundUI();
     });
   });
   document.querySelectorAll('.ed-subcrack-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       _crackTile = +btn.dataset.crack;
-      if (_typeMode === 'crack') { _computeToolFromCompound(); }
+      if (_typeMode === 'crack') _computeToolFromCompound();
       _updateCompoundUI();
     });
   });
+
   // ── Marker tools ─────────────────────────────────────────────────────
   document.querySelectorAll('.ed-tool').forEach(btn => {
     btn.addEventListener('click', () => _selectMarkerTool(btn.dataset.tile));
@@ -498,10 +592,9 @@ export function initEditor() {
   document.getElementById('ed-rotate').addEventListener('click', _rotateTool);
 
   document.getElementById('ed-clear').addEventListener('click', () => {
-    _tiles     = _blankGrid();
-    _heightmap = _blankHeightmap();
-    _markers   = { spawn_p: null, spawn_a: null, spawn_d: null, site_a: null, site_b: null };
-    _undo      = [];
+    _floors  = _blankFloors();
+    _markers = { spawn_p: null, spawn_a: null, spawn_d: null, site_a: null, site_b: null };
+    _undo    = [];
     _draw();
   });
 

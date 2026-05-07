@@ -282,3 +282,7 @@ body{background:#000;overflow:hidden;font-family:'Courier New',monospace}
 .ed-sublvl-btn.selected,.ed-subfacing-btn.selected,.ed-subrange-btn.selected,.ed-subcrack-btn.selected{background:#c8801a;color:#fff;border-color:#c8801a}
 .ed-swdir-btn.selected{background:#4070b0;color:#fff;border-color:#4070b0}
 #ed-floor-sub,#ed-ramp-sub,#ed-crack-sub{padding-bottom:4px;border-bottom:1px solid #1c1c1c;margin-bottom:3px}
+#ed-floor-tabs{display:flex;gap:3px;margin-bottom:4px}
+.ed-floor-tab{flex:1;padding:5px 3px;background:#1a1a1a;color:#888;border:1px solid #2a2a2a;font-family:'Courier New',monospace;font-size:9px;letter-spacing:0px;cursor:pointer;text-align:center}
+.ed-floor-tab:hover{background:#252525;color:#fff}
+.ed-floor-tab.selected{background:#306080;color:#aef;border-color:#4080a0}
