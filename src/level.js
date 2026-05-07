@@ -155,8 +155,8 @@ export function buildLevel(mapDef) {
           const rm = new THREE.Mesh(rampGeo, rampMat);
           rm.position.set(wx, centerY, wz);
           // rotation: +angle tilts the high end upward along the run axis
-          if      (dir === 0) rm.rotation.x =  angle;   // high at +Z
-          else if (dir === 1) rm.rotation.x = -angle;   // high at -Z
+          if      (dir === 0) rm.rotation.x = -angle;   // high at +Z (South)
+          else if (dir === 1) rm.rotation.x =  angle;   // high at -Z (North)
           else if (dir === 2) rm.rotation.z =  angle;   // high at +X
           else                rm.rotation.z = -angle;   // high at -X
           rm.castShadow = rm.receiveShadow = true;
