@@ -81,14 +81,12 @@ function _floorSurface(fl, c0, r0, tx, tz) {
     const frac = dir === 0 ? tz : dir === 1 ? (1 - tz) : dir === 2 ? tx : (1 - tx);
     return loY + (hiY - loY) * frac;
   }
-  const h   = _hFrom(heightmap, c0, r0);
-  const h10 = _cellFrom(tiles, c0 + 1, r0) === 1 ? h : _hFrom(heightmap, c0 + 1, r0);
-  const h01 = _cellFrom(tiles, c0, r0 + 1) === 1 ? h : _hFrom(heightmap, c0, r0 + 1);
-  const h11 = _cellFrom(tiles, c0 + 1, r0 + 1) === 1 ? h : _hFrom(heightmap, c0 + 1, r0 + 1);
-  return h * (1 - tx) * (1 - tz) + h10 * tx * (1 - tz) + h01 * (1 - tx) * tz + h11 * tx * tz;
+  // Flat floor cells return their exact height — bilinear interpolation between
+  // cells at different heights would make slab edges behave like ramps.
+  return _hFrom(heightmap, c0, r0);
 }
 
-// groundElevation: surface Y — ramps linear within cell, flat cells bilinear from heightmap.
+// groundElevation: surface Y — ramps interpolate linearly, flat cells return exact height.
 // refY: camera eye Y (camera.position.y) used to pick the right floor in multi-floor maps.
 // When Infinity (default, legacy callers) the highest surface is returned.
 export function groundElevation(wx, wz, refY = Infinity) {
