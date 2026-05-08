@@ -169,7 +169,7 @@ export function buildLevel(mapDef) {
             wm.castShadow = wm.receiveShadow = true;
             _levelGroup.add(wm);
             wallMeshes.push(wm);
-            const t = new THREE.Mesh(new THREE.BoxGeometry(CELL, 0.18 + WALL_SINK, CELL), mats.trim);
+            const t = new THREE.Mesh(new THREE.BoxGeometry(CELL + 0.004, 0.18 + WALL_SINK, CELL + 0.004), mats.trim);
             t.position.set(wx, BASE + (0.18 - WALL_SINK) / 2, wz);
             _levelGroup.add(t);
             debugLineData.push({ x: wx - CELL / 2, y: BASE, z: wz - CELL / 2, w: CELL, h: WH, d: CELL, col: 0xff3300 });
@@ -342,7 +342,7 @@ export function buildLevel(mapDef) {
       wm.castShadow = wm.receiveShadow = true;
       _levelGroup.add(wm);
       wallMeshes.push(wm);
-      const t = new THREE.Mesh(new THREE.BoxGeometry(CELL, 0.18 + WALL_SINK, CELL), mats.trim);
+      const t = new THREE.Mesh(new THREE.BoxGeometry(CELL + 0.004, 0.18 + WALL_SINK, CELL + 0.004), mats.trim);
       t.position.set(wx, span.base + (0.18 - WALL_SINK) / 2, wz);
       _levelGroup.add(t);
       debugLineData.push({ x: wx - CELL/2, y: span.base, z: wz - CELL/2, w: CELL, h: spanH, d: CELL, col: 0xff3300 });
