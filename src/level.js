@@ -21,8 +21,22 @@ export function clearLevel() {
   torchLights.length = 0;
 }
 
-const _isRamp  = (c) => c >= 4 && c <= 27;
-const _isCrack = (c) => c === 2 || c === 3;
+const _isRamp     = (c) => (c >= 4 && c <= 27) || (c >= 33 && c <= 80);
+const _isDiagRamp = (c) => c >= 33 && c <= 80;
+const _isCrack    = (c) => c === 2 || c === 3;
+
+function _diagFrac(diagType, tx, tz) {
+  switch (diagType) {
+    case 0: return Math.max(1 - tz, 1 - tx);
+    case 1: return Math.max(1 - tz, tx);
+    case 2: return Math.max(tz, tx);
+    case 3: return Math.max(tz, 1 - tx);
+    case 4: return Math.min(1 - tz, 1 - tx);
+    case 5: return Math.min(1 - tz, tx);
+    case 6: return Math.min(tz, tx);
+    default: return Math.min(tz, 1 - tx);
+  }
+}
 
 // [loY, hiY] per ramp group; null hiY = use mapDef.H2 (backward compat for tiles 4-7)
 // F½=1.5 m (FLOOR1/2), F1=3 m, F1½=4.5 m ((F1+F2)/2), F2=6 m
@@ -55,9 +69,15 @@ export function buildLevel(mapDef) {
   const H2 = mapDef.H2 ?? 0;
 
   // ── Ground plane ─────────────────────────────────────────────────────
+  // polygonOffset pushes the ground back in depth so ramp low-ends / wall bases
+  // that touch y=0 always render on top, eliminating z-fighting at the seam.
+  const groundMat = mats.floor.clone();
+  groundMat.polygonOffset = true;
+  groundMat.polygonOffsetFactor = 2;
+  groundMat.polygonOffsetUnits  = 4;
   const fl = new THREE.Mesh(
     new THREE.PlaneGeometry((width + 4) * CELL, (height + 4) * CELL),
-    mats.floor
+    groundMat
   );
   fl.rotation.x = -Math.PI / 2;
   fl.position.set((width * CELL) / 2, 0, (height * CELL) / 2);
@@ -71,6 +91,10 @@ export function buildLevel(mapDef) {
     : [{ base: 0, tiles: mapDef.tiles, heightmap: mapDef.heightmap, wallHeight: WH_DEF }];
 
   // ── Per-floor tile geometry ───────────────────────────────────────────
+  // Extend all wall geometry this far below its floor base so the bottom face
+  // is underground and can never z-fight with any floor/slab surface.
+  const WALL_SINK = 0.05;
+
   for (const flDef of floors) {
     const { tiles, heightmap, base: BASE } = flDef;
     const WH = flDef.wallHeight ?? WH_DEF ?? 3.0;
@@ -92,39 +116,41 @@ export function buildLevel(mapDef) {
           const isPillar = cell === 28 ||
             (n === 0 && s === 0 && e === 0 && w === 0 && mapDef.style !== 'rooftop');
           if (isPillar) {
+            const shaftH = WH + 0.8 + WALL_SINK;
             const shaft = new THREE.Mesh(
-              new THREE.CylinderGeometry(0.55, 0.62, WH + 0.8, 12),
+              new THREE.CylinderGeometry(0.55, 0.62, shaftH, 12),
               mats.wall
             );
-            shaft.position.set(wx, BASE + (WH + 0.8) / 2, wz);
+            shaft.position.set(wx, BASE + (WH + 0.8 - WALL_SINK) / 2, wz);
             shaft.castShadow = shaft.receiveShadow = true;
             _levelGroup.add(shaft);
             wallMeshes.push(shaft);
             const cap = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.35, 1.4), mats.wallTop);
             cap.position.set(wx, BASE + WH + 0.8, wz);
             _levelGroup.add(cap);
-            const base = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.22, 1.5), mats.wallTop);
-            base.position.set(wx, BASE + 0.11, wz);
+            const baseH = 0.22 + WALL_SINK;
+            const base = new THREE.Mesh(new THREE.BoxGeometry(1.5, baseH, 1.5), mats.wallTop);
+            base.position.set(wx, BASE + (0.22 - WALL_SINK) / 2, wz);
             _levelGroup.add(base);
             debugLineData.push({ x: wx - 0.7, y: BASE, z: wz - 0.7, w: 1.4, h: WH + 0.8, d: 1.4, col: 0xff8800 });
           } else {
-            const wm = new THREE.Mesh(new THREE.BoxGeometry(CELL, WH, CELL), [
+            const wm = new THREE.Mesh(new THREE.BoxGeometry(CELL, WH + WALL_SINK, CELL), [
               mats.wallDark, mats.wallDark, mats.wallTop, mats.floor, mats.wall, mats.wall,
             ]);
-            wm.position.set(wx, BASE + WH / 2, wz);
+            wm.position.set(wx, BASE + (WH - WALL_SINK) / 2, wz);
             wm.castShadow = wm.receiveShadow = true;
             _levelGroup.add(wm);
             wallMeshes.push(wm);
-            const t = new THREE.Mesh(new THREE.BoxGeometry(CELL, 0.18, CELL), mats.trim);
-            t.position.set(wx, BASE + 0.09, wz);
+            const t = new THREE.Mesh(new THREE.BoxGeometry(CELL, 0.18 + WALL_SINK, CELL), mats.trim);
+            t.position.set(wx, BASE + (0.18 - WALL_SINK) / 2, wz);
             _levelGroup.add(t);
             debugLineData.push({ x: wx - CELL / 2, y: BASE, z: wz - CELL / 2, w: CELL, h: WH, d: CELL, col: 0xff3300 });
           }
         } else if (_isCrack(cell)) {
           const loH = PLAYER_H - 0.28, upH = 0.55;
           const gw = cell === 2 ? CELL : 0.35, gd = cell === 2 ? 0.35 : CELL;
-          const lo = new THREE.Mesh(new THREE.BoxGeometry(gw, loH, gd), mats.crack);
-          lo.position.set(wx, BASE + loH / 2, wz);
+          const lo = new THREE.Mesh(new THREE.BoxGeometry(gw, loH + WALL_SINK, gd), mats.crack);
+          lo.position.set(wx, BASE + (loH - WALL_SINK) / 2, wz);
           lo.castShadow = lo.receiveShadow = true;
           _levelGroup.add(lo);
           wallMeshes.push(lo);
@@ -135,12 +161,41 @@ export function buildLevel(mapDef) {
           wallMeshes.push(up);
           debugLineData.push({ x: wx - gw / 2, y: BASE, z: wz - gd / 2, w: gw, h: loH, d: gd, col: 0x0088ff });
           debugLineData.push({ x: wx - gw / 2, y: BASE + PLAYER_H + 0.28, z: wz - gd / 2, w: gw, h: upH, d: gd, col: 0x0088ff });
-        } else if (_isRamp(cell)) {
+        } else if (_isDiagRamp(cell)) {
+          const diagType = Math.floor((cell - 33) / 6);
+          const grp      = (cell - 33) % 6;
+          const [loYr, hiYRaw] = _RAMP_PROFILE[grp];
+          const hiYr = hiYRaw ?? H2;
+          const RAMP_T = 0.10;
+          const x0 = col * CELL, x1 = (col + 1) * CELL;
+          const z0 = row * CELL, z1 = (row + 1) * CELL;
+          const hNW = loYr + (hiYr - loYr) * _diagFrac(diagType, 0, 0);
+          const hNE = loYr + (hiYr - loYr) * _diagFrac(diagType, 1, 0);
+          const hSW = loYr + (hiYr - loYr) * _diagFrac(diagType, 0, 1);
+          const hSE = loYr + (hiYr - loYr) * _diagFrac(diagType, 1, 1);
+          // Top face + bottom face (shifted by RAMP_T)
+          const pos = new Float32Array([
+            x0, hNW,        z0,  x0, hSW,        z1,  x1, hNE,        z0,
+            x1, hNE,        z0,  x0, hSW,        z1,  x1, hSE,        z1,
+            x0, hNW-RAMP_T, z0,  x1, hNE-RAMP_T, z0,  x0, hSW-RAMP_T, z1,
+            x1, hNE-RAMP_T, z0,  x1, hSE-RAMP_T, z1,  x0, hSW-RAMP_T, z1,
+          ]);
+          const dgeo = new THREE.BufferGeometry();
+          dgeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+          dgeo.computeVertexNormals();
+          const dmat = new THREE.MeshStandardMaterial({
+            color: mats.ramp.color, roughness: mats.ramp.roughness,
+            metalness: mats.ramp.metalness, side: THREE.DoubleSide,
+          });
+          const dm = new THREE.Mesh(dgeo, dmat);
+          dm.castShadow = dm.receiveShadow = true;
+          _levelGroup.add(dm);
+          debugLineData.push({ x: x0, y: loYr, z: z0, w: CELL, h: hiYr - loYr, d: CELL, col: 0xffcc00 });
+        } else if (cell >= 4 && cell <= 27) {
           const dir = (cell - 4) % 4;
           const grp = Math.floor((cell - 4) / 4);
           const [loY, hiYRaw] = _RAMP_PROFILE[grp];
           const hiY = hiYRaw ?? H2;
-          // Thin tilted slab — no triangular ends.
           const RAMP_T   = 0.10;
           const slopeLen = Math.sqrt(CELL * CELL + (hiY - loY) * (hiY - loY));
           const angle    = Math.atan2(hiY - loY, CELL);
@@ -154,11 +209,10 @@ export function buildLevel(mapDef) {
           });
           const rm = new THREE.Mesh(rampGeo, rampMat);
           rm.position.set(wx, centerY, wz);
-          // rotation: +angle tilts the high end upward along the run axis
-          if      (dir === 0) rm.rotation.x = -angle;   // high at +Z (South)
-          else if (dir === 1) rm.rotation.x =  angle;   // high at -Z (North)
-          else if (dir === 2) rm.rotation.z =  angle;   // high at +X
-          else                rm.rotation.z = -angle;   // high at -X
+          if      (dir === 0) rm.rotation.x = -angle;
+          else if (dir === 1) rm.rotation.x =  angle;
+          else if (dir === 2) rm.rotation.z =  angle;
+          else                rm.rotation.z = -angle;
           rm.castShadow = rm.receiveShadow = true;
           _levelGroup.add(rm);
           debugLineData.push({ x: wx - CELL / 2, y: loY, z: wz - CELL / 2, w: CELL, h: hiY - loY, d: CELL, col: 0xffee00 });
@@ -170,10 +224,10 @@ export function buildLevel(mapDef) {
           else if (cell === 30) {   mx = wx; mz = (row + 1) * CELL - WALL_T / 2; pw = CELL; pd = WALL_T; }
           else if (cell === 31) {   mx = col * CELL + WALL_T / 2; mz = wz;        pw = WALL_T; pd = CELL; }
           else {                    mx = (col + 1) * CELL - WALL_T / 2; mz = wz;  pw = WALL_T; pd = CELL; }
-          const sw = new THREE.Mesh(new THREE.BoxGeometry(pw, WH, pd), [
+          const sw = new THREE.Mesh(new THREE.BoxGeometry(pw, WH + WALL_SINK, pd), [
             mats.wallDark, mats.wallDark, mats.wallTop, mats.floor, mats.wall, mats.wall,
           ]);
-          sw.position.set(mx, BASE + WH / 2, mz);
+          sw.position.set(mx, BASE + (WH - WALL_SINK) / 2, mz);
           sw.castShadow = sw.receiveShadow = true;
           _levelGroup.add(sw);
           wallMeshes.push(sw);
@@ -199,8 +253,8 @@ export function buildLevel(mapDef) {
           ];
           for (const [bit, mx, mz, pw, pd] of edgeDefs) {
             if (!(bits & bit)) continue;
-            const sw = new THREE.Mesh(new THREE.BoxGeometry(pw, WH, pd), swMat);
-            sw.position.set(mx, BASE + WH / 2, mz);
+            const sw = new THREE.Mesh(new THREE.BoxGeometry(pw, WH + WALL_SINK, pd), swMat);
+            sw.position.set(mx, BASE + (WH - WALL_SINK) / 2, mz);
             sw.castShadow = sw.receiveShadow = true;
             _levelGroup.add(sw);
             wallMeshes.push(sw);
@@ -215,6 +269,7 @@ export function buildLevel(mapDef) {
     // players can walk freely below (under Floor 1 at 3 m, Floor 2 at 6 m…).
     const SLAB_T   = 0.3;
     const elevMat  = mm(0xb8a070, 0.94, 0.01);
+    elevMat.polygonOffset = true; elevMat.polygonOffsetFactor = 1; elevMat.polygonOffsetUnits = 2;
     const elevSide = mm(0x8a7050, 0.96, 0.01);
     const built = new Set();
     for (let r = 0; r < height; r++) {

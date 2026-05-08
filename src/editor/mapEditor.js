@@ -40,15 +40,17 @@ const _MARKER_LETTER = { spawn_p:'P', spawn_a:'A', spawn_d:'D', site_a:'①', si
 
 // Per-group canvas colors for ramp tiles (group = Math.floor((tile-4)/4))
 const _RAMP_GROUP_COLOR = ['#7a5c28','#c8901a','#3e2c10','#503c1e','#604c2e','#706040'];
+const _DIAG_TYPE_NAMES  = ['O-NW','O-NE','O-SE','O-SW','P-NW','P-NE','P-SE','P-SW'];
 
 function _getTileColor(tile) {
   if (tile === 0)  return '#1a1a1a';
   if (tile === 1)  return '#5c4e3e';
   if (tile === 2)  return '#2a5578';
   if (tile === 3)  return '#1e4a66';
-  if (tile === 28) return '#7a5030';  // column
-  if (tile >= 29 && tile <= 32) return '#18181e';  // side wall — floor-like bg
-  if (tile >= 4 && tile <= 27) return _RAMP_GROUP_COLOR[Math.floor((tile - 4) / 4)] ?? '#7a5c28';
+  if (tile === 28) return '#7a5030';
+  if (tile >= 29 && tile <= 32) return '#18181e';
+  if (tile >= 4  && tile <= 27) return _RAMP_GROUP_COLOR[Math.floor((tile - 4) / 4)] ?? '#7a5c28';
+  if (tile >= 33 && tile <= 80) return _RAMP_GROUP_COLOR[(tile - 33) % 6] ?? '#7a5c28';
   return '#111';
 }
 
@@ -107,12 +109,13 @@ let _canvas   = null;
 let _ctx      = null;
 
 // Compound toolbar state
-let _typeMode   = 'floor';  // 'floor' | 'ramp' | 'wall' | 'column' | 'swall' | 'crack'
+let _typeMode   = 'floor';  // 'floor' | 'ramp' | 'dramp' | 'wall' | 'column' | 'swall' | 'crack'
 let _rampDir    = 0;         // 0=N 1=S 2=W 3=E
-let _rampRange  = 0;         // 0-5 → ramp tile groups
+let _rampRange  = 0;         // 0-5 → ramp tile groups (shared with dramp)
 let _crackTile  = 2;         // 2=H 3=V
 let _swallDir   = 0;         // side-wall edge: 0=N 1=S 2=W 3=E
 let _floorHKey  = 'h0';      // active height key for current floor
+let _drampType  = 0;         // 0-7: OuterNW/NE/SE/SW, PeakNW/NE/SE/SW
 
 // ── Convenience accessors ─────────────────────────────────────────────────────
 const _curFloor     = () => _floors[_floorIdx];
@@ -139,6 +142,34 @@ function _drawRampArrow(c, r, cpx, cpy, dir) {
   _ctx.fill();
 }
 
+// Draw a diagonal indicator: line from adj1→adj3 + dot at key corner.
+// diagType 0-3 = Outer (dot at valley/low corner), 4-7 = Peak (dot at high corner).
+function _drawDiagRampIndicator(c, r, cpx, cpy, diagType, alpha) {
+  const x0 = c * cpx + 2, y0 = r * cpy + 2;
+  const x1 = (c + 1) * cpx - 2, y1 = (r + 1) * cpy - 2;
+  // Corners: 0=NW 1=NE 2=SE 3=SW
+  const pts = [[x0,y0],[x1,y0],[x1,y1],[x0,y1]];
+  const dir = diagType % 4;
+  const adj1 = (dir + 1) % 4, adj3 = (dir + 3) % 4;
+  const isOuter = diagType < 4;
+  const a = alpha < 1 ? alpha * 0.7 : 1;
+  // Diagonal cut line
+  _ctx.strokeStyle = `rgba(255,255,255,${0.6 * a})`;
+  _ctx.lineWidth = 1.5;
+  _ctx.beginPath();
+  _ctx.moveTo(pts[adj1][0], pts[adj1][1]);
+  _ctx.lineTo(pts[adj3][0], pts[adj3][1]);
+  _ctx.stroke();
+  // Key corner dot
+  const [kx, ky] = pts[dir];
+  _ctx.fillStyle = isOuter
+    ? `rgba(80,160,255,${0.85 * a})`   // blue = valley
+    : `rgba(255,200,40,${0.9 * a})`;   // yellow = peak
+  _ctx.beginPath();
+  _ctx.arc(kx, ky, Math.max(2, Math.min(cpx, cpy) * 0.13), 0, Math.PI * 2);
+  _ctx.fill();
+}
+
 function _drawFloorTiles(fl, cpx, cpy, alpha) {
   _ctx.globalAlpha = alpha;
   for (let r = 0; r < GRID_H; r++) {
@@ -149,6 +180,10 @@ function _drawFloorTiles(fl, cpx, cpy, alpha) {
       if (tile >= 4 && tile <= 27) {
         const dir = (tile - 4) % 4;
         _drawRampArrow(c, r, cpx, cpy, ['down','up','right','left'][dir]);
+      }
+      if (tile >= 33 && tile <= 80) {
+        const diagType = Math.floor((tile - 33) / 6);
+        _drawDiagRampIndicator(c, r, cpx, cpy, diagType, alpha);
       }
       if (tile === 28) {
         _ctx.fillStyle = alpha < 1 ? 'rgba(192,128,80,0.4)' : '#c08050';
@@ -340,9 +375,10 @@ function _computeToolFromCompound() {
   switch (_typeMode) {
     case 'floor':  _tool = _floorHKey; break;
     case 'ramp':   _tool = 4 + _rampRange * 4 + _rampDir; break;
+    case 'dramp':  _tool = 33 + _drampType * 6 + _rampRange; break;
     case 'wall':   _tool = 1; break;
     case 'column': _tool = 28; break;
-    case 'swall':  _tool = 'swall'; break;  // painting handled via swallBits, not tile id
+    case 'swall':  _tool = 'swall'; break;
     case 'crack':  _tool = _crackTile; break;
   }
 }
@@ -366,6 +402,7 @@ function _updateHeightButtons() {
 function _updateCompoundUI() {
   document.getElementById('ed-floor-sub').style.display  = _typeMode === 'floor'  ? '' : 'none';
   document.getElementById('ed-ramp-sub').style.display   = _typeMode === 'ramp'   ? '' : 'none';
+  document.getElementById('ed-dramp-sub').style.display  = _typeMode === 'dramp'  ? '' : 'none';
   document.getElementById('ed-swall-sub').style.display  = _typeMode === 'swall'  ? '' : 'none';
   document.getElementById('ed-crack-sub').style.display  = _typeMode === 'crack'  ? '' : 'none';
   document.querySelectorAll('.ed-type-btn').forEach(b =>
@@ -375,6 +412,8 @@ function _updateCompoundUI() {
     b.classList.toggle('selected', +b.dataset.dir === _rampDir));
   document.querySelectorAll('.ed-subrange-btn').forEach(b =>
     b.classList.toggle('selected', +b.dataset.range === _rampRange));
+  document.querySelectorAll('.ed-dramptype-btn').forEach(b =>
+    b.classList.toggle('selected', +b.dataset.dtype === _drampType));
   document.querySelectorAll('.ed-swdir-btn').forEach(b =>
     b.classList.toggle('selected', +b.dataset.dir === _swallDir));
   document.querySelectorAll('.ed-subcrack-btn').forEach(b =>
@@ -393,6 +432,8 @@ function _selectMarkerTool(key) {
 function _rotateTool() {
   if (_typeMode === 'ramp') {
     _rampDir = (_rampDir + 1) % 4;
+  } else if (_typeMode === 'dramp') {
+    _drampType = (_drampType + 1) % 8;
   } else if (_typeMode === 'swall') {
     _swallDir = (_swallDir + 1) % 4;
   } else if (_typeMode === 'crack') {
@@ -546,12 +587,13 @@ export function initEditor() {
   _floors    = _blankFloors();
   _floorIdx  = 0;
   _markers   = { spawn_p: null, spawn_a: null, spawn_d: null, site_a: null, site_b: null };
-  _typeMode  = 'floor';
-  _rampDir   = 0;
-  _rampRange = 0;
-  _crackTile = 2;
-  _swallDir  = 0;
-  _floorHKey = _FLOOR_DEFS[0].hKeys[0];
+  _typeMode   = 'floor';
+  _rampDir    = 0;
+  _rampRange  = 0;
+  _crackTile  = 2;
+  _swallDir   = 0;
+  _drampType  = 0;
+  _floorHKey  = _FLOOR_DEFS[0].hKeys[0];
   _computeToolFromCompound();
 
   _canvas = document.getElementById('editor-canvas');
@@ -576,8 +618,11 @@ export function initEditor() {
     const swDesc = swBits
       ? ' swall:' + ['N','S','W','E'].filter((_, i) => swBits & (1 << i)).join('+')
       : '';
-    const tDesc = t >= 4 && t <= 27
-      ? `ramp-${['N','S','W','E'][(t-4)%4]} [${['0→F1','F1→F2','0→F½','F½→F1','F1→F1½','F1½→F2'][Math.floor((t-4)/4)]}]`
+    const _RANGE_LABELS = ['0→F1','F1→F2','0→F½','F½→F1','F1→F1½','F1½→F2'];
+    const tDesc = (t >= 4 && t <= 27)
+      ? `ramp-${['N','S','W','E'][(t-4)%4]} [${_RANGE_LABELS[Math.floor((t-4)/4)]}]`
+      : (t >= 33 && t <= 80)
+      ? `diag-${_DIAG_TYPE_NAMES[Math.floor((t-33)/6)]} [${_RANGE_LABELS[(t-33)%6]}]`
       : ({ 0:'floor', 1:'wall', 2:'crack-H', 3:'crack-V', 28:'column' })[t] ?? `tile${t}`;
     const flLabel = _FLOOR_DEFS[_floorIdx].label;
     const st = document.getElementById('ed-status');
@@ -623,6 +668,13 @@ export function initEditor() {
     btn.addEventListener('click', () => {
       _rampRange = +btn.dataset.range;
       if (_typeMode === 'ramp') _computeToolFromCompound();
+      _updateCompoundUI();
+    });
+  });
+  document.querySelectorAll('.ed-dramptype-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _drampType = +btn.dataset.dtype;
+      if (_typeMode === 'dramp') _computeToolFromCompound();
       _updateCompoundUI();
     });
   });

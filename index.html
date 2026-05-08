@@ -150,6 +150,7 @@
     <div class="ed-type-row">
       <button class="ed-type-btn selected" data-type="floor">Floor</button>
       <button class="ed-type-btn" data-type="ramp">Ramp</button>
+      <button class="ed-type-btn" data-type="dramp">DiagRamp</button>
       <button class="ed-type-btn" data-type="wall">Wall</button>
       <button class="ed-type-btn" data-type="column">Col</button>
       <button class="ed-type-btn" data-type="swall">SWall</button>
@@ -175,6 +176,31 @@
         <button class="ed-subfacing-btn" data-dir="1">↑S</button>
         <button class="ed-subfacing-btn" data-dir="2">→W</button>
         <button class="ed-subfacing-btn" data-dir="3">←E</button>
+      </div>
+      <div class="ed-sub-label">HEIGHT RANGE</div>
+      <div class="ed-sublvl-row">
+        <button class="ed-subrange-btn selected" data-range="0">0→F1</button>
+        <button class="ed-subrange-btn" data-range="1">F1→F2</button>
+        <button class="ed-subrange-btn" data-range="2">0→F½</button>
+        <button class="ed-subrange-btn" data-range="3">F½→F1</button>
+        <button class="ed-subrange-btn" data-range="4">F1→F1½</button>
+        <button class="ed-subrange-btn" data-range="5">F1½→F2</button>
+      </div>
+    </div>
+
+    <div id="ed-dramp-sub" style="display:none">
+      <div class="ed-sub-label">TYPE  (R to cycle)</div>
+      <div class="ed-sublvl-row">
+        <button class="ed-dramptype-btn selected" data-dtype="0">O-NW</button>
+        <button class="ed-dramptype-btn" data-dtype="1">O-NE</button>
+        <button class="ed-dramptype-btn" data-dtype="2">O-SE</button>
+        <button class="ed-dramptype-btn" data-dtype="3">O-SW</button>
+      </div>
+      <div class="ed-sublvl-row">
+        <button class="ed-dramptype-btn" data-dtype="4">P-NW</button>
+        <button class="ed-dramptype-btn" data-dtype="5">P-NE</button>
+        <button class="ed-dramptype-btn" data-dtype="6">P-SE</button>
+        <button class="ed-dramptype-btn" data-dtype="7">P-SW</button>
       </div>
       <div class="ed-sub-label">HEIGHT RANGE</div>
       <div class="ed-sublvl-row">

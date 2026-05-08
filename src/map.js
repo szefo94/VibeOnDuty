@@ -28,8 +28,22 @@ export function setActiveMap(def) {
   }
 }
 
-export const isRamp  = (c) => c >= 4 && c <= 27;
+export const isRamp  = (c) => (c >= 4 && c <= 27) || (c >= 33 && c <= 80);
 export const isCrack = (c) => c === 2 || c === 3;
+
+// diagType 0-3 = Outer (valley), 4-7 = Peak (pyramid); dir index: 0=NW 1=NE 2=SE 3=SW
+function _diagFrac(diagType, tx, tz) {
+  switch (diagType) {
+    case 0: return Math.max(1 - tz, 1 - tx); // Outer NW: valley at SE
+    case 1: return Math.max(1 - tz, tx);     // Outer NE: valley at SW
+    case 2: return Math.max(tz, tx);         // Outer SE: valley at NW
+    case 3: return Math.max(tz, 1 - tx);     // Outer SW: valley at NE
+    case 4: return Math.min(1 - tz, 1 - tx); // Peak NW
+    case 5: return Math.min(1 - tz, tx);     // Peak NE
+    case 6: return Math.min(tz, tx);         // Peak SE
+    default: return Math.min(tz, 1 - tx);   // Peak SW
+  }
+}
 
 // F½=1.5 m (FLOOR1/2), F1=3 m, F1½=4.5 m ((F1+F2)/2), F2=6 m
 const _RAMP_PROFILE = [
@@ -73,7 +87,14 @@ function _hFrom(hmap, c, r) {
 function _floorSurface(fl, c0, r0, tx, tz) {
   const { tiles, heightmap } = fl;
   const cell = _cellFrom(tiles, c0, r0);
-  if (isRamp(cell)) {
+  if (cell >= 33 && cell <= 80) {
+    const diagType = Math.floor((cell - 33) / 6);
+    const grp = (cell - 33) % 6;
+    const [loY, hiYRaw] = _RAMP_PROFILE[grp];
+    const hiY = hiYRaw ?? H2;
+    return loY + (hiY - loY) * _diagFrac(diagType, tx, tz);
+  }
+  if (cell >= 4 && cell <= 27) {
     const dir = (cell - 4) % 4;
     const grp = Math.floor((cell - 4) / 4);
     const [loY, hiYRaw] = _RAMP_PROFILE[grp];
