@@ -90,8 +90,41 @@ export function buildLevel(mapDef) {
     ? mapDef.floors
     : [{ base: 0, tiles: mapDef.tiles, heightmap: mapDef.heightmap, wallHeight: WH_DEF }];
 
+  // ── Pre-compute merged wall columns ──────────────────────────────────────────
+  // When multiple floors share a wall at the same (col,row), merge them into one
+  // tall box so the coplanar top/bottom faces at the floor boundary don't exist.
+  const _mergedWallSpans = new Map(); // "col,row" → [{base, top}]
+  const _mergedWallCells = new Set(); // "fi,col,row" consumed by a merge
+  for (let row = 0; row < height; row++) {
+    for (let col = 0; col < width; col++) {
+      const segs = [];
+      for (let fi = 0; fi < floors.length; fi++) {
+        const fd = floors[fi];
+        if (fd.tiles[row]?.[col] !== 1) continue;
+        const fdWH = fd.wallHeight ?? WH_DEF ?? 3.0;
+        const gN = (r2, c2) => (r2 < 0 || r2 >= height || c2 < 0 || c2 >= width) ? 1 : fd.tiles[r2][c2];
+        const isPillar = mapDef.style !== 'rooftop' &&
+          gN(row-1,col)===0 && gN(row+1,col)===0 &&
+          gN(row,col+1)===0 && gN(row,col-1)===0;
+        if (isPillar) continue;
+        segs.push({ fi, base: fd.base, top: fd.base + fdWH });
+      }
+      if (segs.length <= 1) continue;
+      segs.sort((a, b) => a.base - b.base);
+      const merged = [{ base: segs[0].base, top: segs[0].top }];
+      for (let i = 1; i < segs.length; i++) {
+        const last = merged[merged.length - 1];
+        if (segs[i].base <= last.top + 0.001) last.top = Math.max(last.top, segs[i].top);
+        else merged.push({ base: segs[i].base, top: segs[i].top });
+      }
+      _mergedWallSpans.set(`${col},${row}`, merged);
+      for (const seg of segs) _mergedWallCells.add(`${seg.fi},${col},${row}`);
+    }
+  }
+
   // ── Per-floor tile geometry ───────────────────────────────────────────
-  for (const flDef of floors) {
+  for (let fi = 0; fi < floors.length; fi++) {
+    const flDef = floors[fi];
     const { tiles, heightmap, base: BASE } = flDef;
     const WH = flDef.wallHeight ?? WH_DEF ?? 3.0;
 
@@ -111,6 +144,8 @@ export function buildLevel(mapDef) {
           const e = getCell(col + 1, row), w = getCell(col - 1, row);
           const isPillar = cell === 28 ||
             (n === 0 && s === 0 && e === 0 && w === 0 && mapDef.style !== 'rooftop');
+          // Skip non-pillar walls that are merged across floors — rendered below.
+          if (!isPillar && _mergedWallCells.has(`${fi},${col},${row}`)) continue;
           if (isPillar) {
             const shaft = new THREE.Mesh(
               new THREE.CylinderGeometry(0.55, 0.62, WH + 0.8, 12),
@@ -293,6 +328,26 @@ export function buildLevel(mapDef) {
         _levelGroup.add(slab);
         debugLineData.push({ x: cx2 - pw / 2, y: h - SLAB_T, z: cz2 - pd / 2, w: pw, h: SLAB_T, d: pd, col: 0x00ff88 });
       }
+    }
+  }
+
+  // ── Merged wall columns (spans that cross multiple floors) ───────────────────
+  for (const [key, spans] of _mergedWallSpans) {
+    const [mcol, mrow] = key.split(',').map(Number);
+    const wx = mcol * CELL + CELL / 2, wz = mrow * CELL + CELL / 2;
+    for (const span of spans) {
+      const spanH = span.top - span.base;
+      const wm = new THREE.Mesh(new THREE.BoxGeometry(CELL, spanH, CELL), [
+        mats.wallDark, mats.wallDark, mats.wallTop, mats.floor, mats.wall, mats.wall,
+      ]);
+      wm.position.set(wx, span.base + spanH / 2, wz);
+      wm.castShadow = wm.receiveShadow = true;
+      _levelGroup.add(wm);
+      wallMeshes.push(wm);
+      const t = new THREE.Mesh(new THREE.BoxGeometry(CELL, 0.18, CELL), mats.trim);
+      t.position.set(wx, span.base + 0.09, wz);
+      _levelGroup.add(t);
+      debugLineData.push({ x: wx - CELL/2, y: span.base, z: wz - CELL/2, w: CELL, h: spanH, d: CELL, col: 0xff3300 });
     }
   }
 
