@@ -90,6 +90,11 @@ export function buildLevel(mapDef) {
     ? mapDef.floors
     : [{ base: 0, tiles: mapDef.tiles, heightmap: mapDef.heightmap, wallHeight: WH_DEF }];
 
+  // Sink every wall box this far below its floor so the bottom face is underground
+  // and can never be coplanar with a floor/slab surface at the same Y.
+  // Safe now that stacked walls are merged into one box (no wall-wall overlap).
+  const WALL_SINK = 0.01;
+
   // ── Pre-compute merged wall columns ──────────────────────────────────────────
   // When multiple floors share a wall at the same (col,row), merge them into one
   // tall box so the coplanar top/bottom faces at the floor boundary don't exist.
@@ -148,38 +153,38 @@ export function buildLevel(mapDef) {
           if (!isPillar && _mergedWallCells.has(`${fi},${col},${row}`)) continue;
           if (isPillar) {
             const shaft = new THREE.Mesh(
-              new THREE.CylinderGeometry(0.55, 0.62, WH + 0.8, 12),
+              new THREE.CylinderGeometry(0.55, 0.62, WH + 0.8 + WALL_SINK, 12),
               mats.wall
             );
-            shaft.position.set(wx, BASE + (WH + 0.8) / 2, wz);
+            shaft.position.set(wx, BASE + (WH + 0.8 - WALL_SINK) / 2, wz);
             shaft.castShadow = shaft.receiveShadow = true;
             _levelGroup.add(shaft);
             wallMeshes.push(shaft);
             const cap = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.35, 1.4), mats.wallTop);
             cap.position.set(wx, BASE + WH + 0.8, wz);
             _levelGroup.add(cap);
-            const base = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.22, 1.5), mats.wallTop);
-            base.position.set(wx, BASE + 0.11, wz);
+            const base = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.22 + WALL_SINK, 1.5), mats.wallTop);
+            base.position.set(wx, BASE + (0.22 - WALL_SINK) / 2, wz);
             _levelGroup.add(base);
             debugLineData.push({ x: wx - 0.7, y: BASE, z: wz - 0.7, w: 1.4, h: WH + 0.8, d: 1.4, col: 0xff8800 });
           } else {
-            const wm = new THREE.Mesh(new THREE.BoxGeometry(CELL, WH, CELL), [
+            const wm = new THREE.Mesh(new THREE.BoxGeometry(CELL, WH + WALL_SINK, CELL), [
               mats.wallDark, mats.wallDark, mats.wallTop, mats.floor, mats.wall, mats.wall,
             ]);
-            wm.position.set(wx, BASE + WH / 2, wz);
+            wm.position.set(wx, BASE + (WH - WALL_SINK) / 2, wz);
             wm.castShadow = wm.receiveShadow = true;
             _levelGroup.add(wm);
             wallMeshes.push(wm);
-            const t = new THREE.Mesh(new THREE.BoxGeometry(CELL, 0.18, CELL), mats.trim);
-            t.position.set(wx, BASE + 0.09, wz);
+            const t = new THREE.Mesh(new THREE.BoxGeometry(CELL, 0.18 + WALL_SINK, CELL), mats.trim);
+            t.position.set(wx, BASE + (0.18 - WALL_SINK) / 2, wz);
             _levelGroup.add(t);
             debugLineData.push({ x: wx - CELL / 2, y: BASE, z: wz - CELL / 2, w: CELL, h: WH, d: CELL, col: 0xff3300 });
           }
         } else if (_isCrack(cell)) {
           const loH = PLAYER_H - 0.28, upH = 0.55;
           const gw = cell === 2 ? CELL : 0.35, gd = cell === 2 ? 0.35 : CELL;
-          const lo = new THREE.Mesh(new THREE.BoxGeometry(gw, loH, gd), mats.crack);
-          lo.position.set(wx, BASE + loH / 2, wz);
+          const lo = new THREE.Mesh(new THREE.BoxGeometry(gw, loH + WALL_SINK, gd), mats.crack);
+          lo.position.set(wx, BASE + (loH - WALL_SINK) / 2, wz);
           lo.castShadow = lo.receiveShadow = true;
           _levelGroup.add(lo);
           wallMeshes.push(lo);
@@ -253,10 +258,10 @@ export function buildLevel(mapDef) {
           else if (cell === 30) {   mx = wx; mz = (row + 1) * CELL - WALL_T / 2; pw = CELL; pd = WALL_T; }
           else if (cell === 31) {   mx = col * CELL + WALL_T / 2; mz = wz;        pw = WALL_T; pd = CELL; }
           else {                    mx = (col + 1) * CELL - WALL_T / 2; mz = wz;  pw = WALL_T; pd = CELL; }
-          const sw = new THREE.Mesh(new THREE.BoxGeometry(pw, WH, pd), [
+          const sw = new THREE.Mesh(new THREE.BoxGeometry(pw, WH + WALL_SINK, pd), [
             mats.wallDark, mats.wallDark, mats.wallTop, mats.floor, mats.wall, mats.wall,
           ]);
-          sw.position.set(mx, BASE + WH / 2, mz);
+          sw.position.set(mx, BASE + (WH - WALL_SINK) / 2, mz);
           sw.castShadow = sw.receiveShadow = true;
           _levelGroup.add(sw);
           wallMeshes.push(sw);
@@ -282,8 +287,8 @@ export function buildLevel(mapDef) {
           ];
           for (const [bit, mx, mz, pw, pd] of edgeDefs) {
             if (!(bits & bit)) continue;
-            const sw = new THREE.Mesh(new THREE.BoxGeometry(pw, WH, pd), swMat);
-            sw.position.set(mx, BASE + WH / 2, mz);
+            const sw = new THREE.Mesh(new THREE.BoxGeometry(pw, WH + WALL_SINK, pd), swMat);
+            sw.position.set(mx, BASE + (WH - WALL_SINK) / 2, mz);
             sw.castShadow = sw.receiveShadow = true;
             _levelGroup.add(sw);
             wallMeshes.push(sw);
@@ -337,15 +342,15 @@ export function buildLevel(mapDef) {
     const wx = mcol * CELL + CELL / 2, wz = mrow * CELL + CELL / 2;
     for (const span of spans) {
       const spanH = span.top - span.base;
-      const wm = new THREE.Mesh(new THREE.BoxGeometry(CELL, spanH, CELL), [
+      const wm = new THREE.Mesh(new THREE.BoxGeometry(CELL, spanH + WALL_SINK, CELL), [
         mats.wallDark, mats.wallDark, mats.wallTop, mats.floor, mats.wall, mats.wall,
       ]);
-      wm.position.set(wx, span.base + spanH / 2, wz);
+      wm.position.set(wx, span.base + (spanH - WALL_SINK) / 2, wz);
       wm.castShadow = wm.receiveShadow = true;
       _levelGroup.add(wm);
       wallMeshes.push(wm);
-      const t = new THREE.Mesh(new THREE.BoxGeometry(CELL, 0.18, CELL), mats.trim);
-      t.position.set(wx, span.base + 0.09, wz);
+      const t = new THREE.Mesh(new THREE.BoxGeometry(CELL, 0.18 + WALL_SINK, CELL), mats.trim);
+      t.position.set(wx, span.base + (0.18 - WALL_SINK) / 2, wz);
       _levelGroup.add(t);
       debugLineData.push({ x: wx - CELL/2, y: span.base, z: wz - CELL/2, w: CELL, h: spanH, d: CELL, col: 0xff3300 });
     }
