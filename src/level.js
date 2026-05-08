@@ -69,15 +69,9 @@ export function buildLevel(mapDef) {
   const H2 = mapDef.H2 ?? 0;
 
   // ── Ground plane ─────────────────────────────────────────────────────
-  // polygonOffset pushes the ground back in depth so ramp low-ends / wall bases
-  // that touch y=0 always render on top, eliminating z-fighting at the seam.
-  const groundMat = mats.floor.clone();
-  groundMat.polygonOffset = true;
-  groundMat.polygonOffsetFactor = 2;
-  groundMat.polygonOffsetUnits  = 4;
   const fl = new THREE.Mesh(
     new THREE.PlaneGeometry((width + 4) * CELL, (height + 4) * CELL),
-    groundMat
+    mats.floor
   );
   fl.rotation.x = -Math.PI / 2;
   fl.position.set((width * CELL) / 2, 0, (height * CELL) / 2);
@@ -303,7 +297,6 @@ export function buildLevel(mapDef) {
     // players can walk freely below (under Floor 1 at 3 m, Floor 2 at 6 m…).
     const SLAB_T   = 0.3;
     const elevMat  = mm(0xb8a070, 0.94, 0.01);
-    elevMat.polygonOffset = true; elevMat.polygonOffsetFactor = 1; elevMat.polygonOffsetUnits = 2;
     const elevSide = mm(0x8a7050, 0.96, 0.01);
     const built = new Set();
     for (let r = 0; r < height; r++) {
