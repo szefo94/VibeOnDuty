@@ -89,6 +89,13 @@ export function buildLevel(mapDef) {
   // Safe now that stacked walls are merged into one box (no wall-wall overlap).
   const WALL_SINK = 0.01;
 
+  // Wall materials with negative polygonOffset so wall faces always win the depth
+  // test against any coplanar surface (slab side faces, trim, other walls).
+  const _wo = (m) => { const c = m.clone(); c.polygonOffset = true; c.polygonOffsetFactor = -1; c.polygonOffsetUnits = -2; return c; };
+  const _wDark = _wo(mats.wallDark), _wTop = _wo(mats.wallTop);
+  const _wFlr  = _wo(mats.floor),   _wWall = _wo(mats.wall);
+  const _wallMatsArr = [_wDark, _wDark, _wTop, _wFlr, _wWall, _wWall];
+
   // ── Pre-compute merged wall columns ──────────────────────────────────────────
   // When multiple floors share a wall at the same (col,row), merge them into one
   // tall box so the coplanar top/bottom faces at the floor boundary don't exist.
@@ -162,9 +169,7 @@ export function buildLevel(mapDef) {
             _levelGroup.add(base);
             debugLineData.push({ x: wx - 0.7, y: BASE, z: wz - 0.7, w: 1.4, h: WH + 0.8, d: 1.4, col: 0xff8800 });
           } else {
-            const wm = new THREE.Mesh(new THREE.BoxGeometry(CELL, WH + WALL_SINK, CELL), [
-              mats.wallDark, mats.wallDark, mats.wallTop, mats.floor, mats.wall, mats.wall,
-            ]);
+            const wm = new THREE.Mesh(new THREE.BoxGeometry(CELL, WH + WALL_SINK, CELL), _wallMatsArr);
             wm.position.set(wx, BASE + (WH - WALL_SINK) / 2, wz);
             wm.castShadow = wm.receiveShadow = true;
             _levelGroup.add(wm);
@@ -252,9 +257,7 @@ export function buildLevel(mapDef) {
           else if (cell === 30) {   mx = wx; mz = (row + 1) * CELL - WALL_T / 2; pw = CELL; pd = WALL_T; }
           else if (cell === 31) {   mx = col * CELL + WALL_T / 2; mz = wz;        pw = WALL_T; pd = CELL; }
           else {                    mx = (col + 1) * CELL - WALL_T / 2; mz = wz;  pw = WALL_T; pd = CELL; }
-          const sw = new THREE.Mesh(new THREE.BoxGeometry(pw, WH + WALL_SINK, pd), [
-            mats.wallDark, mats.wallDark, mats.wallTop, mats.floor, mats.wall, mats.wall,
-          ]);
+          const sw = new THREE.Mesh(new THREE.BoxGeometry(pw, WH + WALL_SINK, pd), _wallMatsArr);
           sw.position.set(mx, BASE + (WH - WALL_SINK) / 2, mz);
           sw.castShadow = sw.receiveShadow = true;
           _levelGroup.add(sw);
@@ -267,7 +270,7 @@ export function buildLevel(mapDef) {
     // ── Side walls from swallBits (bitmask: bit0=N, bit1=S, bit2=W, bit3=E) ─
     if (flDef.swallBits) {
       const WALL_T = 0.18;
-      const swMat = [mats.wallDark, mats.wallDark, mats.wallTop, mats.floor, mats.wall, mats.wall];
+      const swMat = _wallMatsArr;
       for (let r = 0; r < height; r++) {
         for (let c = 0; c < width; c++) {
           const bits = flDef.swallBits[r][c];
@@ -335,9 +338,7 @@ export function buildLevel(mapDef) {
     const wx = mcol * CELL + CELL / 2, wz = mrow * CELL + CELL / 2;
     for (const span of spans) {
       const spanH = span.top - span.base;
-      const wm = new THREE.Mesh(new THREE.BoxGeometry(CELL, spanH + WALL_SINK, CELL), [
-        mats.wallDark, mats.wallDark, mats.wallTop, mats.floor, mats.wall, mats.wall,
-      ]);
+      const wm = new THREE.Mesh(new THREE.BoxGeometry(CELL, spanH + WALL_SINK, CELL), _wallMatsArr);
       wm.position.set(wx, span.base + (spanH - WALL_SINK) / 2, wz);
       wm.castShadow = wm.receiveShadow = true;
       _levelGroup.add(wm);
