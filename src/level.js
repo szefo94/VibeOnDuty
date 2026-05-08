@@ -161,10 +161,10 @@ export function buildLevel(mapDef) {
             shaft.castShadow = shaft.receiveShadow = true;
             _levelGroup.add(shaft);
             wallMeshes.push(shaft);
-            const cap = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.35, 1.4), mats.wallTop);
+            const cap = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.35, 1.4), _wTop);
             cap.position.set(wx, BASE + WH + 0.8, wz);
             _levelGroup.add(cap);
-            const base = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.22 + WALL_SINK, 1.5), mats.wallTop);
+            const base = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.22 + WALL_SINK, 1.5), _wTop);
             base.position.set(wx, BASE + (0.22 - WALL_SINK) / 2, wz);
             _levelGroup.add(base);
             debugLineData.push({ x: wx - 0.7, y: BASE, z: wz - 0.7, w: 1.4, h: WH + 0.8, d: 1.4, col: 0xff8800 });
