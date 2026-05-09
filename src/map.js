@@ -28,7 +28,7 @@ export function setActiveMap(def) {
   }
 }
 
-export const isRamp  = (c) => (c >= 4 && c <= 27) || (c >= 33 && c <= 128);
+export const isRamp  = (c) => (c >= 4 && c <= 27) || (c >= 33 && c <= 152);
 export const isCrack = (c) => c === 2 || c === 3;
 
 // Revolved ramp fraction — types 0-3: quarter-turn (90°), types 4-7: half-turn (180°)
@@ -104,6 +104,14 @@ function _hFrom(hmap, c, r) {
 function _floorSurface(fl, c0, r0, tx, tz) {
   const { tiles, heightmap } = fl;
   const cell = _cellFrom(tiles, c0, r0);
+  if (cell >= 129 && cell <= 152) {
+    const type = Math.floor((cell - 129) / 6);
+    const grp  = (cell - 129) % 6;
+    const [loY, hiYRaw] = _RAMP_PROFILE[grp];
+    const hiY = hiYRaw ?? H2;
+    const f = [tx*(1-tz), (1-tx)*(1-tz), tx*tz, (1-tx)*tz][type];
+    return loY + (hiY - loY) * f;
+  }
   if (cell >= 81 && cell <= 128) {
     const type = Math.floor((cell - 81) / 6);
     const grp  = (cell - 81) % 6;

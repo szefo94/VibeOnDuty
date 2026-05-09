@@ -21,10 +21,16 @@ export function clearLevel() {
   torchLights.length = 0;
 }
 
-const _isRamp     = (c) => (c >= 4 && c <= 27) || (c >= 33 && c <= 128);
+const _isRamp     = (c) => (c >= 4 && c <= 27) || (c >= 33 && c <= 152);
 const _isDiagRamp = (c) => c >= 33 && c <= 80;
 const _isRevRamp  = (c) => c >= 81 && c <= 128;
+const _isBiRamp   = (c) => c >= 129 && c <= 152;
 const _isCrack    = (c) => c === 2 || c === 3;
+
+// peak NE/NW/SE/SW — two adjacent full edges at loY, one corner at hiY
+function _bilinearFrac(type, tx, tz) {
+  return [tx*(1-tz), (1-tx)*(1-tz), tx*tz, (1-tx)*tz][type];
+}
 
 // 0-3: quarter-turn (90°) pivot NW/NE/SE/SW; 4-7: half-turn (180°) NS-CW/CCW EW-CW/CCW
 function _revolvedFrac(type, tx, tz) {
@@ -240,6 +246,45 @@ export function buildLevel(mapDef) {
           dm.castShadow = dm.receiveShadow = true;
           _levelGroup.add(dm);
           debugLineData.push({ x: x0, y: loYr, z: z0, w: CELL, h: hiYr - loYr, d: CELL, col: 0xffcc00 });
+        } else if (_isBiRamp(cell)) {
+          const type = Math.floor((cell - 129) / 6);
+          const grp  = (cell - 129) % 6;
+          const [loYr, hiYRaw] = _RAMP_PROFILE[grp];
+          const hiYr = hiYRaw ?? H2;
+          const RAMP_T = 0.10;
+          const N = 8, M = N + 1;
+          const x0 = col * CELL, z0 = row * CELL;
+          const topV = [], botV = [];
+          for (let zi = 0; zi <= N; zi++) {
+            for (let xi = 0; xi <= N; xi++) {
+              const tx = xi / N, tz = zi / N;
+              const y = loYr + (hiYr - loYr) * _bilinearFrac(type, tx, tz);
+              topV.push(x0 + tx * CELL, y, z0 + tz * CELL);
+              botV.push(x0 + tx * CELL, y - RAMP_T, z0 + tz * CELL);
+            }
+          }
+          const verts = [...topV, ...botV];
+          const inds = [];
+          const off = M * M;
+          for (let zi = 0; zi < N; zi++) {
+            for (let xi = 0; xi < N; xi++) {
+              const a = zi*M+xi, b = a+1, c2 = a+M, d = c2+1;
+              inds.push(a, c2, b, b, c2, d);
+              inds.push(a+off, b+off, c2+off, b+off, d+off, c2+off);
+            }
+          }
+          const bgeo = new THREE.BufferGeometry();
+          bgeo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+          bgeo.setIndex(inds);
+          bgeo.computeVertexNormals();
+          const bmat = new THREE.MeshStandardMaterial({
+            color: mats.ramp.color, roughness: mats.ramp.roughness,
+            metalness: mats.ramp.metalness, side: THREE.DoubleSide,
+          });
+          const bm = new THREE.Mesh(bgeo, bmat);
+          bm.castShadow = bm.receiveShadow = true;
+          _levelGroup.add(bm);
+          debugLineData.push({ x: x0, y: loYr, z: z0, w: CELL, h: hiYr - loYr, d: CELL, col: 0xcc44ff });
         } else if (_isRevRamp(cell)) {
           const type = Math.floor((cell - 81) / 6);
           const grp  = (cell - 81) % 6;

@@ -42,6 +42,7 @@ const _MARKER_LETTER = { spawn_p:'P', spawn_a:'A', spawn_d:'D', site_a:'①', si
 const _RAMP_GROUP_COLOR  = ['#7a5c28','#c8901a','#3e2c10','#503c1e','#604c2e','#706040'];
 const _DIAG_TYPE_NAMES   = ['O-NW','O-NE','O-SE','O-SW','P-NW','P-NE','P-SE','P-SW'];
 const _RREV_TYPE_NAMES   = ['Q-NW','Q-NE','Q-SE','Q-SW','H-NS+','H-NS-','H-EW+','H-EW-'];
+const _BLIN_TYPE_NAMES   = ['B-NE','B-NW','B-SE','B-SW'];
 
 function _getTileColor(tile) {
   if (tile === 0)  return '#1a1a1a';
@@ -52,7 +53,8 @@ function _getTileColor(tile) {
   if (tile >= 29 && tile <= 32) return '#18181e';
   if (tile >= 4  && tile <= 27) return _RAMP_GROUP_COLOR[Math.floor((tile - 4) / 4)] ?? '#7a5c28';
   if (tile >= 33 && tile <= 80) return _RAMP_GROUP_COLOR[(tile - 33) % 6] ?? '#7a5c28';
-  if (tile >= 81 && tile <= 128) return _RAMP_GROUP_COLOR[(tile - 81) % 6] ?? '#7a5c28';
+  if (tile >= 81  && tile <= 128) return _RAMP_GROUP_COLOR[(tile - 81)  % 6] ?? '#7a5c28';
+  if (tile >= 129 && tile <= 152) return _RAMP_GROUP_COLOR[(tile - 129) % 6] ?? '#7a5c28';
   return '#111';
 }
 
@@ -119,6 +121,7 @@ let _swallDir   = 0;         // side-wall edge: 0=N 1=S 2=W 3=E
 let _floorHKey  = 'h0';      // active height key for current floor
 let _drampType  = 0;         // 0-7: OuterNW/NE/SE/SW, PeakNW/NE/SE/SW
 let _rrampType  = 0;         // 0-3: Q-NW/NE/SE/SW, 4-7: H-NS+/-/EW+/-
+let _brampType  = 0;         // 0-3: peak NE/NW/SE/SW
 
 // ── Convenience accessors ─────────────────────────────────────────────────────
 const _curFloor     = () => _floors[_floorIdx];
@@ -170,6 +173,34 @@ function _drawDiagRampIndicator(c, r, cpx, cpy, diagType, alpha) {
     : `rgba(255,200,40,${0.9 * a})`;   // yellow = peak
   _ctx.beginPath();
   _ctx.arc(kx, ky, Math.max(2, Math.min(cpx, cpy) * 0.13), 0, Math.PI * 2);
+  _ctx.fill();
+}
+
+// Two flat edges (blue) + peak corner dot (yellow) for bilinear corner ramps.
+function _drawBilinearRampIndicator(c, r, cpx, cpy, type, alpha) {
+  const x0 = c * cpx + 2, y0 = r * cpy + 2;
+  const x1 = (c + 1) * cpx - 2, y1 = (r + 1) * cpy - 2;
+  const a = alpha < 1 ? alpha * 0.7 : 1;
+  // Flat edges per type (NE=0: west+south, NW=1: east+south, SE=2: west+north, SW=3: east+north)
+  const edges = [
+    [[x0,y0,x0,y1],[x0,y1,x1,y1]], // NE
+    [[x1,y0,x1,y1],[x0,y1,x1,y1]], // NW
+    [[x0,y0,x0,y1],[x0,y0,x1,y0]], // SE
+    [[x1,y0,x1,y1],[x0,y0,x1,y0]], // SW
+  ];
+  _ctx.strokeStyle = `rgba(80,160,255,${0.7 * a})`;
+  _ctx.lineWidth = 2;
+  _ctx.beginPath();
+  for (const [ax, ay, bx, by] of edges[type]) {
+    _ctx.moveTo(ax, ay); _ctx.lineTo(bx, by);
+  }
+  _ctx.stroke();
+  // Peak corner dot
+  const peaks = [[x1,y0],[x0,y0],[x1,y1],[x0,y1]]; // NE, NW, SE, SW in canvas coords
+  const [kx, ky] = peaks[type];
+  _ctx.fillStyle = `rgba(255,200,40,${0.9 * a})`;
+  _ctx.beginPath();
+  _ctx.arc(kx, ky, Math.max(2, Math.min(cpx, cpy) * 0.14), 0, Math.PI * 2);
   _ctx.fill();
 }
 
@@ -243,6 +274,10 @@ function _drawFloorTiles(fl, cpx, cpy, alpha) {
       if (tile >= 81 && tile <= 128) {
         const rtype = Math.floor((tile - 81) / 6);
         _drawRevolvedRampIndicator(c, r, cpx, cpy, rtype, alpha);
+      }
+      if (tile >= 129 && tile <= 152) {
+        const btype = Math.floor((tile - 129) / 6);
+        _drawBilinearRampIndicator(c, r, cpx, cpy, btype, alpha);
       }
       if (tile === 28) {
         _ctx.fillStyle = alpha < 1 ? 'rgba(192,128,80,0.4)' : '#c08050';
@@ -435,7 +470,8 @@ function _computeToolFromCompound() {
     case 'floor':  _tool = _floorHKey; break;
     case 'ramp':   _tool = 4 + _rampRange * 4 + _rampDir; break;
     case 'dramp':  _tool = 33 + _drampType * 6 + _rampRange; break;
-    case 'rramp':  _tool = 81 + _rrampType * 6 + _rampRange; break;
+    case 'rramp':  _tool = 81  + _rrampType * 6 + _rampRange; break;
+    case 'bramp':  _tool = 129 + _brampType * 6 + _rampRange; break;
     case 'wall':   _tool = 1; break;
     case 'column': _tool = 28; break;
     case 'swall':  _tool = 'swall'; break;
@@ -464,6 +500,7 @@ function _updateCompoundUI() {
   document.getElementById('ed-ramp-sub').style.display   = _typeMode === 'ramp'   ? '' : 'none';
   document.getElementById('ed-dramp-sub').style.display  = _typeMode === 'dramp'  ? '' : 'none';
   document.getElementById('ed-rramp-sub').style.display  = _typeMode === 'rramp'  ? '' : 'none';
+  document.getElementById('ed-bramp-sub').style.display  = _typeMode === 'bramp'  ? '' : 'none';
   document.getElementById('ed-swall-sub').style.display  = _typeMode === 'swall'  ? '' : 'none';
   document.getElementById('ed-crack-sub').style.display  = _typeMode === 'crack'  ? '' : 'none';
   document.querySelectorAll('.ed-type-btn').forEach(b =>
@@ -477,6 +514,8 @@ function _updateCompoundUI() {
     b.classList.toggle('selected', +b.dataset.dtype === _drampType));
   document.querySelectorAll('.ed-rramptype-btn').forEach(b =>
     b.classList.toggle('selected', +b.dataset.rtype === _rrampType));
+  document.querySelectorAll('.ed-bramptype-btn').forEach(b =>
+    b.classList.toggle('selected', +b.dataset.btype === _brampType));
   document.querySelectorAll('.ed-swdir-btn').forEach(b =>
     b.classList.toggle('selected', +b.dataset.dir === _swallDir));
   document.querySelectorAll('.ed-subcrack-btn').forEach(b =>
@@ -499,6 +538,8 @@ function _rotateTool() {
     _drampType = (_drampType + 1) % 8;
   } else if (_typeMode === 'rramp') {
     _rrampType = (_rrampType + 1) % 8;
+  } else if (_typeMode === 'bramp') {
+    _brampType = (_brampType + 1) % 4;
   } else if (_typeMode === 'swall') {
     _swallDir = (_swallDir + 1) % 4;
   } else if (_typeMode === 'crack') {
@@ -659,6 +700,7 @@ export function initEditor() {
   _swallDir   = 0;
   _drampType  = 0;
   _rrampType  = 0;
+  _brampType  = 0;
   _floorHKey  = _FLOOR_DEFS[0].hKeys[0];
   _computeToolFromCompound();
 
@@ -691,6 +733,8 @@ export function initEditor() {
       ? `diag-${_DIAG_TYPE_NAMES[Math.floor((t-33)/6)]} [${_RANGE_LABELS[(t-33)%6]}]`
       : (t >= 81 && t <= 128)
       ? `rev-${_RREV_TYPE_NAMES[Math.floor((t-81)/6)]} [${_RANGE_LABELS[(t-81)%6]}]`
+      : (t >= 129 && t <= 152)
+      ? `bilin-${_BLIN_TYPE_NAMES[Math.floor((t-129)/6)]} [${_RANGE_LABELS[(t-129)%6]}]`
       : ({ 0:'floor', 1:'wall', 2:'crack-H', 3:'crack-V', 28:'column' })[t] ?? `tile${t}`;
     const flLabel = _FLOOR_DEFS[_floorIdx].label;
     const st = document.getElementById('ed-status');
@@ -735,7 +779,7 @@ export function initEditor() {
   document.querySelectorAll('.ed-subrange-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       _rampRange = +btn.dataset.range;
-      if (_typeMode === 'ramp' || _typeMode === 'dramp' || _typeMode === 'rramp') _computeToolFromCompound();
+      if (_typeMode === 'ramp' || _typeMode === 'dramp' || _typeMode === 'rramp' || _typeMode === 'bramp') _computeToolFromCompound();
       _updateCompoundUI();
     });
   });
@@ -750,6 +794,13 @@ export function initEditor() {
     btn.addEventListener('click', () => {
       _rrampType = +btn.dataset.rtype;
       if (_typeMode === 'rramp') _computeToolFromCompound();
+      _updateCompoundUI();
+    });
+  });
+  document.querySelectorAll('.ed-bramptype-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _brampType = +btn.dataset.btype;
+      if (_typeMode === 'bramp') _computeToolFromCompound();
       _updateCompoundUI();
     });
   });
