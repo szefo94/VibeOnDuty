@@ -21,9 +21,25 @@ export function clearLevel() {
   torchLights.length = 0;
 }
 
-const _isRamp     = (c) => (c >= 4 && c <= 27) || (c >= 33 && c <= 80);
+const _isRamp     = (c) => (c >= 4 && c <= 27) || (c >= 33 && c <= 128);
 const _isDiagRamp = (c) => c >= 33 && c <= 80;
+const _isRevRamp  = (c) => c >= 81 && c <= 128;
 const _isCrack    = (c) => c === 2 || c === 3;
+
+// 0-3: quarter-turn (90°) pivot NW/NE/SE/SW; 4-7: half-turn (180°) NS-CW/CCW EW-CW/CCW
+function _revolvedFrac(type, tx, tz) {
+  const h = Math.PI / 2;
+  switch (type) {
+    case 0: return Math.atan2(tz, tx)     / h;
+    case 1: return Math.atan2(tz, 1-tx)   / h;
+    case 2: return Math.atan2(1-tz, 1-tx) / h;
+    case 3: return Math.atan2(1-tz, tx)   / h;
+    case 4: return 0.5 - 0.5 * Math.cos(tz * Math.PI) * (1 - 2*tx);
+    case 5: return 0.5 + 0.5 * Math.cos(tz * Math.PI) * (1 - 2*tx);
+    case 6: return 0.5 - 0.5 * Math.cos(tx * Math.PI) * (1 - 2*tz);
+    default:return 0.5 + 0.5 * Math.cos(tx * Math.PI) * (1 - 2*tz);
+  }
+}
 
 function _diagFrac(diagType, tx, tz) {
   switch (diagType) {
@@ -224,6 +240,45 @@ export function buildLevel(mapDef) {
           dm.castShadow = dm.receiveShadow = true;
           _levelGroup.add(dm);
           debugLineData.push({ x: x0, y: loYr, z: z0, w: CELL, h: hiYr - loYr, d: CELL, col: 0xffcc00 });
+        } else if (_isRevRamp(cell)) {
+          const type = Math.floor((cell - 81) / 6);
+          const grp  = (cell - 81) % 6;
+          const [loYr, hiYRaw] = _RAMP_PROFILE[grp];
+          const hiYr = hiYRaw ?? H2;
+          const RAMP_T = 0.10;
+          const N = 8, M = N + 1;
+          const x0 = col * CELL, z0 = row * CELL;
+          const topVerts = [], botVerts = [];
+          for (let zi = 0; zi <= N; zi++) {
+            for (let xi = 0; xi <= N; xi++) {
+              const tx = xi / N, tz = zi / N;
+              const y = loYr + (hiYr - loYr) * _revolvedFrac(type, tx, tz);
+              topVerts.push(x0 + tx * CELL, y, z0 + tz * CELL);
+              botVerts.push(x0 + tx * CELL, y - RAMP_T, z0 + tz * CELL);
+            }
+          }
+          const verts = [...topVerts, ...botVerts];
+          const inds = [];
+          const off = M * M;
+          for (let zi = 0; zi < N; zi++) {
+            for (let xi = 0; xi < N; xi++) {
+              const a = zi*M+xi, b = a+1, c2 = a+M, d = c2+1;
+              inds.push(a, c2, b, b, c2, d);
+              inds.push(a+off, b+off, c2+off, b+off, d+off, c2+off);
+            }
+          }
+          const rgeo = new THREE.BufferGeometry();
+          rgeo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+          rgeo.setIndex(inds);
+          rgeo.computeVertexNormals();
+          const rmat = new THREE.MeshStandardMaterial({
+            color: mats.ramp.color, roughness: mats.ramp.roughness,
+            metalness: mats.ramp.metalness, side: THREE.DoubleSide,
+          });
+          const rm = new THREE.Mesh(rgeo, rmat);
+          rm.castShadow = rm.receiveShadow = true;
+          _levelGroup.add(rm);
+          debugLineData.push({ x: x0, y: loYr, z: z0, w: CELL, h: hiYr - loYr, d: CELL, col: 0xff88ff });
         } else if (cell >= 4 && cell <= 27) {
           const dir = (cell - 4) % 4;
           const grp = Math.floor((cell - 4) / 4);

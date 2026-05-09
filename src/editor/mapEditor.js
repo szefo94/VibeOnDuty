@@ -39,8 +39,9 @@ const _MARKER_COLOR  = { spawn_p:'#2ecc71', spawn_a:'#e74c3c', spawn_d:'#3498db'
 const _MARKER_LETTER = { spawn_p:'P', spawn_a:'A', spawn_d:'D', site_a:'①', site_b:'②' };
 
 // Per-group canvas colors for ramp tiles (group = Math.floor((tile-4)/4))
-const _RAMP_GROUP_COLOR = ['#7a5c28','#c8901a','#3e2c10','#503c1e','#604c2e','#706040'];
-const _DIAG_TYPE_NAMES  = ['O-NW','O-NE','O-SE','O-SW','P-NW','P-NE','P-SE','P-SW'];
+const _RAMP_GROUP_COLOR  = ['#7a5c28','#c8901a','#3e2c10','#503c1e','#604c2e','#706040'];
+const _DIAG_TYPE_NAMES   = ['O-NW','O-NE','O-SE','O-SW','P-NW','P-NE','P-SE','P-SW'];
+const _RREV_TYPE_NAMES   = ['Q-NW','Q-NE','Q-SE','Q-SW','H-NS+','H-NS-','H-EW+','H-EW-'];
 
 function _getTileColor(tile) {
   if (tile === 0)  return '#1a1a1a';
@@ -51,6 +52,7 @@ function _getTileColor(tile) {
   if (tile >= 29 && tile <= 32) return '#18181e';
   if (tile >= 4  && tile <= 27) return _RAMP_GROUP_COLOR[Math.floor((tile - 4) / 4)] ?? '#7a5c28';
   if (tile >= 33 && tile <= 80) return _RAMP_GROUP_COLOR[(tile - 33) % 6] ?? '#7a5c28';
+  if (tile >= 81 && tile <= 128) return _RAMP_GROUP_COLOR[(tile - 81) % 6] ?? '#7a5c28';
   return '#111';
 }
 
@@ -109,13 +111,14 @@ let _canvas   = null;
 let _ctx      = null;
 
 // Compound toolbar state
-let _typeMode   = 'floor';  // 'floor' | 'ramp' | 'dramp' | 'wall' | 'column' | 'swall' | 'crack'
+let _typeMode   = 'floor';  // 'floor' | 'ramp' | 'dramp' | 'rramp' | 'wall' | 'column' | 'swall' | 'crack'
 let _rampDir    = 0;         // 0=N 1=S 2=W 3=E
-let _rampRange  = 0;         // 0-5 → ramp tile groups (shared with dramp)
+let _rampRange  = 0;         // 0-5 → ramp tile groups (shared by ramp/dramp/rramp)
 let _crackTile  = 2;         // 2=H 3=V
 let _swallDir   = 0;         // side-wall edge: 0=N 1=S 2=W 3=E
 let _floorHKey  = 'h0';      // active height key for current floor
 let _drampType  = 0;         // 0-7: OuterNW/NE/SE/SW, PeakNW/NE/SE/SW
+let _rrampType  = 0;         // 0-3: Q-NW/NE/SE/SW, 4-7: H-NS+/-/EW+/-
 
 // ── Convenience accessors ─────────────────────────────────────────────────────
 const _curFloor     = () => _floors[_floorIdx];
@@ -170,6 +173,58 @@ function _drawDiagRampIndicator(c, r, cpx, cpy, diagType, alpha) {
   _ctx.fill();
 }
 
+// Draw arc (quarter-turn) or S-curve (half-turn) indicator for revolved ramps.
+function _drawRevolvedRampIndicator(c, r, cpx, cpy, type, alpha) {
+  const x0 = c * cpx + 2, y0 = r * cpy + 2;
+  const x1 = (c + 1) * cpx - 2, y1 = (r + 1) * cpy - 2;
+  const a = alpha < 1 ? alpha * 0.7 : 1;
+  _ctx.strokeStyle = `rgba(160,220,255,${0.75 * a})`;
+  _ctx.lineWidth = 1.5;
+  _ctx.beginPath();
+  if (type < 4) {
+    // Quarter-circle arc from one edge to adjacent edge, centred on pivot corner.
+    const pivotX = [x0, x1, x1, x0][type];
+    const pivotY = [y0, y0, y1, y1][type];
+    const r2 = Math.min(cpx, cpy) * 0.72;
+    const startA = [0, Math.PI / 2, Math.PI, -Math.PI / 2][type];
+    _ctx.arc(pivotX, pivotY, r2, startA, startA + Math.PI / 2);
+    _ctx.stroke();
+    // Dot at low (start) end
+    const dotLX = pivotX + Math.cos(startA) * r2;
+    const dotLY = pivotY + Math.sin(startA) * r2;
+    _ctx.fillStyle = `rgba(80,160,255,${0.85 * a})`;
+    _ctx.beginPath();
+    _ctx.arc(dotLX, dotLY, Math.max(2, Math.min(cpx, cpy) * 0.10), 0, Math.PI * 2);
+    _ctx.fill();
+    // Dot at high (end) end
+    const dotHX = pivotX + Math.cos(startA + Math.PI / 2) * r2;
+    const dotHY = pivotY + Math.sin(startA + Math.PI / 2) * r2;
+    _ctx.fillStyle = `rgba(255,200,40,${0.9 * a})`;
+    _ctx.beginPath();
+    _ctx.arc(dotHX, dotHY, Math.max(2, Math.min(cpx, cpy) * 0.10), 0, Math.PI * 2);
+    _ctx.fill();
+  } else {
+    // Half-turn: S-curve across the tile
+    const isNS = type < 6;
+    const flip = (type === 5 || type === 7) ? -1 : 1;
+    const steps = 14;
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      let px, py;
+      if (isNS) {
+        py = y0 + t * (y1 - y0);
+        px = (x0 + x1) / 2 + flip * (x1 - x0) * 0.38 * Math.sin(t * Math.PI);
+      } else {
+        px = x0 + t * (x1 - x0);
+        py = (y0 + y1) / 2 + flip * (y1 - y0) * 0.38 * Math.sin(t * Math.PI);
+      }
+      if (i === 0) _ctx.moveTo(px, py);
+      else _ctx.lineTo(px, py);
+    }
+    _ctx.stroke();
+  }
+}
+
 function _drawFloorTiles(fl, cpx, cpy, alpha) {
   _ctx.globalAlpha = alpha;
   for (let r = 0; r < GRID_H; r++) {
@@ -184,6 +239,10 @@ function _drawFloorTiles(fl, cpx, cpy, alpha) {
       if (tile >= 33 && tile <= 80) {
         const diagType = Math.floor((tile - 33) / 6);
         _drawDiagRampIndicator(c, r, cpx, cpy, diagType, alpha);
+      }
+      if (tile >= 81 && tile <= 128) {
+        const rtype = Math.floor((tile - 81) / 6);
+        _drawRevolvedRampIndicator(c, r, cpx, cpy, rtype, alpha);
       }
       if (tile === 28) {
         _ctx.fillStyle = alpha < 1 ? 'rgba(192,128,80,0.4)' : '#c08050';
@@ -376,6 +435,7 @@ function _computeToolFromCompound() {
     case 'floor':  _tool = _floorHKey; break;
     case 'ramp':   _tool = 4 + _rampRange * 4 + _rampDir; break;
     case 'dramp':  _tool = 33 + _drampType * 6 + _rampRange; break;
+    case 'rramp':  _tool = 81 + _rrampType * 6 + _rampRange; break;
     case 'wall':   _tool = 1; break;
     case 'column': _tool = 28; break;
     case 'swall':  _tool = 'swall'; break;
@@ -403,6 +463,7 @@ function _updateCompoundUI() {
   document.getElementById('ed-floor-sub').style.display  = _typeMode === 'floor'  ? '' : 'none';
   document.getElementById('ed-ramp-sub').style.display   = _typeMode === 'ramp'   ? '' : 'none';
   document.getElementById('ed-dramp-sub').style.display  = _typeMode === 'dramp'  ? '' : 'none';
+  document.getElementById('ed-rramp-sub').style.display  = _typeMode === 'rramp'  ? '' : 'none';
   document.getElementById('ed-swall-sub').style.display  = _typeMode === 'swall'  ? '' : 'none';
   document.getElementById('ed-crack-sub').style.display  = _typeMode === 'crack'  ? '' : 'none';
   document.querySelectorAll('.ed-type-btn').forEach(b =>
@@ -414,6 +475,8 @@ function _updateCompoundUI() {
     b.classList.toggle('selected', +b.dataset.range === _rampRange));
   document.querySelectorAll('.ed-dramptype-btn').forEach(b =>
     b.classList.toggle('selected', +b.dataset.dtype === _drampType));
+  document.querySelectorAll('.ed-rramptype-btn').forEach(b =>
+    b.classList.toggle('selected', +b.dataset.rtype === _rrampType));
   document.querySelectorAll('.ed-swdir-btn').forEach(b =>
     b.classList.toggle('selected', +b.dataset.dir === _swallDir));
   document.querySelectorAll('.ed-subcrack-btn').forEach(b =>
@@ -434,6 +497,8 @@ function _rotateTool() {
     _rampDir = (_rampDir + 1) % 4;
   } else if (_typeMode === 'dramp') {
     _drampType = (_drampType + 1) % 8;
+  } else if (_typeMode === 'rramp') {
+    _rrampType = (_rrampType + 1) % 8;
   } else if (_typeMode === 'swall') {
     _swallDir = (_swallDir + 1) % 4;
   } else if (_typeMode === 'crack') {
@@ -593,6 +658,7 @@ export function initEditor() {
   _crackTile  = 2;
   _swallDir   = 0;
   _drampType  = 0;
+  _rrampType  = 0;
   _floorHKey  = _FLOOR_DEFS[0].hKeys[0];
   _computeToolFromCompound();
 
@@ -623,6 +689,8 @@ export function initEditor() {
       ? `ramp-${['N','S','W','E'][(t-4)%4]} [${_RANGE_LABELS[Math.floor((t-4)/4)]}]`
       : (t >= 33 && t <= 80)
       ? `diag-${_DIAG_TYPE_NAMES[Math.floor((t-33)/6)]} [${_RANGE_LABELS[(t-33)%6]}]`
+      : (t >= 81 && t <= 128)
+      ? `rev-${_RREV_TYPE_NAMES[Math.floor((t-81)/6)]} [${_RANGE_LABELS[(t-81)%6]}]`
       : ({ 0:'floor', 1:'wall', 2:'crack-H', 3:'crack-V', 28:'column' })[t] ?? `tile${t}`;
     const flLabel = _FLOOR_DEFS[_floorIdx].label;
     const st = document.getElementById('ed-status');
@@ -667,7 +735,7 @@ export function initEditor() {
   document.querySelectorAll('.ed-subrange-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       _rampRange = +btn.dataset.range;
-      if (_typeMode === 'ramp') _computeToolFromCompound();
+      if (_typeMode === 'ramp' || _typeMode === 'dramp' || _typeMode === 'rramp') _computeToolFromCompound();
       _updateCompoundUI();
     });
   });
@@ -675,6 +743,13 @@ export function initEditor() {
     btn.addEventListener('click', () => {
       _drampType = +btn.dataset.dtype;
       if (_typeMode === 'dramp') _computeToolFromCompound();
+      _updateCompoundUI();
+    });
+  });
+  document.querySelectorAll('.ed-rramptype-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _rrampType = +btn.dataset.rtype;
+      if (_typeMode === 'rramp') _computeToolFromCompound();
       _updateCompoundUI();
     });
   });

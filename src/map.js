@@ -28,8 +28,25 @@ export function setActiveMap(def) {
   }
 }
 
-export const isRamp  = (c) => (c >= 4 && c <= 27) || (c >= 33 && c <= 80);
+export const isRamp  = (c) => (c >= 4 && c <= 27) || (c >= 33 && c <= 128);
 export const isCrack = (c) => c === 2 || c === 3;
+
+// Revolved ramp fraction — types 0-3: quarter-turn (90°), types 4-7: half-turn (180°)
+// 0: pivot NW  1: pivot NE  2: pivot SE  3: pivot SW
+// 4: NS-CW  5: NS-CCW  6: EW-CW  7: EW-CCW
+function _revolvedFrac(type, tx, tz) {
+  const h = Math.PI / 2;
+  switch (type) {
+    case 0: return Math.atan2(tz, tx)     / h;
+    case 1: return Math.atan2(tz, 1-tx)   / h;
+    case 2: return Math.atan2(1-tz, 1-tx) / h;
+    case 3: return Math.atan2(1-tz, tx)   / h;
+    case 4: return 0.5 - 0.5 * Math.cos(tz * Math.PI) * (1 - 2*tx);
+    case 5: return 0.5 + 0.5 * Math.cos(tz * Math.PI) * (1 - 2*tx);
+    case 6: return 0.5 - 0.5 * Math.cos(tx * Math.PI) * (1 - 2*tz);
+    default:return 0.5 + 0.5 * Math.cos(tx * Math.PI) * (1 - 2*tz);
+  }
+}
 
 // diagType 0-3 = Outer (valley), 4-7 = Peak (pyramid); dir index: 0=NW 1=NE 2=SE 3=SW
 function _diagFrac(diagType, tx, tz) {
@@ -87,6 +104,13 @@ function _hFrom(hmap, c, r) {
 function _floorSurface(fl, c0, r0, tx, tz) {
   const { tiles, heightmap } = fl;
   const cell = _cellFrom(tiles, c0, r0);
+  if (cell >= 81 && cell <= 128) {
+    const type = Math.floor((cell - 81) / 6);
+    const grp  = (cell - 81) % 6;
+    const [loY, hiYRaw] = _RAMP_PROFILE[grp];
+    const hiY = hiYRaw ?? H2;
+    return loY + (hiY - loY) * _revolvedFrac(type, tx, tz);
+  }
   if (cell >= 33 && cell <= 80) {
     const diagType = Math.floor((cell - 33) / 6);
     const grp = (cell - 33) % 6;
