@@ -1,7 +1,8 @@
 export const CELL = 4,
   WALL_H = 3,
   PLAYER_H = 1.65,
-  PLAYER_H_CROUCH = 0.85;
+  PLAYER_H_CROUCH = 0.85,
+  PLAYER_R = 0.35;   // half-width of player body used for wall collision
 export const MOVE_SPEED = 6,
   SPRINT_MULT = 1.65,
   MOUSE_SENS = 0.0018;

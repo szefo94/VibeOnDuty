@@ -4,6 +4,7 @@ import {
   CELL,
   PLAYER_H,
   PLAYER_H_CROUCH,
+  PLAYER_R,
   MOVE_SPEED,
   SPRINT_MULT,
   MAX_HP,
@@ -172,12 +173,14 @@ export function updatePlayer(dt) {
     player.airVelX = mvX / dt;
     player.airVelZ = mvZ / dt;
     if (mvX !== 0) {
-      const nx = camera.position.x + mvX;
-      if (canMoveTo(nx, camera.position.z, groundH)) camera.position.x = nx;
+      const nx = camera.position.x + mvX, z = camera.position.z;
+      if (canMoveTo(nx, z, groundH) && canMoveTo(nx, z - PLAYER_R, groundH) && canMoveTo(nx, z + PLAYER_R, groundH))
+        camera.position.x = nx;
     }
     if (mvZ !== 0) {
-      const nz = camera.position.z + mvZ;
-      if (canMoveTo(camera.position.x, nz, groundH)) camera.position.z = nz;
+      const x = camera.position.x, nz = camera.position.z + mvZ;
+      if (canMoveTo(x, nz, groundH) && canMoveTo(x - PLAYER_R, nz, groundH) && canMoveTo(x + PLAYER_R, nz, groundH))
+        camera.position.z = nz;
     }
   } else {
     mvX = player.airVelX * dt;
@@ -187,12 +190,14 @@ export function updatePlayer(dt) {
       mvZ += player.slideVel.z * dt;
     }
     if (mvX !== 0) {
-      const nx = camera.position.x + mvX;
-      if (canMoveTo(nx, camera.position.z, groundH, true)) camera.position.x = nx;
+      const nx = camera.position.x + mvX, z = camera.position.z;
+      if (canMoveTo(nx, z, groundH, true) && canMoveTo(nx, z - PLAYER_R, groundH, true) && canMoveTo(nx, z + PLAYER_R, groundH, true))
+        camera.position.x = nx;
     }
     if (mvZ !== 0) {
-      const nz = camera.position.z + mvZ;
-      if (canMoveTo(camera.position.x, nz, groundH, true)) camera.position.z = nz;
+      const x = camera.position.x, nz = camera.position.z + mvZ;
+      if (canMoveTo(x, nz, groundH, true) && canMoveTo(x - PLAYER_R, nz, groundH, true) && canMoveTo(x + PLAYER_R, nz, groundH, true))
+        camera.position.z = nz;
     }
     moving = Math.abs(mvX) + Math.abs(mvZ) > 0.0001;
     player.airVelX *= 1 - dt * 0.4;
