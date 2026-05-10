@@ -90,6 +90,7 @@ body{background:#000;overflow:hidden;font-family:'Courier New',monospace}
 .bunker-thumb{background:linear-gradient(135deg,#2a1e10 0%,#1a1a2e 55%,#3a2a1a 100%)}
 .rooftop-thumb{background:linear-gradient(135deg,#87b8d8 0%,#4a7090 50%,#2a4060 100%)}
 .concept-thumb{background:linear-gradient(135deg,#e8e0cc 0%,#c8b890 50%,#f0e8d4 100%)}
+.vanguard-thumb{background:linear-gradient(135deg,#0a0a12 0%,#1a1a28 40%,#2a2a40 70%,#1a2030 100%)}
 .map-name{color:#e8c84a;font-size:11px;letter-spacing:3px;font-weight:bold;text-align:center}
 .map-sub{color:#555;font-size:9px;letter-spacing:1.5px;text-align:center;margin-top:3px}
 .dead-h{font-size:48px;color:#e74c3c;letter-spacing:6px;margin-bottom:14px}

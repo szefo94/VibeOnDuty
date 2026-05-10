@@ -31,6 +31,7 @@ import { bunkerMapDef } from './maps/bunker.js';
 import { rooftopMapDef } from './maps/rooftop.js';
 import { conceptMapDef } from './maps/concept.js';
 import { rangeMapDef } from './maps/range.js';
+import { vanguardMapDef } from './maps/vanguard.js';
 import { startTrainingRange } from './modes/trainingRange.js';
 import { initEditor, openEditor } from './editor/mapEditor.js';
 
@@ -58,7 +59,7 @@ document.querySelectorAll('.diff-card').forEach(card => {
 });
 
 // ── Map selection ──────────────────────────────────────────────────────
-const _mapRegistry = { bunker: bunkerMapDef, rooftop: rooftopMapDef, concept: conceptMapDef };
+const _mapRegistry = { bunker: bunkerMapDef, rooftop: rooftopMapDef, concept: conceptMapDef, vanguard: vanguardMapDef };
 let _selectedMap = bunkerMapDef;
 document.querySelectorAll('.map-card').forEach(card => {
   card.addEventListener('click', () => {
