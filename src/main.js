@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { MOUSE_SENS, MAX_AMMO, PLAYER_H, WEAPONS } from './config.js';
+import { MOUSE_SENS, MAX_AMMO, MAX_HP, PLAYER_H, WEAPONS } from './config.js';
 import { camera } from './scene.js';
 import { debugLines } from './level.js';
 import { locked, gameRunning, setGameRunning, setLocked } from './input.js';
@@ -183,6 +183,41 @@ document.getElementById('startbtn').addEventListener('click', () => {
 document.getElementById('c').addEventListener('click', () => {
   if (gameRunning && !player.dead && !locked && !isBuyPanelOpen()) document.getElementById('c').requestPointerLock();
 });
+
+// ── Pause menu ─────────────────────────────────────────────────────
+const _pauseEl = document.getElementById('pause-menu');
+
+function returnToMainMenu() {
+  _pauseEl.style.display = 'none';
+  setGameRunning(false);
+  deactivateAllEnemies();
+  clearSndDrones();
+  player.dead      = false;
+  player.hp        = MAX_HP;
+  player.reloading = false;
+  player.reloadTimer = 0;
+  player.sliding   = false;
+  player.diving    = false;
+  player.ammo      = WEAPONS[player.weapon].maxAmmo;
+  player.reserve   = WEAPONS[player.weapon].reserve;
+  document.getElementById('reloadwrap').style.display = 'none';
+  document.getElementById('snd-result').style.display = 'none';
+  document.getElementById('overlay').style.display = 'flex';
+  updateHUD();
+}
+
+document.addEventListener('pointerlockchange', () => {
+  if (!document.pointerLockElement && gameRunning && !player.dead) {
+    _pauseEl.style.display = 'block';
+  } else {
+    _pauseEl.style.display = 'none';
+  }
+});
+
+document.getElementById('pause-resume-btn').addEventListener('click', () => {
+  document.getElementById('c').requestPointerLock();
+});
+document.getElementById('pause-mainmenu-btn').addEventListener('click', returnToMainMenu);
 
 function sndStart() {
   _activateMap();
