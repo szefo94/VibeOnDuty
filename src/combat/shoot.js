@@ -23,6 +23,10 @@ export let bobT = 0;
 export let sprayHeat = 0;
 export const SPRAY_COOL = 0.5;
 
+// ── AWP sway oscillator ───────────────────────────────────────────────
+let _awpSwayX = 0, _awpSwayY = 0;
+let _awpVX = 0, _awpVY = 0;
+
 // ── First-person death drop ───────────────────────────────────────────
 const DEATH_DUR = 0.65;
 let _dying = false;
@@ -76,6 +80,25 @@ export function updateWeapon(dt, moving, sprint, crouching, sliding) {
   wpn.position.set(wpnX, wpnY, wpnZ);
   wpn.rotation.x = rc * 0.07 + (sliding ? 0.15 : 0);
   recoilT = Math.max(0, recoilT - dt * 200);
+
+  // AWP sway: Brownian oscillator, damps when player holds breath (Shift+ADS+AWP)
+  if (player.weapon === 'awp' && player.aimT > 0.5) {
+    const damp  = player.holdBreath ? 0.94 : 0.88;
+    const drift = player.holdBreath ? 0.00025 : 0.0015;
+    _awpVX = _awpVX * damp + (Math.random() - 0.5) * drift;
+    _awpVY = _awpVY * damp + (Math.random() - 0.5) * drift;
+    _awpSwayX += _awpVX;
+    _awpSwayY += _awpVY;
+    const maxSway = player.holdBreath ? 0.012 : 0.04;
+    _awpSwayX = Math.max(-maxSway, Math.min(maxSway, _awpSwayX));
+    _awpSwayY = Math.max(-maxSway, Math.min(maxSway, _awpSwayY));
+  } else {
+    _awpSwayX *= 0.85;
+    _awpSwayY *= 0.85;
+    _awpVX    *= 0.85;
+    _awpVY    *= 0.85;
+  }
+
   if (muzzleT > 0) {
     flashMat.opacity = muzzleT / 62;
     flash.scale.setScalar(0.75 + Math.random() * 0.55);
@@ -97,7 +120,7 @@ const liveBullets = [];
 const _bRc = new THREE.Raycaster();
 const _bPM = new THREE.LineBasicMaterial({ color: 0xffee55, transparent: true, opacity: 1 });
 
-export function spawnBullet(origin, dir, damage = 28) {
+export function spawnBullet(origin, dir, damage = 28, isSniper = false) {
   const vel = dir.clone().multiplyScalar(BULLET_SPEED);
   const geo = new THREE.BufferGeometry().setFromPoints([origin.clone(), origin.clone()]);
   const line = new THREE.Line(geo, _bPM.clone());
@@ -109,6 +132,7 @@ export function spawnBullet(origin, dir, damage = 28) {
     line,
     prevPos: origin.clone(),
     damage,
+    isSniper,
   });
 }
 
@@ -116,7 +140,7 @@ export function tickBullets(dt) {
   for (let i = liveBullets.length - 1; i >= 0; i--) {
     const b = liveBullets[i];
     b.prevPos.copy(b.pos);
-    b.vel.y -= BULLET_GRAV * dt;
+    b.vel.y -= (BULLET_GRAV + (b.isSniper ? 9.8 : 0)) * dt;
     b.pos.addScaledVector(b.vel, dt);
     b.life -= dt;
 
@@ -253,10 +277,11 @@ export function tryShoot() {
   const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
   const up = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
   const ca = sprayHeat * wDef.sprayMax;
+  const isSniper = player.weapon === 'awp';
   const dir = baseDir
     .clone()
-    .addScaledVector(right, (Math.random() - 0.5) * 2 * ca)
-    .addScaledVector(up, (Math.random() - 0.5) * 2 * ca)
+    .addScaledVector(right, (Math.random() - 0.5) * 2 * ca + (isSniper ? _awpSwayX : 0))
+    .addScaledVector(up,    (Math.random() - 0.5) * 2 * ca + (isSniper ? _awpSwayY : 0))
     .normalize();
 
   let origin;
@@ -278,6 +303,6 @@ export function tryShoot() {
     flash.getWorldPosition(origin);
   }
   const damage = wDef.damage + Math.floor(Math.random() * 10);
-  spawnBullet(origin, dir, damage);
+  spawnBullet(origin, dir, damage, isSniper);
   if (player.ammo === 0) startReload();
 }

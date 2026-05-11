@@ -61,8 +61,9 @@ export const player = /** @type {any} */ ({
   rollTimer: 0,    // counts down from ROLL_ANIM_DUR; drives roll animation in loop.js
   divePitch: 0,    // extra pitch added to camera during/after dive, lerped out
   moving: false,   // true when player has non-zero horizontal velocity this frame
-  aiming: false,   // RMB held
-  aimT: 0,         // 0=hip, 1=full ADS — lerped each frame
+  aiming: false,      // RMB held
+  aimT: 0,            // 0=hip, 1=full ADS — lerped each frame
+  holdBreath: false,  // Shift+ADS+AWP — suppresses sway oscillator
   thirdPerson: false, // mirror of loop.js tpTransition>0.5 — written by loop.js
   weapon: DEFAULT_WEAPON,
   weaponAmmo:    { m4: WEAPONS.m4.maxAmmo,    p90: WEAPONS.p90.maxAmmo,    awp: WEAPONS.awp.maxAmmo,    pistol: WEAPONS.pistol.maxAmmo    },
@@ -297,6 +298,7 @@ export function updatePlayer(dt) {
   if (player.rollTimer > 0) player.rollTimer = Math.max(0, player.rollTimer - dt);
   const adsTarget = player.aiming && !player.sliding && !player.diving ? 1 : 0;
   player.aimT += (adsTarget - player.aimT) * Math.min(1, dt * 14);
+  player.holdBreath = player.weapon === 'awp' && player.aiming && (keys['ShiftLeft'] || keys['ShiftRight']);
   updateWeapon(dt, moving, sprint, player.crouching, player.sliding);
   tickImpacts(dt);
   tickTracers(dt);

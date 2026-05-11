@@ -255,6 +255,17 @@ export const ATTACK_STATE = {
       e.alertTimer = Math.max(0, e.alertTimer - dt * 1000);
       if (e.alertTimer <= 0) { transitionTo(e, PATROL_STATE, ctx); return false; }
     }
+    // Sniper bots hold position — only rotate and shoot
+    if (e.weaponRole === 'sniper') {
+      e.facingY = slerp(
+        e.facingY,
+        Math.atan2(-(camera.position.x - e.x), -(camera.position.z - e.z)),
+        ENEMY_ROT_SPD * 2.5,
+        dt
+      );
+      _tickPlayerShoot(e, ctx);
+      return false;
+    }
     const isMoving = _tickMovement(e, dt, ctx, 1.0, 2.5);
     _tickStrafe(e, dt, ctx);
     _tickPlayerShoot(e, ctx);

@@ -20,6 +20,7 @@ import { drawMinimap } from './hud/radar.js';
 import { playerMesh, playerMixer, playerActions } from './builders/enemyGLTF.js';
 import { crossfade } from './builders/enemyAnimations.js';
 import { tickKillcam, isKillcamActive } from './replay/killcam.js';
+import { adaptTick } from './ai/difficultyAdapter.js';
 
 // Shared animation state object for the player — same shape crossfade() expects
 const playerAnim = { actions: null, currentClip: 'idle' };
@@ -195,6 +196,7 @@ export function loop(ts) {
     for (const d of sndDrones) updateSndDrone(d, dt);
     tickTorches(dt);
     tickWave(dt, enemies, spawnEnemyIntoSlot);
+    adaptTick(dt);
     tickMeleeRing(dt, camera.position.x, camera.position.z);
     getMode()?.tick(dt, keys);
   }
@@ -217,6 +219,16 @@ export function loop(ts) {
   } else {
     playerBody.visible = bodyVisible;
   }
+
+  // ── AWP scope overlay ────────────────────────────────────────────────
+  const _scopeEl  = document.getElementById('scope-overlay');
+  const _xhairEl  = document.getElementById('xhair');
+  const _awpScoping = player.weapon === 'awp' && player.aimT > 0.05;
+  if (_scopeEl) {
+    _scopeEl.style.display = _awpScoping ? 'block' : 'none';
+    _scopeEl.style.opacity = String(Math.min(1, player.aimT));
+  }
+  if (_xhairEl) _xhairEl.style.opacity = _awpScoping ? '0' : '1';
 
   drawMinimap(dt);
   const eyeX = camera.position.x,

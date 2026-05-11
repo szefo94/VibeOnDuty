@@ -9,6 +9,10 @@
 <body>
 <canvas id="c"></canvas>
 <canvas id="hudCanvas"></canvas>
+<div id="scope-overlay" style="display:none">
+  <div id="scope-cross-h"></div>
+  <div id="scope-cross-v"></div>
+</div>
 <div id="hud">
   <div id="xhair"><div class="xh" id="xh-t"></div><div class="xh" id="xh-b"></div><div class="xh" id="xh-l"></div><div class="xh" id="xh-r"></div><div id="xhair-dot"></div></div>
   <div id="mm-wrap"><div id="mm-label">RADAR</div><canvas id="mm" width="160" height="160"></canvas></div>
@@ -134,6 +138,7 @@
     <button id="startbtn">[ DROP IN ]</button>
     <button id="tdm-startbtn">[ TEAM DEATHMATCH ]</button>
     <button id="snd-startbtn">[ S&amp;D MODE ]</button>
+    <button id="adaptive-startbtn">[ ADAPTIVE ]</button>
     <button id="range-startbtn">[ TRAINING RANGE ]</button>
     <button id="editor-startbtn">[ MAP EDITOR ]</button>
   </div>

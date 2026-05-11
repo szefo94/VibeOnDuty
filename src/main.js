@@ -34,6 +34,7 @@ import { rangeMapDef } from './maps/range.js';
 import { vanguardMapDef } from './maps/vanguard.js';
 import { startTrainingRange } from './modes/trainingRange.js';
 import { initEditor, openEditor } from './editor/mapEditor.js';
+import { adaptStart, adaptStop } from './ai/difficultyAdapter.js';
 
 const _euler = new THREE.Euler(0, 0, 0, 'YXZ');
 let debugVisible = true;
@@ -190,6 +191,7 @@ const _pauseEl = document.getElementById('pause-menu');
 function returnToMainMenu() {
   _pauseEl.style.display = 'none';
   setGameRunning(false);
+  adaptStop();
   deactivateAllEnemies();
   clearSndDrones();
   player.dead      = false;
@@ -267,11 +269,32 @@ function rangeStart() {
   startTrainingRange();
 }
 
+function adaptiveStart() {
+  _activateMap();
+  rebuildAllEnemies();
+  if (_selectedMap.spawnPlayer) {
+    camera.position.set(_selectedMap.spawnPlayer.x, PLAYER_H, _selectedMap.spawnPlayer.z);
+  }
+  document.getElementById('overlay').style.display = 'none';
+  if (isTouchDevice) { setLocked(true); } else { document.getElementById('c').requestPointerLock(); }
+  setGameRunning(true);
+  updateHUD();
+  show1pWeapon(player.weapon);
+  show3pWeapon(player.weapon);
+  spawnNewDrone();
+  adaptStart();
+  showMsg('ADAPTIVE — DIFFICULTY AUTO-ADJUSTS', 3500);
+  showStatus(`[1] ${WEAPONS[player.weapon].name}`);
+}
+
 // ── S&D mode start ─────────────────────────────────────────────────
 document.getElementById('snd-startbtn').addEventListener('click', sndStart);
 
 // ── TDM mode start ─────────────────────────────────────────────────
 document.getElementById('tdm-startbtn').addEventListener('click', tdmStart);
+
+// ── Adaptive mode start ─────────────────────────────────────────────
+document.getElementById('adaptive-startbtn').addEventListener('click', adaptiveStart);
 
 // ── Training range start ────────────────────────────────────────────
 document.getElementById('range-startbtn').addEventListener('click', rangeStart);
@@ -303,21 +326,24 @@ register('player-p90', tryLoadP90ForHand);
 // ── Kick off ───────────────────────────────────────────────────────
 window.loadGLTF = tryLoadEnemyGLTF;
 
-const _startBtn       = document.getElementById('startbtn');
-const _sndStartBtn    = document.getElementById('snd-startbtn');
-const _tdmStartBtn    = document.getElementById('tdm-startbtn');
-const _rangeStartBtn  = document.getElementById('range-startbtn');
-const _editorStartBtn = document.getElementById('editor-startbtn');
-_startBtn.disabled    = true;
-_sndStartBtn.disabled = true;
-_tdmStartBtn.disabled = true;
-_rangeStartBtn.disabled  = true;
-_editorStartBtn.disabled = true;
-_startBtn.textContent    = 'LOADING...';
-_sndStartBtn.textContent = 'LOADING...';
-_tdmStartBtn.textContent = 'LOADING...';
-_rangeStartBtn.textContent  = 'LOADING...';
-_editorStartBtn.textContent = 'LOADING...';
+const _startBtn          = document.getElementById('startbtn');
+const _sndStartBtn       = document.getElementById('snd-startbtn');
+const _tdmStartBtn       = document.getElementById('tdm-startbtn');
+const _adaptiveStartBtn  = document.getElementById('adaptive-startbtn');
+const _rangeStartBtn     = document.getElementById('range-startbtn');
+const _editorStartBtn    = document.getElementById('editor-startbtn');
+_startBtn.disabled         = true;
+_sndStartBtn.disabled      = true;
+_tdmStartBtn.disabled      = true;
+_adaptiveStartBtn.disabled = true;
+_rangeStartBtn.disabled    = true;
+_editorStartBtn.disabled   = true;
+_startBtn.textContent         = 'LOADING...';
+_sndStartBtn.textContent      = 'LOADING...';
+_tdmStartBtn.textContent      = 'LOADING...';
+_adaptiveStartBtn.textContent = 'LOADING...';
+_rangeStartBtn.textContent    = 'LOADING...';
+_editorStartBtn.textContent   = 'LOADING...';
 
 // Attach player 3p weapon to body BEFORE async block so buildPlayerMesh()
 // can reparent it to hand_r without immediately losing it.
@@ -326,16 +352,18 @@ playerBody.add(weapon3p);
 
 (async () => {
   const assets = await loadAll();
-  _startBtn.textContent       = 'INCURSION';
-  _sndStartBtn.textContent    = 'S&D — START';
-  _tdmStartBtn.textContent    = 'TEAM DEATHMATCH';
-  _rangeStartBtn.textContent  = 'TRAINING RANGE';
-  _editorStartBtn.textContent = 'MAP EDITOR';
-  _startBtn.disabled     = false;
-  _sndStartBtn.disabled  = false;
-  _tdmStartBtn.disabled  = false;
-  _rangeStartBtn.disabled  = false;
-  _editorStartBtn.disabled = false;
+  _startBtn.textContent          = 'INCURSION';
+  _sndStartBtn.textContent       = 'S&D — START';
+  _tdmStartBtn.textContent       = 'TEAM DEATHMATCH';
+  _adaptiveStartBtn.textContent  = 'ADAPTIVE';
+  _rangeStartBtn.textContent     = 'TRAINING RANGE';
+  _editorStartBtn.textContent    = 'MAP EDITOR';
+  _startBtn.disabled           = false;
+  _sndStartBtn.disabled        = false;
+  _tdmStartBtn.disabled        = false;
+  _adaptiveStartBtn.disabled   = false;
+  _rangeStartBtn.disabled      = false;
+  _editorStartBtn.disabled     = false;
   if (assets['enemy-glb']) {
     rebuildAllEnemies();
     buildPlayerMesh();
