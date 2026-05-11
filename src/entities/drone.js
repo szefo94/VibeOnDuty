@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { scene, camera } from '../scene.js';
 import { CELL, PLAYER_H } from '../config.js';
-import { MAP_W, MAP_H, MAP, isRamp } from '../map.js';
+import { MAP_W, MAP_H, MAP, isRamp, groundElevation } from '../map.js';
+import { spawnSmokeCloud } from '../fx/particles.js';
 import { buildDrone } from '../builders/drone.js';
 import { player } from './player.js';
 import { spawnAmmoDrop } from './ammoDrops.js';
@@ -50,18 +51,51 @@ export function spawnNewDrone() {
 }
 
 export function killDrone(d) {
-  d.dead = true;
-  scene.remove(d.mesh);
-  activeDrone = null;
+  d.dead       = true;
+  d.dying      = true;
+  d.fallVelY   = 0;
+  d.fallSpinX  = (Math.random() - 0.5) * 5;
+  d.fallSpinZ  = (Math.random() - 0.5) * 5;
+  d.smokeTimer = 0;
   player.kills++;
   document.getElementById('kills-num').textContent = player.kills;
   showMsg('DRONE DOWN — NEW DRONE INCOMING', 2000);
   spawnAmmoDrop(d.x, d.z);
-  setTimeout(() => { if (gameRunning) spawnNewDrone(); }, 3000);
+  setTimeout(() => { if (gameRunning) spawnNewDrone(); }, 4500);
 }
 
 export function updateDrone(d, dt) {
-  if (d.dead) return;
+  if (d.dead && !d.dying) return;
+
+  // ── Dying fall ───────────────────────────────────────────────────────
+  if (d.dying) {
+    d.fallVelY -= 22 * dt;
+    d.y += d.fallVelY * dt;
+    d.mesh.rotation.x += d.fallSpinX * dt;
+    d.mesh.rotation.z += d.fallSpinZ * dt;
+    d.mesh.position.set(d.x, d.y, d.z);
+
+    d.smokeTimer -= dt;
+    if (d.smokeTimer <= 0) {
+      spawnSmokeCloud(new THREE.Vector3(d.x, d.y, d.z));
+      d.smokeTimer = 0.07;
+    }
+
+    const ground = groundElevation(d.x, d.z, d.y);
+    if (d.y <= ground + 0.4) {
+      for (let i = 0; i < 4; i++)
+        spawnSmokeCloud(new THREE.Vector3(
+          d.x + (Math.random() - 0.5) * 1.2,
+          ground + 0.1,
+          d.z + (Math.random() - 0.5) * 1.2
+        ));
+      scene.remove(d.mesh);
+      d.dying    = false;
+      activeDrone = null;
+    }
+    return;
+  }
+
   d.floatT += dt * 0.8;
   const pdx = camera.position.x - d.x,
         pdz = camera.position.z - d.z;

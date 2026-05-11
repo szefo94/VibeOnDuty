@@ -192,7 +192,7 @@ export function loop(ts) {
     }
 
     updateEnemies(ts, dt);
-    if (activeDrone && !activeDrone.dead) updateDrone(activeDrone, dt);
+    if (activeDrone && (!activeDrone.dead || activeDrone.dying)) updateDrone(activeDrone, dt);
     for (const d of sndDrones) updateSndDrone(d, dt);
     tickTorches(dt);
     tickWave(dt, enemies, spawnEnemyIntoSlot);
