@@ -1,6 +1,6 @@
 # VIBE ON DUTY
 
-A browser-based first-person shooter built with Three.js. Survive endless waves of armed infantry, coordinate with your squad in Team Deathmatch, go head-to-head in Search & Destroy, or sharpen your aim in the Training Range.
+A browser-based first-person shooter built with Three.js. Survive endless waves of armed infantry, challenge yourself in Adaptive mode with auto-adjusting difficulty, coordinate with your squad in Team Deathmatch, go head-to-head in Search & Destroy, or sharpen your aim in the Training Range.
 
 **[Play in browser →](https://szefo94.github.io/VibeOnDuty/)**
 
@@ -38,6 +38,9 @@ Best-of-7 match. Rounds 1–3: you attack — plant the bomb at Site A or B and 
 | 3+ consecutive losses | +$2,400 |
 
 Starting cash: **$3,000**. Cap: $16,000.
+
+### Adaptive Mode
+Incursion wave mode with silent auto-adjusting difficulty. The AI tracks your rolling kill/death ratio over a 60-second window and re-evaluates every 30 seconds. Level 1 plays like Recruit; Level 10 plays like Elite. No UI — you just feel the match breathe. Starts at Level 5.
 
 ### Training Range
 A dedicated 56×80 m shooting hall. 9 targets across short / medium / long zones. Hostile targets have red glowing heads — hostage targets have green. Hit hostages for a penalty; hit hostiles for score.
@@ -85,6 +88,7 @@ Full Range · Short Range (5–15 m) · Medium Range (17–35 m) · Long Range (
 | `Q` / `E` | Lean left / right |
 | `LMB` (hold) | Shoot |
 | `RMB` | Aim down sights |
+| `SHIFT` (while ADS + AWP) | Hold breath — damps scope sway |
 | `MMB` | Throw grenade (costs 100% energy) |
 | `F` | Melee punch |
 | `R` | Reload |
@@ -110,7 +114,7 @@ Full Range · Short Range (5–15 m) · Medium Range (17–35 m) · Long Range (
 ## Features
 
 ### World
-- **Four maps**: Greek Columns (indoor CQB), Rooftop District (outdoor), Column Arena (open marble), Training Range (flat shooting hall)
+- **Five maps**: Greek Columns (indoor CQB), Rooftop District (outdoor), Column Arena (open marble), Vanguard Complex (3-floor vertical), Training Range (flat shooting hall)
 - **24×24 tile arena / 14×20 training range** — solid walls, cracked walls (crawl gaps), ramps, pillars, multi-level heightmap terrain
 - Two bomb sites (A / B) with pulsing ring markers and point lights in S&D mode
 - Torch lights with flicker, PCF soft shadows, exponential fog, ACES filmic tone mapping
@@ -133,6 +137,8 @@ Four selectable tiers affect reaction time, aim accuracy, health, speed, and str
 | Veteran | 150–380 ms | 16 | ×1.25 |
 | Elite | 60–150 ms | 22 | ×1.50 |
 
+**Adaptive mode** silently interpolates between Recruit and Elite on a 1–10 scale, re-evaluated every 30 s based on rolling K/D ratio. No manual selection needed.
+
 ### Enemy AI
 - Patrol waypoints with idle wander rotation
 - Line-of-sight detection with reaction delay (difficulty-scaled)
@@ -142,6 +148,7 @@ Four selectable tiers affect reaction time, aim accuracy, health, speed, and str
 - Wave-based respawn (wave mode) or team-based spawn (S&D / TDM)
 - **Friendly bots** (green) — A\*-pathfind to sites/enemies, shoot with LOS check, scout when idle
 - **Enemy attackers** — rush assigned site, plant bomb when in range, defuse enemy plant
+- **Sniper bots** (`weaponRole === 'sniper'`) — hold position in ATTACK_STATE, rotate to face player only, never advance
 
 ### Drone AI
 - **Persistent drone** (wave mode): orbits player at ~8 unit radius, EMP pulse at <30% HP
@@ -154,6 +161,7 @@ Four selectable tiers affect reaction time, aim accuracy, health, speed, and str
 - 3rd person over-the-shoulder (Fortnite-style): animated transition, shoulder swap, ADS preserved
 - Lean: camera rolls ±0.28 rad and shifts ±0.38 units sideways
 - ADS FOV zoom (75° → 50°, weapon-dependent)
+- **AWP scope**: dark radial vignette overlay with crosshair lines when ADS'd; Brownian sway oscillator damped by hold-breath (Shift); bullet drop applies extra 9.8 m/s² gravity
 
 ### HUD
 - Ammo ring, energy ring, HP segments, reload bar, spray cone indicator
@@ -213,13 +221,14 @@ src/
   level.js              — buildLevel(mapDef) — exports wallMeshes, debugLines
   input.js              — keyboard, mouse, pointer lock state
   touch.js              — mobile touch controls
-  difficulty.js         — difficulty preset selection + application
+  difficulty.js         — difficulty preset selection + override API (setDifficultyOverride)
   gamepad.js            — gamepad / controller input
   maps/
     bunker.js           — Greek Columns map definition
     rooftop.js          — Rooftop District map definition
     concept.js          — Column Arena map definition
-    range.js            — Training Range map definition (14×20 flat hall)
+    range.js            — Training Range map definition
+    vanguard.js         — Vanguard Complex map definition (3-floor, 24×24, dark industrial) (14×20 flat hall)
   modes/
     modeManager.js      — setMode/getMode/isAnyModeActive (zero-dep registry)
     snd.js              — S&D match state machine, bomb logic, round lifecycle
@@ -228,7 +237,8 @@ src/
     buyMenu.js          — S&D buy phase UI, weapon shop, 10 s countdown
     trainingRange.js    — Training Range drills, preset panel, HUD, hit callbacks
   ai/
-    enemyStates.js      — PATROL/SPOTTED/ATTACK state objects + transition helpers
+    enemyStates.js      — PATROL/SPOTTED/ATTACK state objects + transition helpers; sniper hold-position
+    difficultyAdapter.js — adaptive difficulty: rolling K/D window, level 1–10, lerps Recruit→Elite presets
   builders/
     weapon.js           — player weapon model (1st-person)
     playerBody.js       — 3rd-person soldier body
@@ -240,7 +250,7 @@ src/
     weaponFBX.js        — player M4 / P90 FBX loader
     assetManager.js     — register/loadAll parallel asset registry
   combat/
-    shoot.js            — bullet physics, hit detection (enemies + range targets), weapon animation
+    shoot.js            — bullet physics, hit detection, weapon animation; AWP sway oscillator + bullet drop
     damage.js           — grenade falloff formulas
   entities/
     entityBase.js       — applyEntityBase mixin (isAlive, takeDamage)

@@ -26,7 +26,8 @@ src/
     rooftop.js          — Rooftop District mapDef (outdoor, HVAC cover, daylight)
     concept.js          — Column Arena mapDef (marble pillar prototype)
     range.js            — Training Range mapDef (56×80 m flat hall, 9 target slots, strip lights)
-  difficulty.js         — setDifficulty/getDifficulty; active preset singleton
+    vanguard.js         — Vanguard Complex mapDef (24×24, 3 floors at 0/3/6 m, dark industrial)
+  difficulty.js         — setDifficulty/getDifficulty; _override API for adaptive mode (setDifficultyOverride/clearDifficultyOverride)
   modes/
     modeManager.js      — setMode/getMode/isAnyModeActive (zero-dep registry)
     snd.js              — S&D match state machine, round lifecycle, bomb logic
@@ -35,7 +36,8 @@ src/
     economy.js          — S&D cash ledger (kill/plant/defuse bonuses, loss streak)
     buyMenu.js          — S&D buy phase UI, weapon shop, 10 s countdown
   ai/
-    enemyStates.js      — PATROL/SPOTTED/ATTACK + transitionTo, alertEnemy, semiAlertEnemy
+    enemyStates.js      — PATROL/SPOTTED/ATTACK + transitionTo, alertEnemy, semiAlertEnemy; sniper hold-position
+    difficultyAdapter.js — rolling K/D window (60 s), level 1–10, evaluates every 30 s, lerps Recruit→Elite
   builders/
     weapon.js           — player weapon model — 4 weapons (m4/p90/awp/pistol), 1p+3p sub-groups, show1pWeapon/show3pWeapon
     playerBody.js       — full soldier body (weapon3p parented here; reparented to hand_r by GLTF loader)
@@ -113,6 +115,10 @@ types/
 | 35 (partial) | **Team Deathmatch** — `src/modes/tdm.js`. First to 50 kills wins or 10-minute timer. Player respawns after 3 s; enemies respawn after 3 s via queue in TDM tick. `enemy:killed` / `player:died` events drive score tracking and respawn. `getMode()?.name` gating in `killEnemy` and `triggerDeath` ensures S&D round events don't fire in TDM. v1: 10 enemies vs player solo (no friendly bots in TDM yet). |
 | 39 (partial) | **Difficulty system** — `src/difficulty.js` + `DIFFICULTY_PRESETS` in `config.js`. 4 tiers (Recruit / Regular / Veteran / Elite) each define `reactMin/Max`, `shootCd`, `damage`, `speedMult`, `aimThresh`, `hp`, `sight`, `strafeChance`. Enemy AI in `enemyStates.js` reads `getDifficulty()` live — reaction delay, shoot cooldown, damage, aim threshold, speed. `_tickStrafe()` added to `ATTACK_STATE`: perpendicular velocity applied each frame, direction flips on timer, active only when `strafeChance > 0`. Recruit: stands still, slow, 70 HP, 16 m sight. Elite: 60–150 ms reaction, 420 ms shoot CD, always strafing, 160 HP, 30 m sight. Picker on main overlay; `setDifficulty` called on card click. `rebuildAllEnemies()` called at game start (not just asset load) so chosen HP applies immediately. |
 | 32 | **Training Range** — `src/modes/trainingRange.js` + `src/entities/targetDummy.js` + `src/maps/range.js`. Dedicated 56×80 m flat hall with 9 procedural targets (3 short / 3 medium / 3 long zone). Four drill modes: Free Practice (all targets up, 1.5 s respawn), Flick Drill (60 s; one lit hostile at a time, hit within difficulty window), Reaction Drill (20 pop appearances with configurable up-time window), Hostage Gauntlet (free practice with live +1/−1 score). Hostile targets have red-glowing heads; hostage targets have green-glowing heads. Hit flash, hitmarker, floating damage numbers. Preset panel (`P` key, pointer-lock released) with 6 sections: DRILL, DIFFICULTY (Beginner 2.5 s / Normal 1.5 s / Hard 0.8 s / Elite 0.4 s), TARGETS (Full/Short/Medium/Long/Hostile Only), MOVEMENT (H+V independent checkboxes), H PATTERN (Sine / Spring strafe physics), H SPEED (Slow / Medium / Fast). Horizontal movement sweeps full corridor width (6–50 m). Spring mode uses spring-damper physics with per-speed configs (k, damp, maxV, goal interval). Sine mode: 0.04/0.10/0.22 Hz per speed index. Vertical: sinusoidal bob 0–0.55 m at 0.65 Hz. Live HUD: drill name, timer/score (Hostage Gauntlet shows coloured score), hit count, accuracy, headshots, streak, avg reaction, penalties. `Tab` cycles drills. Infinite ammo. Enemies deactivated via `deactivateAllEnemies()`. |
+| map | **Vanguard Complex** — `src/maps/vanguard.js`. 24×24, 3 floors (base 0/3/6 m, each 3 m tall). NW stairwell (floor 0→1, ramp tiles 13+17), SE stairwell (floor 0→1, ramp tiles 12+16), centre stairwell (floor 1→2, ramp tiles 21+25). Floor-1 perimeter balcony ring (hm=3.0), N-S centre bridge (rows 11-12). Floor-2 enclosed top room (rows 2-5, cols 7-16) with south window openings. Dark industrial material palette (0x3a3a42 / 0x5a5a66). Dynamic overhead point lights on all 3 floors. Voids above ramp cells suppress slab rendering. |
+| pause | **Pause menu** — Escape releases pointer lock during gameplay; `pointerlockchange` listener shows `#pause-menu` overlay (z-index 25) with RESUME and MAIN MENU buttons. `returnToMainMenu()` resets all player/game state and returns to the main overlay. |
+| 38 | **AWP Sniper Polish** — Scope vignette: `#scope-overlay` radial-gradient overlay (z-index 15) with full-screen crosshair lines; fades in with `player.aimT`, hides regular crosshair. AWP sway: Brownian oscillator (`_awpVX/Y → _awpSwayX/Y`) runs in `updateWeapon()`; strongly damped by `player.holdBreath` (Shift+ADS+AWP). Bullet drop: AWP bullets tagged `isSniper=true`; `tickBullets` applies extra 9.8 m/s² gravity. Sniper bots: `weaponRole==='sniper'` in ATTACK_STATE skips movement and strafe, only rotates to face player and fires. |
+| 39 | **Adaptive Difficulty** — Separate `[ ADAPTIVE ]` mode button (purple). `src/ai/difficultyAdapter.js`: rolling 60 s kill/death window evaluated every 30 s; level 1–10 linearly interpolates all parameters between Recruit and Elite presets via `setDifficultyOverride()`. Starts at level 5. `adaptStop()` on main menu return clears override. `adaptTick(dt)` called in game loop. |
 
 ---
 
@@ -505,36 +511,15 @@ Let players build and share custom maps without touching code.
 
 ---
 
-### Phase 38 — Sniper polish & advanced weapon feel *(partially done)*
+### ~~Phase 38 — Sniper polish & advanced weapon feel~~ ✅ Done
 
-**Already implemented (Phase 18):** AWP exists with `adsZoom: 30`, 140 damage, 10-round mag, 5 reserve. Weapon archetypes (rifle/SMG/sniper/pistol) formalised in `config.js`. S&D bot sniper role holds long positions via `SND_ROLES`.
-
-**Remaining:**
-- Bolt-action mechanic — force 1.4 s `fireRate` cooldown enforced visually (bolt pull animation or model hide/show)
-- Hold-breath: `Shift` while ADS reduces sway; `player.holdBreath` flag settles a sway oscillator over 0.6 s
-- Sway oscillator added to `shoot.js` spray calc — AWP-specific, overrides normal spray curve
-- Scope vignette overlay — CSS ring mask shown when `player.aiming && player.weapon === 'awp'`
-- Bullet drop for sniper only: `b.velY -= 9.8 * dt` in `tickBullets` when `b.isSniper` flag set
-- Enemy sniper bots: hold position when `weaponRole === 'sniper'`, never advance to site
+See Completed table — scope vignette overlay, AWP sway oscillator with hold-breath (Shift+ADS+AWP), bullet drop, sniper bots hold position.
 
 ---
 
-### Phase 39 — Adaptive difficulty AI *(static tiers shipped; adaptive pending)*
+### ~~Phase 39 — Adaptive difficulty AI~~ ✅ Done
 
-**Already implemented:** 4 static difficulty tiers (Recruit / Regular / Veteran / Elite) with picker on main overlay. Full parameter table per tier — see Completed table. Strafing movement pattern active at Veteran+ difficulty.
-
-**Remaining — adaptive runtime nudging:**
-The game silently tracks player performance and nudges bot behaviour so the session stays fun — not too easy, not too hard.
-
-- **Performance score**: rolling 60-second window of `(kills − deaths) / shots_fired`. Updated in `waveSystem.js` or a new `src/ai/difficultyAdapter.js`.
-- **Levers the system pulls** (all already exist as config values):
-  - `ENEMY_REACTION_DELAY` — how fast enemies react to seeing the player (150–600 ms)
-  - `ENEMY_ACCURACY` — spray cone multiplier (0.6 tight → 1.8 wide)
-  - `ENEMY_SPEED` — patrol and chase speed
-  - Patrol density — number of active patrollers in the scene
-- **Target feel**: player should win ~55% of 1v1 engagements. If they're winning 80%+, dial up one lever per 60 s. If dying 3× in 30 s, dial down.
-- No UI — the adaptation is invisible. Players just feel "the enemies got smarter" or "finally had a good round" without knowing why.
-- Hard cap: never exceeds the `Aggressive` bot personality ceiling (Phase 26) or drops below `Passive` floor.
+See Completed table — `src/ai/difficultyAdapter.js`, rolling 60 s K/D window, level 1–10 lerping Recruit→Elite, separate `[ ADAPTIVE ]` mode button, `adaptTick` in game loop.
 
 ---
 
