@@ -1,4 +1,4 @@
-import { CELL, PLAYER_H } from './config.js';
+import { CELL, PLAYER_H, PLAYER_R } from './config.js';
 import { bunkerMapDef, H1 as _bH1, H2 as _bH2 } from './maps/bunker.js';
 
 // 0=floor 1=solid 2=E-W crack 3=N-S crack 4=ramp-N 5=ramp-S 6=ramp-W 7=ramp-E
@@ -168,13 +168,23 @@ export const MAX_STEP = 0.8;
 // Wall height per floor storey (equals FLOOR1 = 3 m so walls align cleanly with slabs).
 const _FLOOR_WALL_H = 3.0;
 
+// Column base radius (CylinderGeometry bottom) + player body radius
+const _COL_BLOCK_R2 = (0.62 + PLAYER_R) ** 2;
+
 export function canMoveTo(nx, nz, currentGroundY, airborne = false) {
   const mc = Math.floor(nx / CELL), mr = Math.floor(nz / CELL);
+
+  // Column (tile 28): circular collision instead of full-cell AABB.
+  // mapCell/cellFrom return 1 for tile 28, so we must handle it before the wall check.
+  if (FLOORS.some(fl => fl.tiles[mr]?.[mc] === 28)) {
+    const cx = (mc + 0.5) * CELL, cz = (mr + 0.5) * CELL;
+    return (nx - cx) ** 2 + (nz - cz) ** 2 >= _COL_BLOCK_R2;
+  }
 
   if (FLOORS.length === 1) {
     // Fast path: single-floor (existing behaviour).
     const c = mapCell(mc, mr);
-    if (c === 1) return false;
+    if (c === 1 || isCrack(c)) return false;
     if (airborne || isRamp(c)) return true;
     const cellH = hAt(mc, mr);
     return cellH - currentGroundY <= MAX_STEP;
@@ -186,6 +196,7 @@ export function canMoveTo(nx, nz, currentGroundY, airborne = false) {
   for (const fl of FLOORS) {
     const c = _cellFrom(fl.tiles, mc, mr);
     if (isRamp(c)) { hasRamp = true; continue; }
+    if (isCrack(c)) return false;
     if (c !== 1) continue;
     // Wall: blocked when the player body [feet, feet+PLAYER_H] overlaps [base, base+wallH].
     const wallBase = fl.base;
