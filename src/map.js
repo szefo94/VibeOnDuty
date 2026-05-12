@@ -171,6 +171,15 @@ const _FLOOR_WALL_H = 3.0;
 // Column base radius (CylinderGeometry bottom) + player body radius
 const _COL_BLOCK_R2 = (0.62 + PLAYER_R) ** 2;
 
+// Crack thin-wall collision: 0.35 m thick slab centred on the cell midline.
+// Tile 2 (E-W): blocks Z-axis passage. Tile 3 (N-S): blocks X-axis passage.
+const _CRACK_HALF_T = 0.35 / 2;
+function _crackBlocks(c, mc, mr, nx, nz) {
+  if (c === 2) return Math.abs(nz - (mr + 0.5) * CELL) < _CRACK_HALF_T + PLAYER_R;
+  if (c === 3) return Math.abs(nx - (mc + 0.5) * CELL) < _CRACK_HALF_T + PLAYER_R;
+  return false;
+}
+
 export function canMoveTo(nx, nz, currentGroundY, airborne = false) {
   const mc = Math.floor(nx / CELL), mr = Math.floor(nz / CELL);
 
@@ -184,7 +193,8 @@ export function canMoveTo(nx, nz, currentGroundY, airborne = false) {
   if (FLOORS.length === 1) {
     // Fast path: single-floor (existing behaviour).
     const c = mapCell(mc, mr);
-    if (c === 1 || isCrack(c)) return false;
+    if (c === 1) return false;
+    if (isCrack(c) && _crackBlocks(c, mc, mr, nx, nz)) return false;
     if (airborne || isRamp(c)) return true;
     const cellH = hAt(mc, mr);
     return cellH - currentGroundY <= MAX_STEP;
@@ -196,7 +206,10 @@ export function canMoveTo(nx, nz, currentGroundY, airborne = false) {
   for (const fl of FLOORS) {
     const c = _cellFrom(fl.tiles, mc, mr);
     if (isRamp(c)) { hasRamp = true; continue; }
-    if (isCrack(c)) return false;
+    if (isCrack(c)) {
+      if (_crackBlocks(c, mc, mr, nx, nz)) return false;
+      continue;
+    }
     if (c !== 1) continue;
     // Wall: blocked when the player body [feet, feet+PLAYER_H] overlaps [base, base+wallH].
     const wallBase = fl.base;
