@@ -36,6 +36,7 @@ const _FLOOR_H_LABELS = [
 ];
 
 const _MARKER_COLOR  = { spawn_p:'#2ecc71', spawn_a:'#e74c3c', spawn_d:'#3498db', site_a:'#ff8800', site_b:'#ff6600' };
+const _MARKER_KEYS   = new Set(Object.keys(_MARKER_COLOR));
 const _MARKER_LETTER = { spawn_p:'P', spawn_a:'A', spawn_d:'D', site_a:'①', site_b:'②' };
 
 // Per-group canvas colors for ramp tiles (group = Math.floor((tile-4)/4))
@@ -109,6 +110,14 @@ let _undo     = [];
 let _painting = false;
 let _paintBtn = 0;
 let _inPreview = false;
+let _fillMode   = false;
+let _rectMode   = false;
+let _rectStart  = null;
+let _rectPreviewEnd = null;
+let _mirrorMode = 0;       // 0=off 1=H 2=V 3=H+V
+let _zoom       = 22;      // canvas px per tile (8–40)
+let _mapName    = '';
+let _activeSlot = -1;
 let _canvas   = null;
 let _ctx      = null;
 
@@ -365,6 +374,19 @@ function _draw() {
     _ctx.fillText(_MARKER_LETTER[key], (pos.col + 0.5) * cpx, (pos.row + 0.5) * cpy);
   }
 
+  // Rect-mode drag preview
+  if (_rectMode && _rectStart && _rectPreviewEnd) {
+    const rc1 = Math.min(_rectStart.col, _rectPreviewEnd.col);
+    const rc2 = Math.max(_rectStart.col, _rectPreviewEnd.col);
+    const rr1 = Math.min(_rectStart.row, _rectPreviewEnd.row);
+    const rr2 = Math.max(_rectStart.row, _rectPreviewEnd.row);
+    _ctx.fillStyle = 'rgba(232,200,74,0.22)';
+    _ctx.fillRect(rc1 * cpx, rr1 * cpy, (rc2 - rc1 + 1) * cpx, (rr2 - rr1 + 1) * cpy);
+    _ctx.strokeStyle = 'rgba(232,200,74,0.85)';
+    _ctx.lineWidth = 2;
+    _ctx.strokeRect(rc1 * cpx + 1, rr1 * cpy + 1, (rc2 - rc1 + 1) * cpx - 2, (rr2 - rr1 + 1) * cpy - 2);
+  }
+
   // Grid lines
   _ctx.strokeStyle = 'rgba(255,255,255,0.06)';
   _ctx.lineWidth = 0.5;
@@ -388,22 +410,21 @@ function _cellAt(e) {
 }
 
 // ── Paint logic ───────────────────────────────────────────────────────────────
-function _paint(e) {
-  const { col, row } = _cellAt(e);
-  const erase = _paintBtn === 2;
+
+// Single-cell paint — caller must call _draw() when done.
+function _paintAt(col, row, erase) {
+  if (col < 0 || row < 0 || col >= GRID_W || row >= GRID_H) return;
   const fi = _floorIdx;
   const tiles = _curTiles(), hmap = _curHmap();
 
-  // ── SWall: bitmask painting — each direction is an independent bit ────
   if (_typeMode === 'swall') {
     const swallMap = _curSwallBits();
-    const bit = 1 << _swallDir;  // 0=N(1), 1=S(2), 2=W(4), 3=E(8)
+    const bit = 1 << _swallDir;
     const prev = swallMap[row][col];
     const next = erase ? (prev & ~bit) : (prev | bit);
     if (prev === next) return;
     _undoPush({ type: 'swall', fi, row, col, from: prev, to: next });
     swallMap[row][col] = next;
-    _draw();
     return;
   }
 
@@ -431,12 +452,30 @@ function _paint(e) {
       _markers[key] = next;
     }
   } else {
-    // Tile painting (ramp, wall, crack, column, swall)
     const next = erase ? 0 : _tool;
     const prev = tiles[row][col];
     if (prev === next) return;
     _undoPush({ type: 'tile', fi, row, col, from: prev, to: next });
     tiles[row][col] = next;
+  }
+}
+
+function _paint(e) {
+  const { col, row } = _cellAt(e);
+  const erase = _paintBtn === 2;
+
+  // Fill mode: flood-fill tile region instead of single cell
+  if (_fillMode && typeof _tool === 'number' && !_HEIGHT_TOOLS.has(_tool)) {
+    _floodFill(col, row, erase);
+    return;
+  }
+
+  _paintAt(col, row, erase);
+  // Mirror mode — skip for unique marker tools
+  if (!_MARKER_KEYS.has(_tool)) {
+    if (_mirrorMode & 1) _paintAt(GRID_W - 1 - col, row, erase);
+    if (_mirrorMode & 2) _paintAt(col, GRID_H - 1 - row, erase);
+    if (_mirrorMode === 3) _paintAt(GRID_W - 1 - col, GRID_H - 1 - row, erase);
   }
   _draw();
 }
@@ -458,9 +497,61 @@ function _doUndo() {
     _floors[op.fi ?? 0].heightmap[op.row][op.col] = op.from;
   } else if (op.type === 'swall') {
     _floors[op.fi].swallBits[op.row][op.col] = op.from;
+  } else if (op.type === 'batch') {
+    for (const sub of [...op.ops].reverse()) {
+      if (sub.type === 'tile') _floors[sub.fi].tiles[sub.row][sub.col] = sub.from;
+      else if (sub.type === 'cell') {
+        _floors[sub.fi].tiles[sub.row][sub.col] = sub.fromT;
+        _floors[sub.fi].heightmap[sub.row][sub.col] = sub.fromH;
+      }
+    }
   } else {
     _markers[op.key] = op.from;
   }
+  _draw();
+}
+
+function _floodFill(startCol, startRow, erase) {
+  const tiles = _curTiles();
+  const fi = _floorIdx;
+  const targetTile = tiles[startRow][startCol];
+  const nextTile = erase ? 0 : _tool;
+  if (targetTile === nextTile) return;
+
+  const ops = [];
+  const visited = new Uint8Array(GRID_W * GRID_H);
+  const queue = [[startCol, startRow]];
+  while (queue.length) {
+    const [c, r] = queue.shift();
+    if (c < 0 || r < 0 || c >= GRID_W || r >= GRID_H) continue;
+    const key = r * GRID_W + c;
+    if (visited[key]) continue;
+    if (tiles[r][c] !== targetTile) continue;
+    visited[key] = 1;
+    ops.push({ type: 'tile', fi, row: r, col: c, from: tiles[r][c], to: nextTile });
+    tiles[r][c] = nextTile;
+    queue.push([c + 1, r], [c - 1, r], [c, r + 1], [c, r - 1]);
+  }
+  if (ops.length) { _undoPush({ type: 'batch', ops }); _draw(); }
+}
+
+function _applyRect(c1, r1, c2, r2, erase) {
+  if (typeof _tool !== 'number') return;
+  const minC = Math.min(c1, c2), maxC = Math.max(c1, c2);
+  const minR = Math.min(r1, r2), maxR = Math.max(r1, r2);
+  const fi = _floorIdx;
+  const tiles = _curTiles();
+  const nextTile = erase ? 0 : _tool;
+  const ops = [];
+  for (let r = minR; r <= maxR; r++) {
+    for (let c = minC; c <= maxC; c++) {
+      const prev = tiles[r][c];
+      if (prev === nextTile) continue;
+      ops.push({ type: 'tile', fi, row: r, col: c, from: prev, to: nextTile });
+      tiles[r][c] = nextTile;
+    }
+  }
+  if (ops.length) _undoPush({ type: 'batch', ops });
   _draw();
 }
 
@@ -549,11 +640,61 @@ function _rotateTool() {
   _updateCompoundUI();
 }
 
+// ── Mode / mirror UI helpers ──────────────────────────────────────────────────
+function _updateMirrorBtn() {
+  const btn = document.getElementById('ed-mirror');
+  if (btn) btn.textContent = ['Mirror: OFF [M]', 'Mirror: ↔ [M]', 'Mirror: ↕ [M]', 'Mirror: ↔↕ [M]'][_mirrorMode];
+}
+function _updateModeButtons() {
+  document.getElementById('ed-fill')?.classList.toggle('ed-mode-active', _fillMode);
+  document.getElementById('ed-rect')?.classList.toggle('ed-mode-active', _rectMode);
+}
+
+// ── Save slots (localStorage) ─────────────────────────────────────────────────
+const SLOT_COUNT = 5;
+function _slotLabel(idx) {
+  const raw = localStorage.getItem(`vod_slot_${idx}`);
+  if (!raw) return '[ empty ]';
+  try { return JSON.parse(raw).name || `Map ${idx + 1}`; } catch (_) { return `Map ${idx + 1}`; }
+}
+function _saveToSlot(idx) {
+  if (idx < 0 || idx >= SLOT_COUNT) return;
+  localStorage.setItem(`vod_slot_${idx}`, JSON.stringify({ name: _mapName, map: _encode() }));
+  _activeSlot = idx;
+  _updateSlotUI();
+  const msg = document.getElementById('ed-export-msg');
+  if (msg) { msg.textContent = `Saved to slot ${idx + 1}`; setTimeout(() => { msg.textContent = ''; }, 2000); }
+}
+function _loadFromSlot(idx) {
+  const raw = localStorage.getItem(`vod_slot_${idx}`);
+  if (!raw) {
+    const msg = document.getElementById('ed-export-msg');
+    if (msg) { msg.textContent = 'Slot is empty'; setTimeout(() => { msg.textContent = ''; }, 2000); }
+    return;
+  }
+  try {
+    const data = JSON.parse(raw);
+    _mapName = data.name ?? '';
+    const nf = document.getElementById('ed-map-name');
+    if (nf) nf.value = _mapName;
+    _decode(data.map);
+    _activeSlot = idx;
+    _updateSlotUI();
+  } catch (_) {}
+}
+function _updateSlotUI() {
+  document.querySelectorAll('.ed-slot-btn').forEach(btn => {
+    const idx = +btn.dataset.slot;
+    btn.textContent = `${idx + 1}: ${_slotLabel(idx)}`;
+    btn.classList.toggle('selected', idx === _activeSlot);
+  });
+}
+
 // ── Export / Import ───────────────────────────────────────────────────────────
 function _encode() {
   const mk = (pos) => pos ? [pos.col, pos.row] : null;
   return btoa(JSON.stringify({
-    v: 2, w: GRID_W, h: GRID_H,
+    v: 2, w: GRID_W, h: GRID_H, name: _mapName,
     floors: _floors.map(fl => ({
       base: fl.base,
       t:  fl.tiles.flat(),
@@ -597,6 +738,7 @@ function _decode(b64) {
     }
   }
   _markers = { spawn_p: mk(d.sp), spawn_a: mk(d.sa), spawn_d: mk(d.sd), site_a: mk(d.sA), site_b: mk(d.sB) };
+  _mapName = d.name ?? '';
   _undo = [];
   _draw();
 }
@@ -641,7 +783,7 @@ function _buildMapDef() {
 
   const siteA = _markers.site_a, siteB = _markers.site_b;
   return {
-    name: 'Custom Map',
+    name: _mapName || 'Custom Map',
     floors: _floors.map((fl, i) => ({
       base:       fl.base,
       wallHeight: _FLOOR_DEFS[i].wallHeight,
@@ -677,8 +819,13 @@ function _buildMapDef() {
 export function openEditor() {
   document.getElementById('overlay').style.display = 'none';
   document.getElementById('editor-overlay').style.display = 'flex';
+  const nf = document.getElementById('ed-map-name');
+  if (nf) nf.value = _mapName;
   _draw();
   _updateCompoundUI();
+  _updateMirrorBtn();
+  _updateModeButtons();
+  _updateSlotUI();
 }
 
 export function closeEditor() {
@@ -706,8 +853,8 @@ export function initEditor() {
 
   _canvas = document.getElementById('editor-canvas');
   _ctx    = _canvas.getContext('2d');
-  _canvas.width  = GRID_W * 22;
-  _canvas.height = GRID_H * 22;
+  _canvas.width  = GRID_W * _zoom;
+  _canvas.height = GRID_H * _zoom;
 
   // ── Canvas mouse events ──────────────────────────────────────────────
   _canvas.addEventListener('contextmenu', e => e.preventDefault());
@@ -715,10 +862,23 @@ export function initEditor() {
     _painting = true;
     _paintBtn = e.button;
     e.preventDefault();
-    _paint(e);
+    if (_rectMode && typeof _tool === 'number' && !_HEIGHT_TOOLS.has(_tool)) {
+      _rectStart = _cellAt(e);
+      _rectPreviewEnd = { ..._rectStart };
+      _draw();
+    } else {
+      _paint(e);
+    }
   });
   _canvas.addEventListener('mousemove', e => {
-    if (_painting) _paint(e);
+    if (_painting) {
+      if (_rectMode && _rectStart && typeof _tool === 'number' && !_HEIGHT_TOOLS.has(_tool)) {
+        _rectPreviewEnd = _cellAt(e);
+        _draw();
+      } else {
+        _paint(e);
+      }
+    }
     const { col, row } = _cellAt(e);
     const h = _curHmap()[row][col];
     const t = _curTiles()[row][col];
@@ -740,8 +900,27 @@ export function initEditor() {
     const st = document.getElementById('ed-status');
     if (st) st.textContent = `[${flLabel}] col ${col}  row ${row}  ${tDesc}${swDesc}  h=${h ? h.toFixed(1) : '0'}m`;
   });
-  _canvas.addEventListener('mouseup',    () => { _painting = false; });
-  _canvas.addEventListener('mouseleave', () => { _painting = false; });
+  _canvas.addEventListener('mouseup', () => {
+    if (_painting && _rectMode && _rectStart && _rectPreviewEnd) {
+      _applyRect(_rectStart.col, _rectStart.row, _rectPreviewEnd.col, _rectPreviewEnd.row, _paintBtn === 2);
+      _rectStart = null; _rectPreviewEnd = null;
+    }
+    _painting = false;
+  });
+  _canvas.addEventListener('mouseleave', () => {
+    if (_painting && _rectMode && _rectStart && _rectPreviewEnd) {
+      _applyRect(_rectStart.col, _rectStart.row, _rectPreviewEnd.col, _rectPreviewEnd.row, _paintBtn === 2);
+      _rectStart = null; _rectPreviewEnd = null;
+    }
+    _painting = false;
+  });
+  _canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    _zoom = Math.max(8, Math.min(40, _zoom + (e.deltaY < 0 ? 2 : -2)));
+    _canvas.width  = GRID_W * _zoom;
+    _canvas.height = GRID_H * _zoom;
+    _draw();
+  }, { passive: false });
 
   // ── Floor tab buttons ────────────────────────────────────────────────
   document.querySelectorAll('.ed-floor-tab').forEach(btn => {
@@ -859,6 +1038,33 @@ export function initEditor() {
 
   document.getElementById('ed-back').addEventListener('click', closeEditor);
 
+  // ── New tool buttons ─────────────────────────────────────────────────
+  document.getElementById('ed-fill')?.addEventListener('click', () => {
+    _fillMode = !_fillMode; if (_fillMode) _rectMode = false; _updateModeButtons();
+  });
+  document.getElementById('ed-rect')?.addEventListener('click', () => {
+    _rectMode = !_rectMode; if (_rectMode) _fillMode = false; _updateModeButtons();
+  });
+  document.getElementById('ed-mirror')?.addEventListener('click', () => {
+    _mirrorMode = (_mirrorMode + 1) % 4; _updateMirrorBtn();
+  });
+
+  // ── Save slots ───────────────────────────────────────────────────────
+  document.querySelectorAll('.ed-slot-btn').forEach(btn => {
+    btn.addEventListener('click', () => _loadFromSlot(+btn.dataset.slot));
+  });
+  document.querySelectorAll('.ed-slot-btn').forEach(btn => {
+    btn.addEventListener('dblclick', () => _saveToSlot(+btn.dataset.slot));
+  });
+
+  // ── Map name field ───────────────────────────────────────────────────
+  const _nameField = document.getElementById('ed-map-name');
+  if (_nameField) _nameField.addEventListener('input', () => { _mapName = _nameField.value; });
+
+  _updateSlotUI();
+  _updateMirrorBtn();
+  _updateModeButtons();
+
   // ── Keyboard shortcuts ───────────────────────────────────────────────
   document.addEventListener('keydown', e => {
     if (_inPreview && (e.code === 'KeyP' || e.code === 'Escape')) {
@@ -868,8 +1074,14 @@ export function initEditor() {
     const overlay = document.getElementById('editor-overlay');
     if (!overlay || overlay.style.display === 'none') return;
     if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') { e.preventDefault(); _doUndo(); }
-    if (e.code === 'KeyP') _preview();
-    if (e.code === 'KeyR') _rotateTool();
+    if ((e.ctrlKey || e.metaKey) && e.code === 'KeyS') { e.preventDefault(); _saveToSlot(_activeSlot >= 0 ? _activeSlot : 0); }
+    const _kd = parseInt(e.code.replace('Digit', ''));
+    if ((e.ctrlKey || e.metaKey) && _kd >= 1 && _kd <= SLOT_COUNT) { e.preventDefault(); _saveToSlot(_kd - 1); }
+    if (e.code === 'KeyP' && !e.ctrlKey) _preview();
+    if (e.code === 'KeyR' && !e.ctrlKey) _rotateTool();
+    if (e.code === 'KeyF' && !e.ctrlKey && !e.metaKey) { _fillMode = !_fillMode; if (_fillMode) _rectMode = false; _updateModeButtons(); }
+    if (e.code === 'KeyX' && !e.ctrlKey && !e.metaKey) { _rectMode = !_rectMode; if (_rectMode) _fillMode = false; _updateModeButtons(); }
+    if (e.code === 'KeyM' && !e.ctrlKey && !e.metaKey) { _mirrorMode = (_mirrorMode + 1) % 4; _updateMirrorBtn(); }
   });
 
   // ── URL map param ────────────────────────────────────────────────────

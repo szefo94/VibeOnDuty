@@ -157,6 +157,7 @@
 <div id="editor-overlay" style="display:none">
   <div id="ed-toolbar">
     <div class="ed-title">MAP EDITOR</div>
+    <input id="ed-map-name" type="text" placeholder="Map name…" maxlength="32">
 
     <div class="ed-section">FLOOR</div>
     <div id="ed-floor-tabs">
@@ -304,10 +305,23 @@
     <button class="ed-tool" data-tile="site_b">Site B</button>
 
     <div class="ed-section">ACTIONS</div>
+    <button id="ed-fill">⌀ Fill [F]</button>
+    <button id="ed-rect">▭ Rect [X]</button>
+    <button id="ed-mirror">Mirror: OFF [M]</button>
     <button id="ed-rotate">Rotate ↻ [R]</button>
     <button id="ed-undo">Undo (Ctrl+Z)</button>
     <button id="ed-clear">Clear Grid</button>
     <button id="ed-preview">Preview [P]</button>
+
+    <div class="ed-section">SAVE SLOTS</div>
+    <div class="ed-section" style="font-size:8px;color:#333;margin-top:-4px">click=load · dbl-click=save · Ctrl+S saves · Ctrl+1–5 saves</div>
+    <div id="ed-slots">
+      <button class="ed-slot-btn" data-slot="0">1: [ empty ]</button>
+      <button class="ed-slot-btn" data-slot="1">2: [ empty ]</button>
+      <button class="ed-slot-btn" data-slot="2">3: [ empty ]</button>
+      <button class="ed-slot-btn" data-slot="3">4: [ empty ]</button>
+      <button class="ed-slot-btn" data-slot="4">5: [ empty ]</button>
+    </div>
 
     <div class="ed-section">SHARE</div>
     <button id="ed-export">Export Map</button>
@@ -320,7 +334,9 @@
   </div>
 
   <div id="ed-main">
-    <canvas id="editor-canvas"></canvas>
+    <div id="ed-canvas-scroll">
+      <canvas id="editor-canvas"></canvas>
+    </div>
     <div id="ed-status">hover over grid to inspect</div>
     <div id="ed-legend">
       <span style="color:#5c4e3e">■</span> Wall &nbsp;
