@@ -33,7 +33,7 @@ import { conceptMapDef } from './maps/concept.js';
 import { rangeMapDef } from './maps/range.js';
 import { vanguardMapDef } from './maps/vanguard.js';
 import { startTrainingRange } from './modes/trainingRange.js';
-import { initEditor, openEditor } from './editor/mapEditor.js';
+import { initEditor, openEditor, mapDefFromB64 } from './editor/mapEditor.js';
 import { adaptStart, adaptStop } from './ai/difficultyAdapter.js';
 
 const _euler = new THREE.Euler(0, 0, 0, 'YXZ');
@@ -69,6 +69,33 @@ document.querySelectorAll('.map-card').forEach(card => {
     _selectedMap = _mapRegistry[card.dataset.map] ?? bunkerMapDef;
   });
 });
+
+// ── Custom map from URL ?map= param ───────────────────────────────────
+{
+  const _urlB64 = new URLSearchParams(window.location.search).get('map');
+  if (_urlB64) {
+    try {
+      const customDef = mapDefFromB64(_urlB64);
+      if (customDef) {
+        _mapRegistry.custom = customDef;
+        const card = document.createElement('div');
+        card.className = 'map-card';
+        card.dataset.map = 'custom';
+        card.innerHTML = `
+          <div class="map-thumb custom-thumb">${customDef.thumb ? `<img src="${customDef.thumb}" alt="">` : 'CUSTOM'}</div>
+          <div class="map-name">${customDef.name.toUpperCase()}</div>
+          <div class="map-sub">${customDef.desc || 'User-created'}</div>
+        `;
+        document.getElementById('map-selector').appendChild(card);
+        card.addEventListener('click', () => {
+          document.querySelectorAll('.map-card').forEach(c => c.classList.remove('selected'));
+          card.classList.add('selected');
+          _selectedMap = customDef;
+        });
+      }
+    } catch (_) {}
+  }
+}
 
 function _activateMap() {
   setActiveMap(_selectedMap);

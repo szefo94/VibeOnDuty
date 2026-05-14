@@ -4,10 +4,20 @@ import { camera } from '../scene.js';
 import { setActiveMap } from '../map.js';
 import { buildLevel, clearLevel } from '../level.js';
 import { setGameRunning } from '../input.js';
-import { deactivateAllEnemies } from '../entities/enemies.js';
+import { deactivateAllEnemies, rebuildAllEnemies } from '../entities/enemies.js';
+import { setDifficulty } from '../difficulty.js';
+import { player } from '../entities/player.js';
 
-const GRID_W = 24, GRID_H = 24;
+let _gW = 24, _gH = 24;
 const FLOOR1 = 3.0, FLOOR2 = 6.0;
+
+const _SKY_PRESETS = [
+  { label: 'Default',    fog: { color: 0x2a3a4a, density: 0.010 }, skyColor: 0x4a6070 },
+  { label: 'Outdoor',    fog: { color: 0x6a9aaa, density: 0.006 }, skyColor: 0x90c0d8 },
+  { label: 'Bunker',     fog: { color: 0x241808, density: 0.020 }, skyColor: 0x180e04 },
+  { label: 'Night',      fog: { color: 0x060610, density: 0.028 }, skyColor: 0x020208 },
+  { label: 'Dawn',       fog: { color: 0x4a2810, density: 0.008 }, skyColor: 0x6a3010 },
+];
 
 // ── Floor definitions ─────────────────────────────────────────────────────────
 // Each floor has a base Y, a wall height (= one storey = FLOOR1), and 2 height keys.
@@ -81,17 +91,17 @@ function _heightTint(h) {
 
 // ── Multi-floor state ─────────────────────────────────────────────────────────
 function _blankGrid() {
-  return Array.from({ length: GRID_H }, (_, r) =>
-    Array.from({ length: GRID_W }, (_, c) =>
-      (r === 0 || r === GRID_H - 1 || c === 0 || c === GRID_W - 1) ? 1 : 0
+  return Array.from({ length: _gH }, (_, r) =>
+    Array.from({ length: _gW }, (_, c) =>
+      (r === 0 || r === _gH - 1 || c === 0 || c === _gW - 1) ? 1 : 0
     )
   );
 }
 function _blankHeightmap() {
-  return Array.from({ length: GRID_H }, () => new Array(GRID_W).fill(0));
+  return Array.from({ length: _gH }, () => new Array(_gW).fill(0));
 }
 function _blankSwallBits() {
-  return Array.from({ length: GRID_H }, () => new Array(GRID_W).fill(0));
+  return Array.from({ length: _gH }, () => new Array(_gW).fill(0));
 }
 function _blankFloors() {
   return _FLOOR_DEFS.map(fd => ({
@@ -117,7 +127,10 @@ let _rectPreviewEnd = null;
 let _mirrorMode = 0;       // 0=off 1=H 2=V 3=H+V
 let _zoom       = 22;      // canvas px per tile (8–40)
 let _mapName    = '';
+let _mapDesc    = '';
+let _skyPreset  = 0;
 let _activeSlot = -1;
+let _inPlaytest = false;
 let _canvas   = null;
 let _ctx      = null;
 
@@ -267,8 +280,8 @@ function _drawRevolvedRampIndicator(c, r, cpx, cpy, type, alpha) {
 
 function _drawFloorTiles(fl, cpx, cpy, alpha) {
   _ctx.globalAlpha = alpha;
-  for (let r = 0; r < GRID_H; r++) {
-    for (let c = 0; c < GRID_W; c++) {
+  for (let r = 0; r < _gH; r++) {
+    for (let c = 0; c < _gW; c++) {
       const tile = fl.tiles[r][c];
       _ctx.fillStyle = _getTileColor(tile);
       _ctx.fillRect(c * cpx + 0.5, r * cpy + 0.5, cpx - 1, cpy - 1);
@@ -309,8 +322,8 @@ function _drawFloorTiles(fl, cpx, cpy, alpha) {
   if (fl.swallBits) {
     const swColor = alpha < 1 ? 'rgba(96,144,208,0.35)' : '#6090d0';
     _ctx.fillStyle = swColor;
-    for (let r = 0; r < GRID_H; r++) {
-      for (let c = 0; c < GRID_W; c++) {
+    for (let r = 0; r < _gH; r++) {
+      for (let c = 0; c < _gW; c++) {
         const bits = fl.swallBits[r][c];
         if (!bits) continue;
         const ew = Math.max(3, Math.round(Math.min(cpx, cpy) * 0.22));
@@ -326,8 +339,8 @@ function _drawFloorTiles(fl, cpx, cpy, alpha) {
   if (alpha >= 1) {
     _ctx.textAlign = 'right';
     _ctx.textBaseline = 'top';
-    for (let r = 0; r < GRID_H; r++) {
-      for (let c = 0; c < GRID_W; c++) {
+    for (let r = 0; r < _gH; r++) {
+      for (let c = 0; c < _gW; c++) {
         const h = fl.heightmap[r][c];
         if (!h) continue;
         _ctx.fillStyle = _heightTint(h);
@@ -348,7 +361,7 @@ function _drawFloorTiles(fl, cpx, cpy, alpha) {
 function _draw() {
   if (!_ctx) return;
   const cw = _canvas.width, ch = _canvas.height;
-  const cpx = cw / GRID_W, cpy = ch / GRID_H;
+  const cpx = cw / _gW, cpy = ch / _gH;
   _ctx.clearRect(0, 0, cw, ch);
 
   // Ghost floors (non-active) at low opacity
@@ -390,10 +403,10 @@ function _draw() {
   // Grid lines
   _ctx.strokeStyle = 'rgba(255,255,255,0.06)';
   _ctx.lineWidth = 0.5;
-  for (let c = 0; c <= GRID_W; c++) {
+  for (let c = 0; c <= _gW; c++) {
     _ctx.beginPath(); _ctx.moveTo(c * cpx, 0); _ctx.lineTo(c * cpx, ch); _ctx.stroke();
   }
-  for (let r = 0; r <= GRID_H; r++) {
+  for (let r = 0; r <= _gH; r++) {
     _ctx.beginPath(); _ctx.moveTo(0, r * cpy); _ctx.lineTo(cw, r * cpy); _ctx.stroke();
   }
 }
@@ -401,11 +414,11 @@ function _draw() {
 // ── Cell hit-test ─────────────────────────────────────────────────────────────
 function _cellAt(e) {
   const rect = _canvas.getBoundingClientRect();
-  const col = Math.floor((e.clientX - rect.left) / rect.width  * GRID_W);
-  const row = Math.floor((e.clientY - rect.top)  / rect.height * GRID_H);
+  const col = Math.floor((e.clientX - rect.left) / rect.width  * _gW);
+  const row = Math.floor((e.clientY - rect.top)  / rect.height * _gH);
   return {
-    col: Math.max(0, Math.min(GRID_W - 1, col)),
-    row: Math.max(0, Math.min(GRID_H - 1, row)),
+    col: Math.max(0, Math.min(_gW - 1, col)),
+    row: Math.max(0, Math.min(_gH - 1, row)),
   };
 }
 
@@ -413,7 +426,7 @@ function _cellAt(e) {
 
 // Single-cell paint — caller must call _draw() when done.
 function _paintAt(col, row, erase) {
-  if (col < 0 || row < 0 || col >= GRID_W || row >= GRID_H) return;
+  if (col < 0 || row < 0 || col >= _gW || row >= _gH) return;
   const fi = _floorIdx;
   const tiles = _curTiles(), hmap = _curHmap();
 
@@ -473,9 +486,9 @@ function _paint(e) {
   _paintAt(col, row, erase);
   // Mirror mode — skip for unique marker tools
   if (!_MARKER_KEYS.has(_tool)) {
-    if (_mirrorMode & 1) _paintAt(GRID_W - 1 - col, row, erase);
-    if (_mirrorMode & 2) _paintAt(col, GRID_H - 1 - row, erase);
-    if (_mirrorMode === 3) _paintAt(GRID_W - 1 - col, GRID_H - 1 - row, erase);
+    if (_mirrorMode & 1) _paintAt(_gW - 1 - col, row, erase);
+    if (_mirrorMode & 2) _paintAt(col, _gH - 1 - row, erase);
+    if (_mirrorMode === 3) _paintAt(_gW - 1 - col, _gH - 1 - row, erase);
   }
   _draw();
 }
@@ -519,12 +532,12 @@ function _floodFill(startCol, startRow, erase) {
   if (targetTile === nextTile) return;
 
   const ops = [];
-  const visited = new Uint8Array(GRID_W * GRID_H);
+  const visited = new Uint8Array(_gW * _gH);
   const queue = [[startCol, startRow]];
   while (queue.length) {
     const [c, r] = queue.shift();
-    if (c < 0 || r < 0 || c >= GRID_W || r >= GRID_H) continue;
-    const key = r * GRID_W + c;
+    if (c < 0 || r < 0 || c >= _gW || r >= _gH) continue;
+    const key = r * _gW + c;
     if (visited[key]) continue;
     if (tiles[r][c] !== targetTile) continue;
     visited[key] = 1;
@@ -694,7 +707,7 @@ function _updateSlotUI() {
 function _encode() {
   const mk = (pos) => pos ? [pos.col, pos.row] : null;
   return btoa(JSON.stringify({
-    v: 2, w: GRID_W, h: GRID_H, name: _mapName,
+    v: 2, w: _gW, h: _gH, name: _mapName, desc: _mapDesc, skyPreset: _skyPreset, thumb: _generateThumbnail(),
     floors: _floors.map(fl => ({
       base: fl.base,
       t:  fl.tiles.flat(),
@@ -708,7 +721,10 @@ function _encode() {
 
 function _decode(b64) {
   const d = JSON.parse(atob(b64));
-  const w = d.w ?? 24, h = d.h ?? 24;
+  _gW = d.w ?? 24; _gH = d.h ?? 24;
+  _skyPreset = d.skyPreset ?? 0;
+  _mapDesc = d.desc ?? '';
+  const w = _gW, h = _gH;
   const mk = (arr) => arr ? { col: arr[0], row: arr[1] } : null;
   if (d.v === 2 && d.floors) {
     _floors = d.floors.map(fd => ({
@@ -740,6 +756,8 @@ function _decode(b64) {
   _markers = { spawn_p: mk(d.sp), spawn_a: mk(d.sa), spawn_d: mk(d.sd), site_a: mk(d.sA), site_b: mk(d.sB) };
   _mapName = d.name ?? '';
   _undo = [];
+  if (_canvas) { _canvas.width = _gW * _zoom; _canvas.height = _gH * _zoom; }
+  _updatePresetButtons();
   _draw();
 }
 
@@ -766,7 +784,9 @@ function _preview() {
 export function exitEditorPreview() {
   if (!_inPreview) return;
   _inPreview = false;
+  _inPlaytest = false;
   setGameRunning(false);
+  deactivateAllEnemies();
   document.exitPointerLock?.();
   const hint = document.getElementById('ed-preview-hint');
   if (hint) hint.style.display = 'none';
@@ -775,8 +795,8 @@ export function exitEditorPreview() {
 
 // ── mapDef builder ────────────────────────────────────────────────────────────
 function _buildMapDef() {
-  const cx = (GRID_W / 2) * CELL + CELL / 2;
-  const cz = (GRID_H / 2) * CELL + CELL / 2;
+  const cx = (_gW / 2) * CELL + CELL / 2;
+  const cz = (_gH / 2) * CELL + CELL / 2;
   const toWorld = (pos) => pos
     ? { x: pos.col * CELL + CELL / 2, z: pos.row * CELL + CELL / 2 }
     : { x: cx, z: cz };
@@ -794,7 +814,7 @@ function _buildMapDef() {
     // Backward-compat fields for code that reads mapDef.tiles directly
     tiles:     _floors[0].tiles.map(row => [...row]),
     heightmap: _floors[0].heightmap.map(row => [...row]),
-    width: GRID_W, height: GRID_H,
+    width: _gW, height: _gH,
     H1: FLOOR1 / 2, H2: FLOOR1,
     spawnPlayer:   toWorld(_markers.spawn_p),
     spawnAttacker: toWorld(_markers.spawn_a),
@@ -803,8 +823,9 @@ function _buildMapDef() {
       ...(siteA ? [{ id: 'A', x: siteA.col * CELL + CELL / 2, z: siteA.row * CELL + CELL / 2 }] : []),
       ...(siteB ? [{ id: 'B', x: siteB.col * CELL + CELL / 2, z: siteB.row * CELL + CELL / 2 }] : []),
     ],
-    fog: { color: 0x2a3a4a, density: 0.010 },
-    skyColor: 0x4a6070,
+    desc: _mapDesc,
+    fog: (_SKY_PRESETS[_skyPreset] ?? _SKY_PRESETS[0]).fog,
+    skyColor: (_SKY_PRESETS[_skyPreset] ?? _SKY_PRESETS[0]).skyColor,
     wallHeight: _FLOOR_DEFS[0].wallHeight,
     showRubble: false,
     materials: {
@@ -815,17 +836,124 @@ function _buildMapDef() {
   };
 }
 
+// ── Variable map size ─────────────────────────────────────────────────────────
+function _newMap(w, h) {
+  _gW = w; _gH = h;
+  _floors = _blankFloors();
+  _markers = { spawn_p: null, spawn_a: null, spawn_d: null, site_a: null, site_b: null };
+  _undo = [];
+  if (_canvas) { _canvas.width = _gW * _zoom; _canvas.height = _gH * _zoom; }
+  _draw();
+}
+
+// ── Thumbnail generator (48×48 px canvas snapshot of ground floor) ────────────
+function _generateThumbnail() {
+  const SZ = 48;
+  const oc = document.createElement('canvas');
+  oc.width = SZ; oc.height = SZ;
+  const ox = oc.getContext('2d');
+  const cpx = SZ / _gW, cpy = SZ / _gH;
+  const fl = _floors[0];
+  for (let r = 0; r < _gH; r++) {
+    for (let c = 0; c < _gW; c++) {
+      ox.fillStyle = _getTileColor(fl.tiles[r][c]);
+      ox.fillRect(c * cpx, r * cpy, Math.ceil(cpx), Math.ceil(cpy));
+    }
+  }
+  for (const [key, pos] of Object.entries(_markers)) {
+    if (!pos) continue;
+    ox.fillStyle = _MARKER_COLOR[key];
+    ox.fillRect(pos.col * cpx, pos.row * cpy, Math.ceil(cpx), Math.ceil(cpy));
+  }
+  return oc.toDataURL('image/png');
+}
+
+// ── Preset UI ─────────────────────────────────────────────────────────────────
+function _updatePresetButtons() {
+  document.querySelectorAll('.ed-preset-btn').forEach(btn => {
+    btn.classList.toggle('selected', +btn.dataset.preset === _skyPreset);
+  });
+}
+
+// ── Playtest ──────────────────────────────────────────────────────────────────
+function _playtest() {
+  if (_inPreview) return;
+  _inPreview = true;
+  _inPlaytest = true;
+  document.getElementById('editor-overlay').style.display = 'none';
+  const hint = document.getElementById('ed-preview-hint');
+  if (hint) { hint.textContent = 'PLAYTEST — Esc to return'; hint.style.display = 'block'; }
+
+  const mapDef = _buildMapDef();
+  clearLevel();
+  setActiveMap(mapDef);
+  buildLevel(mapDef);
+  setDifficulty('recruit');
+  rebuildAllEnemies();
+  // Reset player vitals
+  player.hp = 100; player.dead = false; player.energy = 100;
+
+  const sp = mapDef.spawnPlayer;
+  camera.position.set(sp.x, PLAYER_H, sp.z);
+  setGameRunning(true);
+  document.getElementById('c').requestPointerLock();
+}
+
+// ── Pure mapDef decoder (does NOT touch editor state — for external callers) ──
+export function mapDefFromB64(b64) {
+  const d = JSON.parse(atob(b64));
+  const w = d.w ?? 24, h = d.h ?? 24;
+  const mk = (arr) => arr ? { col: arr[0], row: arr[1] } : null;
+  let floors;
+  if (d.v === 2 && d.floors) {
+    floors = d.floors.map(fd => ({
+      base:      fd.base,
+      tiles:     Array.from({ length: h }, (_, r) => Array.from(fd.t.slice(r * w, r * w + w))),
+      heightmap: Array.from({ length: h }, (_, r) => Array.from(fd.hm.slice(r * w, r * w + w))),
+      swallBits: fd.sw
+        ? Array.from({ length: h }, (_, r) => Array.from(fd.sw.slice(r * w, r * w + w)))
+        : Array.from({ length: h }, () => new Array(w).fill(0)),
+    }));
+  } else { return null; }
+
+  const markers = { spawn_p: mk(d.sp), spawn_a: mk(d.sa), spawn_d: mk(d.sd), site_a: mk(d.sA), site_b: mk(d.sB) };
+  const cx = (w / 2) * CELL + CELL / 2, cz = (h / 2) * CELL + CELL / 2;
+  const toWorld = (pos) => pos ? { x: pos.col * CELL + CELL / 2, z: pos.row * CELL + CELL / 2 } : { x: cx, z: cz };
+  const preset = _SKY_PRESETS[d.skyPreset ?? 0] ?? _SKY_PRESETS[0];
+  const siteA = markers.site_a, siteB = markers.site_b;
+  return {
+    name: d.name || 'Custom Map', desc: d.desc || '', thumb: d.thumb || null,
+    floors,
+    tiles: floors[0].tiles, heightmap: floors[0].heightmap,
+    width: w, height: h, H1: FLOOR1 / 2, H2: FLOOR1,
+    spawnPlayer:   toWorld(markers.spawn_p),
+    spawnAttacker: toWorld(markers.spawn_a),
+    spawnDefender: toWorld(markers.spawn_d),
+    sites: [
+      ...(siteA ? [{ id: 'A', x: siteA.col * CELL + CELL / 2, z: siteA.row * CELL + CELL / 2 }] : []),
+      ...(siteB ? [{ id: 'B', x: siteB.col * CELL + CELL / 2, z: siteB.row * CELL + CELL / 2 }] : []),
+    ],
+    fog: preset.fog, skyColor: preset.skyColor,
+    wallHeight: FLOOR1, showRubble: false,
+    materials: { floor: matFloor, wall: matWall, wallDark: matWallD, wallTop: matWallT, crack: matCrack, trim: matTrim, ramp: matRamp },
+    buildExtras(_scene, tl) { tl.length = 0; },
+  };
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 export function openEditor() {
   document.getElementById('overlay').style.display = 'none';
   document.getElementById('editor-overlay').style.display = 'flex';
   const nf = document.getElementById('ed-map-name');
   if (nf) nf.value = _mapName;
+  const df = document.getElementById('ed-map-desc');
+  if (df) df.value = _mapDesc;
   _draw();
   _updateCompoundUI();
   _updateMirrorBtn();
   _updateModeButtons();
   _updateSlotUI();
+  _updatePresetButtons();
 }
 
 export function closeEditor() {
@@ -853,8 +981,8 @@ export function initEditor() {
 
   _canvas = document.getElementById('editor-canvas');
   _ctx    = _canvas.getContext('2d');
-  _canvas.width  = GRID_W * _zoom;
-  _canvas.height = GRID_H * _zoom;
+  _canvas.width  = _gW * _zoom;
+  _canvas.height = _gH * _zoom;
 
   // ── Canvas mouse events ──────────────────────────────────────────────
   _canvas.addEventListener('contextmenu', e => e.preventDefault());
@@ -917,8 +1045,8 @@ export function initEditor() {
   _canvas.addEventListener('wheel', e => {
     e.preventDefault();
     _zoom = Math.max(8, Math.min(40, _zoom + (e.deltaY < 0 ? 2 : -2)));
-    _canvas.width  = GRID_W * _zoom;
-    _canvas.height = GRID_H * _zoom;
+    _canvas.width  = _gW * _zoom;
+    _canvas.height = _gH * _zoom;
     _draw();
   }, { passive: false });
 
@@ -1061,9 +1189,44 @@ export function initEditor() {
   const _nameField = document.getElementById('ed-map-name');
   if (_nameField) _nameField.addEventListener('input', () => { _mapName = _nameField.value; });
 
+  const _descField = document.getElementById('ed-map-desc');
+  if (_descField) _descField.addEventListener('input', () => { _mapDesc = _descField.value; });
+
+  // ── Sky presets ──────────────────────────────────────────────────────
+  document.querySelectorAll('.ed-preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => { _skyPreset = +btn.dataset.preset; _updatePresetButtons(); });
+  });
+
+  // ── Playtest ─────────────────────────────────────────────────────────
+  document.getElementById('ed-playtest')?.addEventListener('click', _playtest);
+
+  // ── New Map dialog ────────────────────────────────────────────────────
+  document.getElementById('ed-newmap-btn')?.addEventListener('click', () => {
+    const dlg = document.getElementById('ed-newmap-dialog');
+    if (dlg) dlg.style.display = 'flex';
+  });
+  document.getElementById('ed-newmap-cancel')?.addEventListener('click', () => {
+    document.getElementById('ed-newmap-dialog').style.display = 'none';
+  });
+  document.getElementById('ed-newmap-create')?.addEventListener('click', () => {
+    const wIn = document.getElementById('ed-newmap-w');
+    const hIn = document.getElementById('ed-newmap-h');
+    const w = Math.max(8, Math.min(48, Math.round(+(wIn?.value ?? 24) / 2) * 2));
+    const h = Math.max(8, Math.min(48, Math.round(+(hIn?.value ?? 24) / 2) * 2));
+    document.getElementById('ed-newmap-dialog').style.display = 'none';
+    _newMap(w, h);
+  });
+  // Live label updates for range sliders
+  ['ed-newmap-w', 'ed-newmap-h'].forEach(id => {
+    const el = document.getElementById(id);
+    const lbl = document.getElementById(id + '-val');
+    if (el && lbl) el.addEventListener('input', () => { lbl.textContent = el.value; });
+  });
+
   _updateSlotUI();
   _updateMirrorBtn();
   _updateModeButtons();
+  _updatePresetButtons();
 
   // ── Keyboard shortcuts ───────────────────────────────────────────────
   document.addEventListener('keydown', e => {

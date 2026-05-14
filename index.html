@@ -133,6 +133,7 @@
       <div class="map-name">VANGUARD COMPLEX</div>
       <div class="map-sub">3-Floor · Dark · Vertical</div>
     </div>
+    <!-- Custom map card injected by main.js when ?map= URL param is present -->
   </div>
   <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
     <button id="startbtn">[ DROP IN ]</button>
@@ -158,6 +159,7 @@
   <div id="ed-toolbar">
     <div class="ed-title">MAP EDITOR</div>
     <input id="ed-map-name" type="text" placeholder="Map name…" maxlength="32">
+    <input id="ed-map-desc" type="text" placeholder="Short description…" maxlength="80">
 
     <div class="ed-section">FLOOR</div>
     <div id="ed-floor-tabs">
@@ -304,13 +306,24 @@
     <button class="ed-tool" data-tile="site_a">Site A</button>
     <button class="ed-tool" data-tile="site_b">Site B</button>
 
+    <div class="ed-section">SKY / FOG PRESET</div>
+    <div class="ed-type-row">
+      <button class="ed-preset-btn selected" data-preset="0">Default</button>
+      <button class="ed-preset-btn" data-preset="1">Outdoor</button>
+      <button class="ed-preset-btn" data-preset="2">Bunker</button>
+      <button class="ed-preset-btn" data-preset="3">Night</button>
+      <button class="ed-preset-btn" data-preset="4">Dawn</button>
+    </div>
+
     <div class="ed-section">ACTIONS</div>
     <button id="ed-fill">⌀ Fill [F]</button>
     <button id="ed-rect">▭ Rect [X]</button>
     <button id="ed-mirror">Mirror: OFF [M]</button>
     <button id="ed-rotate">Rotate ↻ [R]</button>
     <button id="ed-undo">Undo (Ctrl+Z)</button>
+    <button id="ed-newmap-btn">New Map…</button>
     <button id="ed-clear">Clear Grid</button>
+    <button id="ed-playtest">▶ Playtest</button>
     <button id="ed-preview">Preview [P]</button>
 
     <div class="ed-section">SAVE SLOTS</div>
@@ -345,6 +358,27 @@
       <span style="color:#7a5c28">■</span> Ramp &nbsp;
       <span style="color:#2ecc71">■</span> Spawn &nbsp;
       <span style="color:#ff8800">■</span> Site
+    </div>
+  </div>
+
+  <!-- New Map dialog -->
+  <div id="ed-newmap-dialog" style="display:none">
+    <div id="ed-newmap-box">
+      <div class="ed-title" style="margin-bottom:12px">NEW MAP</div>
+      <div class="ed-sub-label">WIDTH (tiles)</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <input id="ed-newmap-w" type="range" min="8" max="48" step="2" value="24" style="flex:1">
+        <span id="ed-newmap-w-val" style="color:#e8c84a;font-family:'Courier New',monospace;font-size:12px;min-width:24px">24</span>
+      </div>
+      <div class="ed-sub-label">HEIGHT (tiles)</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+        <input id="ed-newmap-h" type="range" min="8" max="48" step="2" value="24" style="flex:1">
+        <span id="ed-newmap-h-val" style="color:#e8c84a;font-family:'Courier New',monospace;font-size:12px;min-width:24px">24</span>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button id="ed-newmap-create" style="flex:1;padding:8px;background:#2ecc71;color:#000;border:none;font-family:'Courier New',monospace;font-size:11px;cursor:pointer">CREATE</button>
+        <button id="ed-newmap-cancel" style="flex:1;padding:8px;background:#1a1a1a;color:#aaa;border:1px solid #333;font-family:'Courier New',monospace;font-size:11px;cursor:pointer">CANCEL</button>
+      </div>
     </div>
   </div>
 </div>

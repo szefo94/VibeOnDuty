@@ -118,3 +118,62 @@ Open the editor via **[ MAP EDITOR ]** on the main menu before starting each sec
 - [ ] Mirror mode with column tool — column appears symmetrically
 - [ ] Save slot 5, then reload page, then load slot 5 — full map restores
 - [ ] Type a 32-character name (maxlength) — input does not accept more characters
+
+---
+
+## 9. Variable map size
+
+Open **[ MAP EDITOR ]**, then click **New Map** (or press **N**).
+
+- [ ] The **New Map** dialog appears with width and height sliders
+- [ ] Sliders range from 12 to 48 — values are shown next to each slider
+- [ ] Click **Create** — grid resets to the chosen dimensions
+- [ ] Cancel button closes the dialog without changing the grid
+- [ ] A 12×12 grid is fully paintable with no missing tiles or crashes
+- [ ] A 48×48 grid is fully paintable — scrollbars appear and canvas is pan-able
+- [ ] Export a non-default-size map, then import it — grid restores to the correct dimensions
+- [ ] Changing map size **resets all tiles** (no stale data from the previous size)
+
+---
+
+## 10. Sky / fog presets
+
+- [ ] Five preset buttons appear in the toolbar: **Default, Outdoor, Bunker, Night, Dawn**
+- [ ] Clicking a preset button highlights it (selected state) and deselects the others
+- [ ] Click **3D Preview** (P) — the sky and fog visually match the selected preset
+- [ ] Return from preview; selected preset is still highlighted
+- [ ] Export the map, import it — the correct preset is restored and highlighted
+- [ ] Each preset produces a noticeably different sky colour and fog density in preview
+
+---
+
+## 11. Playtest button
+
+- [ ] **▷ Playtest** button appears in the ACTIONS section
+- [ ] Clicking it loads the map in first-person view with enemies spawned
+- [ ] Player starts with full HP and ammo (same as a fresh game)
+- [ ] Enemies are active and can be killed
+- [ ] Pressing **Esc** returns to the editor with no enemies remaining
+- [ ] After returning, the editor canvas and toolbar are fully functional
+- [ ] Playtest respects the currently selected **Sky / fog preset**
+
+---
+
+## 12. Minimap thumbnail
+
+- [ ] After clicking **Export Map**, the exported base-64 string contains a thumbnail
+- [ ] Import the exported string — no error occurs
+- [ ] Export the map, copy the URL param (`?map=…`), open it in a new tab — the custom map card appears in the map selector with a small thumbnail image
+- [ ] The thumbnail visually matches the ground-floor tile layout (walls darker, floor lighter)
+- [ ] Maps exported before thumbnail support (no thumb field) import cleanly — card shows "CUSTOM" text fallback
+
+---
+
+## 13. Custom map card (URL param)
+
+- [ ] Open the game with `?map=<base64>` in the URL — a **CUSTOM** card appears at the bottom of the map selector
+- [ ] The card shows the map name and description (or "User-created" if no description)
+- [ ] The card shows the thumbnail image if the export included one
+- [ ] Clicking the card selects it (blue highlight); clicking Play starts the game on that map
+- [ ] If the `?map=` param is invalid or corrupt, no card appears and the game loads normally
+- [ ] Without a `?map=` param, no custom card appears in the selector
