@@ -259,6 +259,15 @@ export function buildEnemyMesh(wx, wz, role = 'assault') {
   if (idleClip) actions.idle.time = Math.random() * idleClip.duration;
   actions.idle.play();
 
+  // Pre-start loco blend-tree clips at weight 0 so setEffectiveWeight works immediately
+  for (const key of ['walk', 'run', 'strafe_l', 'strafe_r']) {
+    if (!actions[key]) continue;
+    const dur = actions[key].getClip().duration;
+    actions[key].time = Math.random() * dur;
+    actions[key].setEffectiveWeight(0);
+    actions[key].play();
+  }
+
   _addAdditiveLayer(mixer, actions);
 
   // ── Muzzle flash ──────────────────────────────────────────────────────
@@ -316,6 +325,15 @@ export function buildPlayerMesh() {
   const idleClip = findClip(gltfTemplate.animations, 'idle');
   if (idleClip && actions.idle) actions.idle.time = Math.random() * idleClip.duration;
   if (actions.idle) actions.idle.play();
+
+  // Pre-start loco blend-tree clips at weight 0
+  for (const key of ['walk', 'run', 'strafe_l', 'strafe_r']) {
+    if (!actions[key]) continue;
+    const dur = actions[key].getClip().duration;
+    actions[key].time = Math.random() * dur;
+    actions[key].setEffectiveWeight(0);
+    actions[key].play();
+  }
 
   _addAdditiveLayer(mixer, actions);
 

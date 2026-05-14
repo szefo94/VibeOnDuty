@@ -631,8 +631,7 @@
       <span>Revitalization</span>
     </h1>
     <p class="hero-sub">
-      A machine-eye diagnosis of the current system, a clear account of where it fails,
-      and a phased plan to make the soldiers feel alive.
+      Machine audit of current system. Where it breaks. How to fix it.
     </p>
     <div class="hero-meta">Vibe on Duty &nbsp;·&nbsp; May 2026 &nbsp;·&nbsp; Phase 41 Proposal</div>
   </div>
@@ -651,9 +650,7 @@
   <h2>Machine Diagnosis</h2>
 
   <p>
-    What follows is an audit of the animation system as it exists in code — no aesthetic judgement,
-    only what the source enforces frame to frame. The intent is to identify the gap between
-    the system's declared capability and what it actually delivers at runtime.
+    Code audit only. No aesthetic call. Gap between declared capability and runtime reality.
   </p>
 
   <!-- Metrics -->
@@ -685,7 +682,7 @@
   </div>
 
   <h3>The full call chain</h3>
-  <p>Every animation decision in the game flows through this path, once per entity per frame:</p>
+  <p>All animation decisions. One path. Every entity, every frame:</p>
 
   <div class="chain">
     <span class="fn">requestAnimationFrame</span> <span class="file">— loop.js</span><br>
@@ -700,8 +697,7 @@
 
   <h3>What actually fires — and what doesn't</h3>
   <p>
-    The alias table in <code>enemyGLTF.js</code> defines 20 clip names.
-    Here is the honest runtime picture:
+    <code>enemyGLTF.js</code> alias table: 20 clip names. What actually runs:
   </p>
 
   <table>
@@ -792,19 +788,14 @@
   <div class="panel panel-red">
     <div class="panel-title">Machine observation</div>
     <p>
-      <strong>70% of the declared clip vocabulary is dead code at runtime.</strong>
-      The clips exist in the alias table and load correctly from GLB assets, but the clip-selection
-      waterfall in <code>tickEnemyAnimation</code> never reaches them. This is not a missing-asset
-      problem — it is a missing-routing problem.
+      <strong>70% of declared clips: dead code at runtime.</strong>
+      Clips load fine. <code>tickEnemyAnimation</code> waterfall never reaches them. Not an asset problem — routing problem.
     </p>
   </div>
 
   <h3>How locomotion is currently decided</h3>
   <p>
-    Speed in this system is not a continuous value — it is a boolean.
-    The enemy is either moving or not. If it is moving in attack state, it plays <code>run</code>.
-    If not, it plays <code>attack</code>. There is no interpolation between these states,
-    no awareness of actual velocity magnitude, and no directionality.
+    Speed = boolean. Moving or not. Attack state moving → <code>run</code>. Not moving → <code>attack</code>. No interpolation. No velocity magnitude. No directionality.
   </p>
 
   <div class="code-block">
@@ -819,16 +810,10 @@
 
   <h3>The crossfade problem</h3>
   <p>
-    Three.js's <code>crossFadeTo()</code> is avoided in the codebase because it freezes
-    the incoming clip at frame 0. The workaround — <code>fadeOut</code> + <code>reset().fadeIn().play()</code> —
-    is correct and solves that bug. But the crossfade duration is a flat constant: <code>0.22s</code>
-    for smooth transitions, <code>0s</code> for snap clips.
+    <code>crossFadeTo()</code> avoided — freezes incoming clip at frame 0. Fix: <code>fadeOut</code> + <code>reset().fadeIn().play()</code>. Works. Duration = flat constant: <code>0.22s</code> smooth / <code>0s</code> snap.
   </p>
   <p>
-    This means a transition from sprinting full-speed into a crouch gets the same 0s snap
-    as a bullet-to-death transition. It also means a slow shuffle into idle gets the same
-    0.22s blend as a sudden directional reversal. There is no concept of carry-over pose,
-    velocity, or context.
+    Sprint → crouch: same 0s snap as bullet-death. Shuffle → idle: same 0.22s as full reversal. No pose carry-over. No velocity. No context.
   </p>
 
 </div>
@@ -846,8 +831,7 @@
   <h2>Where It Breaks</h2>
 
   <p>
-    These are the specific failure modes a player sees, mapped back to their root causes in code.
-    Ordered by impact on perceived quality.
+    Player-visible failure modes, mapped to code root causes. Ordered by impact.
   </p>
 
   <ul class="problem-list">
@@ -857,9 +841,7 @@
       <div class="problem-body">
         <strong>Walk and run are parallel universes</strong>
         <p>
-          A soldier going 0.5 m/s and one going 6 m/s play the same <code>run</code> clip.
-          There is no speed-parameterized blend. The result is foot-sliding at low speeds
-          and a slow-motion feeling at high speeds because stride rate never matches actual velocity.
+          0.5 m/s and 6 m/s play same <code>run</code> clip. No speed blend. Low speed = foot-slide. High speed = stride doesn't match velocity.
         </p>
       </div>
       <div class="sev sev-high">High</div>
@@ -870,9 +852,7 @@
       <div class="problem-body">
         <strong>Strafe is invisible</strong>
         <p>
-          Enemies strafe perpendicular to the player in attack state (the velocity is applied in <code>enemyStates.js</code>).
-          They slide sideways while playing the forward <code>run</code> clip. The strafe clips
-          are declared and loaded but no code path selects them.
+          Enemies strafe in attack state (<code>enemyStates.js</code>). Slide sideways while playing forward <code>run</code>. Strafe clips declared, loaded, never selected.
         </p>
       </div>
       <div class="sev sev-high">High</div>
@@ -883,9 +863,7 @@
       <div class="problem-body">
         <strong>Shoot animation is sub-perceptual</strong>
         <p>
-          The <code>shoot</code> clip fires only while <code>muzzleFlashT &gt; 0</code>, a window of ~55ms.
-          Human visual persistence is ~100–150ms. The clip starts, gets immediately crossfaded away by
-          the next frame's state, and the player perceives no shooting animation at all — only a muzzle flash.
+          <code>shoot</code> fires only while <code>muzzleFlashT &gt; 0</code>: ~55ms window. Human persistence ~100–150ms. Clip starts, gets crossfaded before eyes register. Player sees only muzzle flash.
         </p>
       </div>
       <div class="sev sev-high">High</div>
@@ -896,10 +874,7 @@
       <div class="problem-body">
         <strong>No additive layer — everything is a full-weight replacement</strong>
         <p>
-          Three.js <code>AnimationMixer</code> supports additive blending (<code>THREE.AdditiveAnimationBlendMode</code>),
-          but it is unused. Every clip competes for 100% of total weight.
-          This means a hit reaction <em>replaces</em> locomotion rather than sitting on top of it.
-          Breathing, aim sway, and recoil have no clip representation at all.
+          <code>AdditiveAnimationBlendMode</code> unused. Every clip fights for 100% weight. Hit reaction <em>replaces</em> locomotion instead of layering on top. Breathing, aim sway, recoil: no clips at all.
         </p>
       </div>
       <div class="sev sev-high">High</div>
@@ -910,10 +885,7 @@
       <div class="problem-body">
         <strong>Upper body and lower body are locked together</strong>
         <p>
-          There is no bone mask. If an enemy is walking and shooting, one clip must win.
-          In practice, locomotion wins and the shooting arm gets no animation — the gun
-          floats forward at a fixed pose while the legs cycle. A proper split at the spine
-          would let the legs walk while the arms aim and reload independently.
+          No bone mask. Walking + shooting: one clip wins. Locomotion wins. Arm gets nothing — gun floats at fixed pose while legs cycle. Spine split would let legs walk while arms aim independently.
         </p>
       </div>
       <div class="sev sev-high">High</div>
@@ -924,10 +896,7 @@
       <div class="problem-body">
         <strong>Crossfade ignores context — 0.22s is never the right answer</strong>
         <p>
-          Blending from idle to walk feels slow at 0.22s. Blending from a full sprint
-          into a stopped aim pose feels abrupt at 0.22s. The ideal transition duration
-          depends on the velocity delta and the semantic distance between clips. Inertial blending
-          (carry pose momentum from the outgoing clip) makes every transition feel right automatically.
+          Idle → walk: 0.22s feels slow. Sprint → aim: 0.22s feels abrupt. Right duration depends on velocity delta + clip distance. Inertial blending (carry outgoing pose momentum) makes every transition feel right automatically.
         </p>
       </div>
       <div class="sev sev-med">Med</div>
@@ -938,10 +907,7 @@
       <div class="problem-body">
         <strong>No procedural foot IK</strong>
         <p>
-          Ramp tiles raise the floor geometry. Enemies and the player walk onto ramps with feet
-          visibly embedded in or floating above the surface. A two-bone IK pass on both ankles,
-          raycasting per-foot to the collision surface, would ground the characters without
-          requiring custom animation per slope angle.
+          Ramp tiles raise floor. Feet embed into or float above surface. Two-bone ankle IK + per-foot raycast against collision surface = grounded characters. No custom animation per slope needed.
         </p>
       </div>
       <div class="sev sev-med">Med</div>
@@ -952,10 +918,7 @@
       <div class="problem-body">
         <strong>Death has no lead-in</strong>
         <p>
-          <code>killEnemy</code> snaps to <code>death</code> at duration 0. This is technically correct —
-          a dead enemy should not spend 0.22s elegantly transitioning — but without a preceding
-          hit-stagger additive layer, the enemy goes from full animation to ragdoll-freeze in one frame,
-          which feels like a bug rather than a death.
+          <code>killEnemy</code> snaps to <code>death</code> at 0. Correct. But without preceding hit-stagger additive, enemy goes full-animation → ragdoll-freeze in one frame. Looks like bug, not death.
         </p>
       </div>
       <div class="sev sev-low">Low</div>
@@ -966,10 +929,7 @@
       <div class="problem-body">
         <strong>Procedural weapon bob competes with GLTF body animation</strong>
         <p>
-          The first-person weapon bob is a manually calculated sine offset applied each frame
-          to <code>wpn.position</code>. The third-person GLTF skeleton animates independently.
-          They are not synchronised — the weapon floats in first person while the body cycles below.
-          A shared locomotion phase value would let both systems breathe together.
+          1P weapon bob: sine offset on <code>wpn.position</code>. 3P GLTF animates independently. Not synced — weapon floats while body cycles. Shared locomotion phase float would fix it.
         </p>
       </div>
       <div class="sev sev-low">Low</div>
@@ -992,8 +952,7 @@
   <h2>The Evolution Plan</h2>
 
   <p>
-    Five changes, independent enough to ship incrementally, each closing a specific gap identified above.
-    Listed in implementation order — each one builds on the previous.
+    Five changes. Ship incrementally. Each closes specific gap above. Order matters — each builds on last.
   </p>
 
   <!-- Step A -->
@@ -1004,15 +963,10 @@
       <span class="tag">locomotion</span>
       <span class="tag">no new assets needed</span>
       <p>
-        Replace the <code>isMoving</code> boolean with a continuous <code>speed</code> float (0–1 normalized).
-        Blend <code>idle → walk → run</code> by linearly crossfading weights as speed changes, rather than
-        hard-switching clips. This single change eliminates foot-sliding at low speeds and makes
-        deceleration feel physical.
+        Replace <code>isMoving</code> boolean with <code>speed</code> float (0–1). Blend <code>idle → walk → run</code> by weight as speed changes. Kills foot-slide. Deceleration feels real.
       </p>
       <p>
-        Simultaneously, wire <code>strafe_l</code> and <code>strafe_r</code> by computing the dot product
-        of velocity against the entity's forward vector. Negative lateral dot → strafe_l weight, positive → strafe_r.
-        Blend all three axes (forward/back, strafe, speed) into a 2D blend tree.
+        Wire strafe: dot(velocity, forward). Negative lateral → <code>strafe_l</code> weight, positive → <code>strafe_r</code>. 2D blend tree: forward/back + strafe + speed.
       </p>
       <div class="code-block">
 <span class="c">// Proposed: 2D locomotion blend (forward × strafe)</span>
@@ -1038,26 +992,16 @@ actions.strafe_r.weight = <span class="fn">Math.max</span>(<span class="n">0</sp
       <span class="tag">body masking</span>
       <span class="tag">blender asset needed</span>
       <p>
-        Three.js <code>AnimationAction</code> supports a weight-per-track model. By zeroing the
-        weight of spine-upward tracks on the locomotion layer and zeroing leg-bone tracks on the
-        aim layer, you get a clean split: legs walk, torso shoots.
+        <code>AnimationAction</code> supports weight-per-track. Zero spine-up tracks on locomotion layer, zero leg-bone tracks on aim layer. Clean split: legs walk, torso shoots.
       </p>
       <p>
-        Upper body clips (<code>shoot</code>, <code>reload</code>, <code>attack</code>) run on
-        a separate action with only arm/spine/head tracks active. Lower body clips
-        (<code>walk</code>, <code>run</code>, <code>idle</code>) run with leg tracks only.
-        The Quaternius rig's named bones (<code>spine_01</code>, <code>thigh_l/r</code>) are
-        already resolved in <code>enemyGLTF.js</code> for the debug skeleton — the same bone
-        lookup enables masking.
+        Upper body (<code>shoot</code>, <code>reload</code>, <code>attack</code>): arm/spine/head tracks only. Lower body (<code>walk</code>, <code>run</code>, <code>idle</code>): leg tracks only. Quaternius bone names (<code>spine_01</code>, <code>thigh_l/r</code>) already resolved in <code>enemyGLTF.js</code> — same lookup enables masking.
       </p>
 
       <div class="panel panel-blue" style="margin-top:20px;">
         <div class="panel-title">Impact on shoot animation</div>
         <p>
-          With upper-body masking, the shoot clip no longer competes with locomotion for
-          full weight. It runs independently on the arm/spine layer for the duration of the
-          shoot animation (300–400ms), while the legs continue their correct cycle below.
-          The 55ms muzzle-flash window is no longer the bottleneck.
+          Shoot clip runs on arm/spine layer only. Legs keep cycling. 55ms muzzle-flash window no longer bottleneck.
         </p>
       </div>
     </div>
@@ -1071,42 +1015,32 @@ actions.strafe_r.weight = <span class="fn">Math.max</span>(<span class="n">0</sp
       <span class="tag">additive blending</span>
       <span class="tag">new clips needed</span>
       <p>
-        Enable <code>THREE.AdditiveAnimationBlendMode</code> on a dedicated additive action group.
-        Three types of clip live here, each at independent weight, all applied on top of the
-        base locomotion result:
+        Dedicated additive action group. Each clip type at independent weight, stacks on top of base locomotion:
       </p>
 
       <div class="blender-grid">
         <div class="panel">
           <div class="panel-title" style="color:var(--green)">Breathing</div>
           <p style="font-size:13px;">
-            A 3-second looping clip with subtle spine compression and shoulder rise.
-            Weight = 1.0 always. When the player sprints, weight rises to 1.4 (heavier breathing).
-            Costs one Blender export pass.
+            3-sec loop. Spine compression + shoulder rise. Weight 1.0 always, 1.4 during sprint. One Blender export.
           </p>
         </div>
         <div class="panel">
           <div class="panel-title" style="color:var(--green)">Hit Reaction</div>
           <p style="font-size:13px;">
-            Short (0.3s) directional additive clips: hit_front, hit_back, hit_left, hit_right.
-            Playing an additive hit clip on top of locomotion gives a stagger without
-            interrupting the walk cycle. Weight lerps from 1.0 to 0 over the clip duration.
+            0.3s directional clips: hit_front/back/left/right. Additive on top of locomotion — stagger without interrupting walk. Weight lerps 1.0→0 over duration.
           </p>
         </div>
         <div class="panel">
           <div class="panel-title" style="color:var(--green)">Aim Offset</div>
           <p style="font-size:13px;">
-            An additive pose that tilts spine and arm toward the look target.
-            Driven by the vertical look angle (pitch). No clip required — a procedural
-            spine rotation applied additively each frame covers this case.
+            Tilts spine + arm toward look target. Driven by pitch. No clip needed — procedural spine rotation applied additively per frame.
           </p>
         </div>
         <div class="panel">
           <div class="panel-title" style="color:var(--green)">Recoil</div>
           <p style="font-size:13px;">
-            Currently a procedural weapon position offset in <code>shoot.js</code>.
-            Moving it to an additive clip means the body rocks back slightly on fire,
-            not just the camera. The existing <code>recoilT</code> float drives the clip weight.
+            Currently procedural offset in <code>shoot.js</code>. As additive clip: body rocks on fire, not just camera. <code>recoilT</code> float drives weight.
           </p>
         </div>
       </div>
@@ -1121,16 +1055,10 @@ actions.strafe_r.weight = <span class="fn">Math.max</span>(<span class="n">0</sp
       <span class="tag">transitions</span>
       <span class="tag">no new assets</span>
       <p>
-        Inertial blending, described by David Bollo (Ubisoft) and adopted in many AAA engines,
-        records the current pose and its first derivative (velocity) at the moment a transition
-        fires, then decays toward the incoming clip using a critically-damped spring.
-        The result: transitions always feel right regardless of duration, because the blend
-        curve is shaped by physics, not a fixed lerp.
+        Capture pose + angular velocity at transition moment. Decay toward incoming clip via critically-damped spring. Transitions feel right regardless of duration — blend curve shaped by physics, not fixed lerp. (Bollo/Ubisoft, standard across AAA.)
       </p>
       <p>
-        A minimal implementation in Three.js stores the outgoing bone quaternions and angular
-        velocities at crossfade time, then applies a spring-damper correction offset that decays
-        to zero over ~0.15s. The spring constant controls how snappy or floaty the settle feels.
+        Three.js impl: store outgoing bone quaternions + velocities at crossfade time. Apply spring-damper correction offset, decays to zero over ~0.15s. Spring constant controls snappy vs floaty.
       </p>
 
       <div class="code-block">
@@ -1163,26 +1091,19 @@ actions.strafe_r.weight = <span class="fn">Math.max</span>(<span class="n">0</sp
       <span class="tag">IK</span>
       <span class="tag">terrain-aware</span>
       <p>
-        Two-bone IK on each ankle (thigh → calf → foot). Each frame, raycast downward from
-        the foot's animated world position. If the hit point is above the animated foot position,
-        solve IK to plant the foot at the hit. If below, leave the animated pose.
+        Two-bone IK per ankle (thigh → calf → foot). Each frame: raycast down from animated foot. Hit above foot → solve IK to plant. Hit below → leave animated pose.
       </p>
       <p>
-        An additional hip offset lowers the pelvis when both feet need to reach downward (walking
-        into a depression) and raises it when ascending a ramp. The result is characters that feel
-        grounded on ramps, cracks, and column bases without per-terrain animation work.
+        Hip offset: lower pelvis when feet reach down (depression), raise ascending ramp. Characters feel grounded on ramps + column bases. No per-terrain animation work.
       </p>
       <p>
-        The collision surface is already queryable — the same BVH that handles player movement
-        reports height per cell. A per-foot raycast against wallMeshes (already in the scene)
-        returns the exact surface normal needed for ankle rotation.
+        BVH already queryable — same system as player movement. Per-foot raycast against <code>wallMeshes</code> returns surface normal for ankle rotation.
       </p>
 
       <div class="panel panel-red" style="margin-top:20px;">
         <div class="panel-title">Scope note</div>
         <p>
-          Foot IK is the most technically complex step. It should ship last, after steps A–D are stable.
-          The visual gain on flat maps is zero; the gain on ramp-heavy maps like Vanguard Complex is significant.
+          Most complex step. Ship after A–D stable. Flat maps: zero visual gain. Ramp-heavy maps like Vanguard Complex: significant.
         </p>
       </div>
     </div>
@@ -1203,16 +1124,11 @@ actions.strafe_r.weight = <span class="fn">Math.max</span>(<span class="n">0</sp
   <h2>Claude × Blender</h2>
 
   <p>
-    Anthropic has released native Blender integration for Claude — Claude can now read,
-    write, and execute <code>bpy</code> (Blender Python API) scripts directly inside the
-    Blender environment. This changes the asset pipeline for this project significantly.
+    Claude now reads, writes, and executes <code>bpy</code> scripts inside Blender. Changes asset pipeline for this project.
   </p>
 
   <blockquote>
-    Instead of hand-animating clips in Blender, Claude can <em>generate</em> a Python script
-    that builds the animation programmatically — bone by bone, frame by frame — and bakes it
-    into NLA strips ready for GLB export. The artist's job shifts from keyframing to curating
-    and tuning the output.
+    Claude <em>generates</em> Python: bone by bone, frame by frame, baked to NLA strips for GLB export. Artist job: curate + tune, not keyframe.
   </blockquote>
 
   <h3>What Claude can generate for this project</h3>
@@ -1222,40 +1138,28 @@ actions.strafe_r.weight = <span class="fn">Math.max</span>(<span class="n">0</sp
     <div class="panel panel-gold">
       <div class="panel-title">Additive clip set</div>
       <p style="font-size:13px;">
-        A <code>bpy</code> script that creates breathing, hit_front, hit_back, hit_left, hit_right
-        as additive NLA strips on the Quaternius rig. Each clip is generated from procedural
-        keyframes (spine compression curves, arm flinch arcs) and exported with correct
-        <code>ANIM_RETARGET</code> correction so they slot into the existing alias map without changes.
+        <code>bpy</code> script: breathing + hit_front/back/left/right as additive NLA strips on Quaternius rig. Procedural keyframes (spine compression, arm flinch). Exports with <code>ANIM_RETARGET</code> — slots into alias map unchanged.
       </p>
     </div>
 
     <div class="panel panel-blue">
       <div class="panel-title">Locomotion polish pass</div>
       <p style="font-size:13px;">
-        A script that reads the existing walk/run clips and generates smooth transition poses —
-        the frames between walk and run that currently don't exist. Output: a blended
-        "walk_to_run" and "run_to_walk" clip of 6 frames each, eliminating the pop
-        even before inertial blending is implemented.
+        Reads existing walk/run clips, generates 6-frame transition poses. Output: walk_to_run + run_to_walk. Kills the pop before inertial blending lands.
       </p>
     </div>
 
     <div class="panel panel-gold">
       <div class="panel-title">Directional strafe set</div>
       <p style="font-size:13px;">
-        Strafe clips are declared in the alias map but never existed as real assets.
-        A Claude-written <code>bpy</code> script derives them from the existing walk clip
-        by rotating the pelvis and shoulder orientation 90°, adjusting foot phase,
-        and baking the result. No human animation time required.
+        Strafe clips declared, never existed as assets. Claude <code>bpy</code> derives from walk clip: rotate pelvis + shoulders 90°, adjust foot phase, bake. Zero human animation time.
       </p>
     </div>
 
     <div class="panel panel-blue">
       <div class="panel-title">NLA layer setup</div>
       <p style="font-size:13px;">
-        A script that configures the Blender NLA editor with the correct layer order:
-        base locomotion, upper body override, additive effects. Exports a single GLB
-        with all tracks named to match the existing alias map. Drop-in replacement for
-        the current asset.
+        Configures NLA layer order: base loco → upper body override → additive. Exports GLB with tracks matching alias map. Drop-in replacement.
       </p>
     </div>
 
@@ -1272,11 +1176,7 @@ actions.strafe_r.weight = <span class="fn">Math.max</span>(<span class="n">0</sp
   <div class="panel panel-green">
     <div class="panel-title">Why this matters for a solo project</div>
     <p>
-      Professional 3D animation requires either expensive motion capture or expensive animator time.
-      Claude generating <code>bpy</code> scripts makes procedural keyframe generation available
-      at conversation speed. The quality ceiling is lower than handcrafted motion, but for
-      secondary clips (breathing, hit reactions, additive layers) it is more than sufficient —
-      and the clips it generates can always be manually refined in Blender afterward.
+      Pro animation = mocap money or animator time. Claude <code>bpy</code> scripts = procedural keyframes at conversation speed. Quality ceiling below handcrafted — but for breathing, hit reactions, additive layers: sufficient. Always refinable in Blender after.
     </p>
   </div>
 

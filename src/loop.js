@@ -18,7 +18,7 @@ import { updateWeaponDeath } from './combat/shoot.js';
 import { tickGamepad } from './gamepad.js';
 import { drawMinimap } from './hud/radar.js';
 import { playerMesh, playerMixer, playerActions } from './builders/enemyGLTF.js';
-import { crossfade } from './builders/enemyAnimations.js';
+import { crossfade, tickInertia } from './builders/enemyAnimations.js';
 import { tickKillcam, isKillcamActive } from './replay/killcam.js';
 import { adaptTick } from './ai/difficultyAdapter.js';
 
@@ -129,6 +129,16 @@ export function loop(ts) {
       // Sync action table once playerActions is populated after load
       if (!playerAnim.actions && playerActions) playerAnim.actions = playerActions;
 
+      // Lazy bone collection for inertial blending
+      if (!playerAnim._bonesInit) {
+        playerAnim._bonesInit = true;
+        playerAnim._bones = [];
+        playerMesh.traverse(obj => {
+          if (obj.isSkinnedMesh && obj.skeleton)
+            for (const b of obj.skeleton.bones) if (!playerAnim._bones.includes(b)) playerAnim._bones.push(b);
+        });
+      }
+
       if (playerAnim.actions) {
         const a = playerAnim.actions;
         let clip;
@@ -211,7 +221,10 @@ export function loop(ts) {
   }
 
   // ── Player mixer ticks even when dead so death animation plays ───
-  if (playerMesh && playerMixer) playerMixer.update(dt);
+  if (playerMesh && playerMixer) {
+    playerMixer.update(dt);
+    tickInertia(playerAnim, dt);
+  }
 
   // ── 1p weapon death drop (runs even when dead) ───────────────────
   updateWeaponDeath(dt);

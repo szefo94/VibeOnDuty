@@ -113,11 +113,84 @@ export function buildEnemyMixer(mesh) {
   return { mixer, actions };
 }
 
+// ── Locomotion blend tree helpers ─────────────────────────────────────────
+// LOCO_CLIPS run simultaneously with direct weight control (no crossfade).
+// Override clips (death, jump, hit, crouch, shoot, attack-idle) use crossfade.
+const LOCO_CLIPS = new Set(['idle', 'walk', 'run', 'strafe_l', 'strafe_r']);
+const MAX_ENEMY_SPEED = 3.6; // ENEMY_SPEED * max speedMult
+
+function _setLocoWeights(actions, speedN, strN) {
+  const strAmt = Math.abs(strN);
+  const fwdFrac = Math.max(0, 1 - strAmt);
+
+  const idleW = Math.max(0, 1 - speedN * 3);
+  const walkW = Math.max(0, 1 - Math.abs(speedN * 2 - 1)) * fwdFrac;
+  const runW  = Math.max(0, speedN * 2 - 1) * fwdFrac;
+  const strLW = Math.max(0, -strN);
+  const strRW = Math.max(0,  strN);
+
+  const sum = idleW + walkW + runW + strLW + strRW || 1;
+
+  if (actions.idle)     actions.idle    .setEffectiveWeight(idleW / sum);
+  if (actions.walk)     actions.walk    .setEffectiveWeight(walkW / sum);
+  if (actions.run)      actions.run     .setEffectiveWeight(runW  / sum);
+  if (actions.strafe_l) {
+    if (!actions.strafe_l.isRunning()) actions.strafe_l.play();
+    actions.strafe_l.setEffectiveWeight(strLW / sum);
+  }
+  if (actions.strafe_r) {
+    if (!actions.strafe_r.isRunning()) actions.strafe_r.play();
+    actions.strafe_r.setEffectiveWeight(strRW / sum);
+  }
+}
+
+function _exitLocoMode(e) {
+  if (!e._inLocoMode) return;
+  for (const n of LOCO_CLIPS) { const a = e.actions[n]; if (a) a.setEffectiveWeight(0); }
+  e._inLocoMode = false;
+}
+
+function _snapBones(e) {
+  if (!e._bones?.length) return;
+  e._inertia = new Map();
+  e._inertiaT = 0;
+  for (const bone of e._bones) e._inertia.set(bone.uuid, bone.quaternion.clone());
+}
+
+function _enterLocoMode(e) {
+  if (e._inLocoMode) return;
+  const a = e.actions[e.currentClip];
+  if (a && !LOCO_CLIPS.has(e.currentClip)) { _snapBones(e); a.setEffectiveWeight(0); }
+  e._inLocoMode = true;
+  e.currentClip = 'idle';
+}
+
+// ── Inertial blending ──────────────────────────────────────────────────────
+// Critically-damped spring: settles bone pose from snapshot toward new clip.
+// Applied after mixer.update() so the correction overrides the mixer output.
+const INERTIA_OMEGA = 22;
+
+function _tickInertia(e, dt) {
+  if (!e._inertia) return;
+  e._inertiaT += dt;
+  const decay = (1 + INERTIA_OMEGA * e._inertiaT) * Math.exp(-INERTIA_OMEGA * e._inertiaT);
+  if (decay < 0.001) { e._inertia = null; return; }
+  for (const bone of e._bones) {
+    const snap = e._inertia.get(bone.uuid);
+    if (!snap) continue;
+    bone.quaternion.copy(snap.clone().slerp(bone.quaternion, 1 - decay));
+  }
+}
+
+export function tickInertia(e, dt) { _tickInertia(e, dt); }
+
 // ── Crossfade helper ──────────────────────────────────────────────────────
 // Call once per frame after computing the desired clip name.
 // e must have { actions, currentClip } on it.
 export function crossfade(e, to, dur = 0.22) {
   if (to === e.currentClip || !e.actions[to]) return;
+  // Snap transitions: snapshot bones so inertial blending can soften the pop.
+  if (dur === 0) _snapBones(e);
   const from = e.actions[e.currentClip];
   const toAct = e.actions[to];
   // Standard Three.js crossfade pattern: fade out old, reset + fade in new.
@@ -184,7 +257,7 @@ export function setSkeletonDebugVisible(v) {
 }
 
 // ── Per-enemy animation tick ──────────────────────────────────────────────
-// Drives jump-phase state machine + selects and crossfades to the right clip.
+// Drives jump-phase + locomotion blend tree + override clip selection.
 // Called every frame by both enemy-bot and friendly-bot tickers.
 const E_JUMP_START_DUR = 0.32;
 const E_JUMP_LAND_DUR  = 0.38;
@@ -192,63 +265,76 @@ const SNAP_CLIPS = new Set(['crouch', 'crouch_walk', 'death', 'hit', 'roll', 'ju
 
 export function tickEnemyAnimation(e, dt, isMoving) {
   const nowOnGround = e.onGround;
-  if (!e._prevOnGround && nowOnGround) {
-    e.jumpPhase = 'land';
-    e.jumpPhaseTimer = E_JUMP_LAND_DUR;
-  } else if (e._prevOnGround && !nowOnGround) {
-    e.jumpPhase = 'start';
-    e.jumpPhaseTimer = E_JUMP_START_DUR;
-  }
-  e._prevOnGround = nowOnGround;
-  if (e.jumpPhase === 'start') {
-    e.jumpPhaseTimer -= dt;
-    if (e.jumpPhaseTimer <= 0) e.jumpPhase = nowOnGround ? '' : 'loop';
-  }
-  if (e.jumpPhase === 'land') {
-    e.jumpPhaseTimer -= dt;
-    if (e.jumpPhaseTimer <= 0) e.jumpPhase = '';
-  }
 
-  // ── Additive hit reaction ──────────────────────────────────────────────
-  // When _hitAdditive is available (GLTF), play it as an overlay and keep
-  // the base layer running locomotion uninterrupted. Without it (procedural),
-  // fall through to the old full-replacement 'hit' clip below.
+  // Jump phase bookkeeping
+  if (!e._prevOnGround && nowOnGround)      { e.jumpPhase = 'land';  e.jumpPhaseTimer = E_JUMP_LAND_DUR; }
+  else if (e._prevOnGround && !nowOnGround) { e.jumpPhase = 'start'; e.jumpPhaseTimer = E_JUMP_START_DUR; }
+  e._prevOnGround = nowOnGround;
+  if (e.jumpPhase === 'start') { e.jumpPhaseTimer -= dt; if (e.jumpPhaseTimer <= 0) e.jumpPhase = nowOnGround ? '' : 'loop'; }
+  if (e.jumpPhase === 'land')  { e.jumpPhaseTimer -= dt; if (e.jumpPhaseTimer <= 0) e.jumpPhase = ''; }
+
+  // Additive hit reaction — GLTF only; procedural falls through to full hit clip below
   if (e.actions._hitAdditive) {
     if (e.stunTimer > 0) {
-      if (!e._hitAddPlaying) {
-        e.actions._hitAdditive.reset().fadeIn(0.03).play();
-        e._hitAddPlaying = true;
-      }
+      if (!e._hitAddPlaying) { e.actions._hitAdditive.reset().fadeIn(0.03).play(); e._hitAddPlaying = true; }
     } else if (e._hitAddPlaying) {
-      e.actions._hitAdditive.fadeOut(0.12);
-      e._hitAddPlaying = false;
+      e.actions._hitAdditive.fadeOut(0.12); e._hitAddPlaying = false;
     }
   }
 
-  let clip;
-  if (e.jumpPhase === 'land' && e.actions.jump_land) {
-    clip = 'jump_land';
-  } else if (!nowOnGround) {
-    if (e.jumpPhase === 'start' && e.actions.jump_start) clip = 'jump_start';
-    else clip = e.actions.jump_loop ? 'jump_loop' : 'idle';
-  } else if (e.stunTimer > 0 && e.actions.hit && !e.actions._hitAdditive) {
-    clip = 'hit'; // procedural fallback only — GLTF uses additive layer above
-  } else if (e.crouching) {
-    clip = isMoving
-      ? (e.actions.crouch_walk ? 'crouch_walk' : 'walk')
-      : (e.actions.crouch      ? 'crouch'      : 'idle');
-  } else if (e.state === 'attack' || e.state === 'spotted') {
-    if (isMoving) {
-      clip = e.actions.run ? 'run' : 'walk';
-    } else if (e.muzzleFlashT > 0 && e.actions.shoot) {
-      clip = 'shoot';
-    } else {
-      clip = 'attack';
-    }
-  } else {
-    clip = isMoving ? 'walk' : 'idle';
+  // Lazy bone collection for inertial blending (SkinnedMesh skeleton, GLTF only)
+  if (!e._bonesInit) {
+    e._bonesInit = true;
+    e._bones = [];
+    e.mesh.traverse(obj => {
+      if (obj.isSkinnedMesh && obj.skeleton) {
+        for (const b of obj.skeleton.bones) if (!e._bones.includes(b)) e._bones.push(b);
+      }
+    });
   }
-  const snapTransition = SNAP_CLIPS.has(clip) || SNAP_CLIPS.has(e.currentClip);
-  crossfade(e, clip, snapTransition ? 0 : 0.22);
+
+  // Position-derived velocity — captures strafe + knockback (velX/velZ miss direct-pos moves)
+  const prevX = e._prevX ?? e.x, prevZ = e._prevZ ?? e.z;
+  e._prevX = e.x; e._prevZ = e.z;
+  const velX = dt > 0 ? (e.x - prevX) / dt : 0;
+  const velZ = dt > 0 ? (e.z - prevZ) / dt : 0;
+  const speed  = Math.sqrt(velX * velX + velZ * velZ);
+  const speedN = Math.min(1, speed / MAX_ENEMY_SPEED);
+
+  // Strafe component: project velocity onto entity's right axis
+  // forward = (-sin(facingY), -cos(facingY)), right = (-cos(facingY), sin(facingY))
+  const rgtX  = -Math.cos(e.facingY), rgtZ = Math.sin(e.facingY);
+  const strN  = speed > 0.05 ? Math.max(-1, Math.min(1, (velX * rgtX + velZ * rgtZ) / MAX_ENEMY_SPEED)) : 0;
+
+  // ── Override clip selection (non-locomotion states) ────────────────────
+  let overrideClip = null;
+  if (e.jumpPhase === 'land' && e.actions.jump_land) {
+    overrideClip = 'jump_land';
+  } else if (!nowOnGround) {
+    overrideClip = e.jumpPhase === 'start' && e.actions.jump_start ? 'jump_start'
+                 : e.actions.jump_loop ? 'jump_loop' : null;
+  } else if (e.stunTimer > 0 && e.actions.hit && !e.actions._hitAdditive) {
+    overrideClip = 'hit'; // procedural fallback — GLTF uses additive layer above
+  } else if (e.crouching) {
+    overrideClip = speedN > 0.05
+      ? (e.actions.crouch_walk ? 'crouch_walk' : 'walk')
+      : (e.actions.crouch      ? 'crouch'      : null);
+  } else if (e.muzzleFlashT > 0 && e.actions.shoot) {
+    overrideClip = 'shoot';
+  } else if ((e.state === 'attack' || e.state === 'spotted') && speedN < 0.05 && e.actions.attack) {
+    overrideClip = 'attack'; // standing still in attack stance
+  }
+
+  // ── Drive animation ────────────────────────────────────────────────────
+  if (overrideClip) {
+    _exitLocoMode(e);
+    const snap = SNAP_CLIPS.has(overrideClip) || SNAP_CLIPS.has(e.currentClip);
+    crossfade(e, overrideClip, snap ? 0 : 0.22);
+  } else {
+    _enterLocoMode(e);
+    _setLocoWeights(e.actions, speedN, strN);
+  }
+
   e.mixer.update(dt);
+  _tickInertia(e, dt);
 }
