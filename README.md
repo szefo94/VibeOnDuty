@@ -151,7 +151,7 @@ Four selectable tiers affect reaction time, aim accuracy, health, speed, and str
 - **Sniper bots** (`weaponRole === 'sniper'`) — hold position in ATTACK_STATE, rotate to face player only, never advance
 
 ### Drone AI
-- **Persistent drone** (wave mode): orbits player at ~8 unit radius, EMP pulse at <30% HP
+- **Persistent drone** (wave mode): orbits player at ~8 unit radius, EMP pulse at <30% HP; on death tumbles with gravity, emits a smoke trail, and bursts on impact before respawning
 - **S&D / TDM recon drones** (one per team): fixed waypoint patrol, periodic LOS scan
   - Friendly drone reveals enemy bot positions on minimap
   - Enemy drone compromises player position and alerts nearby bots
