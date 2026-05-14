@@ -551,7 +551,6 @@ Tags — **complexity:** `easy` `medium` `hard` `very hard` · **player demand:*
 | 12 | Ricochet off angled metal surfaces at reduced damage, max one bounce per bullet. | `hard` | `niche` | `juicy` |
 | 13 | Scope glint — the AWP lens catches light and flickers for ~0.3 s before the shot, visible at range. | `medium` | `solid` | `tactical` |
 | 14 | Weapon inspect animation plays when the player is idle for 10 s. | `easy` | `solid` | `polish` |
-| 53 | Lean/peek mechanic — hold Q/E to side-lean; narrows hitbox and shifts aim to edge of cover without full exposure. | `medium` | `hot` | `tactical` |
 | 54 | Crouch-slide — sprint + crouch launches a 0.8 s slide at full momentum, hitbox drops to knee height, cancellable with jump. | `medium` | `hot` | `juicy` |
 | 55 | Suppressor attachment — press `Alt+1–4` to toggle per-weapon; no muzzle flash, off-radar while firing, 10% damage reduction. | `medium` | `solid` | `tactical` |
 | 56 | Defuse kit — buy in S&D buy phase for $400; cuts your personal defuse time from 10 s to 5 s, classic CS staple. | `easy` | `hot` | `tactical` |
