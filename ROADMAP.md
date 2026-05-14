@@ -77,6 +77,8 @@ src/
     enemyBars.js        — drone bar, grenade impact zones, enemy HP bars
     radar.js            — drawMinimap (canvas)
     sndHud.js           — S&D match header, bomb timer, plant/defuse bars, result overlay
+  editor/
+    mapEditor.js        — 2D canvas grid editor; all tile types, 3-floor tabs, undo (80 ops), fill/rect/zoom/mirror tools, variable map size (12–48), 5 sky/fog presets, save slots (localStorage×5), map name+desc, minimap thumbnail, playtest, 3D preview, base-64 export/import, URL ?map= sharing; exports mapDefFromB64 for main.js
   *.test.js             — Vitest unit tests (54 tests, 5 files)
 tests/
   smoke.spec.js         — Playwright smoke tests (7 tests)
@@ -121,7 +123,8 @@ types/
 | 39 | **Adaptive Difficulty** — Separate `[ ADAPTIVE ]` mode button (purple). `src/ai/difficultyAdapter.js`: rolling 60 s kill/death window evaluated every 30 s; level 1–10 linearly interpolates all parameters between Recruit and Elite presets via `setDifficultyOverride()`. Starts at level 5. `adaptStop()` on main menu return clears override. `adaptTick(dt)` called in game loop. |
 | bugfix | **Drone death fall + smoke** — `killDrone()` no longer removes the mesh immediately; sets `d.dying=true` with random tumble spin. Fall phase in `updateDrone()`: 22 m/s² gravity, X/Z rotation tumble, `spawnSmokeCloud` trail every 70 ms. On ground contact: 4-puff burst smoke, mesh removed, `activeDrone` nulled. `loop.js` updated to tick dying drones (`!dead \|\| dying`). Respawn delay bumped 3 s → 4.5 s. |
 | bugfix | **Crack & column collision** — Cracks (tile 2/3) now block movement with a thin-slab distance check (`\|offset from wall centreline\| < 0.175 + PLAYER_R`) instead of a full-cell block, matching the 0.35 m visual geometry. Columns (tile 28) replaced full-cell AABB with circular distance (`colRadius 0.62 + PLAYER_R = 0.97 m`) so players can approach naturally. |
-| 37 | **In-Browser Map Editor** — `src/editor/mapEditor.js` (887 lines). Full 2D canvas grid view, paint toolbar covering all tile types (floor, wall, crack H/V, ramp N/S/E/W, diagonal/revolved/bilinear ramps, column, side wall bitmask). 3-floor tabs (Ground / F1 / F2) with per-floor height tools (6 levels: 0→F2½). Marker tools for player spawn, attacker/defender spawns, bomb sites A/B. Rotate shortcut (R). Undo stack (80 ops, Ctrl+Z). 3D preview (P key — live `buildLevel()` call, Esc to return). Export/import: `btoa/atob` base-64 JSON, copy-to-clipboard, URL `?map=<b64>` sharing, paste-import via textarea. v1→v2 format migration on import. |
+| 37 | **In-Browser Map Editor** — `src/editor/mapEditor.js`. Full 2D canvas grid view, paint toolbar covering all tile types (floor, wall, crack H/V, ramp N/S/E/W, diagonal/revolved/bilinear ramps, column, side wall bitmask). 3-floor tabs (Ground / F1 / F2) with per-floor height tools (6 levels: 0→F2½). Marker tools for player spawn, attacker/defender spawns, bomb sites A/B. Rotate shortcut (R). Undo stack (80 ops, Ctrl+Z). 3D preview (P key — live `buildLevel()` call, Esc to return). Export/import: `btoa/atob` base-64 JSON, copy-to-clipboard, URL `?map=<b64>` sharing, paste-import via textarea. v1→v2 format migration on import. |
+| 40 | **Map Editor v2** — Fill (bucket) tool with BFS flood-fill + batch undo; Rectangle tool with live gold preview rect + batch undo; scroll-to-zoom (8–40 px/tile, scrollable canvas container); Mirror/symmetry mode cycling Off→H→V→Both applied per brush stroke; variable map size 12–48 via New Map dialog with sliders; 5 named localStorage save slots (click=load, dbl-click=save, Ctrl+S/1–5); map name + description fields stored in export; 5 sky/fog presets (Default/Outdoor/Bunker/Night/Dawn) stored as `skyPreset` index; Playtest button launches Wave mode with enemies then returns to editor on Esc; 48×48 minimap thumbnail embedded in export; `mapDefFromB64` pure decoder; `main.js` reads `?map=` param and injects a custom map card into the selector with thumbnail, name, and desc. |
 
 ---
 
@@ -520,22 +523,9 @@ See Completed table — `src/ai/difficultyAdapter.js`, rolling 60 s K/D window, 
 
 ---
 
-### Phase 40 — Map Editor v2
+### ~~Phase 40 — Map Editor v2~~ ✅ Done
 
-Quality-of-life and power-user pass on the existing editor — no new game systems, only editor productivity.
-
-- **Fill (bucket) tool** — flood-fill a contiguous region of the same tile type in one click; respects floor boundaries. New toolbar button `[ ⌀ ]`, also bound to key `F` while editor is open.
-- **Rectangle tool** — click-drag to paint or erase a rectangular area; shows a live preview rect while dragging. Key `X` to toggle rect mode on/off.
-- **Scroll-to-zoom** — mouse wheel scales the grid (2 px/tile min → 32 px/tile max); middle-click-drag pans; current tile stays centered. Allows fine detail work on large maps.
-- **Mirror / symmetry mode** — toolbar toggle cycles: Off → Mirror H → Mirror V → Mirror Both. Each brush stroke is mirrored across the map centre simultaneously. Makes symmetric arena building fast.
-- **Variable map size** — "New Map" dialog lets the user choose width × height (8–48, even numbers only). Border walls are auto-placed. Existing export format gains `width`/`height` fields (defaults to 24 if absent — backwards compatible).
-- **Named save slots** — 5 `localStorage` slots with editable names. Editor header shows slot picker; `Ctrl+S` saves to active slot, `Ctrl+1–5` fast-loads. Export/import still works independently.
-- **Map name + description** — two text fields in the editor sidebar; stored in the exported mapDef (`name`, `desc`). The Custom Map card on the main map selector renders the name as the card title.
-- **Ambient / fog preset** — dropdown with 5 presets: Outdoor (bright, blue sky), Bunker (dim, yellow-brown fog), Industrial (cool grey), Night (dark, low ambient), Dawn (warm orange). Stored as a `skyPreset` key in mapDef; `lighting.js` applies the matching fog color/density + ambient intensity when a custom map is loaded.
-- **Playtest button** — `[ ▶ PLAYTEST ]` button in editor header: saves current state, hides editor overlay, applies the current grid as the active map, and launches Wave mode (Recruit difficulty). Pressing Esc during playtest returns to the editor with state intact.
-- **Minimap thumbnail** — on export, the editor renders a 48×48 canvas snapshot of the ground floor tile grid, converts it to a data-URL, and embeds it in the mapDef as `thumbnail`. The map selector card displays it as a preview image instead of the generic placeholder.
-
-**Files touched:** `src/editor/mapEditor.js` (all tools), `src/lighting.js` (sky preset lookup), `src/main.js` (custom map card thumbnail + name), `index.html` / `style.css` (editor sidebar, slot picker UI).
+See Completed table — fill tool, rect tool, scroll-to-zoom, mirror mode, variable map size, save slots, map name+desc, sky/fog presets, playtest, minimap thumbnail, and custom map card from `?map=` URL param.
 
 ---
 
