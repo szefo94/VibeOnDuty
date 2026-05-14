@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Animation Revitalization — Vibe on Duty</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #08090c;
+      --surface:   #101318;
+      --surface2:  #181b24;
+      --surface3:  #20242f;
+      --gold:      #c8a84b;
+      --gold-dim:  #7a6530;
+      --gold-glow: rgba(200,168,75,0.12);
+      --blue:      #4a8fff;
+      --blue-dim:  rgba(74,143,255,0.1);
+      --red:       #e05050;
+      --red-dim:   rgba(224,80,80,0.1);
+      --green:     #4adf8a;
+      --green-dim: rgba(74,223,138,0.1);
+      --purple:    #9a6fff;
+      --text:      #c0c6d4;
+      --text-dim:  #5a6070;
+      --text-mid:  #8a90a0;
+      --border:    #22262f;
+      --border2:   #2a2e3a;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      font-size: 15px;
+    }
+
+    /* ── Hero ─────────────────────────────────────────────────── */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 80px 10vw;
+      overflow: hidden;
+    }
+
+    .hero-grid {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(200,168,75,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(200,168,75,0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      animation: gridPan 40s linear infinite;
+    }
+
+    @keyframes gridPan {
+      0%   { background-position: 0 0; }
+      100% { background-position: 48px 48px; }
+    }
+
+    .hero-vignette {
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 60% 50%, transparent 20%, var(--bg) 75%);
+    }
+
+    .hero-content { position: relative; z-index: 1; max-width: 800px; }
+
+    .hero-eyebrow {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.3em;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-bottom: 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .hero-eyebrow::before {
+      content: '';
+      display: block;
+      width: 32px; height: 1px;
+      background: var(--gold);
+    }
+
+    .hero h1 {
+      font-size: clamp(52px, 8vw, 96px);
+      font-weight: 700;
+      line-height: 0.92;
+      letter-spacing: -0.02em;
+      margin-bottom: 28px;
+      color: #fff;
+    }
+
+    .hero h1 span {
+      color: var(--gold);
+      display: block;
+    }
+
+    .hero-sub {
+      font-size: 18px;
+      font-weight: 300;
+      color: var(--text-mid);
+      max-width: 480px;
+      margin-bottom: 48px;
+    }
+
+    .hero-meta {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+
+    .hero-scroll-hint {
+      position: absolute;
+      bottom: 40px; left: 50%;
+      transform: translateX(-50%);
+      display: flex; flex-direction: column; align-items: center;
+      gap: 8px;
+      color: var(--text-dim);
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      animation: float 2.5s ease-in-out infinite;
+    }
+
+    .hero-scroll-hint::after {
+      content: '';
+      display: block;
+      width: 1px; height: 40px;
+      background: linear-gradient(to bottom, var(--text-dim), transparent);
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50%       { transform: translateX(-50%) translateY(8px); }
+    }
+
+    /* ── Layout ───────────────────────────────────────────────── */
+    .container { max-width: 900px; margin: 0 auto; padding: 0 40px; }
+
+    section { padding: 100px 0; }
+
+    .section-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.4em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 16px;
+      display: flex; align-items: center; gap: 12px;
+    }
+
+    .section-label::after {
+      content: '';
+      flex: 1; height: 1px;
+      background: var(--border);
+    }
+
+    h2 {
+      font-size: clamp(28px, 4vw, 44px);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      color: #fff;
+      margin-bottom: 48px;
+    }
+
+    h3 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 16px;
+      margin-top: 48px;
+    }
+
+    h3:first-child { margin-top: 0; }
+
+    p { color: var(--text); margin-bottom: 20px; max-width: 680px; }
+    p:last-child { margin-bottom: 0; }
+
+    /* ── Cards & Panels ───────────────────────────────────────── */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 28px 32px;
+      margin-bottom: 16px;
+    }
+
+    .panel-gold  { border-color: var(--gold-dim); background: linear-gradient(135deg, var(--surface), rgba(200,168,75,0.04)); }
+    .panel-blue  { border-color: rgba(74,143,255,0.25); background: linear-gradient(135deg, var(--surface), rgba(74,143,255,0.04)); }
+    .panel-red   { border-color: rgba(224,80,80,0.25);  background: linear-gradient(135deg, var(--surface), rgba(224,80,80,0.04)); }
+    .panel-green { border-color: rgba(74,223,138,0.2);  background: linear-gradient(135deg, var(--surface), rgba(74,223,138,0.04)); }
+
+    .panel-title {
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .panel-gold  .panel-title { color: var(--gold); }
+    .panel-blue  .panel-title { color: var(--blue); }
+    .panel-red   .panel-title { color: var(--red); }
+    .panel-green .panel-title { color: var(--green); }
+
+    /* ── Code ─────────────────────────────────────────────────── */
+    code, .mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+    }
+
+    .code-block {
+      background: #07080b;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 20px 24px;
+      margin: 20px 0;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+      line-height: 1.75;
+      color: #a8b4c8;
+    }
+
+    .code-block .c  { color: #4a5060; font-style: italic; } /* comment */
+    .code-block .k  { color: #9a6fff; }                      /* keyword */
+    .code-block .fn { color: #4a8fff; }                      /* function */
+    .code-block .s  { color: #4adf8a; }                      /* string */
+    .code-block .n  { color: var(--gold); }                  /* number */
+    .code-block .t  { color: var(--red); }                   /* type */
+
+    /* ── Metric grid ──────────────────────────────────────────── */
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+      margin: 32px 0;
+    }
+
+    .metric {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 6px;
+      padding: 20px;
+    }
+
+    .metric-value {
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 6px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .metric-label {
+      font-size: 11px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .metric-bad  .metric-value { color: var(--red); }
+    .metric-warn .metric-value { color: var(--gold); }
+    .metric-ok   .metric-value { color: var(--green); }
+
+    /* ── Problems list ────────────────────────────────────────── */
+    .problem-list { list-style: none; margin: 24px 0; }
+
+    .problem-item {
+      display: grid;
+      grid-template-columns: 28px 1fr auto;
+      gap: 16px;
+      align-items: start;
+      padding: 20px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .problem-item:last-child { border-bottom: none; }
+
+    .problem-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-dim);
+      padding-top: 2px;
+    }
+
+    .problem-body strong {
+      display: block;
+      color: #fff;
+      font-size: 15px;
+      margin-bottom: 6px;
+    }
+
+    .problem-body p {
+      font-size: 13px;
+      color: var(--text-mid);
+      margin: 0;
+      max-width: 560px;
+    }
+
+    .sev {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      padding: 3px 8px;
+      border-radius: 3px;
+      white-space: nowrap;
+      align-self: start;
+      margin-top: 2px;
+    }
+
+    .sev-high   { background: rgba(224,80,80,0.15);  color: var(--red);   border: 1px solid rgba(224,80,80,0.3); }
+    .sev-med    { background: rgba(200,168,75,0.12); color: var(--gold);  border: 1px solid rgba(200,168,75,0.3); }
+    .sev-low    { background: rgba(74,143,255,0.1);  color: var(--blue);  border: 1px solid rgba(74,143,255,0.25); }
+
+    /* ── Plan steps ───────────────────────────────────────────── */
+    .plan-step {
+      display: grid;
+      grid-template-columns: 52px 1fr;
+      gap: 24px;
+      margin-bottom: 40px;
+      align-items: start;
+    }
+
+    .step-num {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .step-a .step-num { background: rgba(200,168,75,0.15); color: var(--gold);  border: 1px solid rgba(200,168,75,0.3); }
+    .step-b .step-num { background: rgba(74,143,255,0.12); color: var(--blue);  border: 1px solid rgba(74,143,255,0.25); }
+    .step-c .step-num { background: rgba(74,223,138,0.1);  color: var(--green); border: 1px solid rgba(74,223,138,0.2); }
+    .step-d .step-num { background: rgba(154,111,255,0.12);color: var(--purple);border: 1px solid rgba(154,111,255,0.25); }
+    .step-e .step-num { background: rgba(224,80,80,0.1);   color: var(--red);   border: 1px solid rgba(224,80,80,0.2); }
+
+    .step-body { padding-top: 12px; }
+    .step-body h3 { margin-top: 0; font-size: 18px; }
+    .step-body .tag {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 3px;
+      margin-right: 6px;
+      margin-bottom: 12px;
+    }
+    .step-a .tag { background: rgba(200,168,75,0.12); color: var(--gold); }
+    .step-b .tag { background: rgba(74,143,255,0.1);  color: var(--blue); }
+    .step-c .tag { background: rgba(74,223,138,0.08); color: var(--green); }
+    .step-d .tag { background: rgba(154,111,255,0.1); color: var(--purple); }
+    .step-e .tag { background: rgba(224,80,80,0.08);  color: var(--red); }
+
+    /* ── Call chain diagram ───────────────────────────────────── */
+    .chain {
+      background: #07080b;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 28px 32px;
+      margin: 28px 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      line-height: 2;
+      color: var(--text-mid);
+    }
+
+    .chain .fn   { color: var(--blue); }
+    .chain .file { color: var(--text-dim); font-size: 11px; }
+    .chain .hot  { color: var(--gold); }
+    .chain .dead { color: var(--red); text-decoration: line-through; opacity: 0.6; }
+    .chain .arrow { color: var(--border2); }
+
+    /* ── Blender section ──────────────────────────────────────── */
+    .blender-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 32px 0;
+    }
+
+    @media (max-width: 640px) { .blender-grid { grid-template-columns: 1fr; } }
+
+    /* ── Separator ────────────────────────────────────────────── */
+    .sep {
+      height: 1px;
+      background: linear-gradient(to right, transparent, var(--border2), transparent);
+      margin: 0;
+    }
+
+    /* ── Teaser ───────────────────────────────────────────────── */
+    .teaser {
+      position: relative;
+      background: var(--bg);
+      overflow: hidden;
+      padding: 120px 10vw;
+      text-align: center;
+    }
+
+    .teaser-bg {
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse 60% 60% at 50% 50%, rgba(200,168,75,0.07) 0%, transparent 70%),
+        radial-gradient(ellipse 100% 50% at 50% 100%, rgba(74,143,255,0.05) 0%, transparent 60%);
+    }
+
+    .teaser-scanlines {
+      position: absolute; inset: 0;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 3px,
+        rgba(0,0,0,0.15) 3px,
+        rgba(0,0,0,0.15) 4px
+      );
+      pointer-events: none;
+    }
+
+    .teaser-content { position: relative; z-index: 1; }
+
+    .teaser-phase {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      letter-spacing: 0.5em;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-bottom: 24px;
+      animation: pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.5; }
+    }
+
+    .teaser h2 {
+      font-size: clamp(40px, 7vw, 88px);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 0.9;
+      color: #fff;
+      margin-bottom: 0;
+      text-align: center;
+    }
+
+    .teaser h2 .gold { color: var(--gold); }
+
+    .teaser-tagline {
+      font-size: clamp(14px, 2vw, 18px);
+      font-weight: 300;
+      color: var(--text-mid);
+      margin-top: 28px;
+      margin-bottom: 56px;
+      font-style: italic;
+      letter-spacing: 0.02em;
+    }
+
+    .teaser-features {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 64px;
+    }
+
+    .teaser-feature {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 6px 14px;
+      border-radius: 3px;
+      border: 1px solid;
+    }
+
+    .tf-gold   { color: var(--gold);  border-color: var(--gold-dim);               background: rgba(200,168,75,0.06); }
+    .tf-blue   { color: var(--blue);  border-color: rgba(74,143,255,0.3);           background: rgba(74,143,255,0.06); }
+    .tf-green  { color: var(--green); border-color: rgba(74,223,138,0.25);          background: rgba(74,223,138,0.06); }
+    .tf-purple { color: var(--purple);border-color: rgba(154,111,255,0.3);          background: rgba(154,111,255,0.06); }
+
+    .teaser-bar {
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(to right, transparent, var(--gold), transparent);
+      margin: 0 auto 48px;
+      max-width: 400px;
+      animation: barPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes barPulse {
+      0%, 100% { opacity: 0.4; transform: scaleX(0.6); }
+      50%       { opacity: 1;   transform: scaleX(1); }
+    }
+
+    .teaser-quote {
+      font-size: 13px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-dim);
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Nav dot ──────────────────────────────────────────────── */
+    .toc {
+      position: fixed;
+      right: 32px; top: 50%;
+      transform: translateY(-50%);
+      display: flex; flex-direction: column; gap: 10px;
+      z-index: 100;
+    }
+
+    .toc a {
+      display: block; width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--border2);
+      transition: background 0.2s, transform 0.2s;
+    }
+
+    .toc a:hover { background: var(--gold); transform: scale(1.5); }
+
+    @media (max-width: 900px) { .toc { display: none; } }
+
+    /* ── Misc ─────────────────────────────────────────────────── */
+    .chip {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 2px 7px; border-radius: 3px;
+      background: var(--surface3); color: var(--text-dim);
+      border: 1px solid var(--border2);
+      vertical-align: middle;
+    }
+    .chip-gold   { background: rgba(200,168,75,0.1);  color: var(--gold);  border-color: var(--gold-dim); }
+    .chip-red    { background: rgba(224,80,80,0.1);   color: var(--red);   border-color: rgba(224,80,80,0.3); }
+    .chip-blue   { background: rgba(74,143,255,0.1);  color: var(--blue);  border-color: rgba(74,143,255,0.3); }
+    .chip-green  { background: rgba(74,223,138,0.08); color: var(--green); border-color: rgba(74,223,138,0.25); }
+    .chip-purple { background: rgba(154,111,255,0.1); color: var(--purple);border-color: rgba(154,111,255,0.3); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 24px 0;
+      font-size: 13px;
+    }
+
+    th {
+      text-align: left;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border2);
+    }
+
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+      color: var(--text);
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    .dead-row td { opacity: 0.45; }
+    .dead-row td:first-child::before {
+      content: '✗ ';
+      color: var(--red);
+    }
+
+    a { color: var(--gold); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .divider {
+      border: none;
+      height: 1px;
+      background: var(--border);
+      margin: 48px 0;
+    }
+
+    blockquote {
+      border-left: 3px solid var(--gold-dim);
+      padding: 4px 20px;
+      margin: 28px 0;
+      color: var(--text-mid);
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Navigation dots ──────────────────────────────────────────── -->
+<nav class="toc" aria-label="Sections">
+  <a href="#hero"      title="Intro"></a>
+  <a href="#diagnosis" title="Diagnosis"></a>
+  <a href="#problems"  title="Problems"></a>
+  <a href="#plan"      title="Plan"></a>
+  <a href="#blender"   title="Claude × Blender"></a>
+  <a href="#teaser"    title="Phase 41"></a>
+</nav>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- HERO                                                            -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section class="hero" id="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-vignette"></div>
+  <div class="hero-content">
+    <div class="hero-eyebrow">Internal Design Document · Animation</div>
+    <h1>
+      Animation<br>
+      <span>Revitalization</span>
+    </h1>
+    <p class="hero-sub">
+      A machine-eye diagnosis of the current system, a clear account of where it fails,
+      and a phased plan to make the soldiers feel alive.
+    </p>
+    <div class="hero-meta">Vibe on Duty &nbsp;·&nbsp; May 2026 &nbsp;·&nbsp; Phase 41 Proposal</div>
+  </div>
+  <div class="hero-scroll-hint">Scroll</div>
+</section>
+
+<div class="sep"></div>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- PART I — MACHINE DIAGNOSIS                                       -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="diagnosis">
+<div class="container">
+
+  <div class="section-label">Part I</div>
+  <h2>Machine Diagnosis</h2>
+
+  <p>
+    What follows is an audit of the animation system as it exists in code — no aesthetic judgement,
+    only what the source enforces frame to frame. The intent is to identify the gap between
+    the system's declared capability and what it actually delivers at runtime.
+  </p>
+
+  <!-- Metrics -->
+  <div class="metric-grid">
+    <div class="metric metric-warn">
+      <div class="metric-value">20</div>
+      <div class="metric-label">Clip aliases declared</div>
+    </div>
+    <div class="metric metric-bad">
+      <div class="metric-value">6</div>
+      <div class="metric-label">Clips used regularly</div>
+    </div>
+    <div class="metric metric-warn">
+      <div class="metric-value">0.22s</div>
+      <div class="metric-label">Crossfade — always</div>
+    </div>
+    <div class="metric metric-bad">
+      <div class="metric-value">55ms</div>
+      <div class="metric-label">Shoot clip window</div>
+    </div>
+    <div class="metric metric-bad">
+      <div class="metric-value">0</div>
+      <div class="metric-label">Additive layers</div>
+    </div>
+    <div class="metric metric-bad">
+      <div class="metric-value">0</div>
+      <div class="metric-label">Blend tree axes</div>
+    </div>
+  </div>
+
+  <h3>The full call chain</h3>
+  <p>Every animation decision in the game flows through this path, once per entity per frame:</p>
+
+  <div class="chain">
+    <span class="fn">requestAnimationFrame</span> <span class="file">— loop.js</span><br>
+    &nbsp;&nbsp;<span class="arrow">└─</span> <span class="fn hot">updateEnemies(ts, dt)</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="arrow">└─</span> <span class="fn hot">e._aiState.tick(e, dt, ctx)</span> → <code>isMoving</code><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="arrow">└─</span> <span class="fn hot">tickEnemyAnimation(e, dt, isMoving)</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="arrow">├─</span> jump phase state machine (start / loop / land)<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="arrow">├─</span> clip selection: <span class="hot">boolean waterfall</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="arrow">└─</span> <span class="fn">crossfade(e, clip, snapTransition ? 0 : 0.22)</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="arrow">└─</span> <span class="fn hot">mixer.update(dt)</span>
+  </div>
+
+  <h3>What actually fires — and what doesn't</h3>
+  <p>
+    The alias table in <code>enemyGLTF.js</code> defines 20 clip names.
+    Here is the honest runtime picture:
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Clip</th>
+        <th>Declared</th>
+        <th>Selected by AI</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>idle</code></td>
+        <td><span class="chip-green chip">yes</span></td>
+        <td><span class="chip-green chip">yes</span></td>
+        <td>Default state, works correctly</td>
+      </tr>
+      <tr>
+        <td><code>walk</code></td>
+        <td><span class="chip-green chip">yes</span></td>
+        <td><span class="chip-green chip">yes</span></td>
+        <td>Patrol movement</td>
+      </tr>
+      <tr>
+        <td><code>run</code></td>
+        <td><span class="chip-green chip">yes</span></td>
+        <td><span class="chip-green chip">yes</span></td>
+        <td>Used for all attack-state movement, including strafing</td>
+      </tr>
+      <tr>
+        <td><code>attack</code></td>
+        <td><span class="chip-green chip">yes</span></td>
+        <td><span class="chip-gold chip">limited</span></td>
+        <td>Only when stationary in attack state and not shooting</td>
+      </tr>
+      <tr>
+        <td><code>shoot</code></td>
+        <td><span class="chip-green chip">yes</span></td>
+        <td><span class="chip-gold chip">~55ms</span></td>
+        <td>Fires only while <code>muzzleFlashT &gt; 0</code> — barely perceptible</td>
+      </tr>
+      <tr>
+        <td><code>death</code></td>
+        <td><span class="chip-green chip">yes</span></td>
+        <td><span class="chip-green chip">yes</span></td>
+        <td>Snap (0s), correct but has no preceding hit-stagger</td>
+      </tr>
+      <tr>
+        <td><code>hit</code></td>
+        <td><span class="chip-green chip">yes</span></td>
+        <td><span class="chip-gold chip">partial</span></td>
+        <td>Only during <code>stunTimer &gt; 0</code>; not additive — fights with locomotion</td>
+      </tr>
+      <tr>
+        <td><code>reload</code></td>
+        <td><span class="chip-green chip">yes</span></td>
+        <td><span class="chip-gold chip">player only</span></td>
+        <td>Plays on player GLTF; enemy reload is invisible</td>
+      </tr>
+      <tr class="dead-row">
+        <td><code>strafe_l / strafe_r</code></td>
+        <td><span class="chip-green chip">yes</span></td>
+        <td><span class="chip-red chip">never</span></td>
+        <td>Alias map includes them; no code path ever selects them</td>
+      </tr>
+      <tr class="dead-row">
+        <td><code>crouch_walk</code></td>
+        <td><span class="chip-green chip">yes</span></td>
+        <td><span class="chip-red chip">never</span></td>
+        <td>Enemies don't crouch-walk in any current AI state</td>
+      </tr>
+      <tr class="dead-row">
+        <td><code>run_back / walk_back</code></td>
+        <td><span class="chip-green chip">yes</span></td>
+        <td><span class="chip-red chip">never</span></td>
+        <td>No directional velocity check — run is used regardless of facing</td>
+      </tr>
+      <tr class="dead-row">
+        <td><code>nade</code></td>
+        <td><span class="chip-green chip">yes</span></td>
+        <td><span class="chip-red chip">never</span></td>
+        <td>Enemies don't throw grenades yet</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="panel panel-red">
+    <div class="panel-title">Machine observation</div>
+    <p>
+      <strong>70% of the declared clip vocabulary is dead code at runtime.</strong>
+      The clips exist in the alias table and load correctly from GLB assets, but the clip-selection
+      waterfall in <code>tickEnemyAnimation</code> never reaches them. This is not a missing-asset
+      problem — it is a missing-routing problem.
+    </p>
+  </div>
+
+  <h3>How locomotion is currently decided</h3>
+  <p>
+    Speed in this system is not a continuous value — it is a boolean.
+    The enemy is either moving or not. If it is moving in attack state, it plays <code>run</code>.
+    If not, it plays <code>attack</code>. There is no interpolation between these states,
+    no awareness of actual velocity magnitude, and no directionality.
+  </p>
+
+  <div class="code-block">
+<span class="c">// Current selection logic (simplified) — enemyAnimations.js</span>
+<span class="k">if</span> (state === <span class="s">'attack'</span> || state === <span class="s">'spotted'</span>) {
+  clip = isMoving ? <span class="s">'run'</span> : (muzzleFlashT > <span class="n">0</span> ? <span class="s">'shoot'</span> : <span class="s">'attack'</span>);
+}
+
+<span class="c">// isMoving = velocity.length() > 0 — there is no speed value, only on/off</span>
+<span class="c">// result: a soldier going 0.1 m/s and 6 m/s play identical animations</span>
+  </div>
+
+  <h3>The crossfade problem</h3>
+  <p>
+    Three.js's <code>crossFadeTo()</code> is avoided in the codebase because it freezes
+    the incoming clip at frame 0. The workaround — <code>fadeOut</code> + <code>reset().fadeIn().play()</code> —
+    is correct and solves that bug. But the crossfade duration is a flat constant: <code>0.22s</code>
+    for smooth transitions, <code>0s</code> for snap clips.
+  </p>
+  <p>
+    This means a transition from sprinting full-speed into a crouch gets the same 0s snap
+    as a bullet-to-death transition. It also means a slow shuffle into idle gets the same
+    0.22s blend as a sudden directional reversal. There is no concept of carry-over pose,
+    velocity, or context.
+  </p>
+
+</div>
+</section>
+
+<div class="sep"></div>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- PART II — FRICTION POINTS                                        -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="problems">
+<div class="container">
+
+  <div class="section-label">Part II</div>
+  <h2>Where It Breaks</h2>
+
+  <p>
+    These are the specific failure modes a player sees, mapped back to their root causes in code.
+    Ordered by impact on perceived quality.
+  </p>
+
+  <ul class="problem-list">
+
+    <li class="problem-item">
+      <div class="problem-num">01</div>
+      <div class="problem-body">
+        <strong>Walk and run are parallel universes</strong>
+        <p>
+          A soldier going 0.5 m/s and one going 6 m/s play the same <code>run</code> clip.
+          There is no speed-parameterized blend. The result is foot-sliding at low speeds
+          and a slow-motion feeling at high speeds because stride rate never matches actual velocity.
+        </p>
+      </div>
+      <div class="sev sev-high">High</div>
+    </li>
+
+    <li class="problem-item">
+      <div class="problem-num">02</div>
+      <div class="problem-body">
+        <strong>Strafe is invisible</strong>
+        <p>
+          Enemies strafe perpendicular to the player in attack state (the velocity is applied in <code>enemyStates.js</code>).
+          They slide sideways while playing the forward <code>run</code> clip. The strafe clips
+          are declared and loaded but no code path selects them.
+        </p>
+      </div>
+      <div class="sev sev-high">High</div>
+    </li>
+
+    <li class="problem-item">
+      <div class="problem-num">03</div>
+      <div class="problem-body">
+        <strong>Shoot animation is sub-perceptual</strong>
+        <p>
+          The <code>shoot</code> clip fires only while <code>muzzleFlashT &gt; 0</code>, a window of ~55ms.
+          Human visual persistence is ~100–150ms. The clip starts, gets immediately crossfaded away by
+          the next frame's state, and the player perceives no shooting animation at all — only a muzzle flash.
+        </p>
+      </div>
+      <div class="sev sev-high">High</div>
+    </li>
+
+    <li class="problem-item">
+      <div class="problem-num">04</div>
+      <div class="problem-body">
+        <strong>No additive layer — everything is a full-weight replacement</strong>
+        <p>
+          Three.js <code>AnimationMixer</code> supports additive blending (<code>THREE.AdditiveAnimationBlendMode</code>),
+          but it is unused. Every clip competes for 100% of total weight.
+          This means a hit reaction <em>replaces</em> locomotion rather than sitting on top of it.
+          Breathing, aim sway, and recoil have no clip representation at all.
+        </p>
+      </div>
+      <div class="sev sev-high">High</div>
+    </li>
+
+    <li class="problem-item">
+      <div class="problem-num">05</div>
+      <div class="problem-body">
+        <strong>Upper body and lower body are locked together</strong>
+        <p>
+          There is no bone mask. If an enemy is walking and shooting, one clip must win.
+          In practice, locomotion wins and the shooting arm gets no animation — the gun
+          floats forward at a fixed pose while the legs cycle. A proper split at the spine
+          would let the legs walk while the arms aim and reload independently.
+        </p>
+      </div>
+      <div class="sev sev-high">High</div>
+    </li>
+
+    <li class="problem-item">
+      <div class="problem-num">06</div>
+      <div class="problem-body">
+        <strong>Crossfade ignores context — 0.22s is never the right answer</strong>
+        <p>
+          Blending from idle to walk feels slow at 0.22s. Blending from a full sprint
+          into a stopped aim pose feels abrupt at 0.22s. The ideal transition duration
+          depends on the velocity delta and the semantic distance between clips. Inertial blending
+          (carry pose momentum from the outgoing clip) makes every transition feel right automatically.
+        </p>
+      </div>
+      <div class="sev sev-med">Med</div>
+    </li>
+
+    <li class="problem-item">
+      <div class="problem-num">07</div>
+      <div class="problem-body">
+        <strong>No procedural foot IK</strong>
+        <p>
+          Ramp tiles raise the floor geometry. Enemies and the player walk onto ramps with feet
+          visibly embedded in or floating above the surface. A two-bone IK pass on both ankles,
+          raycasting per-foot to the collision surface, would ground the characters without
+          requiring custom animation per slope angle.
+        </p>
+      </div>
+      <div class="sev sev-med">Med</div>
+    </li>
+
+    <li class="problem-item">
+      <div class="problem-num">08</div>
+      <div class="problem-body">
+        <strong>Death has no lead-in</strong>
+        <p>
+          <code>killEnemy</code> snaps to <code>death</code> at duration 0. This is technically correct —
+          a dead enemy should not spend 0.22s elegantly transitioning — but without a preceding
+          hit-stagger additive layer, the enemy goes from full animation to ragdoll-freeze in one frame,
+          which feels like a bug rather than a death.
+        </p>
+      </div>
+      <div class="sev sev-low">Low</div>
+    </li>
+
+    <li class="problem-item">
+      <div class="problem-num">09</div>
+      <div class="problem-body">
+        <strong>Procedural weapon bob competes with GLTF body animation</strong>
+        <p>
+          The first-person weapon bob is a manually calculated sine offset applied each frame
+          to <code>wpn.position</code>. The third-person GLTF skeleton animates independently.
+          They are not synchronised — the weapon floats in first person while the body cycles below.
+          A shared locomotion phase value would let both systems breathe together.
+        </p>
+      </div>
+      <div class="sev sev-low">Low</div>
+    </li>
+
+  </ul>
+
+</div>
+</section>
+
+<div class="sep"></div>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- PART III — THE PLAN                                              -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="plan">
+<div class="container">
+
+  <div class="section-label">Part III</div>
+  <h2>The Evolution Plan</h2>
+
+  <p>
+    Five changes, independent enough to ship incrementally, each closing a specific gap identified above.
+    Listed in implementation order — each one builds on the previous.
+  </p>
+
+  <!-- Step A -->
+  <div class="plan-step step-a">
+    <div class="step-num">A</div>
+    <div class="step-body">
+      <h3>Locomotion Blend Tree</h3>
+      <span class="tag">locomotion</span>
+      <span class="tag">no new assets needed</span>
+      <p>
+        Replace the <code>isMoving</code> boolean with a continuous <code>speed</code> float (0–1 normalized).
+        Blend <code>idle → walk → run</code> by linearly crossfading weights as speed changes, rather than
+        hard-switching clips. This single change eliminates foot-sliding at low speeds and makes
+        deceleration feel physical.
+      </p>
+      <p>
+        Simultaneously, wire <code>strafe_l</code> and <code>strafe_r</code> by computing the dot product
+        of velocity against the entity's forward vector. Negative lateral dot → strafe_l weight, positive → strafe_r.
+        Blend all three axes (forward/back, strafe, speed) into a 2D blend tree.
+      </p>
+      <div class="code-block">
+<span class="c">// Proposed: 2D locomotion blend (forward × strafe)</span>
+<span class="k">const</span> vFwd   = dot(velocity, forward);   <span class="c">// –1 … 1</span>
+<span class="k">const</span> vRight = dot(velocity, right);    <span class="c">// –1 … 1</span>
+<span class="k">const</span> speed  = velocity.length() / <span class="n">MAX_SPEED</span>;
+
+actions.idle.weight    = <span class="fn">Math.max</span>(<span class="n">0</span>, <span class="n">1</span> - speed * <span class="n">2</span>);
+actions.walk.weight    = <span class="fn">triangular</span>(speed, <span class="n">0</span>, <span class="n">0.5</span>, <span class="n">1</span>);
+actions.run.weight     = <span class="fn">Math.max</span>(<span class="n">0</span>, speed - <span class="n">0.5</span>) * <span class="n">2</span>;
+actions.strafe_l.weight = <span class="fn">Math.max</span>(<span class="n">0</span>, -vRight) * speed;
+actions.strafe_r.weight = <span class="fn">Math.max</span>(<span class="n">0</span>, +vRight) * speed;
+<span class="c">// normalise weights so they sum to 1.0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step B -->
+  <div class="plan-step step-b">
+    <div class="step-num">B</div>
+    <div class="step-body">
+      <h3>Upper / Lower Body Split via Bone Mask</h3>
+      <span class="tag">body masking</span>
+      <span class="tag">blender asset needed</span>
+      <p>
+        Three.js <code>AnimationAction</code> supports a weight-per-track model. By zeroing the
+        weight of spine-upward tracks on the locomotion layer and zeroing leg-bone tracks on the
+        aim layer, you get a clean split: legs walk, torso shoots.
+      </p>
+      <p>
+        Upper body clips (<code>shoot</code>, <code>reload</code>, <code>attack</code>) run on
+        a separate action with only arm/spine/head tracks active. Lower body clips
+        (<code>walk</code>, <code>run</code>, <code>idle</code>) run with leg tracks only.
+        The Quaternius rig's named bones (<code>spine_01</code>, <code>thigh_l/r</code>) are
+        already resolved in <code>enemyGLTF.js</code> for the debug skeleton — the same bone
+        lookup enables masking.
+      </p>
+
+      <div class="panel panel-blue" style="margin-top:20px;">
+        <div class="panel-title">Impact on shoot animation</div>
+        <p>
+          With upper-body masking, the shoot clip no longer competes with locomotion for
+          full weight. It runs independently on the arm/spine layer for the duration of the
+          shoot animation (300–400ms), while the legs continue their correct cycle below.
+          The 55ms muzzle-flash window is no longer the bottleneck.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step C -->
+  <div class="plan-step step-c">
+    <div class="step-num">C</div>
+    <div class="step-body">
+      <h3>Additive Layer Stack</h3>
+      <span class="tag">additive blending</span>
+      <span class="tag">new clips needed</span>
+      <p>
+        Enable <code>THREE.AdditiveAnimationBlendMode</code> on a dedicated additive action group.
+        Three types of clip live here, each at independent weight, all applied on top of the
+        base locomotion result:
+      </p>
+
+      <div class="blender-grid">
+        <div class="panel">
+          <div class="panel-title" style="color:var(--green)">Breathing</div>
+          <p style="font-size:13px;">
+            A 3-second looping clip with subtle spine compression and shoulder rise.
+            Weight = 1.0 always. When the player sprints, weight rises to 1.4 (heavier breathing).
+            Costs one Blender export pass.
+          </p>
+        </div>
+        <div class="panel">
+          <div class="panel-title" style="color:var(--green)">Hit Reaction</div>
+          <p style="font-size:13px;">
+            Short (0.3s) directional additive clips: hit_front, hit_back, hit_left, hit_right.
+            Playing an additive hit clip on top of locomotion gives a stagger without
+            interrupting the walk cycle. Weight lerps from 1.0 to 0 over the clip duration.
+          </p>
+        </div>
+        <div class="panel">
+          <div class="panel-title" style="color:var(--green)">Aim Offset</div>
+          <p style="font-size:13px;">
+            An additive pose that tilts spine and arm toward the look target.
+            Driven by the vertical look angle (pitch). No clip required — a procedural
+            spine rotation applied additively each frame covers this case.
+          </p>
+        </div>
+        <div class="panel">
+          <div class="panel-title" style="color:var(--green)">Recoil</div>
+          <p style="font-size:13px;">
+            Currently a procedural weapon position offset in <code>shoot.js</code>.
+            Moving it to an additive clip means the body rocks back slightly on fire,
+            not just the camera. The existing <code>recoilT</code> float drives the clip weight.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step D -->
+  <div class="plan-step step-d">
+    <div class="step-num">D</div>
+    <div class="step-body">
+      <h3>Inertial Blending</h3>
+      <span class="tag">transitions</span>
+      <span class="tag">no new assets</span>
+      <p>
+        Inertial blending, described by David Bollo (Ubisoft) and adopted in many AAA engines,
+        records the current pose and its first derivative (velocity) at the moment a transition
+        fires, then decays toward the incoming clip using a critically-damped spring.
+        The result: transitions always feel right regardless of duration, because the blend
+        curve is shaped by physics, not a fixed lerp.
+      </p>
+      <p>
+        A minimal implementation in Three.js stores the outgoing bone quaternions and angular
+        velocities at crossfade time, then applies a spring-damper correction offset that decays
+        to zero over ~0.15s. The spring constant controls how snappy or floaty the settle feels.
+      </p>
+
+      <div class="code-block">
+<span class="c">// Inertial transition sketch</span>
+<span class="k">function</span> <span class="fn">onTransition</span>(bone, currentQ, nextQ) {
+  <span class="k">const</span> offset = currentQ.clone().multiply(nextQ.<span class="fn">conjugate</span>());
+  <span class="k">const</span> vel    = angularVelocity[bone.uuid] ?? <span class="k">new</span> <span class="t">THREE.Quaternion</span>();
+  inertia[bone.uuid] = { offset, vel, t: <span class="n">0</span> };
+}
+
+<span class="k">function</span> <span class="fn">tickInertia</span>(bone, dt) {
+  <span class="k">const</span> s = inertia[bone.uuid];
+  <span class="k">if</span> (!s) <span class="k">return</span>;
+  <span class="c">// critically-damped spring: x'' = –ω²x – 2ωx'</span>
+  s.t += dt * <span class="n">OMEGA</span>;
+  <span class="k">const</span> decay = (<span class="n">1</span> + s.t) * <span class="fn">Math.exp</span>(-s.t);
+  bone.quaternion.premultiply(
+    <span class="fn">slerpQ</span>(identityQ, s.offset, decay)
+  );
+}
+      </div>
+    </div>
+  </div>
+
+  <!-- Step E -->
+  <div class="plan-step step-e">
+    <div class="step-num">E</div>
+    <div class="step-body">
+      <h3>Procedural Foot IK</h3>
+      <span class="tag">IK</span>
+      <span class="tag">terrain-aware</span>
+      <p>
+        Two-bone IK on each ankle (thigh → calf → foot). Each frame, raycast downward from
+        the foot's animated world position. If the hit point is above the animated foot position,
+        solve IK to plant the foot at the hit. If below, leave the animated pose.
+      </p>
+      <p>
+        An additional hip offset lowers the pelvis when both feet need to reach downward (walking
+        into a depression) and raises it when ascending a ramp. The result is characters that feel
+        grounded on ramps, cracks, and column bases without per-terrain animation work.
+      </p>
+      <p>
+        The collision surface is already queryable — the same BVH that handles player movement
+        reports height per cell. A per-foot raycast against wallMeshes (already in the scene)
+        returns the exact surface normal needed for ankle rotation.
+      </p>
+
+      <div class="panel panel-red" style="margin-top:20px;">
+        <div class="panel-title">Scope note</div>
+        <p>
+          Foot IK is the most technically complex step. It should ship last, after steps A–D are stable.
+          The visual gain on flat maps is zero; the gain on ramp-heavy maps like Vanguard Complex is significant.
+        </p>
+      </div>
+    </div>
+  </div>
+
+</div>
+</section>
+
+<div class="sep"></div>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- PART IV — CLAUDE × BLENDER                                       -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="blender">
+<div class="container">
+
+  <div class="section-label">Part IV</div>
+  <h2>Claude × Blender</h2>
+
+  <p>
+    Anthropic has released native Blender integration for Claude — Claude can now read,
+    write, and execute <code>bpy</code> (Blender Python API) scripts directly inside the
+    Blender environment. This changes the asset pipeline for this project significantly.
+  </p>
+
+  <blockquote>
+    Instead of hand-animating clips in Blender, Claude can <em>generate</em> a Python script
+    that builds the animation programmatically — bone by bone, frame by frame — and bakes it
+    into NLA strips ready for GLB export. The artist's job shifts from keyframing to curating
+    and tuning the output.
+  </blockquote>
+
+  <h3>What Claude can generate for this project</h3>
+
+  <div class="blender-grid">
+
+    <div class="panel panel-gold">
+      <div class="panel-title">Additive clip set</div>
+      <p style="font-size:13px;">
+        A <code>bpy</code> script that creates breathing, hit_front, hit_back, hit_left, hit_right
+        as additive NLA strips on the Quaternius rig. Each clip is generated from procedural
+        keyframes (spine compression curves, arm flinch arcs) and exported with correct
+        <code>ANIM_RETARGET</code> correction so they slot into the existing alias map without changes.
+      </p>
+    </div>
+
+    <div class="panel panel-blue">
+      <div class="panel-title">Locomotion polish pass</div>
+      <p style="font-size:13px;">
+        A script that reads the existing walk/run clips and generates smooth transition poses —
+        the frames between walk and run that currently don't exist. Output: a blended
+        "walk_to_run" and "run_to_walk" clip of 6 frames each, eliminating the pop
+        even before inertial blending is implemented.
+      </p>
+    </div>
+
+    <div class="panel panel-gold">
+      <div class="panel-title">Directional strafe set</div>
+      <p style="font-size:13px;">
+        Strafe clips are declared in the alias map but never existed as real assets.
+        A Claude-written <code>bpy</code> script derives them from the existing walk clip
+        by rotating the pelvis and shoulder orientation 90°, adjusting foot phase,
+        and baking the result. No human animation time required.
+      </p>
+    </div>
+
+    <div class="panel panel-blue">
+      <div class="panel-title">NLA layer setup</div>
+      <p style="font-size:13px;">
+        A script that configures the Blender NLA editor with the correct layer order:
+        base locomotion, upper body override, additive effects. Exports a single GLB
+        with all tracks named to match the existing alias map. Drop-in replacement for
+        the current asset.
+      </p>
+    </div>
+
+  </div>
+
+  <h3>The new pipeline</h3>
+  <div class="chain">
+    <span class="hot">Claude writes bpy script</span> → Blender executes it → <span class="fn">NLA strips created</span><br>
+    → <span class="fn">glTF Export</span> (Draco compressed) → <span class="hot">public/models/*.glb</span><br>
+    → <span class="fn">assetManager.register()</span> → <span class="fn">enemyGLTF.js</span> resolves aliases<br>
+    → <span class="fn">buildEnemyMixer()</span> pre-loads all actions → <span class="hot">game loop</span>
+  </div>
+
+  <div class="panel panel-green">
+    <div class="panel-title">Why this matters for a solo project</div>
+    <p>
+      Professional 3D animation requires either expensive motion capture or expensive animator time.
+      Claude generating <code>bpy</code> scripts makes procedural keyframe generation available
+      at conversation speed. The quality ceiling is lower than handcrafted motion, but for
+      secondary clips (breathing, hit reactions, additive layers) it is more than sufficient —
+      and the clips it generates can always be manually refined in Blender afterward.
+    </p>
+  </div>
+
+</div>
+</section>
+
+<div class="sep"></div>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- TEASER                                                           -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section class="teaser" id="teaser">
+  <div class="teaser-bg"></div>
+  <div class="teaser-scanlines"></div>
+
+  <div class="teaser-content">
+    <div class="teaser-phase">Phase 41</div>
+
+    <h2 class="gold">Animation</h2>
+    <h2>Renaissance</h2>
+
+    <p class="teaser-tagline">"The soldiers live now."</p>
+
+    <div class="teaser-bar"></div>
+
+    <div class="teaser-features">
+      <span class="teaser-feature tf-gold">Locomotion Blend Tree</span>
+      <span class="teaser-feature tf-blue">Upper / Lower Body Split</span>
+      <span class="teaser-feature tf-green">Additive Hit Reactions</span>
+      <span class="teaser-feature tf-purple">Breathing Overlay</span>
+      <span class="teaser-feature tf-gold">Strafe Animations Live</span>
+      <span class="teaser-feature tf-blue">Inertial Transitions</span>
+      <span class="teaser-feature tf-green">Aim Offset</span>
+      <span class="teaser-feature tf-purple">Foot IK on Ramps</span>
+      <span class="teaser-feature tf-gold">Claude × Blender Pipeline</span>
+    </div>
+
+    <div class="teaser-quote">
+      70% of declared clips. 0 additive layers. 1 crossfade duration.<br>
+      &nbsp;<br>
+      After Phase 41: none of that will be true.
+    </div>
+  </div>
+</section>
+
+<!-- ── Footer ──────────────────────────────────────────────────────── -->
+<footer style="padding:40px; text-align:center; border-top:1px solid var(--border);">
+  <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);letter-spacing:0.2em;text-transform:uppercase;">
+    Vibe on Duty &nbsp;·&nbsp; Internal Document &nbsp;·&nbsp; May 2026
+  </div>
+</footer>
+
+</body>
+</html>
