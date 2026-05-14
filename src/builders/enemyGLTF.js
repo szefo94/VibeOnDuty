@@ -15,7 +15,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { scene } from '../scene.js';
 import { buildEnemy } from './enemy.js';
-import { buildEnemyMixer, attachSkeletonDebug } from './enemyAnimations.js';
+import { buildEnemyMixer, attachSkeletonDebug, buildGLTFBreathingClip } from './enemyAnimations.js';
 import { attachEnemyWeapon } from './enemyWeapon.js';
 import { attachWeapons3pToHand } from './weaponFBX.js';
 
@@ -147,6 +147,36 @@ function normaliseClipQuatSigns(clips) {
   }
 }
 
+// ── Additive layer setup (GLTF only) ──────────────────────────────────────
+// Called after all base actions are registered. Adds:
+//   actions._breathing   — always-on gentle spine/shoulder sway
+//   actions._hitAdditive — hit clip converted to additive delta (vs idle pose)
+function _addAdditiveLayer(mixer, actions) {
+  // Breathing
+  const breathAction = mixer.clipAction(buildGLTFBreathingClip());
+  breathAction.blendMode = THREE.AdditiveAnimationBlendMode;
+  breathAction.time = Math.random() * 3.5;
+  breathAction.setEffectiveWeight(0.75);
+  breathAction.play();
+  actions._breathing = breathAction;
+
+  // Hit additive — convert hit clip to delta-from-idle so it layers on top
+  // of any locomotion state without replacing it.
+  const hitClip  = findClip(gltfTemplate.animations, 'hit');
+  const idleClip = findClip(gltfTemplate.animations, 'idle');
+  if (hitClip && idleClip) {
+    const hitAddClip = THREE.AnimationUtils.makeClipAdditive(
+      hitClip.clone(), 0, idleClip
+    );
+    hitAddClip.name = '_hit_additive';
+    const hitAddAction = mixer.clipAction(hitAddClip);
+    hitAddAction.blendMode = THREE.AdditiveAnimationBlendMode;
+    hitAddAction.setLoop(THREE.LoopOnce);
+    hitAddAction.clampWhenFinished = true;
+    actions._hitAdditive = hitAddAction;
+  }
+}
+
 // ── Load ───────────────────────────────────────────────────────────────────
 export async function tryLoadEnemyGLTF() {
   // HEAD probe first so no 404 noise when file is absent
@@ -229,6 +259,8 @@ export function buildEnemyMesh(wx, wz, role = 'assault') {
   if (idleClip) actions.idle.time = Math.random() * idleClip.duration;
   actions.idle.play();
 
+  _addAdditiveLayer(mixer, actions);
+
   // ── Muzzle flash ──────────────────────────────────────────────────────
   const muzzleFlash = new THREE.Mesh(
     new THREE.SphereGeometry(0.03, 5, 5),
@@ -284,6 +316,8 @@ export function buildPlayerMesh() {
   const idleClip = findClip(gltfTemplate.animations, 'idle');
   if (idleClip && actions.idle) actions.idle.time = Math.random() * idleClip.duration;
   if (actions.idle) actions.idle.play();
+
+  _addAdditiveLayer(mixer, actions);
 
   attachSkeletonDebug(clone);
   attachWeapons3pToHand(clone);

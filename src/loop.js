@@ -188,6 +188,15 @@ export function loop(ts) {
         }
 
         setDebugAnimClip(clip);
+
+        // Scale breathing weight: heavier during sprint, lighter while aiming
+        if (playerAnim.actions?._breathing) {
+          const breathW = player.dead ? 0
+            : player.aiming          ? 0.4
+            : (sprint && player.moving) ? 1.1
+            : 0.75;
+          playerAnim.actions._breathing.setEffectiveWeight(breathW);
+        }
       }
     }
 

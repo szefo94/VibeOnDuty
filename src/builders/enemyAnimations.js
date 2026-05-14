@@ -1,5 +1,55 @@
 import * as THREE from 'three';
 
+// ── Additive breathing clips ──────────────────────────────────────────────
+// Procedural rig: target the arm-swing meshes with a slow sine oscillation.
+// makeClipAdditive subtracts frame-0 (which is 0 for a sine starting at 0),
+// so the values remain as-is and play correctly in AdditiveAnimationBlendMode.
+function buildProceduralBreathingClip() {
+  const T = 3.5;
+  const N = 32;
+  const times = [], vL = [], vR = [];
+  for (let i = 0; i <= N; i++) {
+    const t = (i / N) * T;
+    times.push(t);
+    vL.push(Math.sin((i / N) * Math.PI * 2) * 0.022);
+    vR.push(Math.sin((i / N) * Math.PI * 2 + Math.PI * 0.6) * 0.022);
+  }
+  const clip = new THREE.AnimationClip('_breathing', T, [
+    new THREE.NumberKeyframeTrack('armSwingL.rotation[x]', times, vL),
+    new THREE.NumberKeyframeTrack('armSwingR.rotation[x]', times, vR),
+  ]);
+  return THREE.AnimationUtils.makeClipAdditive(clip);
+}
+
+// GLTF rig: target spine_01 + upperarms using quaternion tracks.
+// Same makeClipAdditive treatment — frame-0 is identity, so deltas are
+// identical to the original values (no distortion).
+export function buildGLTFBreathingClip() {
+  const T = 3.5;
+  const N = 32;
+  const times = [];
+  for (let i = 0; i <= N; i++) times.push((i / N) * T);
+
+  function qTrack(boneName, ampX, ampZ, phase = 0) {
+    const vals = [];
+    for (let i = 0; i <= N; i++) {
+      const s = Math.sin((i / N) * Math.PI * 2 + phase);
+      const q = new THREE.Quaternion().setFromEuler(
+        new THREE.Euler(s * ampX, 0, s * ampZ, 'YXZ')
+      );
+      vals.push(q.x, q.y, q.z, q.w);
+    }
+    return new THREE.QuaternionKeyframeTrack(boneName + '.quaternion', times, vals);
+  }
+
+  const clip = new THREE.AnimationClip('_breathing_gltf', T, [
+    qTrack('spine_01',   0.010, 0.004),
+    qTrack('upperarm_l', 0.008, 0, Math.PI * 0.3),
+    qTrack('upperarm_r', 0.008, 0, Math.PI * 0.3),
+  ]);
+  return THREE.AnimationUtils.makeClipAdditive(clip);
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────
 // Build a NumberKeyframeTrack that follows a sine wave over one period T.
 // phase shifts the wave start so legs can swing opposite each other.
@@ -51,6 +101,14 @@ export function buildEnemyMixer(mesh) {
     action.setEffectiveWeight(name === 'idle' ? 1 : 0);
     actions[name] = action;
   }
+
+  // Additive breathing — runs on top of all base clips, always active
+  const breathAction = mixer.clipAction(buildProceduralBreathingClip());
+  breathAction.blendMode = THREE.AdditiveAnimationBlendMode;
+  breathAction.time = Math.random() * 3.5;
+  breathAction.setEffectiveWeight(0.75);
+  breathAction.play();
+  actions._breathing = breathAction;
 
   return { mixer, actions };
 }
@@ -151,14 +209,30 @@ export function tickEnemyAnimation(e, dt, isMoving) {
     if (e.jumpPhaseTimer <= 0) e.jumpPhase = '';
   }
 
+  // ── Additive hit reaction ──────────────────────────────────────────────
+  // When _hitAdditive is available (GLTF), play it as an overlay and keep
+  // the base layer running locomotion uninterrupted. Without it (procedural),
+  // fall through to the old full-replacement 'hit' clip below.
+  if (e.actions._hitAdditive) {
+    if (e.stunTimer > 0) {
+      if (!e._hitAddPlaying) {
+        e.actions._hitAdditive.reset().fadeIn(0.03).play();
+        e._hitAddPlaying = true;
+      }
+    } else if (e._hitAddPlaying) {
+      e.actions._hitAdditive.fadeOut(0.12);
+      e._hitAddPlaying = false;
+    }
+  }
+
   let clip;
   if (e.jumpPhase === 'land' && e.actions.jump_land) {
     clip = 'jump_land';
   } else if (!nowOnGround) {
     if (e.jumpPhase === 'start' && e.actions.jump_start) clip = 'jump_start';
     else clip = e.actions.jump_loop ? 'jump_loop' : 'idle';
-  } else if (e.stunTimer > 0 && e.actions.hit) {
-    clip = 'hit';
+  } else if (e.stunTimer > 0 && e.actions.hit && !e.actions._hitAdditive) {
+    clip = 'hit'; // procedural fallback only — GLTF uses additive layer above
   } else if (e.crouching) {
     clip = isMoving
       ? (e.actions.crouch_walk ? 'crouch_walk' : 'walk')
