@@ -551,6 +551,10 @@ Tags — **complexity:** `easy` `medium` `hard` `very hard` · **player demand:*
 | 12 | Ricochet off angled metal surfaces at reduced damage, max one bounce per bullet. | `hard` | `niche` | `juicy` |
 | 13 | Scope glint — the AWP lens catches light and flickers for ~0.3 s before the shot, visible at range. | `medium` | `solid` | `tactical` |
 | 14 | Weapon inspect animation plays when the player is idle for 10 s. | `easy` | `solid` | `polish` |
+| 53 | Lean/peek mechanic — hold Q/E to side-lean; narrows hitbox and shifts aim to edge of cover without full exposure. | `medium` | `hot` | `tactical` |
+| 54 | Crouch-slide — sprint + crouch launches a 0.8 s slide at full momentum, hitbox drops to knee height, cancellable with jump. | `medium` | `hot` | `juicy` |
+| 55 | Suppressor attachment — press `Alt+1–4` to toggle per-weapon; no muzzle flash, off-radar while firing, 10% damage reduction. | `medium` | `solid` | `tactical` |
+| 56 | Defuse kit — buy in S&D buy phase for $400; cuts your personal defuse time from 10 s to 5 s, classic CS staple. | `easy` | `hot` | `tactical` |
 
 ### Audio & perception
 
@@ -563,6 +567,8 @@ Tags — **complexity:** `easy` `medium` `hard` `very hard` · **player demand:*
 | 19 | Dynamic music that intensifies the moment a bomb is planted and resolves on defuse or explosion. | `medium` | `hot` | `juicy` |
 | 20 | Killstreak voice announcer — "DOUBLE KILL", "ACE", "FLAWLESS" barked at the player. | `easy` | `solid` | `juicy` |
 | 21 | Friendly bot voice lines for callouts — "SITE A CLEAR", "PLANTING NOW", "ENEMY BEHIND YOU". | `medium` | `solid` | `content` |
+| 57 | Tinnitus ring — sustained close-range gunfire or explosion triggers a 2 s high-pitched overlay tone, then fades; pure Web Audio `OscillatorNode`. | `easy` | `solid` | `juicy` |
+| 58 | Reload click — dry-fire click sound when the player fires on an empty mag instead of silent nothing. | `easy` | `hot` | `polish` |
 
 ### Visuals & polish
 
@@ -576,6 +582,9 @@ Tags — **complexity:** `easy` `medium` `hard` `very hard` · **player demand:*
 | 27 | Hot zone pulse — bomb sites pulse with a red halo on the minimap the entire time the bomb is live. | `easy` | `solid` | `polish` |
 | 28 | Enemy death ragdoll using simple per-bone velocity inheritance, no external physics engine needed. | `hard` | `hot` | `juicy` |
 | 29 | Tracer rounds briefly illuminate the scene along the bullet path like a flashlight streak. | `easy` | `solid` | `juicy` |
+| 59 | Dynamic crosshair gap — gap expands proportionally to current spray cone, snaps shut when ADS or stationary. Complements #43 without replacing it. | `easy` | `hot` | `polish` |
+| 60 | Glass pane tiles — thin breakable panels; intact glass renders as translucent, shatters into particle shards on bullet impact. Editor tile type. | `hard` | `solid` | `content` |
+| 61 | Muzzle light — muzzle flash spawns a `THREE.PointLight` (range 4 m, one frame) so nearby walls and floors catch the flash. | `easy` | `hot` | `juicy` |
 
 ### Tactical / S&D depth
 
@@ -591,6 +600,9 @@ Tags — **complexity:** `easy` `medium` `hard` `very hard` · **player demand:*
 | 37 | Friendly fire toggle per lobby for hardcore mode where every bullet counts. | `easy` | `niche` | `meta` |
 | 38 | Wallbang check key — hold `Alt` to highlight penetrable surfaces in view with a colour overlay. | `medium` | `solid` | `tactical` |
 | 39 | Round-end MVP card — highest-impact player gets a solo model shot with their stats overlaid. | `medium` | `solid` | `juicy` |
+| 62 | One-way smoke — smoke grenade creates a directional cloud; crouching below it reveals the enemy side while still blocking their view. | `hard` | `hot` | `tactical` |
+| 63 | Bomb LED — once planted, the bomb mesh shows a visible blinking counter both teams can see in-world, reducing HUD dependence. | `easy` | `solid` | `polish` |
+| 64 | Footprint trails — enemies leave temporary scuff marks on dusty/wet floors for ~4 s; read recent movement without radar. | `medium` | `niche` | `tactical` |
 
 ### Progression & meta
 
@@ -602,6 +614,8 @@ Tags — **complexity:** `easy` `medium` `hard` `very hard` · **player demand:*
 | 43 | Crosshair customiser — shape, colour, gap, dot, thickness, all stored in `localStorage`. | `easy` | `hot` | `polish` |
 | 44 | Kill verification ping — distinct visual pop on the kill shot separate from the regular hitmarker. | `easy` | `hot` | `juicy` |
 | 45 | Seasonal map variant — Christmas lights on rooftop in December, skull decorations on bunker in October. | `medium` | `solid` | `content` |
+| 65 | Match replay export — save the full match as a compact JSON replay (positions + events at 10 Hz) and replay it in-engine from any spectator angle. | `very hard` | `hot` | `meta` |
+| 66 | Performance grade — post-match letter grade (S/A/B/C) based on accuracy, survival, objectives; shown on the end card. | `easy` | `solid` | `meta` |
 
 ### AI & bots
 
@@ -611,6 +625,8 @@ Tags — **complexity:** `easy` `medium` `hard` `very hard` · **player demand:*
 | 47 | Body drag — walk up to a fresh corpse and pull it behind cover to deny enemies a death-position read. | `hard` | `niche` | `tactical` |
 | 48 | Bots remember where they were last killed and avoid that exact spot for two rounds. | `medium` | `solid` | `tactical` |
 | 49 | Sniper bot holds the angle they first acquired a kill from and never moves — genuinely terrifying. | `easy` | `solid` | `tactical` |
+| 67 | Bot mistake budget — Recruit bots have an error quota each round (random wrong reload, wandering, missed grenade toss) so they feel fallibly human rather than just slow. | `medium` | `solid` | `tactical` |
+| 68 | Bot comms ping — when a bot spots or kills an enemy it pings the minimap at that position, blinking for 3 s, giving the player imperfect but useful intel. | `easy` | `hot` | `tactical` |
 
 ### Long-shot / dream
 
@@ -619,3 +635,23 @@ Tags — **complexity:** `easy` `medium` `hard` `very hard` · **player demand:*
 | 50 | Grappling hook as a one-per-round ability — hard to aim, huge vertical mobility, zero second chances. | `hard` | `hot` | `content` |
 | 51 | Procedurally generated map variant each match — same tile palette, randomised layout, never the same twice. | `very hard` | `niche` | `content` |
 | 52 | Ammo type swap — switch between FMJ (penetration) and hollow-point (extra damage, no wallbang) on the fly. | `hard` | `niche` | `tactical` |
+| 69 | Gun Game mode — 26 weapons, one kill advances you to the next; first to cycle all 26 wins; knife kill demotes the victim. | `medium` | `hot` | `content` |
+| 70 | One in the Chamber — pistol, one bullet per life; earn a bullet per kill; headshots only. Forces maximum precision. | `easy` | `hot` | `content` |
+
+### Map editor tools
+
+| # | Idea | complexity | demand | feel |
+|---|------|-----------|--------|------|
+| 71 | Prefab stamp — select a rectangular tile region, save it as a named prefab, stamp it anywhere in the current or future session. | `medium` | `solid` | `content` |
+| 72 | Copy / paste region — Ctrl+C copies the current selection rect; Ctrl+V pastes it at the hovered cell. | `easy` | `hot` | `polish` |
+| 73 | Undo history panel — sidebar list of the last 20 ops with previews; click any step to revert to that point. | `medium` | `niche` | `polish` |
+| 74 | Auto-border — "Border walls" button flood-fills the map perimeter with wall tiles in one click. | `easy` | `solid` | `polish` |
+| 75 | Tile search filter — type in the tile palette search box to hide non-matching tiles; great for large palettes. | `easy` | `solid` | `polish` |
+
+### Accessibility & UX
+
+| # | Idea | complexity | demand | feel |
+|---|------|-----------|--------|------|
+| 76 | Colorblind mode — recolors enemy outlines, radar dots, bomb indicators, and hitmarker to work under Protanopia / Deuteranopia / Tritanopia, switchable in settings. | `medium` | `hot` | `polish` |
+| 77 | FOV slider — adjustable 70–110° with live preview in the editor or settings menu, stored in `localStorage`. | `easy` | `hot` | `polish` |
+| 78 | Subtitles for audio cues — on-screen text label when an important audio event fires (bomb planted, enemy reloading, grenade incoming) for hearing-impaired players. | `easy` | `solid` | `polish` |
