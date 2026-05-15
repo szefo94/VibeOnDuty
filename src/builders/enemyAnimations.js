@@ -119,7 +119,6 @@ export function buildEnemyMixer(mesh) {
 const LOCO_CLIPS = new Set(['idle', 'walk', 'run', 'strafe_l', 'strafe_r']);
 const MAX_ENEMY_SPEED = 3.6; // ENEMY_SPEED * max speedMult
 
-let _locoDbg = false;
 function _setLocoWeights(actions, speedN, strN) {
   const strAmt = Math.abs(strN);
   const fwdFrac = Math.max(0, 1 - strAmt);
@@ -131,15 +130,6 @@ function _setLocoWeights(actions, speedN, strN) {
   const strRW = Math.max(0,  strN);
 
   const sum = idleW + walkW + runW + strLW + strRW || 1;
-
-  if (!_locoDbg && walkW > 0) {
-    _locoDbg = true;
-    console.log('[_setLocoWeights] speedN', speedN, 'walkW/sum', walkW/sum, 'walk before:', actions.walk?.weight);
-    if (actions.walk) actions.walk.setEffectiveWeight(walkW / sum);
-    console.log('[_setLocoWeights] walk after setEW:', actions.walk?.weight, '_effectiveWeight:', actions.walk?._effectiveWeight);
-    console.log('[_setLocoWeights] walk is same object:', actions.walk === actions.walk, 'typeof setEW:', typeof actions.walk?.setEffectiveWeight);
-    return;
-  }
 
   if (actions.idle) {
     if (!actions.idle.isRunning()) actions.idle.play();
@@ -210,6 +200,28 @@ export function setLocoWeights(actions, speedN, strN) { _setLocoWeights(actions,
 export function enterLocoMode(e) { _enterLocoMode(e); }
 export function exitLocoMode(e) { _exitLocoMode(e); }
 
+// ── Per-frame bone-flip monitor ───────────────────────────────────────────
+// Detects quaternion sign flips (dot < 0 vs previous frame) in any bone.
+// Logs the bone name + dot product so we know which bone is flipping and when.
+// Only active when e._dbgFlipMonitor = true.
+const _FLIP_MON_RE = /arm|hand|shoulder|spine|neck|clavicle/i;
+export function tickBoneFlipMonitor(e) {
+  if (!e._dbgFlipMonitor || !e._bones?.length) return;
+  if (!e._prevBoneQ) {
+    e._prevBoneQ = new Map();
+    for (const b of e._bones) if (_FLIP_MON_RE.test(b.name)) e._prevBoneQ.set(b.uuid, b.quaternion.clone());
+    return;
+  }
+  for (const b of e._bones) {
+    if (!_FLIP_MON_RE.test(b.name)) continue;
+    const prev = e._prevBoneQ.get(b.uuid);
+    if (!prev) { e._prevBoneQ.set(b.uuid, b.quaternion.clone()); continue; }
+    const dot = prev.x*b.quaternion.x + prev.y*b.quaternion.y + prev.z*b.quaternion.z + prev.w*b.quaternion.w;
+    if (dot < 0) console.log(`[flipMonitor] ${b.name} dot=${dot.toFixed(3)} clip=${e.currentClip ?? 'loco'}`);
+    prev.copy(b.quaternion);
+  }
+}
+
 // ── Crossfade helper ──────────────────────────────────────────────────────
 // Call once per frame after computing the desired clip name.
 // e must have { actions, currentClip } on it.
@@ -228,18 +240,23 @@ export function crossfade(e, to, dur = 0.22) {
   toAct.reset().setEffectiveWeight(1).fadeIn(dur).play();
   e.currentClip = to;
 
-  // Debug: log transitions + hand quaternion hemisphere check when enabled
+  // Debug: log transitions + hemisphere check for full right-arm chain
   if (e._dbgTransitions && e._bones?.length) {
     const fromLabel = e._dbgPrevClip ?? 'loco';
     e._dbgPrevClip = to;
-    const handBone = e._bones.find(b => /hand_r/i.test(b.name)) ?? e._bones[0];
-    const q = handBone?.quaternion;
-    // Check against target clip's first quaternion keyframe for this bone
     const toClip = toAct.getClip();
-    const track = toClip.tracks.find(t => t.name.includes(handBone?.name) && t.name.endsWith('.quaternion'));
-    const fq = track ? { x: track.values[0], y: track.values[1], z: track.values[2], w: track.values[3] } : null;
-    const dot = (q && fq) ? q.x*fq.x + q.y*fq.y + q.z*fq.z + q.w*fq.w : null;
-    console.log(`[crossfade] ${fromLabel} → ${to} dur=${dur.toFixed(2)} | hand_r dot=${dot?.toFixed(3) ?? 'n/a'} ${dot !== null && dot < 0 ? '⚠ OPPOSITE HEMISPHERE' : ''}`);
+    const ARM_RE = /hand_r|lower_arm_r|upper_arm_r|shoulder_r|spine|neck/i;
+    const boneResults = e._bones
+      .filter(b => ARM_RE.test(b.name))
+      .map(b => {
+        const track = toClip.tracks.find(t => t.name.includes(b.name) && t.name.endsWith('.quaternion'));
+        if (!track) return null;
+        const q = b.quaternion;
+        const dot = q.x*track.values[0] + q.y*track.values[1] + q.z*track.values[2] + q.w*track.values[3];
+        return dot < 0 ? `⚠${b.name}(${dot.toFixed(2)})` : null;
+      })
+      .filter(Boolean);
+    console.log(`[crossfade] ${fromLabel} → ${to} dur=${dur.toFixed(2)}${boneResults.length ? ' FLIPPERS: ' + boneResults.join(' ') : ' ok'}`);
   }
 }
 

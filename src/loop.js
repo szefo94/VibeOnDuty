@@ -18,12 +18,12 @@ import { updateWeaponDeath } from './combat/shoot.js';
 import { tickGamepad } from './gamepad.js';
 import { drawMinimap } from './hud/radar.js';
 import { playerMesh, playerMixer, playerActions } from './builders/enemyGLTF.js';
-import { crossfade, tickInertia, setLocoWeights, enterLocoMode, exitLocoMode } from './builders/enemyAnimations.js';
+import { crossfade, tickInertia, setLocoWeights, enterLocoMode, exitLocoMode, tickBoneFlipMonitor } from './builders/enemyAnimations.js';
 import { tickKillcam, isKillcamActive } from './replay/killcam.js';
 import { adaptTick } from './ai/difficultyAdapter.js';
 
 // Shared animation state object for the player — same shape crossfade() expects
-const playerAnim = { actions: null, currentClip: 'idle', _dbgTransitions: true };
+const playerAnim = { actions: null, currentClip: 'idle', _dbgTransitions: true, _dbgFlipMonitor: true };
 
 // ── Player jump-phase state ───────────────────────────────────────────────
 // Tracks jump_start → jump_loop → jump_land sequence with timers
@@ -182,11 +182,6 @@ export function loop(ts) {
             enterLocoMode(playerAnim);
             setLocoWeights(playerAnim.actions, speedN, strN);
             locoHandled = true;
-            if (!playerAnim._locoDebugLogged) {
-              playerAnim._locoDebugLogged = true;
-              console.log('[LOCO player] walk exists:', !!a.walk, 'isRunning:', a.walk?.isRunning(), 'enabled:', a.walk?.enabled, 'weight:', a.walk?.weight, 'run exists:', !!a.run, 'run.isRunning:', a.run?.isRunning());
-              console.log('[LOCO player] all actions:', Object.keys(a).filter(k => !k.startsWith('_')).map(k => `${k}:${a[k]?.weight?.toFixed(2)}`).join(' '));
-            }
           }
         } else {
           // Idle / aiming: loco at speedN=0 → idle clip gets full weight, no fade artifact
@@ -241,6 +236,7 @@ export function loop(ts) {
   if (playerMesh && playerMixer) {
     playerMixer.update(dt);
     tickInertia(playerAnim, dt);
+    tickBoneFlipMonitor(playerAnim);
   }
 
   // ── 1p weapon death drop (runs even when dead) ───────────────────
