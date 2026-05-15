@@ -119,6 +119,7 @@ export function buildEnemyMixer(mesh) {
 const LOCO_CLIPS = new Set(['idle', 'walk', 'run', 'strafe_l', 'strafe_r']);
 const MAX_ENEMY_SPEED = 3.6; // ENEMY_SPEED * max speedMult
 
+let _locoDbg = false;
 function _setLocoWeights(actions, speedN, strN) {
   const strAmt = Math.abs(strN);
   const fwdFrac = Math.max(0, 1 - strAmt);
@@ -130,6 +131,15 @@ function _setLocoWeights(actions, speedN, strN) {
   const strRW = Math.max(0,  strN);
 
   const sum = idleW + walkW + runW + strLW + strRW || 1;
+
+  if (!_locoDbg && walkW > 0) {
+    _locoDbg = true;
+    console.log('[_setLocoWeights] speedN', speedN, 'walkW/sum', walkW/sum, 'walk before:', actions.walk?.weight);
+    if (actions.walk) actions.walk.setEffectiveWeight(walkW / sum);
+    console.log('[_setLocoWeights] walk after setEW:', actions.walk?.weight, '_effectiveWeight:', actions.walk?._effectiveWeight);
+    console.log('[_setLocoWeights] walk is same object:', actions.walk === actions.walk, 'typeof setEW:', typeof actions.walk?.setEffectiveWeight);
+    return;
+  }
 
   if (actions.idle) {
     if (!actions.idle.isRunning()) actions.idle.play();
