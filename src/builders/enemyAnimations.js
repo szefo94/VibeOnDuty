@@ -197,7 +197,9 @@ export function crossfade(e, to, dur = 0.22) {
   // crossFadeTo(warp=true) was avoided — it warps the incoming clip's timeScale 0→1,
   // freezing it at frame 0 (bind/T-pose) for the entire blend duration.
   if (from) from.fadeOut(dur);
-  toAct.reset().fadeIn(dur).play();
+  // setEffectiveWeight(1) restores this.weight=1 before fadeIn schedules its 0→1 interpolant.
+  // Phase 41 pre-started loco clips at weight=0; without this, effectiveWeight = 0 * interpolant = 0 forever.
+  toAct.reset().setEffectiveWeight(1).fadeIn(dur).play();
   e.currentClip = to;
 }
 
