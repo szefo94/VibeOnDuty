@@ -23,7 +23,7 @@ import { tickKillcam, isKillcamActive } from './replay/killcam.js';
 import { adaptTick } from './ai/difficultyAdapter.js';
 
 // Shared animation state object for the player — same shape crossfade() expects
-const playerAnim = { actions: null, currentClip: 'idle' };
+const playerAnim = { actions: null, currentClip: 'idle', _dbgTransitions: true };
 
 // ── Player jump-phase state ───────────────────────────────────────────────
 // Tracks jump_start → jump_loop → jump_land sequence with timers

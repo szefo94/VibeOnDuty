@@ -167,6 +167,7 @@ function _exitLocoMode(e) {
   if (!e._inLocoMode) return;
   for (const n of LOCO_CLIPS) { const a = e.actions[n]; if (a) a.setEffectiveWeight(0); }
   e._inLocoMode = false;
+  if (e._dbgTransitions) e._dbgPrevClip = `loco[${Object.entries(e.actions ?? {}).filter(([k,a]) => LOCO_CLIPS.has(k) && !k.startsWith('_') && a?.weight > 0.01).map(([k,a]) => `${k}:${a.weight.toFixed(2)}`).join('+')}]`;
   // Nullify currentClip so the next crossfade() call doesn't skip the incoming clip
   // due to the "to === currentClip" early-return guard.
   e.currentClip = null;
@@ -226,6 +227,20 @@ export function crossfade(e, to, dur = 0.22) {
   // Phase 41 pre-started loco clips at weight=0; without this, effectiveWeight = 0 * interpolant = 0 forever.
   toAct.reset().setEffectiveWeight(1).fadeIn(dur).play();
   e.currentClip = to;
+
+  // Debug: log transitions + hand quaternion hemisphere check when enabled
+  if (e._dbgTransitions && e._bones?.length) {
+    const fromLabel = e._dbgPrevClip ?? 'loco';
+    e._dbgPrevClip = to;
+    const handBone = e._bones.find(b => /hand_r/i.test(b.name)) ?? e._bones[0];
+    const q = handBone?.quaternion;
+    // Check against target clip's first quaternion keyframe for this bone
+    const toClip = toAct.getClip();
+    const track = toClip.tracks.find(t => t.name.includes(handBone?.name) && t.name.endsWith('.quaternion'));
+    const fq = track ? { x: track.values[0], y: track.values[1], z: track.values[2], w: track.values[3] } : null;
+    const dot = (q && fq) ? q.x*fq.x + q.y*fq.y + q.z*fq.z + q.w*fq.w : null;
+    console.log(`[crossfade] ${fromLabel} → ${to} dur=${dur.toFixed(2)} | hand_r dot=${dot?.toFixed(3) ?? 'n/a'} ${dot !== null && dot < 0 ? '⚠ OPPOSITE HEMISPHERE' : ''}`);
+  }
 }
 
 // ── Skeleton debug ────────────────────────────────────────────────────────
