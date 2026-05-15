@@ -84,12 +84,12 @@ export function updateWeapon(dt, moving, sprint, crouching, sliding) {
   // AWP sway: Brownian oscillator, damps when player holds breath (Shift+ADS+AWP)
   if (player.weapon === 'awp' && player.aimT > 0.5) {
     const damp  = player.holdBreath ? 0.94 : 0.88;
-    const drift = player.holdBreath ? 0.00025 : 0.0015;
+    const drift = player.holdBreath ? 0.00025 : (moving ? 0.0015 : 0.0004);
     _awpVX = _awpVX * damp + (Math.random() - 0.5) * drift;
     _awpVY = _awpVY * damp + (Math.random() - 0.5) * drift;
     _awpSwayX += _awpVX;
     _awpSwayY += _awpVY;
-    const maxSway = player.holdBreath ? 0.012 : 0.04;
+    const maxSway = player.holdBreath ? 0.006 : (moving ? 0.04 : 0.008);
     _awpSwayX = Math.max(-maxSway, Math.min(maxSway, _awpSwayX));
     _awpSwayY = Math.max(-maxSway, Math.min(maxSway, _awpSwayY));
   } else {
@@ -118,18 +118,24 @@ const BULLET_MAX_LIFE = 1.1;
 const BULLET_TRAIL = 2.8;
 const liveBullets = [];
 const _bRc = new THREE.Raycaster();
-const _bPM = new THREE.LineBasicMaterial({ color: 0xffee55, transparent: true, opacity: 1 });
+const _bPM  = new THREE.LineBasicMaterial({ color: 0xffee55, transparent: true, opacity: 1 });
+const _bHGeo = new THREE.SphereGeometry(0.045, 8, 6);
+const _bHMat = new THREE.MeshBasicMaterial({ color: 0xffee88, transparent: true });
 
 export function spawnBullet(origin, dir, damage = 28, isSniper = false) {
   const vel = dir.clone().multiplyScalar(BULLET_SPEED);
-  const geo = new THREE.BufferGeometry().setFromPoints([origin.clone(), origin.clone()]);
-  const line = new THREE.Line(geo, _bPM.clone());
-  scene.add(line);
+  const head = new THREE.Mesh(_bHGeo, _bHMat.clone());
+  head.position.copy(origin);
+  scene.add(head);
+  const tGeo = new THREE.BufferGeometry().setFromPoints([origin.clone(), origin.clone()]);
+  const trail = new THREE.Line(tGeo, _bPM.clone());
+  scene.add(trail);
   liveBullets.push({
     pos: origin.clone(),
     vel,
     life: BULLET_MAX_LIFE,
-    line,
+    head,
+    trail,
     prevPos: origin.clone(),
     damage,
     isSniper,
@@ -144,13 +150,17 @@ export function tickBullets(dt) {
     b.pos.addScaledVector(b.vel, dt);
     b.life -= dt;
 
+    const fade = Math.max(0, (b.life / BULLET_MAX_LIFE) * 0.95);
+    b.head.position.copy(b.pos);
+    b.head.material.opacity = fade;
+
     const vn = b.vel.clone().normalize();
     const tail = b.pos.clone().addScaledVector(vn, -BULLET_TRAIL);
-    const attr = b.line.geometry.attributes.position;
+    const attr = b.trail.geometry.attributes.position;
     attr.setXYZ(0, tail.x, tail.y, tail.z);
     attr.setXYZ(1, b.pos.x, b.pos.y, b.pos.z);
     attr.needsUpdate = true;
-    b.line.material.opacity = Math.max(0, (b.life / BULLET_MAX_LIFE) * 0.95);
+    b.trail.material.opacity = fade * 0.6;
 
     if (b.life <= 0) {
       _removeBullet(i);
@@ -250,9 +260,11 @@ export function tryPunchDamage() {
 
 function _removeBullet(i) {
   const b = liveBullets[i];
-  scene.remove(b.line);
-  b.line.geometry.dispose();
-  b.line.material.dispose();
+  scene.remove(b.head);
+  b.head.material.dispose();
+  scene.remove(b.trail);
+  b.trail.geometry.dispose();
+  b.trail.material.dispose();
   liveBullets.splice(i, 1);
 }
 
