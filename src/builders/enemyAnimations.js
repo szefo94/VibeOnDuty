@@ -119,6 +119,18 @@ export function buildEnemyMixer(mesh) {
 const LOCO_CLIPS = new Set(['idle', 'walk', 'run', 'strafe_l', 'strafe_r']);
 const MAX_ENEMY_SPEED = 3.6; // ENEMY_SPEED * max speedMult
 
+function _applyLocoWeight(action, w) {
+  if (!action) return;
+  // play() forces enabled=true via _activateAction — a completed fadeOut sets
+  // enabled=false which makes setEffectiveWeight return 0 even at weight=1.
+  action.play();
+  // Set weight directly rather than via setEffectiveWeight: we don't want
+  // stopFading() to clobber a running interpolant on other actions, and we need
+  // _effectiveWeight to match immediately (not after the next mixer tick).
+  action.weight = w;
+  action._effectiveWeight = w;
+}
+
 function _setLocoWeights(actions, speedN, strN) {
   const strAmt = Math.abs(strN);
   const fwdFrac = Math.max(0, 1 - strAmt);
@@ -131,26 +143,11 @@ function _setLocoWeights(actions, speedN, strN) {
 
   const sum = idleW + walkW + runW + strLW + strRW || 1;
 
-  if (actions.idle) {
-    if (!actions.idle.isRunning()) actions.idle.play();
-    actions.idle.setEffectiveWeight(idleW / sum);
-  }
-  if (actions.walk) {
-    if (!actions.walk.isRunning()) actions.walk.play();
-    actions.walk.setEffectiveWeight(walkW / sum);
-  }
-  if (actions.run) {
-    if (!actions.run.isRunning()) actions.run.play();
-    actions.run.setEffectiveWeight(runW / sum);
-  }
-  if (actions.strafe_l) {
-    if (!actions.strafe_l.isRunning()) actions.strafe_l.play();
-    actions.strafe_l.setEffectiveWeight(strLW / sum);
-  }
-  if (actions.strafe_r) {
-    if (!actions.strafe_r.isRunning()) actions.strafe_r.play();
-    actions.strafe_r.setEffectiveWeight(strRW / sum);
-  }
+  _applyLocoWeight(actions.idle,     idleW / sum);
+  _applyLocoWeight(actions.walk,     walkW / sum);
+  _applyLocoWeight(actions.run,      runW  / sum);
+  _applyLocoWeight(actions.strafe_l, strLW / sum);
+  _applyLocoWeight(actions.strafe_r, strRW / sum);
 }
 
 function _exitLocoMode(e) {

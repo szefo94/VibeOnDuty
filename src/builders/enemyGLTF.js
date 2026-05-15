@@ -126,12 +126,32 @@ function normaliseClipQuatSigns(clips) {
     for (const track of clip.tracks) {
       if (!track.name.endsWith('.quaternion')) continue;
       const v = track.values;
+      if (v.length < 4) continue;
 
-      // Step 1: within-track continuity
+      // Step 1: within-track continuity (forward pass)
       for (let i = 4; i < v.length; i += 4) {
         const dot = v[i-4]*v[i] + v[i-3]*v[i+1] + v[i-2]*v[i+2] + v[i-1]*v[i+3];
         if (dot < 0) {
           v[i] = -v[i]; v[i+1] = -v[i+1]; v[i+2] = -v[i+2]; v[i+3] = -v[i+3];
+        }
+      }
+
+      // Step 1b: loop-seam fix — ensure last frame and first frame are on the
+      // same hemisphere. When an animation loops, the mixer jumps from the
+      // final keyframe back to frame-0; a sign mismatch here causes a 180°
+      // bone snap every loop cycle. Fix: re-anchor frame-0 to last frame and
+      // redo the forward pass so all frames stay consistent.
+      if (v.length >= 8) {
+        const n = v.length - 4;
+        const seamDot = v[n]*v[0] + v[n+1]*v[1] + v[n+2]*v[2] + v[n+3]*v[3];
+        if (seamDot < 0) {
+          v[0] = -v[0]; v[1] = -v[1]; v[2] = -v[2]; v[3] = -v[3];
+          for (let i = 4; i < v.length; i += 4) {
+            const dot = v[i-4]*v[i] + v[i-3]*v[i+1] + v[i-2]*v[i+2] + v[i-1]*v[i+3];
+            if (dot < 0) {
+              v[i] = -v[i]; v[i+1] = -v[i+1]; v[i+2] = -v[i+2]; v[i+3] = -v[i+3];
+            }
+          }
         }
       }
 
