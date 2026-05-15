@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>README — Vibe on Duty</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #08090c;
+      --surface:   #101318;
+      --surface2:  #181b24;
+      --surface3:  #20242f;
+      --gold:      #c8a84b;
+      --gold-dim:  #7a6530;
+      --gold-glow: rgba(200,168,75,0.12);
+      --blue:      #4a8fff;
+      --blue-dim:  rgba(74,143,255,0.1);
+      --red:       #e05050;
+      --red-dim:   rgba(224,80,80,0.1);
+      --green:     #4adf8a;
+      --green-dim: rgba(74,223,138,0.1);
+      --purple:    #9a6fff;
+      --orange:    #f08040;
+      --text:      #c0c6d4;
+      --text-dim:  #5a6070;
+      --text-mid:  #8a90a0;
+      --border:    #22262f;
+      --border2:   #2a2e3a;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      font-size: 15px;
+    }
+
+    /* ── Nav dots ─────────────────────────────────────────────── */
+    .toc {
+      position: fixed; right: 24px; top: 50%; transform: translateY(-50%);
+      display: flex; flex-direction: column; gap: 10px; z-index: 100;
+    }
+    .toc a {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--text-dim); display: block;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .toc a:hover { background: var(--gold); transform: scale(1.5); }
+
+    /* ── Hero ─────────────────────────────────────────────────── */
+    .hero {
+      position: relative; min-height: 100vh;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: flex-start;
+      padding: 80px 10vw; overflow: hidden;
+    }
+    .hero-grid {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(200,168,75,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(200,168,75,0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      animation: gridPan 40s linear infinite;
+    }
+    @keyframes gridPan {
+      0%   { background-position: 0 0; }
+      100% { background-position: 48px 48px; }
+    }
+    .hero-vignette {
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 60% 50%, transparent 20%, var(--bg) 75%);
+    }
+    .hero-content { position: relative; z-index: 1; max-width: 800px; }
+    .hero-eyebrow {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      letter-spacing: 0.3em; color: var(--gold); text-transform: uppercase;
+      margin-bottom: 32px; display: flex; align-items: center; gap: 12px;
+    }
+    .hero-eyebrow::before {
+      content: ''; display: block; width: 32px; height: 1px; background: var(--gold);
+    }
+    .hero h1 {
+      font-size: clamp(52px, 8vw, 96px); font-weight: 700;
+      line-height: 0.92; letter-spacing: -0.02em; margin-bottom: 28px; color: #fff;
+    }
+    .hero h1 span { color: var(--gold); display: block; }
+    .hero-sub {
+      font-size: 18px; font-weight: 300; color: var(--text-mid);
+      max-width: 560px; margin-bottom: 48px;
+    }
+    .hero-cta {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: var(--gold); color: #000; font-weight: 700;
+      font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase;
+      text-decoration: none; padding: 14px 28px; border-radius: 4px;
+      transition: opacity 0.2s;
+    }
+    .hero-cta:hover { opacity: 0.85; }
+    .hero-cta-note {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      color: var(--text-dim); letter-spacing: 0.1em; margin-top: 20px;
+    }
+    .hero-cta-note code {
+      color: var(--blue); background: var(--blue-dim);
+      padding: 2px 6px; border-radius: 3px;
+    }
+    .hero-scroll-hint {
+      position: absolute; bottom: 40px; left: 50%;
+      transform: translateX(-50%);
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      color: var(--text-dim); font-size: 11px; letter-spacing: 0.2em;
+      text-transform: uppercase; animation: float 2.5s ease-in-out infinite;
+    }
+    .hero-scroll-hint::after {
+      content: ''; display: block; width: 1px; height: 40px;
+      background: linear-gradient(to bottom, var(--text-dim), transparent);
+    }
+    @keyframes float {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50%       { transform: translateX(-50%) translateY(8px); }
+    }
+
+    /* ── Layout ───────────────────────────────────────────────── */
+    .container { max-width: 1020px; margin: 0 auto; padding: 0 40px; }
+    section { padding: 96px 0; }
+    .section-label {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      letter-spacing: 0.4em; text-transform: uppercase; color: var(--text-dim);
+      margin-bottom: 16px; display: flex; align-items: center; gap: 12px;
+    }
+    .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    h2 {
+      font-size: clamp(28px, 4vw, 44px); font-weight: 700;
+      letter-spacing: -0.02em; line-height: 1.1; color: #fff; margin-bottom: 48px;
+    }
+    h3 { font-size: 19px; font-weight: 600; color: #fff; margin-bottom: 10px; margin-top: 36px; }
+    h3:first-child { margin-top: 0; }
+    p { color: var(--text); margin-bottom: 16px; max-width: 720px; }
+    p:last-child { margin-bottom: 0; }
+
+    /* ── Mode cards ───────────────────────────────────────────── */
+    .mode-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px; margin-top: 40px;
+    }
+    .mode-card {
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 8px; padding: 28px; position: relative; overflow: hidden;
+    }
+    .mode-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    }
+    .mode-card.gold::before  { background: var(--gold); }
+    .mode-card.blue::before  { background: var(--blue); }
+    .mode-card.red::before   { background: var(--red); }
+    .mode-card.purple::before { background: var(--purple); }
+    .mode-card.green::before { background: var(--green); }
+    .mode-card-label {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 10px;
+    }
+    .mode-card.gold   .mode-card-label { color: var(--gold); }
+    .mode-card.blue   .mode-card-label { color: var(--blue); }
+    .mode-card.red    .mode-card-label { color: var(--red); }
+    .mode-card.purple .mode-card-label { color: var(--purple); }
+    .mode-card.green  .mode-card-label { color: var(--green); }
+    .mode-card h3 { margin-top: 0; font-size: 17px; }
+    .mode-card p { font-size: 13.5px; color: var(--text-mid); margin-top: 8px; max-width: none; }
+
+    /* ── Data tables ──────────────────────────────────────────── */
+    .table-wrap { overflow-x: auto; margin: 24px 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    th {
+      text-align: left; font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim);
+      padding: 10px 16px; border-bottom: 1px solid var(--border2);
+    }
+    td { padding: 11px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--surface2); }
+    td code, th code { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: var(--blue); }
+    .key-cell {
+      font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--gold);
+      white-space: nowrap;
+    }
+
+    /* ── Controls grid ────────────────────────────────────────── */
+    .controls-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+      border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+      margin: 28px 0; font-size: 13.5px;
+    }
+    .ctrl-row {
+      display: contents;
+    }
+    .ctrl-row .ctrl-key {
+      font-family: 'JetBrains Mono', monospace; font-size: 11.5px;
+      color: var(--gold); padding: 10px 18px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .ctrl-row .ctrl-desc {
+      padding: 10px 18px;
+      border-bottom: 1px solid var(--border);
+      border-left: 1px solid var(--border);
+      color: var(--text);
+    }
+    .ctrl-row:last-child .ctrl-key,
+    .ctrl-row:last-child .ctrl-desc { border-bottom: none; }
+
+    /* ── Feature list ─────────────────────────────────────────── */
+    .feature-list {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 12px; margin: 28px 0;
+    }
+    .feature-item {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 6px; padding: 16px 18px; font-size: 13.5px;
+      display: flex; align-items: flex-start; gap: 10px;
+    }
+    .feature-dot {
+      width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 6px;
+    }
+    .feature-dot.gold   { background: var(--gold); }
+    .feature-dot.blue   { background: var(--blue); }
+    .feature-dot.green  { background: var(--green); }
+    .feature-dot.purple { background: var(--purple); }
+    .feature-dot.red    { background: var(--red); }
+    .feature-dot.orange { background: var(--orange); }
+
+    /* ── Weapon table accents ─────────────────────────────────── */
+    .wpn-name { color: var(--gold); font-weight: 600; }
+    .price-free { color: var(--green); font-style: italic; }
+
+    /* ── Difficulty tiers ─────────────────────────────────────── */
+    .tier-recruit { color: var(--green); }
+    .tier-regular { color: var(--blue); }
+    .tier-veteran { color: var(--gold); }
+    .tier-elite   { color: var(--red); }
+
+    /* ── Stack cards ──────────────────────────────────────────── */
+    .stack-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px; margin: 28px 0;
+    }
+    .stack-card {
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 6px; padding: 18px 20px;
+    }
+    .stack-name { font-weight: 600; color: #fff; font-size: 14px; margin-bottom: 4px; }
+    .stack-ver  { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); margin-bottom: 6px; }
+    .stack-role { font-size: 12.5px; color: var(--text-mid); }
+
+    /* ── File tree ────────────────────────────────────────────── */
+    .filetree {
+      background: #07080b; border: 1px solid var(--border);
+      border-radius: 8px; padding: 28px 32px;
+      font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      line-height: 1.9; color: var(--text-mid); overflow-x: auto;
+    }
+    .filetree .dir     { color: var(--gold); }
+    .filetree .file    { color: var(--text); }
+    .filetree .comment { color: var(--text-dim); }
+
+    /* ── Commands ─────────────────────────────────────────────── */
+    .cmd-block {
+      background: #07080b; border: 1px solid var(--border);
+      border-radius: 8px; padding: 24px 28px;
+      font-family: 'JetBrains Mono', monospace; font-size: 13px;
+      line-height: 2.2; margin: 24px 0;
+    }
+    .cmd-block .cmd-line { display: flex; gap: 12px; align-items: baseline; }
+    .cmd-block .prompt { color: var(--text-dim); user-select: none; }
+    .cmd-block .cmd { color: var(--blue); }
+    .cmd-block .comment { color: var(--text-dim); font-style: italic; }
+
+    /* ── Drill table ──────────────────────────────────────────── */
+    .drill-icon {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      color: var(--purple); background: rgba(154,111,255,0.1);
+      padding: 2px 7px; border-radius: 3px;
+    }
+
+    /* ── S&D econ chips ───────────────────────────────────────── */
+    .econ-plus  { color: var(--green); font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+    .econ-cash  { color: var(--gold);  font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+
+    /* ── Section divider ──────────────────────────────────────── */
+    .divider {
+      border: none; border-top: 1px solid var(--border); margin: 0;
+    }
+
+    /* ── Inline code ──────────────────────────────────────────── */
+    code {
+      font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      color: var(--blue); background: var(--blue-dim);
+      padding: 2px 6px; border-radius: 3px;
+    }
+
+    /* ── Responsive ───────────────────────────────────────────── */
+    @media (max-width: 700px) {
+      .container { padding: 0 20px; }
+      .hero { padding: 60px 6vw; }
+      .controls-grid { grid-template-columns: 1fr; }
+      .controls-grid .ctrl-desc { border-left: none; }
+      .toc { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="toc" aria-label="Page sections">
+  <a href="#hero"     title="Home"></a>
+  <a href="#modes"    title="Game Modes"></a>
+  <a href="#controls" title="Controls"></a>
+  <a href="#features" title="Features"></a>
+  <a href="#weapons"  title="Weapons"></a>
+  <a href="#stack"    title="Stack"></a>
+  <a href="#structure" title="Structure"></a>
+  <a href="#running"  title="Running Locally"></a>
+</nav>
+
+<!-- ── Hero ─────────────────────────────────────────────────────── -->
+<section id="hero" class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-vignette"></div>
+  <div class="hero-content">
+    <p class="hero-eyebrow">Browser FPS · Three.js</p>
+    <h1>VIBE<span>ON DUTY</span></h1>
+    <p class="hero-sub">
+      A browser-based first-person shooter built with Three.js. Survive endless waves, challenge
+      yourself in Adaptive mode, coordinate in Team Deathmatch, go head-to-head in Search &amp; Destroy,
+      or sharpen your aim in the Training Range.
+    </p>
+    <a class="hero-cta" href="https://szefo94.github.io/VibeOnDuty/" target="_blank" rel="noopener">
+      Play in Browser →
+    </a>
+    <p class="hero-cta-note">Or run locally: <code>npm run dev</code> → <code>http://localhost:5173</code></p>
+  </div>
+  <div class="hero-scroll-hint">scroll</div>
+</section>
+
+<hr class="divider">
+
+<!-- ── Game Modes ─────────────────────────────────────────────────── -->
+<section id="modes">
+  <div class="container">
+    <p class="section-label">01</p>
+    <h2>Game Modes</h2>
+
+    <div class="mode-grid">
+      <div class="mode-card gold">
+        <p class="mode-card-label">Survival</p>
+        <h3>Wave Mode — Incursion</h3>
+        <p>Survive endless waves of enemies in a tactical indoor arena. Clear each wave to face the next. A persistent drone hunts you between waves.</p>
+      </div>
+      <div class="mode-card red">
+        <p class="mode-card-label">5v5</p>
+        <h3>Team Deathmatch</h3>
+        <p>5v5 bot battle. You and four green-tinted allies face five red-tinted enemies. First team to 50 kills wins. All bots pathfind, fight, and respawn.</p>
+      </div>
+      <div class="mode-card blue">
+        <p class="mode-card-label">Tactical · Best-of-7</p>
+        <h3>Search &amp; Destroy</h3>
+        <p>Plant the bomb at Site A or B, or stop the enemy team from planting. First to 4 round wins takes the match. Full buy phase economy.</p>
+      </div>
+      <div class="mode-card purple">
+        <p class="mode-card-label">Auto-scaling</p>
+        <h3>Adaptive Mode</h3>
+        <p>Incursion with silent difficulty scaling. AI tracks rolling K/D over 60 s, re-evaluates every 30 s. Level 1 = Recruit; Level 10 = Elite. Starts at 5.</p>
+      </div>
+      <div class="mode-card green">
+        <p class="mode-card-label">Skills</p>
+        <h3>Training Range</h3>
+        <p>56×80 m shooting hall. 9 targets across short / medium / long zones. Four drills, four difficulty tiers, three movement presets. Infinite ammo.</p>
+      </div>
+    </div>
+
+    <h3>S&amp;D Details</h3>
+    <p>10 s buy phase · 60 s round timer · 40 s fuse after plant · 3 s plant / 5 s defuse (hold <code>G</code>)</p>
+    <p>Round ends on: bomb exploded · bomb defused · team elimination · round timeout</p>
+
+    <h3>S&amp;D Economy</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Event</th><th>Cash</th></tr></thead>
+        <tbody>
+          <tr><td>Kill</td><td class="econ-plus">+<span class="econ-cash">$300</span></td></tr>
+          <tr><td>Plant / Defuse</td><td class="econ-plus">+<span class="econ-cash">$300</span></td></tr>
+          <tr><td>Round win</td><td class="econ-plus">+<span class="econ-cash">$900</span></td></tr>
+          <tr><td>1st consecutive loss</td><td class="econ-plus">+<span class="econ-cash">$1,400</span></td></tr>
+          <tr><td>2nd consecutive loss</td><td class="econ-plus">+<span class="econ-cash">$1,900</span></td></tr>
+          <tr><td>3+ consecutive losses</td><td class="econ-plus">+<span class="econ-cash">$2,400</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:0">Starting cash: <strong style="color:var(--gold)">$3,000</strong> · Cap: <strong style="color:var(--gold)">$16,000</strong></p>
+
+    <h3>Training Range Drills</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Drill</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><span class="drill-icon">Free Practice</span></td><td>All enabled targets up; respawn 1.5 s after hit</td></tr>
+          <tr><td><span class="drill-icon">Flick Drill</span></td><td>60 s session; one lit hostile at a time; hit within difficulty window</td></tr>
+          <tr><td><span class="drill-icon">Reaction Drill</span></td><td>20 pop appearances; targets stay up for a brief window</td></tr>
+          <tr><td><span class="drill-icon">Hostage Gauntlet</span></td><td>Free practice with live score: +1 hostile / −1 hostage</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Training Difficulty</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Level</th><th>Flick Window</th><th>Target Up Time</th></tr></thead>
+        <tbody>
+          <tr><td class="tier-recruit">Beginner</td><td>2.5 s</td><td>0.8 s</td></tr>
+          <tr><td class="tier-regular">Normal</td><td>1.5 s</td><td>0.5 s</td></tr>
+          <tr><td class="tier-veteran">Hard</td><td>0.8 s</td><td>0.4 s</td></tr>
+          <tr><td class="tier-elite">Elite</td><td>0.4 s</td><td>0.25 s</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ── Controls ───────────────────────────────────────────────────── -->
+<section id="controls">
+  <div class="container">
+    <p class="section-label">02</p>
+    <h2>Controls</h2>
+
+    <div class="controls-grid">
+      <div class="ctrl-row"><div class="ctrl-key">WASD</div><div class="ctrl-desc">Move</div></div>
+      <div class="ctrl-row"><div class="ctrl-key">SHIFT</div><div class="ctrl-desc">Sprint</div></div>
+      <div class="ctrl-row"><div class="ctrl-key">CTRL / C</div><div class="ctrl-desc">Crouch</div></div>
+      <div class="ctrl-row"><div class="ctrl-key">W + CTRL</div><div class="ctrl-desc">Slide</div></div>
+      <div class="ctrl-row"><div class="ctrl-key">Z</div><div class="ctrl-desc">Dive (forward launch → lands into slide)</div></div>
+      <div class="ctrl-row"><div class="ctrl-key">SPACE</div><div class="ctrl-desc">Jump</div></div>
+      <div class="ctrl-row"><div class="ctrl-key">Q / E</div><div class="ctrl-desc">Lean left / right</div></div>
+      <div class="ctrl-row"><div class="ctrl-key">LMB (hold)</div><div class="ctrl-desc">Shoot</div></div>
+      <div class="ctrl-row"><div class="ctrl-key">RMB</div><div class="ctrl-desc">Aim down sights</div></div>
+      <div class="ctrl-row"><div class="ctrl-key">SHIFT (ADS + AWP)</div><div class="ctrl-desc">Hold breath — damps scope sway</div></div>
+      <div class="ctrl-row"><div class="ctrl-key">MMB</div><div class="ctrl-desc">Throw grenade (costs 100% energy)</div></div>
+      <div class="ctrl-row"><div class="ctrl-key">F</div><div class="ctrl-desc">Melee punch</div></div>
+      <div class="ctrl-row"><div class="ctrl-key">R</div><div class="ctrl-desc">Reload</div></div>
+      <div class="ctrl-row"><div class="ctrl-key">G (near site/bomb)</div><div class="ctrl-desc">Plant / Defuse</div></div>
+      <div class="ctrl-row"><div class="ctrl-key">B</div><div class="ctrl-desc">Buy menu (S&amp;D) · Shoulder swap (3rd person)</div></div>
+      <div class="ctrl-row"><div class="ctrl-key">1 – 4</div><div class="ctrl-desc">Switch weapon (M4 · P90 · AWP · Pistol)</div></div>
+      <div class="ctrl-row"><div class="ctrl-key">V</div><div class="ctrl-desc">Toggle 3rd person camera</div></div>
+      <div class="ctrl-row"><div class="ctrl-key">T</div><div class="ctrl-desc">Dance</div></div>
+      <div class="ctrl-row"><div class="ctrl-key">P</div><div class="ctrl-desc">Training Range preset menu</div></div>
+      <div class="ctrl-row"><div class="ctrl-key">Tab</div><div class="ctrl-desc">Training Range: cycle drill</div></div>
+      <div class="ctrl-row"><div class="ctrl-key">F3</div><div class="ctrl-desc">Toggle debug overlay</div></div>
+    </div>
+
+    <h3>Movement Tricks</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Trick</th><th>How</th></tr></thead>
+        <tbody>
+          <tr><td>Slide cancel</td><td>During a slide, press <code>SPACE</code> to launch into a jump</td></tr>
+          <tr><td>Crouch-landing slide</td><td>Jump, hold <code>CTRL</code>, land — converts air momentum into a slide</td></tr>
+          <tr><td>Dive → slide</td><td>Press <code>Z</code> while running — dives forward and lands into a boosted slide</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ── Features ───────────────────────────────────────────────────── -->
+<section id="features">
+  <div class="container">
+    <p class="section-label">03</p>
+    <h2>Features</h2>
+
+    <h3>World</h3>
+    <div class="feature-list">
+      <div class="feature-item"><span class="feature-dot gold"></span><div>Five maps: Greek Columns, Rooftop District, Column Arena, Vanguard Complex (3-floor), Training Range</div></div>
+      <div class="feature-item"><span class="feature-dot blue"></span><div>24×24 tile arenas — solid walls, cracked walls (crawl gaps), ramps, pillars, multi-level heightmap</div></div>
+      <div class="feature-item"><span class="feature-dot gold"></span><div>Bomb sites A/B with pulsing ring markers and point lights in S&amp;D mode</div></div>
+      <div class="feature-item"><span class="feature-dot orange"></span><div>Torch lights with flicker, PCF soft shadows, exponential fog, ACES filmic tone mapping</div></div>
+    </div>
+
+    <h3>Player</h3>
+    <div class="feature-list">
+      <div class="feature-item"><span class="feature-dot blue"></span><div>Full movement: walk, sprint, crouch, slide, slide-cancel jump, dive, lean</div></div>
+      <div class="feature-item"><span class="feature-dot blue"></span><div>Gravity, jump, step-height traversal on ramps and ledges</div></div>
+      <div class="feature-item"><span class="feature-dot purple"></span><div>EMP slow (drone ability): reduces movement speed to 40% for 2 s</div></div>
+      <div class="feature-item"><span class="feature-dot red"></span><div>1st-person death animation: weapon tips forward and drops on death</div></div>
+    </div>
+
+    <h3>Difficulty</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Tier</th><th>React Time</th><th>Damage</th><th>Speed</th></tr></thead>
+        <tbody>
+          <tr><td class="tier-recruit">Recruit</td><td>900–1800 ms</td><td>6</td><td>×0.60</td></tr>
+          <tr><td class="tier-regular">Regular</td><td>400–950 ms</td><td>10</td><td>×1.00</td></tr>
+          <tr><td class="tier-veteran">Veteran</td><td>150–380 ms</td><td>16</td><td>×1.25</td></tr>
+          <tr><td class="tier-elite">Elite</td><td>60–150 ms</td><td>22</td><td>×1.50</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Enemy AI</h3>
+    <div class="feature-list">
+      <div class="feature-item"><span class="feature-dot gold"></span><div>Patrol waypoints with idle wander rotation</div></div>
+      <div class="feature-item"><span class="feature-dot gold"></span><div>Line-of-sight detection with difficulty-scaled reaction delay</div></div>
+      <div class="feature-item"><span class="feature-dot blue"></span><div>A* pathfinding, throttled to once per 600–800 ms or on goal change</div></div>
+      <div class="feature-item"><span class="feature-dot blue"></span><div>Velocity-based movement with acceleration + drag; knockback stagger on hit</div></div>
+      <div class="feature-item"><span class="feature-dot green"></span><div>Friendly bots — A*-pathfind to sites/enemies, shoot with LOS check, scout when idle</div></div>
+      <div class="feature-item"><span class="feature-dot purple"></span><div>Sniper bots — hold position, rotate to face player only, never advance</div></div>
+    </div>
+
+    <h3>Drone AI</h3>
+    <div class="feature-list">
+      <div class="feature-item"><span class="feature-dot red"></span><div>Persistent drone (wave): orbits at ~8 unit radius, EMP pulse at &lt;30% HP; tumbles with smoke trail on death</div></div>
+      <div class="feature-item"><span class="feature-dot blue"></span><div>S&amp;D / TDM recon drones — one per team; waypoint patrol, periodic LOS scan</div></div>
+      <div class="feature-item"><span class="feature-dot green"></span><div>Friendly drone reveals enemy bot positions on minimap</div></div>
+      <div class="feature-item"><span class="feature-dot red"></span><div>Enemy drone compromises player position and alerts nearby bots</div></div>
+    </div>
+
+    <h3>Camera</h3>
+    <div class="feature-list">
+      <div class="feature-item"><span class="feature-dot blue"></span><div>1st person: head bob, weapon sway, spray cone, recoil</div></div>
+      <div class="feature-item"><span class="feature-dot gold"></span><div>3rd person over-the-shoulder (Fortnite-style): animated transition, shoulder swap, ADS preserved</div></div>
+      <div class="feature-item"><span class="feature-dot purple"></span><div>Lean: camera rolls ±0.28 rad and shifts ±0.38 units sideways</div></div>
+      <div class="feature-item"><span class="feature-dot gold"></span><div>AWP scope: dark radial vignette, Brownian sway oscillator damped by hold-breath (Shift), +9.8 m/s² bullet drop</div></div>
+    </div>
+
+    <h3>HUD</h3>
+    <div class="feature-list">
+      <div class="feature-item"><span class="feature-dot blue"></span><div>Ammo ring, energy ring, HP segments, reload bar, spray cone indicator</div></div>
+      <div class="feature-item"><span class="feature-dot gold"></span><div>S&amp;D match header: role · round · score · timer; plant / defuse bars; bomb fuse countdown</div></div>
+      <div class="feature-item"><span class="feature-dot green"></span><div>TDM score bar: team kills vs enemy kills · timer · kill limit</div></div>
+      <div class="feature-item"><span class="feature-dot purple"></span><div>Minimap radar: sweep animation, fog of war, enemy/drone/ammo blips</div></div>
+      <div class="feature-item"><span class="feature-dot orange"></span><div>Floating world-space damage numbers (yellow enemy / red player)</div></div>
+      <div class="feature-item"><span class="feature-dot blue"></span><div>Training Range HUD: drill name, timer/score, hits, accuracy, headshots, streak, avg reaction</div></div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ── Weapons ─────────────────────────────────────────────────────── -->
+<section id="weapons">
+  <div class="container">
+    <p class="section-label">04</p>
+    <h2>Weapons</h2>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Weapon</th><th>Mag</th><th>Reserve</th><th>Damage</th>
+            <th>Fire Rate</th><th>Reload</th><th>Price</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="wpn-name">M4A1</td><td>30</td><td>90</td><td>28</td>
+            <td>88 ms</td><td>1.8 s</td><td class="econ-cash">$2,900</td>
+          </tr>
+          <tr>
+            <td class="wpn-name">P90</td><td>50</td><td>150</td><td>20</td>
+            <td>55 ms</td><td>2.0 s</td><td class="econ-cash">$2,350</td>
+          </tr>
+          <tr>
+            <td class="wpn-name">AWP</td><td>5</td><td>20</td><td>95</td>
+            <td>1100 ms</td><td>2.5 s</td><td class="econ-cash">$4,750</td>
+          </tr>
+          <tr>
+            <td class="wpn-name">M9 Pistol</td><td>12</td><td>36</td><td>38</td>
+            <td>280 ms</td><td>1.2 s</td><td class="price-free">free</td>
+          </tr>
+          <tr>
+            <td class="wpn-name">Melee</td><td>—</td><td>—</td><td>55</td>
+            <td>700 ms</td><td>—</td><td class="price-free">—</td>
+          </tr>
+          <tr>
+            <td class="wpn-name">Grenade</td><td>—</td><td>—</td><td>up to 150</td>
+            <td>—</td><td>—</td><td style="color:var(--purple)">100% energy</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ── Stack ───────────────────────────────────────────────────────── -->
+<section id="stack">
+  <div class="container">
+    <p class="section-label">05</p>
+    <h2>Stack</h2>
+
+    <div class="stack-grid">
+      <div class="stack-card">
+        <div class="stack-name">Three.js</div>
+        <div class="stack-ver">r160 (npm)</div>
+        <div class="stack-role">3D rendering</div>
+      </div>
+      <div class="stack-card">
+        <div class="stack-name">Vite</div>
+        <div class="stack-ver">8.x</div>
+        <div class="stack-role">Dev server + production build</div>
+      </div>
+      <div class="stack-card">
+        <div class="stack-name">Vitest</div>
+        <div class="stack-ver">4.x</div>
+        <div class="stack-role">Unit tests</div>
+      </div>
+      <div class="stack-card">
+        <div class="stack-name">Playwright</div>
+        <div class="stack-ver">1.40</div>
+        <div class="stack-role">Smoke / e2e tests</div>
+      </div>
+      <div class="stack-card">
+        <div class="stack-name">ESLint 9</div>
+        <div class="stack-ver">flat config</div>
+        <div class="stack-role">Linting</div>
+      </div>
+      <div class="stack-card">
+        <div class="stack-name">Prettier</div>
+        <div class="stack-ver">3.x</div>
+        <div class="stack-role">Formatting</div>
+      </div>
+      <div class="stack-card">
+        <div class="stack-name">TypeScript</div>
+        <div class="stack-ver">6.x</div>
+        <div class="stack-role">Type checking (allowJs, noEmit)</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ── Project Structure ──────────────────────────────────────────── -->
+<section id="structure">
+  <div class="container">
+    <p class="section-label">06</p>
+    <h2>Project Structure</h2>
+
+    <div class="filetree">
+<span class="file">index.html</span>              <span class="comment">— HTML shell + canvas</span>
+<span class="file">style.css</span>               <span class="comment">— all styles</span>
+<span class="file">vite.config.js</span>          <span class="comment">— entry point config</span>
+<span class="dir">src/</span>
+  <span class="file">main.js</span>               <span class="comment">— entry: DOM listeners, start buttons, asset-gated init</span>
+  <span class="file">loop.js</span>               <span class="comment">— game loop, 3rd-person camera, lean offset, drone ticks</span>
+  <span class="file">config.js</span>             <span class="comment">— all game constants (player, enemy, weapons, S&D, physics)</span>
+  <span class="file">events.js</span>             <span class="comment">— 4-line pub/sub event bus (on/off/emit)</span>
+  <span class="file">map.js</span>                <span class="comment">— MAP data, heightmap, pathability, setActiveMap</span>
+  <span class="file">astar.js</span>              <span class="comment">— A* pathfinding with dev-mode failure logging</span>
+  <span class="file">scene.js</span>              <span class="comment">— renderer, scene, camera</span>
+  <span class="file">lighting.js</span>           <span class="comment">— torches, ambient, sun</span>
+  <span class="file">level.js</span>              <span class="comment">— buildLevel(mapDef) — exports wallMeshes, debugLines</span>
+  <span class="file">input.js</span>              <span class="comment">— keyboard, mouse, pointer lock state</span>
+  <span class="file">touch.js</span>              <span class="comment">— mobile touch controls</span>
+  <span class="file">difficulty.js</span>         <span class="comment">— difficulty preset selection + override API</span>
+  <span class="file">gamepad.js</span>            <span class="comment">— gamepad / controller input</span>
+  <span class="dir">maps/</span>
+    <span class="file">bunker.js</span>           <span class="comment">— Greek Columns map definition</span>
+    <span class="file">rooftop.js</span>          <span class="comment">— Rooftop District map definition</span>
+    <span class="file">concept.js</span>          <span class="comment">— Column Arena map definition</span>
+    <span class="file">range.js</span>            <span class="comment">— Training Range map definition</span>
+    <span class="file">vanguard.js</span>         <span class="comment">— Vanguard Complex (3-floor, 24×24, dark industrial)</span>
+  <span class="dir">modes/</span>
+    <span class="file">modeManager.js</span>      <span class="comment">— setMode/getMode/isAnyModeActive (zero-dep registry)</span>
+    <span class="file">snd.js</span>              <span class="comment">— S&D match state machine, bomb logic, round lifecycle</span>
+    <span class="file">tdm.js</span>              <span class="comment">— TDM score tracking, respawn, timer</span>
+    <span class="file">economy.js</span>          <span class="comment">— S&D cash ledger (kill/plant/defuse bonuses, loss streak)</span>
+    <span class="file">buyMenu.js</span>          <span class="comment">— S&D buy phase UI, weapon shop, 10 s countdown</span>
+    <span class="file">trainingRange.js</span>    <span class="comment">— Training Range drills, preset panel, HUD, hit callbacks</span>
+  <span class="dir">ai/</span>
+    <span class="file">enemyStates.js</span>      <span class="comment">— PATROL/SPOTTED/ATTACK state objects + transition helpers</span>
+    <span class="file">difficultyAdapter.js</span> <span class="comment">— adaptive difficulty: rolling K/D window, level 1–10</span>
+  <span class="dir">builders/</span>
+    <span class="file">weapon.js</span>           <span class="comment">— player weapon model (1st-person)</span>
+    <span class="file">playerBody.js</span>       <span class="comment">— 3rd-person soldier body</span>
+    <span class="file">enemy.js</span>            <span class="comment">— ground soldier model (procedural fallback)</span>
+    <span class="file">drone.js</span>            <span class="comment">— drone model (procedural)</span>
+    <span class="file">enemyGLTF.js</span>        <span class="comment">— GLTF enemy + player mesh loader, clip aliases, team tinting</span>
+    <span class="file">enemyAnimations.js</span>  <span class="comment">— AnimationMixer crossfade + locomotion blend tree</span>
+    <span class="file">enemyWeapon.js</span>      <span class="comment">— enemy pistol GLTF attach</span>
+    <span class="file">weaponFBX.js</span>        <span class="comment">— player M4 / P90 FBX loader</span>
+    <span class="file">assetManager.js</span>     <span class="comment">— register/loadAll parallel asset registry</span>
+  <span class="dir">combat/</span>
+    <span class="file">shoot.js</span>            <span class="comment">— bullet physics, hit detection, weapon animation; AWP sway + bullet drop</span>
+    <span class="file">damage.js</span>           <span class="comment">— grenade falloff formulas</span>
+  <span class="dir">entities/</span>
+    <span class="file">entityBase.js</span>       <span class="comment">— applyEntityBase mixin (isAlive, takeDamage)</span>
+    <span class="file">player.js</span>           <span class="comment">— player state, movement, reload, dive, lean</span>
+    <span class="file">enemies.js</span>          <span class="comment">— enemy AI loop, S&D / TDM team spawn, kill/death events</span>
+    <span class="file">friendlyBots.js</span>     <span class="comment">— allied bot AI (A*, LOS, mode-aware)</span>
+    <span class="file">drone.js</span>            <span class="comment">— drone runtime (orbit AI, EMP, S&D/TDM recon drones)</span>
+    <span class="file">waveSystem.js</span>       <span class="comment">— wave state, tickWave, triggerWaveEnd</span>
+    <span class="file">ammoDrops.js</span>        <span class="comment">— ammo pickup spawning and collection</span>
+    <span class="file">grenades.js</span>         <span class="comment">— grenade throw, flight, explosion</span>
+    <span class="file">targetDummy.js</span>      <span class="comment">— range target mesh, pop/drop animation, hit flash, spring movement</span>
+  <span class="dir">utils/</span>
+    <span class="file">los.js</span>              <span class="comment">— hasLOS raycaster utility</span>
+  <span class="dir">fx/</span>
+    <span class="file">tracers.js</span>          <span class="comment">— enemy muzzle tracers</span>
+    <span class="file">impacts.js</span>          <span class="comment">— bullet impact sparks</span>
+    <span class="file">particles.js</span>        <span class="comment">— grenade explosion particles</span>
+    <span class="file">meleeRange.js</span>       <span class="comment">— melee ring flash</span>
+    <span class="file">damageNumbers.js</span>    <span class="comment">— floating world-space damage numbers</span>
+    <span class="file">screenShake.js</span>      <span class="comment">— camera shake on hit / explosion</span>
+  <span class="dir">hud/</span>
+    <span class="file">overlay.js</span>          <span class="comment">— updateHUD, showMsg, showStatus, triggerHitFlash</span>
+    <span class="file">hitmarker.js</span>        <span class="comment">— crosshair hit indicator</span>
+    <span class="file">hud.js</span>              <span class="comment">— drawHUD dispatcher (clears canvas, calls rings + enemyBars)</span>
+    <span class="file">rings.js</span>            <span class="comment">— ammo/energy/reload rings, spray cone, healthColor helper</span>
+    <span class="file">enemyBars.js</span>        <span class="comment">— drone HP bar, grenade impact zones, enemy HP bars</span>
+    <span class="file">radar.js</span>            <span class="comment">— minimap radar canvas</span>
+    <span class="file">sndHud.js</span>           <span class="comment">— S&D HUD (match header, bomb timer, plant/defuse bars)</span>
+  <span class="comment">*.test.js             — Vitest unit tests (54 tests, 5 files)</span>
+<span class="dir">tests/</span>
+  <span class="file">smoke.spec.js</span>       <span class="comment">— Playwright smoke tests</span>
+<span class="dir">types/</span>
+  <span class="file">entities.d.ts</span>       <span class="comment">— EntityBase, Enemy, Player, Drone, AiState, AiCtx interfaces</span>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ── Running Locally ────────────────────────────────────────────── -->
+<section id="running">
+  <div class="container">
+    <p class="section-label">07</p>
+    <h2>Running Locally</h2>
+
+    <div class="cmd-block">
+      <div class="cmd-line"><span class="prompt">$</span><span class="cmd">npm install</span></div>
+      <div class="cmd-line"><span class="prompt">$</span><span class="cmd">npm run dev</span>       <span class="comment"># dev server at http://localhost:5173</span></div>
+      <div class="cmd-line"><span class="prompt">$</span><span class="cmd">npm run build</span>     <span class="comment"># production build → dist/</span></div>
+      <div class="cmd-line"><span class="prompt">$</span><span class="cmd">npm test</span>          <span class="comment"># Vitest unit tests</span></div>
+      <div class="cmd-line"><span class="prompt">$</span><span class="cmd">npm run test:e2e</span>  <span class="comment"># Playwright smoke tests</span></div>
+      <div class="cmd-line"><span class="prompt">$</span><span class="cmd">npm run lint</span>      <span class="comment"># ESLint</span></div>
+      <div class="cmd-line"><span class="prompt">$</span><span class="cmd">npm run typecheck</span> <span class="comment"># tsc --noEmit</span></div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
