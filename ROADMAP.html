@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roadmap — Vibe on Duty</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #08090c;
+      --surface:   #101318;
+      --surface2:  #181b24;
+      --surface3:  #20242f;
+      --gold:      #c8a84b;
+      --gold-dim:  #7a6530;
+      --gold-glow: rgba(200,168,75,0.12);
+      --blue:      #4a8fff;
+      --blue-dim:  rgba(74,143,255,0.1);
+      --red:       #e05050;
+      --red-dim:   rgba(224,80,80,0.1);
+      --green:     #4adf8a;
+      --green-dim: rgba(74,223,138,0.1);
+      --purple:    #9a6fff;
+      --text:      #c0c6d4;
+      --text-dim:  #5a6070;
+      --text-mid:  #8a90a0;
+      --border:    #22262f;
+      --border2:   #2a2e3a;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      font-size: 15px;
+    }
+
+    /* ── Nav dots ──────────────────────────────────────────────── */
+    .toc {
+      position: fixed; right: 24px; top: 50%; transform: translateY(-50%);
+      display: flex; flex-direction: column; gap: 10px; z-index: 100;
+    }
+    .toc a {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--text-dim); display: block;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .toc a:hover { background: var(--gold); transform: scale(1.5); }
+
+    /* ── Hero ─────────────────────────────────────────────────── */
+    .hero {
+      position: relative; min-height: 100vh;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: flex-start;
+      padding: 80px 10vw; overflow: hidden;
+    }
+    .hero-grid {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(200,168,75,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(200,168,75,0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      animation: gridPan 40s linear infinite;
+    }
+    @keyframes gridPan {
+      0%   { background-position: 0 0; }
+      100% { background-position: 48px 48px; }
+    }
+    .hero-vignette {
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 60% 50%, transparent 20%, var(--bg) 75%);
+    }
+    .hero-content { position: relative; z-index: 1; max-width: 800px; }
+    .hero-eyebrow {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      letter-spacing: 0.3em; color: var(--gold); text-transform: uppercase;
+      margin-bottom: 32px; display: flex; align-items: center; gap: 12px;
+    }
+    .hero-eyebrow::before {
+      content: ''; display: block; width: 32px; height: 1px; background: var(--gold);
+    }
+    .hero h1 {
+      font-size: clamp(52px, 8vw, 96px); font-weight: 700;
+      line-height: 0.92; letter-spacing: -0.02em; margin-bottom: 28px; color: #fff;
+    }
+    .hero h1 span { color: var(--gold); display: block; }
+    .hero-sub {
+      font-size: 18px; font-weight: 300; color: var(--text-mid);
+      max-width: 480px; margin-bottom: 48px;
+    }
+    .hero-meta {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      letter-spacing: 0.15em; color: var(--text-dim); text-transform: uppercase;
+    }
+    .hero-scroll-hint {
+      position: absolute; bottom: 40px; left: 50%;
+      transform: translateX(-50%);
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      color: var(--text-dim); font-size: 11px; letter-spacing: 0.2em;
+      text-transform: uppercase; animation: float 2.5s ease-in-out infinite;
+    }
+    .hero-scroll-hint::after {
+      content: ''; display: block; width: 1px; height: 40px;
+      background: linear-gradient(to bottom, var(--text-dim), transparent);
+    }
+    @keyframes float {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50%       { transform: translateX(-50%) translateY(8px); }
+    }
+
+    /* ── Layout ───────────────────────────────────────────────── */
+    .container { max-width: 960px; margin: 0 auto; padding: 0 40px; }
+    section { padding: 100px 0; }
+    .section-label {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      letter-spacing: 0.4em; text-transform: uppercase; color: var(--text-dim);
+      margin-bottom: 16px; display: flex; align-items: center; gap: 12px;
+    }
+    .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    h2 {
+      font-size: clamp(28px, 4vw, 44px); font-weight: 700;
+      letter-spacing: -0.02em; line-height: 1.1; color: #fff; margin-bottom: 48px;
+    }
+    h3 { font-size: 20px; font-weight: 600; color: #fff; margin-bottom: 12px; margin-top: 40px; }
+    h3:first-child { margin-top: 0; }
+    p { color: var(--text); margin-bottom: 16px; max-width: 700px; }
+    p:last-child { margin-bottom: 0; }
+
+    /* ── Metric grid ──────────────────────────────────────────── */
+    .metric-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px; margin: 32px 0;
+    }
+    .metric {
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 6px; padding: 20px;
+    }
+    .metric-value {
+      font-size: 32px; font-weight: 700; line-height: 1; margin-bottom: 6px;
+      font-variant-numeric: tabular-nums;
+    }
+    .metric-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; }
+    .metric-ok   .metric-value { color: var(--green); }
+    .metric-warn .metric-value { color: var(--gold); }
+    .metric-bad  .metric-value { color: var(--red); }
+
+    /* ── File tree ────────────────────────────────────────────── */
+    .filetree {
+      background: #07080b; border: 1px solid var(--border);
+      border-radius: 8px; padding: 28px 32px;
+      font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      line-height: 1.8; color: var(--text-mid); overflow-x: auto;
+    }
+    .filetree .dir  { color: var(--gold); }
+    .filetree .file { color: var(--text); }
+    .filetree .comment { color: var(--text-dim); }
+    .filetree .run-note {
+      margin-top: 20px; padding: 12px 16px;
+      background: rgba(74,143,255,0.06); border: 1px solid rgba(74,143,255,0.2);
+      border-radius: 4px; color: var(--blue); font-size: 11px;
+    }
+
+    /* ── Completed phases ─────────────────────────────────────── */
+    .phase-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13.5px; }
+    .phase-table th {
+      text-align: left; font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim);
+      padding: 10px 16px; border-bottom: 1px solid var(--border2);
+    }
+    .phase-table td { padding: 11px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .phase-table tr:last-child td { border-bottom: none; }
+    .phase-table tr:hover td { background: var(--surface2); }
+    .phase-num {
+      font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      color: var(--text-dim); white-space: nowrap;
+    }
+    .phase-title { color: #fff; font-weight: 500; }
+    .phase-note  { color: var(--text-mid); font-size: 12.5px; margin-top: 3px; }
+
+    .badge {
+      display: inline-block; font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+      padding: 3px 9px; border-radius: 3px; border: 1px solid; line-height: 1.4;
+    }
+    .badge-done    { color: var(--green); border-color: rgba(74,223,138,0.3); background: rgba(74,223,138,0.06); }
+    .badge-partial { color: var(--gold);  border-color: var(--gold-dim); background: rgba(200,168,75,0.06); }
+    .badge-bugfix  { color: var(--blue);  border-color: rgba(74,143,255,0.3); background: rgba(74,143,255,0.06); }
+
+    /* ── Upcoming phases ──────────────────────────────────────── */
+    .phases-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+      gap: 16px; margin-top: 8px;
+    }
+    .phase-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 24px 28px;
+    }
+    .phase-card-gold   { border-color: var(--gold-dim); background: linear-gradient(135deg, var(--surface), rgba(200,168,75,0.04)); }
+    .phase-card-blue   { border-color: rgba(74,143,255,0.25); background: linear-gradient(135deg, var(--surface), rgba(74,143,255,0.04)); }
+    .phase-card-purple { border-color: rgba(154,111,255,0.3); background: linear-gradient(135deg, var(--surface), rgba(154,111,255,0.04)); }
+    .phase-card-red    { border-color: rgba(224,80,80,0.25); background: linear-gradient(135deg, var(--surface), rgba(224,80,80,0.04)); }
+    .phase-card-green  { border-color: rgba(74,223,138,0.2); background: linear-gradient(135deg, var(--surface), rgba(74,223,138,0.04)); }
+    .phase-card-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 16px; margin-bottom: 10px;
+    }
+    .phase-card-num {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.2em;
+      padding-top: 3px; white-space: nowrap;
+    }
+    .phase-card h3 {
+      font-size: 17px; margin-top: 0; margin-bottom: 0; flex: 1;
+    }
+    .phase-card p { font-size: 13.5px; color: var(--text-mid); margin-top: 8px; max-width: none; }
+    .phase-files {
+      margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px;
+    }
+    .phase-file {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      color: var(--text-dim); background: var(--surface3);
+      border: 1px solid var(--border); border-radius: 3px; padding: 2px 8px;
+    }
+
+    /* ── Chips ────────────────────────────────────────────────── */
+    .chip {
+      display: inline-block; font-size: 10px; font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0.1em; text-transform: uppercase; padding: 2px 8px;
+      border-radius: 3px; border: 1px solid; line-height: 1.6;
+    }
+    .chip-easy    { background: rgba(74,223,138,0.08); color: var(--green);  border-color: rgba(74,223,138,0.25); }
+    .chip-medium  { background: rgba(200,168,75,0.1);  color: var(--gold);   border-color: var(--gold-dim); }
+    .chip-hard    { background: rgba(224,80,80,0.1);   color: var(--red);    border-color: rgba(224,80,80,0.3); }
+    .chip-vhard   { background: rgba(224,80,80,0.15);  color: var(--red);    border-color: rgba(224,80,80,0.5); font-weight: 600; }
+    .chip-hot     { background: rgba(224,80,80,0.1);   color: var(--red);    border-color: rgba(224,80,80,0.3); }
+    .chip-solid   { background: rgba(200,168,75,0.1);  color: var(--gold);   border-color: var(--gold-dim); }
+    .chip-niche   { background: rgba(74,143,255,0.1);  color: var(--blue);   border-color: rgba(74,143,255,0.3); }
+    .chip-juicy   { background: rgba(154,111,255,0.1); color: var(--purple); border-color: rgba(154,111,255,0.3); }
+    .chip-tactical{ background: rgba(74,143,255,0.1);  color: var(--blue);   border-color: rgba(74,143,255,0.3); }
+    .chip-polish  { background: rgba(200,168,75,0.1);  color: var(--gold);   border-color: var(--gold-dim); }
+    .chip-content { background: rgba(74,223,138,0.08); color: var(--green);  border-color: rgba(74,223,138,0.25); }
+    .chip-meta    { background: rgba(144,160,176,0.1); color: var(--text-mid);border-color: var(--border2); }
+
+    /* ── Idea table ───────────────────────────────────────────── */
+    .idea-table { width: 100%; border-collapse: collapse; margin: 16px 0 40px; font-size: 13px; }
+    .idea-table th {
+      text-align: left; font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-dim);
+      padding: 8px 14px; border-bottom: 1px solid var(--border2);
+    }
+    .idea-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .idea-table tr:last-child td { border-bottom: none; }
+    .idea-table tr:hover td { background: var(--surface2); }
+    .idea-id   { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); width: 36px; }
+    .idea-text { color: var(--text); }
+    .chip-col  { white-space: nowrap; }
+
+    /* ── Divider ──────────────────────────────────────────────── */
+    .sep { border: none; height: 1px; background: var(--border); }
+
+    a { color: var(--gold); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    code {
+      font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      background: var(--surface2); border: 1px solid var(--border);
+      padding: 1px 6px; border-radius: 3px; color: var(--text);
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Navigation dots ──────────────────────────────────────────── -->
+<nav class="toc" aria-label="Sections">
+  <a href="#hero"      title="Intro"></a>
+  <a href="#tree"      title="File Tree"></a>
+  <a href="#completed" title="Completed"></a>
+  <a href="#upcoming"  title="Upcoming"></a>
+  <a href="#ideas"     title="Ideas"></a>
+</nav>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- HERO                                                            -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section class="hero" id="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-vignette"></div>
+  <div class="hero-content">
+    <div class="hero-eyebrow">Internal Document · Roadmap</div>
+    <h1>
+      Vibe on Duty<br>
+      <span>Roadmap</span>
+    </h1>
+    <p class="hero-sub">
+      Phases done. Phases next. Ideas waiting. One doc.
+    </p>
+
+    <div class="metric-grid" style="margin-bottom:48px;">
+      <div class="metric metric-ok">
+        <div class="metric-value">34+</div>
+        <div class="metric-label">Phases complete</div>
+      </div>
+      <div class="metric metric-warn">
+        <div class="metric-value">12</div>
+        <div class="metric-label">Upcoming phases</div>
+      </div>
+      <div class="metric metric-warn">
+        <div class="metric-value">87</div>
+        <div class="metric-label">Backlog ideas</div>
+      </div>
+      <div class="metric metric-ok">
+        <div class="metric-value">54</div>
+        <div class="metric-label">Unit tests</div>
+      </div>
+    </div>
+
+    <div class="hero-meta">Vibe on Duty &nbsp;·&nbsp; May 2026</div>
+  </div>
+  <div class="hero-scroll-hint">Scroll</div>
+</section>
+
+<hr class="sep">
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- FILE TREE                                                        -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="tree">
+<div class="container">
+  <div class="section-label">Current State</div>
+  <h2>Project Structure</h2>
+
+  <div class="filetree">
+<span class="file">index.html</span>         <span class="comment">— HTML shell (entry: src/main.js)</span>
+<span class="file">style.css</span>           <span class="comment">— all styles</span>
+<span class="file">vite.config.js</span>      <span class="comment">— Vite entry</span>
+<span class="dir">src/</span>
+  <span class="file">main.js</span>            <span class="comment">— DOM listeners, start buttons, asset-gated init, map registry</span>
+  <span class="file">loop.js</span>            <span class="comment">— game loop, 3rd-person camera, lean offset, drone tick</span>
+  <span class="file">config.js</span>          <span class="comment">— all game constants (player, enemy, S&amp;D, physics)</span>
+  <span class="file">events.js</span>          <span class="comment">— 4-line pub/sub event bus (on/off/emit)</span>
+  <span class="file">map.js</span>             <span class="comment">— live-binding MAP/HMAP exports, setActiveMap(def)</span>
+  <span class="file">math.js</span>            <span class="comment">— normA, slerp</span>
+  <span class="file">astar.js</span>           <span class="comment">— A* pathfinding with dev-mode failure logging</span>
+  <span class="file">level.js</span>           <span class="comment">— buildLevel(mapDef) — exports wallMeshes, debugLines</span>
+  <span class="file">scene.js</span>           <span class="comment">— renderer, scene, camera, hudCanvas, hudCtx</span>
+  <span class="file">materials.js</span>       <span class="comment">— mm(), shared MeshStandardMaterials</span>
+  <span class="file">lighting.js</span>        <span class="comment">— ambient, sun, fill, torchLights[] — exports tickTorches</span>
+  <span class="file">input.js</span>           <span class="comment">— keys, locked, gameRunning, mouseHeld, setGameRunning</span>
+  <span class="file">touch.js</span>           <span class="comment">— mobile touch controls</span>
+  <span class="file">gamepad.js</span>         <span class="comment">— Standard Gamepad API (sticks + all buttons mapped)</span>
+  <span class="dir">maps/</span>
+    <span class="file">bunker.js</span>        <span class="comment">— Greek Columns (complex arena, ramps, cracks, torches)</span>
+    <span class="file">rooftop.js</span>       <span class="comment">— Rooftop District (outdoor, HVAC, daylight)</span>
+    <span class="file">concept.js</span>       <span class="comment">— Column Arena prototype</span>
+    <span class="file">range.js</span>         <span class="comment">— Training Range (56×80 m flat hall, 9 target slots)</span>
+    <span class="file">vanguard.js</span>      <span class="comment">— Vanguard Complex (24×24, 3 floors at 0/3/6 m)</span>
+  <span class="dir">modes/</span>
+    <span class="file">modeManager.js</span>   <span class="comment">— setMode/getMode/isAnyModeActive</span>
+    <span class="file">snd.js</span>           <span class="comment">— S&amp;D match state machine, round lifecycle, bomb logic</span>
+    <span class="file">tdm.js</span>           <span class="comment">— Team Deathmatch — score, respawn queues, 10-min timer</span>
+    <span class="file">trainingRange.js</span> <span class="comment">— Training Range drills (free/flick/reaction/hostage), HUD</span>
+    <span class="file">economy.js</span>       <span class="comment">— S&amp;D cash ledger (kill/plant/defuse bonuses, loss streak)</span>
+    <span class="file">buyMenu.js</span>       <span class="comment">— S&amp;D buy phase UI, weapon shop, 10 s countdown</span>
+  <span class="dir">ai/</span>
+    <span class="file">enemyStates.js</span>   <span class="comment">— PATROL/SPOTTED/ATTACK + transitionTo, alertEnemy; sniper hold</span>
+    <span class="file">difficultyAdapter.js</span> <span class="comment">— rolling K/D window 60 s, level 1–10, evaluates every 30 s</span>
+  <span class="dir">builders/</span>
+    <span class="file">weapon.js</span>        <span class="comment">— player weapon model (m4/p90/awp/pistol), 1p+3p sub-groups</span>
+    <span class="file">playerBody.js</span>    <span class="comment">— full soldier body</span>
+    <span class="file">enemy.js</span>         <span class="comment">— ground soldier model (procedural fallback)</span>
+    <span class="file">drone.js</span>         <span class="comment">— drone model (procedural)</span>
+    <span class="file">enemyGLTF.js</span>     <span class="comment">— GLTF enemy + player mesh loader; buildEnemyMesh(wx,wz,role)</span>
+    <span class="file">enemyAnimations.js</span> <span class="comment">— blend tree, crossfade, inertial blending, breathing additive</span>
+    <span class="file">enemyWeapon.js</span>   <span class="comment">— role-based enemy weapons (assault/smg/sniper/pistol)</span>
+    <span class="file">weaponFBX.js</span>     <span class="comment">— player M4/P90 FBX loader; attachWeapons3pToHand</span>
+    <span class="file">assetManager.js</span>  <span class="comment">— register/loadAll parallel asset registry</span>
+  <span class="dir">combat/</span>
+    <span class="file">shoot.js</span>         <span class="comment">— bullet physics, hit detection, spray — per-weapon stats</span>
+    <span class="file">damage.js</span>        <span class="comment">— grenade falloff, entity/player damage formulas</span>
+  <span class="dir">entities/</span>
+    <span class="file">entityBase.js</span>    <span class="comment">— applyEntityBase mixin (isAlive, takeDamage)</span>
+    <span class="file">player.js</span>        <span class="comment">— player state, movement, dive, lean, reload</span>
+    <span class="file">enemies.js</span>       <span class="comment">— enemy AI loop, S&amp;D team spawn, kill/death events</span>
+    <span class="file">friendlyBots.js</span>  <span class="comment">— allied bot AI (A*, LOS, bot-vs-bot shooting)</span>
+    <span class="file">drone.js</span>         <span class="comment">— drone runtime (AI, EMP, orbit, S&amp;D recon drones)</span>
+    <span class="file">waveSystem.js</span>    <span class="comment">— wave state, tickWave, triggerWaveEnd</span>
+    <span class="file">ammoDrops.js</span>     <span class="comment">— ammo pickup spawn and collection</span>
+    <span class="file">grenades.js</span>      <span class="comment">— grenade throw, flight, explosion</span>
+    <span class="file">targetDummy.js</span>   <span class="comment">— range target mesh, pop/drop, hit flash, spring/sine movement</span>
+  <span class="dir">utils/</span>
+    <span class="file">los.js</span>           <span class="comment">— hasLOS raycaster utility</span>
+  <span class="dir">fx/</span>
+    <span class="file">tracers.js</span>       <span class="comment">— enemy muzzle tracers</span>
+    <span class="file">impacts.js</span>       <span class="comment">— bullet impact sparks</span>
+    <span class="file">particles.js</span>     <span class="comment">— grenade sparks + smoke + impact zones; 90-particle cap</span>
+    <span class="file">meleeRange.js</span>    <span class="comment">— melee ring flash</span>
+    <span class="file">screenShake.js</span>   <span class="comment">— triggerScreenShake / tickScreenShake</span>
+  <span class="dir">hud/</span>
+    <span class="file">overlay.js</span>       <span class="comment">— updateHUD, showMsg, showStatus, triggerHitFlash, showKillFeed</span>
+    <span class="file">hitmarker.js</span>     <span class="comment">— hitMarkerT, spawnHitMarker, tickHitMarker</span>
+    <span class="file">hud.js</span>           <span class="comment">— drawHUD dispatcher; setDebugAnimClip + setDebugFrameMs</span>
+    <span class="file">rings.js</span>         <span class="comment">— ammo/energy/reload rings + spray cone + hit-dir arc</span>
+    <span class="file">enemyBars.js</span>     <span class="comment">— drone bar, grenade impact zones, enemy HP bars</span>
+    <span class="file">radar.js</span>         <span class="comment">— drawMinimap (canvas)</span>
+    <span class="file">sndHud.js</span>        <span class="comment">— S&amp;D match header, bomb timer, plant/defuse bars, result overlay</span>
+  <span class="dir">editor/</span>
+    <span class="file">mapEditor.js</span>     <span class="comment">— 2D grid editor; all tiles, 3-floor tabs, undo 80 ops, fill/rect/zoom/mirror,</span>
+                      <span class="comment">  variable size 12–48, 5 save slots, sky presets, playtest, thumbnail, URL sharing</span>
+  <span class="dir">replay/</span>
+    <span class="file">killcam.js</span>       <span class="comment">— 3 s ring buffer, camera playback on player death</span>
+  <span class="dir">ai/</span>
+    <span class="file">difficultyAdapter.js</span> <span class="comment">— rolling K/D, level 1–10 lerp Recruit→Elite</span>
+  <span class="file">*.test.js</span>          <span class="comment">— Vitest unit tests (54 tests, 5 files)</span>
+<span class="dir">tests/</span>
+  <span class="file">smoke.spec.js</span>      <span class="comment">— Playwright smoke tests (7 tests)</span>
+<span class="dir">types/</span>
+  <span class="file">entities.d.ts</span>      <span class="comment">— EntityBase, Enemy, Player, Drone, AiState interfaces</span>
+
+    <div class="run-note">▶ npm run dev — Vite dev server. Do NOT open via file://.</div>
+  </div>
+
+</div>
+</section>
+
+<hr class="sep">
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- COMPLETED                                                        -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="completed">
+<div class="container">
+  <div class="section-label">Part II</div>
+  <h2>Completed Phases</h2>
+
+  <table class="phase-table">
+    <thead>
+      <tr>
+        <th>Phase</th>
+        <th>Title</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="phase-num">1–4</td>
+        <td>
+          <div class="phase-title">Foundation</div>
+          <div class="phase-note">npm + Vite, module split, Vitest + Playwright, ESLint/Prettier/TS</div>
+        </td>
+        <td><span class="badge badge-done">Done</span></td>
+      </tr>
+      <tr>
+        <td class="phase-num">5</td>
+        <td>
+          <div class="phase-title">Core Movement &amp; Camera</div>
+          <div class="phase-note">Velocity movement, stagger on hit, A* throttle, drone orbit + EMP, 3rd-person camera, lean, dive</div>
+        </td>
+        <td><span class="badge badge-done">Done</span></td>
+      </tr>
+      <tr>
+        <td class="phase-num">6</td>
+        <td>
+          <div class="phase-title">GLTF + FBX Assets</div>
+          <div class="phase-note">GLTF enemy + player mesh, AnimationMixer crossfade, M4/P90 FBX, enemy pistol GLTF</div>
+        </td>
+        <td><span class="badge badge-done">Done</span></td>
+      </tr>
+      <tr>
+        <td class="phase-num">7</td>
+        <td>
+          <div class="phase-title">Search &amp; Destroy Mode</div>
+          <div class="phase-note">Best-of-7, two sites, plant/defuse, 60 s timer, 5v5 bot teams, round lifecycle</div>
+        </td>
+        <td><span class="badge badge-done">Done</span></td>
+      </tr>
+      <tr>
+        <td class="phase-num">8</td>
+        <td>
+          <div class="phase-title">Module Extraction</div>
+          <div class="phase-note">los.js, friendlyBots.js, waveSystem.js, sndHud.js; 21 S&amp;D unit tests</div>
+        </td>
+        <td><span class="badge badge-done">Done</span></td>
+      </tr>
+      <tr>
+        <td class="phase-num">9</td>
+        <td>
+          <div class="phase-title">Entity Base + AI State Machine</div>
+          <div class="phase-note">entityBase.js mixin, ai/enemyStates.js, TS interfaces</div>
+        </td>
+        <td><span class="badge badge-done">Done</span></td>
+      </tr>
+      <tr>
+        <td class="phase-num">10</td>
+        <td>
+          <div class="phase-title">Event Bus</div>
+          <div class="phase-note">events.js pub/sub; enemies/waveSystem emit events instead of direct cross-module calls</div>
+        </td>
+        <td><span class="badge badge-done">Done</span></td>
+      </tr>
+      <tr>
+        <td class="phase-num">11</td>
+        <td>
+          <div class="phase-title">Asset Manager</div>
+          <div class="phase-note">assetManager.js register/loadAll; start buttons gated until all assets resolve</div>
+        </td>
+        <td><span class="badge badge-done">Done</span></td>
+      </tr>
+      <tr>
+        <td class="phase-num">12–14</td>
+        <td>
+          <div class="phase-title">Cleanup &amp; HUD Split</div>
+          <div class="phase-note">Drone constants, grenade-drone fix, A* diagnostic, dead EHM removed, HUD split into rings/enemyBars/hud</div>
+        </td>
+        <td><span class="badge badge-done">Done</span></td>
+      </tr>
+      <tr>
+        <td class="phase-num">15–16</td>
+        <td>
+          <div class="phase-title">Mode Manager + Circular Dep Fix</div>
+          <div class="phase-note">modeManager.js; snd.js decoupled via event bus; circular ESM dep broken with snd:configure injection</div>
+        </td>
+        <td><span class="badge badge-done">Done</span></td>
+      </tr>
+      <tr>
+        <td class="phase-num">18</td>
+        <td>
+          <div class="phase-title">4-Weapon System</div>
+          <div class="phase-note">M4A1 / P90 / AWP / Pistol (1–4). Per-weapon damage, fireRate, spray, reload, ADS FOV, ammo state. Enemy weapon roles.</div>
+        </td>
+        <td><span class="badge badge-done">Done</span></td>
+      </tr>
+      <tr>
+        <td class="phase-num">20</td>
+        <td>
+          <div class="phase-title">Feedback FX</div>
+          <div class="phase-note">Screen shake, kill feed, smoke cloud, hit-direction arc in rings.js</div>
+        </td>
+        <td><span class="badge badge-done">Done</span></td>
+      </tr>
+      <tr>
+        <td class="phase-num">21</td>
+        <td>
+          <div class="phase-title">Multi-Map + Map Selector</div>
+          <div class="phase-note">Greek Columns, Rooftop District, Column Arena. buildLevel(mapDef) refactor, per-map lighting/fog, map selector overlay.</div>
+        </td>
+        <td><span class="badge badge-done">Done</span></td>
+      </tr>
+      <tr>
+        <td class="phase-num">23–24</td>
+        <td>
+          <div class="phase-title">Performance + Gamepad</div>
+          <div class="phase-note">AI cull for distant patrollers, 90-particle cap, frame-time F3 panel, Gamepad API, viewport HUD scaling</div>
+        </td>
+        <td><span class="badge badge-done">Done</span></td>
+      </tr>
+      <tr>
+        <td class="phase-num">32</td>
+        <td>
+          <div class="phase-title">Training Range</div>
+          <div class="phase-note">56×80 m hall, 9 targets, 4 drills (Free/Flick/Reaction/Hostage), preset panel, spring+sine movement, live HUD stats</div>
+        </td>
+        <td><span class="badge badge-done">Done</span></td>
+      </tr>
+      <tr>
+        <td class="phase-num">35 (partial)</td>
+        <td>
+          <div class="phase-title">Team Deathmatch</div>
+          <div class="phase-note">First to 50 kills, 10-min timer, 3 s respawn. CTF still pending.</div>
+        </td>
+        <td><span class="badge badge-partial">Partial</span></td>
+      </tr>
+      <tr>
+        <td class="phase-num">37</td>
+        <td>
+          <div class="phase-title">Map Editor v1</div>
+          <div class="phase-note">2D canvas grid, all tile types, 3-floor tabs, undo 80 ops, 3D preview, base-64 export/import, URL sharing</div>
+        </td>
+        <td><span class="badge badge-done">Done</span></td>
+      </tr>
+      <tr>
+        <td class="phase-num">38</td>
+        <td>
+          <div class="phase-title">AWP Sniper Polish</div>
+          <div class="phase-note">Scope vignette, AWP sway oscillator, hold-breath, bullet drop, sniper bots hold position</div>
+        </td>
+        <td><span class="badge badge-done">Done</span></td>
+      </tr>
+      <tr>
+        <td class="phase-num">39</td>
+        <td>
+          <div class="phase-title">Difficulty System + Adaptive AI</div>
+          <div class="phase-note">4 presets (Recruit→Elite), adaptive difficultyAdapter.js rolling 60 s K/D window, level 1–10, ADAPTIVE mode button</div>
+        </td>
+        <td><span class="badge badge-done">Done</span></td>
+      </tr>
+      <tr>
+        <td class="phase-num">40</td>
+        <td>
+          <div class="phase-title">Map Editor v2</div>
+          <div class="phase-note">Fill, rect, zoom, mirror, variable size 12–48, 5 save slots, name+desc, sky/fog presets, playtest, thumbnail, ?map= URL card</div>
+        </td>
+        <td><span class="badge badge-done">Done</span></td>
+      </tr>
+      <tr>
+        <td class="phase-num">map</td>
+        <td>
+          <div class="phase-title">Vanguard Complex</div>
+          <div class="phase-note">24×24, 3 floors at 0/3/6 m, NW+SE+centre stairwells, perimeter balcony, floor-2 top room, dark industrial</div>
+        </td>
+        <td><span class="badge badge-done">Done</span></td>
+      </tr>
+      <tr>
+        <td class="phase-num">pause</td>
+        <td>
+          <div class="phase-title">Pause Menu</div>
+          <div class="phase-note">Esc releases pointer lock, #pause-menu overlay, RESUME + MAIN MENU buttons, full state reset on return</div>
+        </td>
+        <td><span class="badge badge-done">Done</span></td>
+      </tr>
+      <tr>
+        <td class="phase-num">bugfix</td>
+        <td>
+          <div class="phase-title">Drone Death + Crack/Column Collision</div>
+          <div class="phase-note">Drone fall+smoke trail on death; crack thin-slab check; column circular distance</div>
+        </td>
+        <td><span class="badge badge-bugfix">Bugfix</span></td>
+      </tr>
+      <tr>
+        <td class="phase-num">19 (partial)</td>
+        <td>
+          <div class="phase-title">S&amp;D Buy Phase + Economy</div>
+          <div class="phase-note">10 s buy phase, weapon shop (M4/P90/AWP/Pistol, keyboard hotkeys), economy cash ledger — kill/plant/defuse/round bonuses, loss streak up to $2400. Grenade buying + Phase 33 grenade types still pending.</div>
+        </td>
+        <td><span class="badge badge-partial">Partial</span></td>
+      </tr>
+      <tr>
+        <td class="phase-num">27</td>
+        <td>
+          <div class="phase-title">Killcam + Damage Summary</div>
+          <div class="phase-note">3 s ring buffer per entity; on player death detaches camera, replays from killer POV. "KILLCAM" badge + Skip button. End-of-round damage summary panel. Pure client-side.</div>
+        </td>
+        <td><span class="badge badge-done">Done</span></td>
+      </tr>
+      <tr>
+        <td class="phase-num">anim</td>
+        <td>
+          <div class="phase-title">Animation Revitalization (Phase 41 A+C+D)</div>
+          <div class="phase-note">Locomotion blend tree (speed float, strafe clips live), additive breathing + hit reaction overlay (Step C), inertial blending spring-damper</div>
+        </td>
+        <td><span class="badge badge-done">Done</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+</div>
+</section>
+
+<hr class="sep">
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- UPCOMING                                                         -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="upcoming">
+<div class="container">
+  <div class="section-label">Part III</div>
+  <h2>Upcoming</h2>
+
+  <div class="phases-grid">
+
+    <div class="phase-card phase-card-blue">
+      <div class="phase-card-header">
+        <div class="phase-card-num">Phase 41</div>
+        <span class="badge badge-partial">In Progress</span>
+      </div>
+      <h3>Animation Renaissance</h3>
+      <p>Steps B and E remaining: upper/lower body bone mask split (Blender asset needed) and procedural foot IK on ramps. Steps A+C+D shipped.</p>
+      <div class="phase-files">
+        <span class="phase-file">enemyAnimations.js</span>
+        <span class="phase-file">enemyGLTF.js</span>
+        <span class="phase-file">loop.js</span>
+        <span class="phase-file">ANIMATIONS.html</span>
+      </div>
+    </div>
+
+    <div class="phase-card phase-card-gold">
+      <div class="phase-card-header">
+        <div class="phase-card-num">Phase 17</div>
+        <span class="badge" style="color:var(--text-dim);border-color:var(--border2);">Upcoming</span>
+      </div>
+      <h3>Audio System</h3>
+      <p>Web Audio API with spatial sound via <code>PannerNode</code>. Gunshots, footsteps, grenade explosion, bomb beep, ambient loop, enemy bark on spot.</p>
+      <div class="phase-files">
+        <span class="phase-file">src/audio/</span>
+      </div>
+    </div>
+
+    <div class="phase-card phase-card-red">
+      <div class="phase-card-header">
+        <div class="phase-card-num">Phase 22</div>
+        <span class="badge" style="color:var(--text-dim);border-color:var(--border2);">Upcoming</span>
+      </div>
+      <h3>Multiplayer Foundation</h3>
+      <p>Real-time 5v5 S&amp;D over WebSocket. Server authoritative for round state; client-authoritative movement. 20 Hz tick, lag-compensated hit rewind (100 ms). Room codes, lobby, bot fill for empty slots.</p>
+      <div class="phase-files">
+        <span class="phase-file">src/net/socket.js</span>
+        <span class="phase-file">src/net/remotePlayer.js</span>
+        <span class="phase-file">src/net/netSync.js</span>
+        <span class="phase-file">server/index.js</span>
+      </div>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-card-header">
+        <div class="phase-card-num">Phase 25</div>
+        <span class="badge" style="color:var(--text-dim);border-color:var(--border2);">Upcoming</span>
+      </div>
+      <h3>Progression &amp; Persistence</h3>
+      <p>localStorage stats (kills, wins, accuracy, best wave). Match-end scoreboard. Kill streak rewards: ammo refill → drone strike → EMP. Wave difficulty ramp.</p>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-card-header">
+        <div class="phase-card-num">Phase 26</div>
+        <span class="badge" style="color:var(--text-dim);border-color:var(--border2);">Upcoming</span>
+      </div>
+      <h3>Bot Personalities</h3>
+      <p>Passive / Competitive / Aggressive. Per-bot <code>personality</code> field drives peek chance, retreat threshold, reaction delay in enemyStates.js. S&amp;D lobby chooser.</p>
+      <div class="phase-files">
+        <span class="phase-file">ai/enemyStates.js</span>
+        <span class="phase-file">config.js</span>
+      </div>
+    </div>
+
+    <div class="phase-card phase-card-purple">
+      <div class="phase-card-header">
+        <div class="phase-card-num">Phase 28</div>
+        <span class="badge" style="color:var(--text-dim);border-color:var(--border2);">Upcoming</span>
+      </div>
+      <h3>Advanced Movement</h3>
+      <p>Bunny hop (momentum fraction on jump+strafe, cap 1.35×), wall-slide along geometry, ledge grab ≤0.9 m, slide cancel into jump. All gated behind <code>ADVANCED_MOVEMENT</code> flag.</p>
+    </div>
+
+    <div class="phase-card phase-card-purple">
+      <div class="phase-card-header">
+        <div class="phase-card-num">Phase 29</div>
+        <span class="badge" style="color:var(--text-dim);border-color:var(--border2);">Upcoming</span>
+      </div>
+      <h3>Operator Abilities</h3>
+      <p>One signature charge per round (free). Recon Drone, Smoke Canister, EMP Pulse, Flashbang, Wall Sensor. Key: E. abilityManager.js maps player type → handler.</p>
+      <div class="phase-files">
+        <span class="phase-file">src/abilities/</span>
+      </div>
+    </div>
+
+    <div class="phase-card phase-card-green">
+      <div class="phase-card-header">
+        <div class="phase-card-num">Phase 30</div>
+        <span class="badge" style="color:var(--text-dim);border-color:var(--border2);">Upcoming</span>
+      </div>
+      <h3>Environmental Interaction</h3>
+      <p>Destructible crates (splinter on bullet/explosion), shootable lights (darkness = new angles), explosive barrels, door toggles (F key, 1.5 m range).</p>
+      <div class="phase-files">
+        <span class="phase-file">entities/destructibles.js</span>
+      </div>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-card-header">
+        <div class="phase-card-num">Phase 33</div>
+        <span class="badge" style="color:var(--text-dim);border-color:var(--border2);">Upcoming</span>
+      </div>
+      <h3>Full Grenade Arsenal</h3>
+      <p>Frag (existing), Flashbang (blind 2 s), Smoke (hasLOS false through volume, 15 s), Molotov (fire zone 8 s, 8 dmg/s), Decoy (fake muzzle flash + bark). 1 of each carry limit.</p>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-card-header">
+        <div class="phase-card-num">Phase 34</div>
+        <span class="badge" style="color:var(--text-dim);border-color:var(--border2);">Upcoming</span>
+      </div>
+      <h3>Weather &amp; Time-of-Day</h3>
+      <p>mapDef variants[]: Night (flashlight, no sun), Rain (2000-particle streaks, puddle floor), Dust Storm (heavy FogExp2, sightlines to 15 m). Random at S&amp;D round start.</p>
+      <div class="phase-files">
+        <span class="phase-file">src/fx/rain.js</span>
+      </div>
+    </div>
+
+    <div class="phase-card phase-card-blue">
+      <div class="phase-card-header">
+        <div class="phase-card-num">Phase 35</div>
+        <span class="badge badge-partial">Partial (CTF pending)</span>
+      </div>
+      <h3>Capture the Flag</h3>
+      <p>Two flags at opposing bases (glowing cylinder). Carry enemy flag to base to score. Carrier slowed 15%. Drop on death, auto-return 20 s idle. Radar flag icon.</p>
+      <div class="phase-files">
+        <span class="phase-file">entities/flag.js</span>
+      </div>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-card-header">
+        <div class="phase-card-num">Phase 36</div>
+        <span class="badge" style="color:var(--text-dim);border-color:var(--border2);">Upcoming</span>
+      </div>
+      <h3>Ping / Comms System</h3>
+      <p>Z key raycast → classify surface → Sprite billboard at hit point. 6 s expiry. Bot response: Go Here rerouts A*, Defend holds position, Attack pushes site.</p>
+      <div class="phase-files">
+        <span class="phase-file">src/net/ping.js</span>
+      </div>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-card-header">
+        <div class="phase-card-num">Phase 16</div>
+        <span class="badge" style="color:var(--text-dim);border-color:var(--border2);opacity:0.6;">Stretch</span>
+      </div>
+      <h3>Drone GLTF</h3>
+      <p>Wire droneGLTF.js once drone.glb is available. Procedural fallback stays if asset missing.</p>
+      <div class="phase-files">
+        <span class="phase-file">builders/droneGLTF.js</span>
+        <span class="phase-file">public/models/drone.glb</span>
+      </div>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-card-header">
+        <div class="phase-card-num">Phase 31</div>
+        <span class="badge" style="color:var(--text-dim);border-color:var(--border2);">Upcoming</span>
+      </div>
+      <h3>Cosmetic System</h3>
+      <p>6 operator skin presets (hue-shift material color). Weapon finishes unlocked by kill milestones. Kill card particles per operator style. Player nameplate Sprite above allied bots.</p>
+    </div>
+
+  </div>
+</div>
+</section>
+
+<hr class="sep">
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- IDEA BACKLOG                                                     -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="ideas">
+<div class="container">
+  <div class="section-label">Part IV</div>
+  <h2>Idea Slogan Backlog</h2>
+
+  <p>
+    Tags — <span class="chip chip-easy">easy</span> <span class="chip chip-medium">medium</span> <span class="chip chip-hard">hard</span> <span class="chip chip-vhard">very hard</span>
+    &nbsp; · &nbsp;
+    <span class="chip chip-hot">hot</span> <span class="chip chip-solid">solid</span> <span class="chip chip-niche">niche</span>
+    &nbsp; · &nbsp;
+    <span class="chip chip-juicy">juicy</span> <span class="chip chip-tactical">tactical</span> <span class="chip chip-polish">polish</span> <span class="chip chip-content">content</span> <span class="chip chip-meta">meta</span>
+  </p>
+
+  <h3>Combat feel</h3>
+  <table class="idea-table">
+    <thead><tr><th>#</th><th>Idea</th><th>C</th><th>D</th><th>F</th></tr></thead>
+    <tbody>
+      <tr><td class="idea-id">1</td><td class="idea-text">Aim punch — camera kicks slightly on every hit received.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-juicy">juicy</span></td></tr>
+      <tr><td class="idea-id">2</td><td class="idea-text">Distinct headshot vs body-hit sound — know shot quality without looking.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-juicy">juicy</span></td></tr>
+      <tr><td class="idea-id">3</td><td class="idea-text">Counter-strafe snaps accuracy to zero instantly on stop.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-tactical">tactical</span></td></tr>
+      <tr><td class="idea-id">4</td><td class="idea-text">Reload cancel — tap fire mid-reload, chambers one round, interrupts anim.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-juicy">juicy</span></td></tr>
+      <tr><td class="idea-id">5</td><td class="idea-text">Grenade cook — hold throw key to keep pin out; contact burst on late release.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-tactical">tactical</span></td></tr>
+      <tr><td class="idea-id">6</td><td class="idea-text">Grenade preview arc — dots trace flight path in world space while winding up.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-polish">polish</span></td></tr>
+      <tr><td class="idea-id">7</td><td class="idea-text">Kill distance in feed after every sniper kill ("47 m").</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-polish">polish</span></td></tr>
+      <tr><td class="idea-id">8</td><td class="idea-text">Tactical reload — different anim when mag still has rounds, faster.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-juicy">juicy</span></td></tr>
+      <tr><td class="idea-id">9</td><td class="idea-text">Spray-transfer discipline — first 5 bullets dead-accurate before cone kicks in.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-tactical">tactical</span></td></tr>
+      <tr><td class="idea-id">10</td><td class="idea-text">Peek advantage — pre-aim and step out faster than enemy reaction window.</td><td class="chip-col"><span class="chip chip-hard">hard</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-tactical">tactical</span></td></tr>
+      <tr><td class="idea-id">11</td><td class="idea-text">Bullet penetration — through thin walls at 40% reduced damage, [WALLBANG] marker.</td><td class="chip-col"><span class="chip chip-hard">hard</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-tactical">tactical</span></td></tr>
+      <tr><td class="idea-id">12</td><td class="idea-text">Ricochet off angled metal surfaces at reduced damage, max 1 bounce.</td><td class="chip-col"><span class="chip chip-hard">hard</span></td><td class="chip-col"><span class="chip chip-niche">niche</span></td><td class="chip-col"><span class="chip chip-juicy">juicy</span></td></tr>
+      <tr><td class="idea-id">13</td><td class="idea-text">Scope glint — AWP lens flickers ~0.3 s before shot, visible at range.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-tactical">tactical</span></td></tr>
+      <tr><td class="idea-id">14</td><td class="idea-text">Weapon inspect animation on 10 s idle.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-polish">polish</span></td></tr>
+      <tr><td class="idea-id">54</td><td class="idea-text">Crouch-slide — sprint+crouch launches 0.8 s slide at full momentum, hitbox drops.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-juicy">juicy</span></td></tr>
+      <tr><td class="idea-id">79</td><td class="idea-text">Armor plate system — $650 in buy phase; 3 plates absorb 3 shots, crack visually, must re-buy each round.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-tactical">tactical</span></td></tr>
+      <tr><td class="idea-id">80</td><td class="idea-text">Quick-swap — G toggles instantly between primary and sidearm, replaces scroll delay; mirrors CS muscle memory.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-juicy">juicy</span></td></tr>
+      <tr><td class="idea-id">55</td><td class="idea-text">Suppressor — Alt+1–4 toggle; no muzzle flash, off-radar while firing, 10% dmg loss.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-tactical">tactical</span></td></tr>
+      <tr><td class="idea-id">56</td><td class="idea-text">Defuse kit — $400 buy; cuts defuse time 10 s → 5 s.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-tactical">tactical</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Audio &amp; perception</h3>
+  <table class="idea-table">
+    <thead><tr><th>#</th><th>Idea</th><th>C</th><th>D</th><th>F</th></tr></thead>
+    <tbody>
+      <tr><td class="idea-id">15</td><td class="idea-text">Footstep sounds vary by surface — concrete thud, metal clang, grass hush.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-juicy">juicy</span></td></tr>
+      <tr><td class="idea-id">16</td><td class="idea-text">Sound occlusion — muffled shots through walls.</td><td class="chip-col"><span class="chip chip-hard">hard</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-tactical">tactical</span></td></tr>
+      <tr><td class="idea-id">17</td><td class="idea-text">Footstep directionality via PannerNode cones.</td><td class="chip-col"><span class="chip chip-hard">hard</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-tactical">tactical</span></td></tr>
+      <tr><td class="idea-id">18</td><td class="idea-text">Bomb beep pitch rises toward deadline.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-juicy">juicy</span></td></tr>
+      <tr><td class="idea-id">19</td><td class="idea-text">Dynamic music intensifies on plant, resolves on defuse/explosion.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-juicy">juicy</span></td></tr>
+      <tr><td class="idea-id">20</td><td class="idea-text">Killstreak voice announcer — "DOUBLE KILL", "ACE", "FLAWLESS".</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-juicy">juicy</span></td></tr>
+      <tr><td class="idea-id">21</td><td class="idea-text">Bot voice callouts — "SITE A CLEAR", "PLANTING NOW".</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-content">content</span></td></tr>
+      <tr><td class="idea-id">57</td><td class="idea-text">Tinnitus ring — close gunfire or explosion triggers 2 s high-pitched OscillatorNode tone.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-juicy">juicy</span></td></tr>
+      <tr><td class="idea-id">58</td><td class="idea-text">Reload click — dry-fire sound when firing on empty mag.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-polish">polish</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Visuals &amp; polish</h3>
+  <table class="idea-table">
+    <thead><tr><th>#</th><th>Idea</th><th>C</th><th>D</th><th>F</th></tr></thead>
+    <tbody>
+      <tr><td class="idea-id">22</td><td class="idea-text">Post-processing bloom on muzzle flash and fire zones.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-juicy">juicy</span></td></tr>
+      <tr><td class="idea-id">23</td><td class="idea-text">Bullet hole decals on walls, persist until round reset.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-polish">polish</span></td></tr>
+      <tr><td class="idea-id">24</td><td class="idea-text">Player shadow leaks around corners — gives away position before body does.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-niche">niche</span></td><td class="chip-col"><span class="chip chip-tactical">tactical</span></td></tr>
+      <tr><td class="idea-id">25</td><td class="idea-text">Time dilation — final kill plays 0.25× for 1 s.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-juicy">juicy</span></td></tr>
+      <tr><td class="idea-id">26</td><td class="idea-text">Bomb carrier subtle glow visible to their team on radar.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-polish">polish</span></td></tr>
+      <tr><td class="idea-id">27</td><td class="idea-text">Hot zone pulse — bomb sites pulse red halo on minimap while bomb is live.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-polish">polish</span></td></tr>
+      <tr><td class="idea-id">28</td><td class="idea-text">Enemy death ragdoll — per-bone velocity inheritance, no external physics.</td><td class="chip-col"><span class="chip chip-hard">hard</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-juicy">juicy</span></td></tr>
+      <tr><td class="idea-id">29</td><td class="idea-text">Tracer rounds briefly illuminate scene along bullet path.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-juicy">juicy</span></td></tr>
+      <tr><td class="idea-id">59</td><td class="idea-text">Dynamic crosshair gap — expands with spray cone, snaps on ADS.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-polish">polish</span></td></tr>
+      <tr><td class="idea-id">60</td><td class="idea-text">Glass pane tiles — translucent intact, shatters into particles on bullet hit. Editor tile.</td><td class="chip-col"><span class="chip chip-hard">hard</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-content">content</span></td></tr>
+      <tr><td class="idea-id">61</td><td class="idea-text">Muzzle light — PointLight range 4 m one frame on fire; nearby walls catch flash.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-juicy">juicy</span></td></tr>
+      <tr><td class="idea-id">81</td><td class="idea-text">Blood splash decal — small mesh-decal blood at hit point on enemy, cleared on death.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-juicy">juicy</span></td></tr>
+      <tr><td class="idea-id">82</td><td class="idea-text">Agent portrait — 2D portrait HUD top-left; expression reacts to HP state (calm → alert → critical → dead).</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-niche">niche</span></td><td class="chip-col"><span class="chip chip-juicy">juicy</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Tactical / S&amp;D depth</h3>
+  <table class="idea-table">
+    <thead><tr><th>#</th><th>Idea</th><th>C</th><th>D</th><th>F</th></tr></thead>
+    <tbody>
+      <tr><td class="idea-id">30</td><td class="idea-text">Spectator — dead players watch live teammate 1P POV, switch with Tab.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-content">content</span></td></tr>
+      <tr><td class="idea-id">31</td><td class="idea-text">Team economy display during buy phase — see each bot's cash.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-meta">meta</span></td></tr>
+      <tr><td class="idea-id">32</td><td class="idea-text">Surrender vote — forfeit when down 0-7, unanimous required.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-meta">meta</span></td></tr>
+      <tr><td class="idea-id">33</td><td class="idea-text">Interactive bomb defuse mini-game — key sequence instead of hold-F.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-niche">niche</span></td><td class="chip-col"><span class="chip chip-content">content</span></td></tr>
+      <tr><td class="idea-id">34</td><td class="idea-text">Decoy grenade routes enemies toward throw site.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-tactical">tactical</span></td></tr>
+      <tr><td class="idea-id">35</td><td class="idea-text">Spawn protection bubble — 1.5 s cannot be shot or shoot.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-tactical">tactical</span></td></tr>
+      <tr><td class="idea-id">36</td><td class="idea-text">Ghost round — every 5th round footsteps silent for both teams.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-niche">niche</span></td><td class="chip-col"><span class="chip chip-content">content</span></td></tr>
+      <tr><td class="idea-id">37</td><td class="idea-text">Friendly fire toggle per lobby for hardcore mode.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-niche">niche</span></td><td class="chip-col"><span class="chip chip-meta">meta</span></td></tr>
+      <tr><td class="idea-id">38</td><td class="idea-text">Wallbang check — hold Alt to highlight penetrable surfaces.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-tactical">tactical</span></td></tr>
+      <tr><td class="idea-id">39</td><td class="idea-text">Round-end MVP card — solo model shot with stats overlaid.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-juicy">juicy</span></td></tr>
+      <tr><td class="idea-id">62</td><td class="idea-text">One-way smoke — crouching below reveals enemy side, still blocks their view.</td><td class="chip-col"><span class="chip chip-hard">hard</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-tactical">tactical</span></td></tr>
+      <tr><td class="idea-id">63</td><td class="idea-text">Bomb LED — in-world blinking counter on planted bomb both teams can see.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-polish">polish</span></td></tr>
+      <tr><td class="idea-id">64</td><td class="idea-text">Footprint trails — scuff marks on dusty/wet floors ~4 s, read movement without radar.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-niche">niche</span></td><td class="chip-col"><span class="chip chip-tactical">tactical</span></td></tr>
+      <tr><td class="idea-id">83</td><td class="idea-text">Named zone callouts — map split into labelled zones (A Site, B Hall, Mid Ramp); banner on entry, bots reference zone names.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-content">content</span></td></tr>
+      <tr><td class="idea-id">84</td><td class="idea-text">Grenade 3D countdown — planted grenade shows numerical timer visible in 3D space when looking at it.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-polish">polish</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Progression &amp; meta</h3>
+  <table class="idea-table">
+    <thead><tr><th>#</th><th>Idea</th><th>C</th><th>D</th><th>F</th></tr></thead>
+    <tbody>
+      <tr><td class="idea-id">40</td><td class="idea-text">Challenge cards each round — "3 pistol kills = +$500 bonus".</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-meta">meta</span></td></tr>
+      <tr><td class="idea-id">41</td><td class="idea-text">Loadout presets — 3 buy configs triggered with Ctrl+1/2/3.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-meta">meta</span></td></tr>
+      <tr><td class="idea-id">42</td><td class="idea-text">Spray pattern unlock — 100 kills reveals counter-pull pattern on firing range.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-meta">meta</span></td></tr>
+      <tr><td class="idea-id">43</td><td class="idea-text">Crosshair customiser — shape, colour, gap, dot, thickness, localStorage.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-polish">polish</span></td></tr>
+      <tr><td class="idea-id">44</td><td class="idea-text">Kill verification ping — distinct visual pop on the killing shot.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-juicy">juicy</span></td></tr>
+      <tr><td class="idea-id">45</td><td class="idea-text">Seasonal map variant — Christmas lights in December, skulls in October.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-content">content</span></td></tr>
+      <tr><td class="idea-id">65</td><td class="idea-text">Match replay export — compact JSON at 10 Hz, replay from any spectator angle.</td><td class="chip-col"><span class="chip chip-vhard">very hard</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-meta">meta</span></td></tr>
+      <tr><td class="idea-id">66</td><td class="idea-text">Performance grade — S/A/B/C based on accuracy, survival, objectives on end card.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-meta">meta</span></td></tr>
+      <tr><td class="idea-id">85</td><td class="idea-text">Economy history panel — end-of-round card shows each player's last 3 rounds of cash earned/spent.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-meta">meta</span></td></tr>
+      <tr><td class="idea-id">86</td><td class="idea-text">Killstreak badge — persistent streak counter badge in HUD; resets on death, milestone at 5+/10+ lights up.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-polish">polish</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>AI &amp; bots</h3>
+  <table class="idea-table">
+    <thead><tr><th>#</th><th>Idea</th><th>C</th><th>D</th><th>F</th></tr></thead>
+    <tbody>
+      <tr><td class="idea-id">46</td><td class="idea-text">Enemy bots fake radio callout of own position when spotted, misdirects naive players.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-niche">niche</span></td><td class="chip-col"><span class="chip chip-content">content</span></td></tr>
+      <tr><td class="idea-id">47</td><td class="idea-text">Body drag — pull fresh corpse behind cover to deny death-position read.</td><td class="chip-col"><span class="chip chip-hard">hard</span></td><td class="chip-col"><span class="chip chip-niche">niche</span></td><td class="chip-col"><span class="chip chip-tactical">tactical</span></td></tr>
+      <tr><td class="idea-id">48</td><td class="idea-text">Bots remember kill spots and avoid them for two rounds.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-tactical">tactical</span></td></tr>
+      <tr><td class="idea-id">49</td><td class="idea-text">Sniper bot holds first-kill angle and never moves — genuinely terrifying.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-tactical">tactical</span></td></tr>
+      <tr><td class="idea-id">67</td><td class="idea-text">Bot mistake budget — Recruit quota of random errors per round (wrong reload, wander, missed grenade).</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-tactical">tactical</span></td></tr>
+      <tr><td class="idea-id">68</td><td class="idea-text">Bot comms ping — spot/kill blinks minimap at that position for 3 s.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-tactical">tactical</span></td></tr>
+      <tr><td class="idea-id">87</td><td class="idea-text">Bot vault obstacle — bots auto-jump over low crates and barriers using navmesh height flag.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-tactical">tactical</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Long-shot / dream</h3>
+  <table class="idea-table">
+    <thead><tr><th>#</th><th>Idea</th><th>C</th><th>D</th><th>F</th></tr></thead>
+    <tbody>
+      <tr><td class="idea-id">50</td><td class="idea-text">Grappling hook — one per round, hard to aim, huge vertical mobility, zero second chances.</td><td class="chip-col"><span class="chip chip-hard">hard</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-content">content</span></td></tr>
+      <tr><td class="idea-id">51</td><td class="idea-text">Procedurally generated map variant each match — same palette, random layout.</td><td class="chip-col"><span class="chip chip-vhard">very hard</span></td><td class="chip-col"><span class="chip chip-niche">niche</span></td><td class="chip-col"><span class="chip chip-content">content</span></td></tr>
+      <tr><td class="idea-id">52</td><td class="idea-text">Ammo type swap — FMJ (penetration) vs hollow-point (extra dmg, no wallbang).</td><td class="chip-col"><span class="chip chip-hard">hard</span></td><td class="chip-col"><span class="chip chip-niche">niche</span></td><td class="chip-col"><span class="chip chip-tactical">tactical</span></td></tr>
+      <tr><td class="idea-id">69</td><td class="idea-text">Gun Game — 26 weapons, one kill advances; knife kill demotes victim.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-content">content</span></td></tr>
+      <tr><td class="idea-id">70</td><td class="idea-text">One in the Chamber — pistol, 1 bullet per life, earn on kill, headshots only.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-content">content</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Map editor tools</h3>
+  <table class="idea-table">
+    <thead><tr><th>#</th><th>Idea</th><th>C</th><th>D</th><th>F</th></tr></thead>
+    <tbody>
+      <tr><td class="idea-id">71</td><td class="idea-text">Prefab stamp — save selection rect as named prefab, stamp anywhere.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-content">content</span></td></tr>
+      <tr><td class="idea-id">72</td><td class="idea-text">Copy / paste region — Ctrl+C / Ctrl+V on selection rect.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-polish">polish</span></td></tr>
+      <tr><td class="idea-id">73</td><td class="idea-text">Undo history panel — last 20 ops with previews, click to revert.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-niche">niche</span></td><td class="chip-col"><span class="chip chip-polish">polish</span></td></tr>
+      <tr><td class="idea-id">74</td><td class="idea-text">Auto-border — flood-fills map perimeter with walls in one click.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-polish">polish</span></td></tr>
+      <tr><td class="idea-id">75</td><td class="idea-text">Tile search filter — type in palette search to hide non-matching tiles.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-polish">polish</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Accessibility &amp; UX</h3>
+  <table class="idea-table">
+    <thead><tr><th>#</th><th>Idea</th><th>C</th><th>D</th><th>F</th></tr></thead>
+    <tbody>
+      <tr><td class="idea-id">76</td><td class="idea-text">Colorblind mode — Protanopia / Deuteranopia / Tritanopia recoloring of outlines, radar, bomb indicators.</td><td class="chip-col"><span class="chip chip-medium">medium</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-polish">polish</span></td></tr>
+      <tr><td class="idea-id">77</td><td class="idea-text">FOV slider — 70–110° with live preview, localStorage.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-polish">polish</span></td></tr>
+      <tr><td class="idea-id">78</td><td class="idea-text">Subtitles for audio cues — on-screen text when bomb planted / enemy reloading / grenade incoming.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-solid">solid</span></td><td class="chip-col"><span class="chip chip-polish">polish</span></td></tr>
+      <tr><td class="idea-id">88</td><td class="idea-text">Practice mode overlay — toggle shows live enemy HP bar + bullet spread circle ring during training range sessions.</td><td class="chip-col"><span class="chip chip-easy">easy</span></td><td class="chip-col"><span class="chip chip-hot">hot</span></td><td class="chip-col"><span class="chip chip-polish">polish</span></td></tr>
+    </tbody>
+  </table>
+
+</div>
+</section>
+
+<!-- ── Footer ──────────────────────────────────────────────────────── -->
+<footer style="padding:40px; text-align:center; border-top:1px solid var(--border);">
+  <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);letter-spacing:0.2em;text-transform:uppercase;">
+    Vibe on Duty &nbsp;·&nbsp; Internal Document &nbsp;·&nbsp; May 2026
+  </div>
+</footer>
+
+</body>
+</html>
