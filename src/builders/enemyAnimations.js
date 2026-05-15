@@ -131,9 +131,18 @@ function _setLocoWeights(actions, speedN, strN) {
 
   const sum = idleW + walkW + runW + strLW + strRW || 1;
 
-  if (actions.idle)     actions.idle    .setEffectiveWeight(idleW / sum);
-  if (actions.walk)     actions.walk    .setEffectiveWeight(walkW / sum);
-  if (actions.run)      actions.run     .setEffectiveWeight(runW  / sum);
+  if (actions.idle) {
+    if (!actions.idle.isRunning()) actions.idle.play();
+    actions.idle.setEffectiveWeight(idleW / sum);
+  }
+  if (actions.walk) {
+    if (!actions.walk.isRunning()) actions.walk.play();
+    actions.walk.setEffectiveWeight(walkW / sum);
+  }
+  if (actions.run) {
+    if (!actions.run.isRunning()) actions.run.play();
+    actions.run.setEffectiveWeight(runW / sum);
+  }
   if (actions.strafe_l) {
     if (!actions.strafe_l.isRunning()) actions.strafe_l.play();
     actions.strafe_l.setEffectiveWeight(strLW / sum);
@@ -148,6 +157,9 @@ function _exitLocoMode(e) {
   if (!e._inLocoMode) return;
   for (const n of LOCO_CLIPS) { const a = e.actions[n]; if (a) a.setEffectiveWeight(0); }
   e._inLocoMode = false;
+  // Nullify currentClip so the next crossfade() call doesn't skip the incoming clip
+  // due to the "to === currentClip" early-return guard.
+  e.currentClip = null;
 }
 
 function _snapBones(e) {
@@ -183,6 +195,9 @@ function _tickInertia(e, dt) {
 }
 
 export function tickInertia(e, dt) { _tickInertia(e, dt); }
+export function setLocoWeights(actions, speedN, strN) { _setLocoWeights(actions, speedN, strN); }
+export function enterLocoMode(e) { _enterLocoMode(e); }
+export function exitLocoMode(e) { _exitLocoMode(e); }
 
 // ── Crossfade helper ──────────────────────────────────────────────────────
 // Call once per frame after computing the desired clip name.

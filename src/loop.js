@@ -18,7 +18,7 @@ import { updateWeaponDeath } from './combat/shoot.js';
 import { tickGamepad } from './gamepad.js';
 import { drawMinimap } from './hud/radar.js';
 import { playerMesh, playerMixer, playerActions } from './builders/enemyGLTF.js';
-import { crossfade, tickInertia } from './builders/enemyAnimations.js';
+import { crossfade, tickInertia, setLocoWeights, enterLocoMode, exitLocoMode } from './builders/enemyAnimations.js';
 import { tickKillcam, isKillcamActive } from './replay/killcam.js';
 import { adaptTick } from './ai/difficultyAdapter.js';
 
@@ -141,27 +141,30 @@ export function loop(ts) {
 
       if (playerAnim.actions) {
         const a = playerAnim.actions;
-        let clip;
+        let clip = null;
+        let locoHandled = false;
         const sprint = keys['ShiftLeft'] || keys['ShiftRight'];
 
         if (player.dead && a.death) {
-          clip = 'death';
+          exitLocoMode(playerAnim); clip = 'death';
         } else if (player.dancing && a.dance) {
-          clip = 'dance';
+          exitLocoMode(playerAnim); clip = 'dance';
         } else if (player.punching && a[player.punchClip]) {
-          clip = player.punchClip;
+          exitLocoMode(playerAnim); clip = player.punchClip;
         } else if (player.rollTimer > 0 && a.roll) {
-          clip = 'roll';
+          exitLocoMode(playerAnim); clip = 'roll';
         } else if (jumpPhase === 'land' && a.jump_land) {
-          clip = 'jump_land';
+          exitLocoMode(playerAnim); clip = 'jump_land';
         } else if (!player.onGround) {
+          exitLocoMode(playerAnim);
           if (jumpPhase === 'start' && a.jump_start) clip = 'jump_start';
           else clip = a.jump_loop ? 'jump_loop' : 'idle';
         } else if (player.throwingNade && a.nade) {
-          clip = 'nade';
+          exitLocoMode(playerAnim); clip = 'nade';
         } else if (player.reloading && a.reload) {
-          clip = 'reload';
+          exitLocoMode(playerAnim); clip = 'reload';
         } else if (player.crouching || player.sliding) {
+          exitLocoMode(playerAnim);
           clip = player.moving
             ? (a.crouch_walk ? 'crouch_walk' : 'walk')
             : (a.crouch      ? 'crouch'      : 'idle');
@@ -169,20 +172,34 @@ export function loop(ts) {
           const back  = keys['KeyS'] && !keys['KeyW'];
           const left  = keys['KeyA'] && !keys['KeyD'] && !keys['KeyW'] && !keys['KeyS'];
           const right = keys['KeyD'] && !keys['KeyA'] && !keys['KeyW'] && !keys['KeyS'];
-          if (back  && a.walk_back) clip = 'walk_back';
-          else if (back  && a.run_back)  clip = 'run_back';
-          else if (left  && a.strafe_l)  clip = 'strafe_l';
-          else if (right && a.strafe_r)  clip = 'strafe_r';
-          else clip = sprint && a.run ? 'run' : 'walk';
-        } else if (player.aiming && a.attack) {
-          clip = 'attack';
+          if (back) {
+            exitLocoMode(playerAnim);
+            clip = a.walk_back ? 'walk_back' : (a.run_back ? 'run_back' : 'idle');
+          } else {
+            // Use loco blend tree for forward/strafe — same approach as enemies
+            const strN = left ? -1 : right ? 1 : 0;
+            const speedN = sprint ? 1.0 : 0.45;
+            enterLocoMode(playerAnim);
+            setLocoWeights(playerAnim.actions, speedN, strN);
+            locoHandled = true;
+            if (!playerAnim._locoDebugLogged) {
+              playerAnim._locoDebugLogged = true;
+              console.log('[LOCO player] walk exists:', !!a.walk, 'isRunning:', a.walk?.isRunning(), 'enabled:', a.walk?.enabled, 'weight:', a.walk?.weight, 'run exists:', !!a.run, 'run.isRunning:', a.run?.isRunning());
+              console.log('[LOCO player] all actions:', Object.keys(a).filter(k => !k.startsWith('_')).map(k => `${k}:${a[k]?.weight?.toFixed(2)}`).join(' '));
+            }
+          }
         } else {
-          clip = 'idle';
+          // Idle / aiming: loco at speedN=0 → idle clip gets full weight, no fade artifact
+          // idle===attack alias, so the attack/aim pose shows correctly at weight=1
+          enterLocoMode(playerAnim);
+          setLocoWeights(playerAnim.actions, 0, 0);
+          locoHandled = true;
         }
+
         const SNAP_CLIPS = new Set(['crouch', 'crouch_walk', 'death', 'roll', 'jump_start', 'jump_land', 'dance', 'punch_cross', 'punch_jab']);
-        const snapTransition = SNAP_CLIPS.has(clip) || SNAP_CLIPS.has(playerAnim.currentClip);
+        const snapTransition = clip && (SNAP_CLIPS.has(clip) || SNAP_CLIPS.has(playerAnim.currentClip));
         const prevClip = playerAnim.currentClip;
-        crossfade(playerAnim, clip, snapTransition ? 0 : 0.22);
+        if (!locoHandled && clip) crossfade(playerAnim, clip, snapTransition ? 0 : 0.22);
 
         // Dance plays once then stops — set LoopOnce when first entering the state
         // so it doesn't spin forever when the player forgets to press T again.
@@ -197,7 +214,7 @@ export function loop(ts) {
           });
         }
 
-        setDebugAnimClip(clip);
+        setDebugAnimClip(locoHandled ? `loco[${playerAnim.currentClip}]` : clip);
 
         // Scale breathing weight: heavier during sprint, lighter while aiming
         if (playerAnim.actions?._breathing) {
