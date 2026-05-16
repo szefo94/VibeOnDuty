@@ -17,17 +17,18 @@ Split into `enemySpawning.js` (S&D/TDM/rebuild), `enemyUpdate.js` (AI loop),
 ### ~~Duplicate grid-to-world conversion~~ ✅ done
 `worldToCell(x, z)` exported from `map.js`, replaced across all callsites.
 
-### level.js — too large (490+ lines)
-Split into:
-- `rampGeometry.js` — all ramp generators (`_diagFrac`, `_bilinearFrac`, `_revolvedFrac`, etc.)
-- `levelTiles.js` — tile predicate helpers (`_isRamp`, `_isCrack`, etc.)
-- `levelBuilder.js` — main `buildLevel` orchestrator
+### level.js — too large (490+ lines) — ⚠️ partial
+Extracted pure math helpers to `rampMath.js` (shared by map.js + level.js).
+Duplicate `_revolvedFrac`/`_diagFrac`/`_RAMP_PROFILE` removed from map.js.
+`_isCrack` in level.js replaced with `isCrack` from map.js.
+`buildLevel()` itself (~420 lines) not split further — single cohesive geometry pass.
 
 ### ~~Physics / animation constants scattered in source files~~ ✅ done
 All constants moved to `config.js` under named sections. Callsites updated.
 
-### Dead code in map.js
-`_revolvedFrac()` and `_diagFrac()` defined in both `map.js` and `level.js`. Remove from `map.js` (level.js is authoritative).
+### ~~Dead code in map.js~~ ✅ done
+`_revolvedFrac`, `_diagFrac`, `_RAMP_PROFILE` extracted to `rampMath.js` and removed
+from both `map.js` and `level.js`. Neither was authoritative — now shared properly.
 
 ### ~~Duplicate friend-indicator mesh creation~~ ✅ done
 `_attachFriendIndicator()` extracted, shared geometry/material hoisted to module level.

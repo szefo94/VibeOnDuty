@@ -3,6 +3,8 @@ import { CELL, PLAYER_H } from './config.js';
 import { mm } from './materials.js';
 import { renderer, scene } from './scene.js';
 import { torchLights, ambientLight, sunLight } from './lighting.js';
+import { isCrack } from './map.js';
+import { bilinearFrac, revolvedFrac, diagFrac, RAMP_PROFILE } from './rampMath.js';
 
 export const wallMeshes = [];
 export let debugLines = null;
@@ -21,55 +23,9 @@ export function clearLevel() {
   torchLights.length = 0;
 }
 
-const _isRamp     = (c) => (c >= 4 && c <= 27) || (c >= 33 && c <= 152);
 const _isDiagRamp = (c) => c >= 33 && c <= 80;
 const _isRevRamp  = (c) => c >= 81 && c <= 128;
 const _isBiRamp   = (c) => c >= 129 && c <= 152;
-const _isCrack    = (c) => c === 2 || c === 3;
-
-// peak NE/NW/SE/SW — two adjacent full edges at loY, one corner at hiY
-function _bilinearFrac(type, tx, tz) {
-  return [tx*(1-tz), (1-tx)*(1-tz), tx*tz, (1-tx)*tz][type];
-}
-
-// 0-3: quarter-turn (90°) pivot NW/NE/SE/SW; 4-7: half-turn (180°) NS-CW/CCW EW-CW/CCW
-function _revolvedFrac(type, tx, tz) {
-  const h = Math.PI / 2;
-  switch (type) {
-    case 0: return Math.atan2(tz, tx)     / h;
-    case 1: return Math.atan2(tz, 1-tx)   / h;
-    case 2: return Math.atan2(1-tz, 1-tx) / h;
-    case 3: return Math.atan2(1-tz, tx)   / h;
-    case 4: return 0.5 - 0.5 * Math.cos(tz * Math.PI) * (1 - 2*tx);
-    case 5: return 0.5 + 0.5 * Math.cos(tz * Math.PI) * (1 - 2*tx);
-    case 6: return 0.5 - 0.5 * Math.cos(tx * Math.PI) * (1 - 2*tz);
-    default:return 0.5 + 0.5 * Math.cos(tx * Math.PI) * (1 - 2*tz);
-  }
-}
-
-function _diagFrac(diagType, tx, tz) {
-  switch (diagType) {
-    case 0: return Math.max(1 - tz, 1 - tx);
-    case 1: return Math.max(1 - tz, tx);
-    case 2: return Math.max(tz, tx);
-    case 3: return Math.max(tz, 1 - tx);
-    case 4: return Math.min(1 - tz, 1 - tx);
-    case 5: return Math.min(1 - tz, tx);
-    case 6: return Math.min(tz, tx);
-    default: return Math.min(tz, 1 - tx);
-  }
-}
-
-// [loY, hiY] per ramp group; null hiY = use mapDef.H2 (backward compat for tiles 4-7)
-// F½=1.5 m (FLOOR1/2), F1=3 m, F1½=4.5 m ((F1+F2)/2), F2=6 m
-const _RAMP_PROFILE = [
-  [0,   null], // 4-7:  0 → F1 (H2 from mapDef)
-  [3.0, 6.0],  // 8-11: F1 → F2
-  [0,   1.5],  // 12-15: 0 → F½
-  [1.5, 3.0],  // 16-19: F½ → F1
-  [3.0, 4.5],  // 20-23: F1 → F1½
-  [4.5, 6.0],  // 24-27: F1½ → F2
-];
 
 export function buildLevel(mapDef) {
   clearLevel();
@@ -201,7 +157,7 @@ export function buildLevel(mapDef) {
             _levelGroup.add(t);
             debugLineData.push({ x: wx - CELL / 2, y: BASE, z: wz - CELL / 2, w: CELL, h: WH, d: CELL, col: 0xff3300 });
           }
-        } else if (_isCrack(cell)) {
+        } else if (isCrack(cell)) {
           const loH = PLAYER_H - 0.28, upH = 0.55;
           const gw = cell === 2 ? CELL : 0.35, gd = cell === 2 ? 0.35 : CELL;
           const lo = new THREE.Mesh(new THREE.BoxGeometry(gw, loH + WALL_SINK, gd), mats.crack);
@@ -219,15 +175,15 @@ export function buildLevel(mapDef) {
         } else if (_isDiagRamp(cell)) {
           const diagType = Math.floor((cell - 33) / 6);
           const grp      = (cell - 33) % 6;
-          const [loYr, hiYRaw] = _RAMP_PROFILE[grp];
+          const [loYr, hiYRaw] = RAMP_PROFILE[grp];
           const hiYr = hiYRaw ?? H2;
           const RAMP_T = 0.10;
           const x0 = col * CELL, x1 = (col + 1) * CELL;
           const z0 = row * CELL, z1 = (row + 1) * CELL;
-          const hNW = loYr + (hiYr - loYr) * _diagFrac(diagType, 0, 0);
-          const hNE = loYr + (hiYr - loYr) * _diagFrac(diagType, 1, 0);
-          const hSW = loYr + (hiYr - loYr) * _diagFrac(diagType, 0, 1);
-          const hSE = loYr + (hiYr - loYr) * _diagFrac(diagType, 1, 1);
+          const hNW = loYr + (hiYr - loYr) * diagFrac(diagType, 0, 0);
+          const hNE = loYr + (hiYr - loYr) * diagFrac(diagType, 1, 0);
+          const hSW = loYr + (hiYr - loYr) * diagFrac(diagType, 0, 1);
+          const hSE = loYr + (hiYr - loYr) * diagFrac(diagType, 1, 1);
           // Top face + bottom face (shifted by RAMP_T)
           const pos = new Float32Array([
             x0, hNW,        z0,  x0, hSW,        z1,  x1, hNE,        z0,
@@ -249,7 +205,7 @@ export function buildLevel(mapDef) {
         } else if (_isBiRamp(cell)) {
           const type = Math.floor((cell - 129) / 6);
           const grp  = (cell - 129) % 6;
-          const [loYr, hiYRaw] = _RAMP_PROFILE[grp];
+          const [loYr, hiYRaw] = RAMP_PROFILE[grp];
           const hiYr = hiYRaw ?? H2;
           const RAMP_T = 0.10;
           const N = 8, M = N + 1;
@@ -258,7 +214,7 @@ export function buildLevel(mapDef) {
           for (let zi = 0; zi <= N; zi++) {
             for (let xi = 0; xi <= N; xi++) {
               const tx = xi / N, tz = zi / N;
-              const y = loYr + (hiYr - loYr) * _bilinearFrac(type, tx, tz);
+              const y = loYr + (hiYr - loYr) * bilinearFrac(type, tx, tz);
               topV.push(x0 + tx * CELL, y, z0 + tz * CELL);
               botV.push(x0 + tx * CELL, y - RAMP_T, z0 + tz * CELL);
             }
@@ -288,7 +244,7 @@ export function buildLevel(mapDef) {
         } else if (_isRevRamp(cell)) {
           const type = Math.floor((cell - 81) / 6);
           const grp  = (cell - 81) % 6;
-          const [loYr, hiYRaw] = _RAMP_PROFILE[grp];
+          const [loYr, hiYRaw] = RAMP_PROFILE[grp];
           const hiYr = hiYRaw ?? H2;
           const RAMP_T = 0.10;
           const N = 8, M = N + 1;
@@ -297,7 +253,7 @@ export function buildLevel(mapDef) {
           for (let zi = 0; zi <= N; zi++) {
             for (let xi = 0; xi <= N; xi++) {
               const tx = xi / N, tz = zi / N;
-              const y = loYr + (hiYr - loYr) * _revolvedFrac(type, tx, tz);
+              const y = loYr + (hiYr - loYr) * revolvedFrac(type, tx, tz);
               topVerts.push(x0 + tx * CELL, y, z0 + tz * CELL);
               botVerts.push(x0 + tx * CELL, y - RAMP_T, z0 + tz * CELL);
             }
@@ -327,7 +283,7 @@ export function buildLevel(mapDef) {
         } else if (cell >= 4 && cell <= 27) {
           const dir = (cell - 4) % 4;
           const grp = Math.floor((cell - 4) / 4);
-          const [loY, hiYRaw] = _RAMP_PROFILE[grp];
+          const [loY, hiYRaw] = RAMP_PROFILE[grp];
           const hiY = hiYRaw ?? H2;
           const RAMP_T   = 0.10;
           const slopeLen = Math.sqrt(CELL * CELL + (hiY - loY) * (hiY - loY));
