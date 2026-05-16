@@ -118,3 +118,34 @@ export const SND_ROUND_TIMER  = 60.0;
 export const SND_ROUNDS_PER_HALF = 3;
 export const SND_TOTAL_ROUNDS    = 7;
 export const SND_WINS_NEEDED     = 4;
+
+// ── Player movement physics ────────────────────────────────────────────────
+export const DIVE_SPEED    = 12;
+export const DIVE_LAUNCH_Y = 2.8;
+export const DIVE_DUR      = 0.55;
+export const ROLL_ANIM_DUR = 1.467;
+export const LEAN_ANGLE    = 0.28;
+export const LEAN_SHIFT    = 0.38;
+export const LEAN_SPEED    = 3.5;
+
+// ── Jump animation timings (shared by loop.js and enemyAnimations.js) ──────
+export const JUMP_START_DUR = 0.32;
+export const JUMP_LAND_DUR  = 0.38;
+
+// ── Bullet physics ─────────────────────────────────────────────────────────
+export const BULLET_SPEED    = 65;
+export const BULLET_GRAV     = 6;
+export const BULLET_MAX_LIFE = 1.1;
+export const BULLET_TRAIL    = 2.8;
+export const DEATH_DUR       = 0.65;
+
+// ── Drone AI ───────────────────────────────────────────────────────────────
+export const DRONE_ACCEL      = 4;
+export const DRONE_STRAFE     = 2.8;
+export const DRONE_DRAG       = 3;
+export const DRONE_MAX_SPEED  = 5;
+export const DRONE_ORBIT_DIST = 8;
+export const RECON_FLY_H      = 4.2;
+export const RECON_SPEED      = 4.0;
+export const RECON_SCAN_R     = 13;
+export const RECON_SCAN_CD    = 2.5;

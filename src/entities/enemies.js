@@ -23,6 +23,16 @@ import { getSummary } from '../replay/damageTracker.js';
 let _snd = null;
 on('snd:configure', api => { _snd = api; });
 
+// ── Friend indicator ──────────────────────────────────────────────
+const _indGeo = new THREE.ConeGeometry(0.22, 0.45, 8);
+const _indMat = new THREE.MeshBasicMaterial({ color: 0x00ccff, depthTest: false });
+function _attachFriendIndicator(e) {
+  if (e._friendIndicator) scene.remove(e._friendIndicator);
+  const ind = new THREE.Mesh(_indGeo, _indMat);
+  scene.add(ind);
+  e._friendIndicator = ind;
+}
+
 // ── Walkable cells ────────────────────────────────────────────────
 export const WALKABLE_CELLS = [];
 for (let r = 1; r < MAP_H - 1; r++)
@@ -231,15 +241,7 @@ export function spawnSndEnemies(sitePositions, roleOverrides = null) {
       e.sndTeam = 'friend';
       e.sndSiteTarget = i % 2;
       tintEnemyMesh(e.mesh, 0x00bb44);
-      // Remove old world-space indicator before creating fresh one
-      if (e._friendIndicator) { scene.remove(e._friendIndicator); e._friendIndicator = null; }
-      const ind = new THREE.Mesh(
-        new THREE.ConeGeometry(0.22, 0.45, 8),
-        new THREE.MeshBasicMaterial({ color: 0x00ccff, depthTest: false })
-      );
-      // Parented to scene (world-space) so GLTF scale/hierarchy doesn't affect it
-      scene.add(ind);
-      e._friendIndicator = ind;
+      _attachFriendIndicator(e);
     } else {
       // ── Enemy team ──
       const j = i - NUM_FRIENDS;
@@ -265,16 +267,8 @@ export function spawnSndEnemies(sitePositions, roleOverrides = null) {
 
 // ── Restore friend indicator after respawn ────────────────────────────
 export function restoreFriendIndicator(e) {
-  if (e._friendIndicator) {
-    e._friendIndicator.visible = true;
-  } else {
-    const ind = new THREE.Mesh(
-      new THREE.ConeGeometry(0.22, 0.45, 8),
-      new THREE.MeshBasicMaterial({ color: 0x00ccff, depthTest: false })
-    );
-    scene.add(ind);
-    e._friendIndicator = ind;
-  }
+  if (e._friendIndicator) e._friendIndicator.visible = true;
+  else _attachFriendIndicator(e);
 }
 
 // ── TDM spawn: 5 friendly bots near player + 5 enemies on far side ──
@@ -292,13 +286,7 @@ export function spawnTdmEnemies(mapDef) {
       spawnEnemyIntoSlot(e, [fc, fr]);
       e.sndTeam = 'friend';
       tintEnemyMesh(e.mesh, 0x00bb44);
-      if (e._friendIndicator) { scene.remove(e._friendIndicator); e._friendIndicator = null; }
-      const ind = new THREE.Mesh(
-        new THREE.ConeGeometry(0.22, 0.45, 8),
-        new THREE.MeshBasicMaterial({ color: 0x00ccff, depthTest: false })
-      );
-      scene.add(ind);
-      e._friendIndicator = ind;
+      _attachFriendIndicator(e);
     } else {
       const [dc, dr] = TDM_OFFSETS[i - 5];
       const [fc, fr] = openNear(defCell[0] + dc, defCell[1] + dr);

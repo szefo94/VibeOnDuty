@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import { renderer, scene, camera } from './scene.js';
-import { PLAYER_H, PLAYER_H_CROUCH, WEAPONS } from './config.js';
+import { PLAYER_H, PLAYER_H_CROUCH, WEAPONS, LEAN_SHIFT, JUMP_START_DUR, JUMP_LAND_DUR } from './config.js';
 import { touchLook } from './touch.js';
 import { gameRunning, keys } from './input.js';
-import { player, updatePlayer, LEAN_SHIFT } from './entities/player.js';
+import { player, updatePlayer } from './entities/player.js';
 import { playerBody } from './builders/playerBody.js';
 import { wpn } from './builders/weapon.js';
 import { updateEnemies, enemies, spawnEnemyIntoSlot } from './entities/enemies.js';
@@ -30,8 +30,6 @@ const playerAnim = { actions: null, currentClip: 'idle', _dbgTransitions: false,
 let prevPlayerOnGround = true;
 let jumpPhase = '';       // 'start' | 'loop' | 'land' | ''
 let jumpPhaseTimer = 0;
-const JUMP_START_DUR = 0.32; // seconds before transitioning start → loop
-const JUMP_LAND_DUR  = 0.38; // seconds to hold landing pose
 
 // ── Third-person state ────────────────────────────────────────────────
 // thirdPerson: semantic bool (what mode we're in)

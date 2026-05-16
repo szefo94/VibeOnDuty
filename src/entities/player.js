@@ -16,6 +16,13 @@ import {
   SLIDE_CANCEL_JUMP,
   WEAPONS,
   DEFAULT_WEAPON,
+  LEAN_ANGLE,
+  LEAN_SHIFT,
+  LEAN_SPEED,
+  DIVE_SPEED,
+  DIVE_LAUNCH_Y,
+  DIVE_DUR,
+  ROLL_ANIM_DUR,
 } from '../config.js';
 import { MAP_W, MAP_H, groundElevation, canMoveTo, worldToCell } from '../map.js';
 import { keys, locked, mouseHeld } from '../input.js';
@@ -73,14 +80,6 @@ export const player = /** @type {any} */ ({
 export const visited = Array.from({ length: MAP_H }, () => new Uint8Array(MAP_W));
 
 const _euler = new THREE.Euler(0, 0, 0, 'YXZ');
-const LEAN_ANGLE = 0.28;        // radians of roll at full lean
-export const LEAN_SHIFT = 0.38; // camera X offset at full lean (world units), read by loop.js
-const LEAN_SPEED = 3.5;         // smoothing speed (lower = slower lean)
-
-const DIVE_SPEED = 12;          // horizontal launch speed
-const DIVE_LAUNCH_Y = 2.8;      // upward kick on dive
-const DIVE_DUR = 0.55;          // seconds camera stays pitched forward after landing
-const ROLL_ANIM_DUR = 1.467;    // Roll clip duration from enemy.glb — slide timed to match
 
 export function startReload() {
   if (player.reloading || player.reserve <= 0) return;

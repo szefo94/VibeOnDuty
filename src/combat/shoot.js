@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { scene, camera } from '../scene.js';
-import { PLAYER_H, WEAPONS, ENERGY_PER_DMG, MAX_ENERGY, PUNCH_RANGE, PUNCH_DAMAGE } from '../config.js';
+import { PLAYER_H, WEAPONS, ENERGY_PER_DMG, MAX_ENERGY, PUNCH_RANGE, PUNCH_DAMAGE, BULLET_SPEED, BULLET_GRAV, BULLET_MAX_LIFE, BULLET_TRAIL, DEATH_DUR } from '../config.js';
 import { wallMeshes } from '../level.js';
 import { wpn, flash, flashMat, muzzleLight } from '../builders/weapon.js';
 import { spawnImpact } from '../fx/impacts.js';
@@ -28,7 +28,6 @@ let _awpSwayX = 0, _awpSwayY = 0;
 let _awpVX = 0, _awpVY = 0;
 
 // ── First-person death drop ───────────────────────────────────────────
-const DEATH_DUR = 0.65;
 let _dying = false;
 let _deathT = 0;
 let _prevDead = false;
@@ -112,10 +111,6 @@ export function updateWeapon(dt, moving, sprint, crouching, sliding) {
 }
 
 // ── Live bullets ──────────────────────────────────────────────────────
-const BULLET_SPEED = 65;
-const BULLET_GRAV = 6;
-const BULLET_MAX_LIFE = 1.1;
-const BULLET_TRAIL = 2.8;
 const liveBullets = [];
 const _bRc = new THREE.Raycaster();
 const _bPM  = new THREE.LineBasicMaterial({ color: 0xffee55, transparent: true, opacity: 1 });

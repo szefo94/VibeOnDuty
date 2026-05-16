@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { JUMP_START_DUR, JUMP_LAND_DUR } from '../config.js';
 
 // ── Additive breathing clips ──────────────────────────────────────────────
 // Procedural rig: target the arm-swing meshes with a slow sine oscillation.
@@ -364,16 +365,14 @@ export function setSkeletonDebugVisible(v) {
 // ── Per-enemy animation tick ──────────────────────────────────────────────
 // Drives jump-phase + locomotion blend tree + override clip selection.
 // Called every frame by both enemy-bot and friendly-bot tickers.
-const E_JUMP_START_DUR = 0.32;
-const E_JUMP_LAND_DUR  = 0.38;
 const SNAP_CLIPS = new Set(['crouch', 'crouch_walk', 'death', 'hit', 'roll', 'jump_start', 'jump_land']);
 
 export function tickEnemyAnimation(e, dt, isMoving) {
   const nowOnGround = e.onGround;
 
   // Jump phase bookkeeping
-  if (!e._prevOnGround && nowOnGround)      { e.jumpPhase = 'land';  e.jumpPhaseTimer = E_JUMP_LAND_DUR; }
-  else if (e._prevOnGround && !nowOnGround) { e.jumpPhase = 'start'; e.jumpPhaseTimer = E_JUMP_START_DUR; }
+  if (!e._prevOnGround && nowOnGround)      { e.jumpPhase = 'land';  e.jumpPhaseTimer = JUMP_LAND_DUR; }
+  else if (e._prevOnGround && !nowOnGround) { e.jumpPhase = 'start'; e.jumpPhaseTimer = JUMP_START_DUR; }
   e._prevOnGround = nowOnGround;
   if (e.jumpPhase === 'start') { e.jumpPhaseTimer -= dt; if (e.jumpPhaseTimer <= 0) e.jumpPhase = nowOnGround ? '' : 'loop'; }
   if (e.jumpPhase === 'land')  { e.jumpPhaseTimer -= dt; if (e.jumpPhaseTimer <= 0) e.jumpPhase = ''; }

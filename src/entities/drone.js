@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { scene, camera } from '../scene.js';
-import { CELL, PLAYER_H } from '../config.js';
+import { CELL, PLAYER_H, DRONE_ACCEL, DRONE_STRAFE, DRONE_DRAG, DRONE_MAX_SPEED, DRONE_ORBIT_DIST, RECON_FLY_H, RECON_SPEED, RECON_SCAN_R, RECON_SCAN_CD } from '../config.js';
 import { MAP_W, MAP_H, MAP, isRamp, groundElevation } from '../map.js';
 import { spawnSmokeCloud } from '../fx/particles.js';
 import { buildDrone } from '../builders/drone.js';
@@ -23,13 +23,6 @@ for (let r = 1; r < MAP_H - 1; r++)
 function _randomCell() {
   return _WALKABLE[Math.floor(Math.random() * _WALKABLE.length)];
 }
-
-// ── Constants ─────────────────────────────────────────────────────────────
-const DRONE_ACCEL      = 4;
-const DRONE_STRAFE     = 2.8;
-const DRONE_DRAG       = 3;
-const DRONE_MAX_SPEED  = 5;
-const DRONE_ORBIT_DIST = 8;
 
 // ── State ─────────────────────────────────────────────────────────────────
 export const DRONE_FLY_H = 4.5;
@@ -164,11 +157,6 @@ export function updateDrone(d, dt) {
 }
 
 // ── S&D recon drones ─────────────────────────────────────────────────────────
-const RECON_FLY_H  = 4.2;
-const RECON_SPEED  = 4.0;
-const RECON_SCAN_R = 13;
-const RECON_SCAN_CD = 2.5;
-
 // Patrol routes (world coords) — friend sweeps west/sites, enemy sweeps east/player
 const _WP = {
   friend: [

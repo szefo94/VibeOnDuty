@@ -130,8 +130,8 @@ Use `mm()` consistently.
 | Remove duplicate `_revolvedFrac`/`_diagFrac` from `map.js` | 5 min | ⚠️ skipped — both files use them internally; moving to shared module risks circular dep |
 | Add `worldToCell()` to `map.js`, replace callsites | 1 hr | ✅ done — enemies.js, friendlyBots.js, player.js, enemyStates.js, ammoDrops.js, grenades.js |
 | Add `dist2()` to `math.js`, replace sqrt range checks | 30 min | ✅ done — ammoDrops.js pickup check replaced |
-| Move physics constants to `config.js` | 2 hr | ⬜ pending |
-| Extract `createFriendIndicator()` in `enemies.js` | 30 min | ⬜ pending |
+| Move physics constants to `config.js` | 2 hr | ✅ done — player.js, loop.js, enemyAnimations.js, shoot.js, drone.js |
+| Extract `createFriendIndicator()` in `enemies.js` | 30 min | ✅ done — _attachFriendIndicator + restoreFriendIndicator extracted |
 | Unify `showMsg`/`showStatus` → `showMessage()` | 30 min | ⚠️ skipped — different DOM elements (`#msg` vs `#status`), different default durations; not true duplicates |
 
-**Remaining: physics constants + friendlyIndicator extraction.**
+**All quick wins complete.**
