@@ -37,15 +37,15 @@ from both `map.js` and `level.js`. Neither was authoritative — now shared prop
 
 ## MEDIUM
 
-### loop.js — too large (337 lines, mixed concerns)
-Split:
-- `playerAnimation.js` — jump phase state machine + clip selection logic
-- `cameraController.js` — third-person lerp, shoulder offset, `tpCamY` smoothing
-- `loop.js` — stays as thin coordinator
+### loop.js — too large (337 lines, mixed concerns) — ⚠️ deferred
+Split into playerAnimation.js + cameraController.js + thin loop.js coordinator.
+Deferred: state variables (jumpPhase, tpTransition, tpCamY) are tightly
+coupled across all three sections; split adds more coupling risk than benefit.
 
-### Circular S&D dependency via event bus
-`enemyStates.js` does `on('snd:configure', api => _snd = api)` to avoid import cycle.
-Fix: pass `snd` API as a parameter to state transition functions instead of a module-level side-effect.
+### Circular S&D dependency via event bus — ⚠️ accepted pattern
+`on('snd:configure', api => _snd = api)` is a standard late-binding pattern for
+avoiding circular imports. Changing to parameter-passing would require refactoring
+all AI state tick signatures. Not worth it.
 
 ### ~~Enemy state mutation inconsistency~~ ✅ verified — already clean
 No direct `e.state =` assignments in enemy code outside `transitionTo()`. The sync block
