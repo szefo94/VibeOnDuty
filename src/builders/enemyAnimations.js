@@ -117,6 +117,19 @@ export function buildEnemyMixer(mesh) {
 // LOCO_CLIPS run simultaneously with direct weight control (no crossfade).
 // Override clips (death, jump, hit, crouch, shoot, attack-idle) use crossfade.
 const LOCO_CLIPS = new Set(['idle', 'walk', 'run', 'strafe_l', 'strafe_r']);
+
+// Retargeted clips that were exported with +90°X CORR baked in by merge_animations.py.
+// Original clips (Jump_Start, Jump_Land, Crouch_Idle_Loop, Roll, Death01, etc.) are
+// in the native Mannequin bone space — there is no way to bridge the two spaces at
+// runtime without re-exporting the .glb.
+// Inertial blending ONLY makes sense within the same space: a snap between spaces
+// already differs by ~165° on most bones, and inertia would lerp through that full
+// arc (visible as the "entangled ball" sweep). A hard single-frame snap (16ms) is
+// below the visual threshold and is preferable.
+const CORR_CLIPS = new Set([
+  'idle', 'walk', 'run', 'strafe_l', 'strafe_r', // loco — always CORR
+  'attack', 'shoot', 'reload', 'hit', 'nade', 'run_back', 'walk_back', // retargeted overrides
+]);
 const MAX_ENEMY_SPEED = 3.6; // ENEMY_SPEED * max speedMult
 
 function _applyLocoWeight(action, w) {
@@ -171,7 +184,13 @@ function _snapBones(e) {
 function _enterLocoMode(e) {
   if (e._inLocoMode) return;
   const a = e.actions[e.currentClip];
-  if (a && !LOCO_CLIPS.has(e.currentClip)) { _snapBones(e); a.setEffectiveWeight(0); }
+  if (a && !LOCO_CLIPS.has(e.currentClip)) {
+    // Skip inertia when returning from an original-space clip (jump_land, crouch, death,
+    // roll …). Those clips differ from loco by ~165° on most bones — the inertia arc
+    // through that gap looks worse than a single-frame snap.
+    if (CORR_CLIPS.has(e.currentClip)) _snapBones(e);
+    a.setEffectiveWeight(0);
+  }
   e._inLocoMode = true;
   e.currentClip = 'idle';
 }
@@ -225,8 +244,14 @@ export function tickBoneFlipMonitor(e) {
 // e must have { actions, currentClip } on it.
 export function crossfade(e, to, dur = 0.22) {
   if (to === e.currentClip || !e.actions[to]) return;
-  // Snap transitions: snapshot bones so inertial blending can soften the pop.
-  if (dur === 0) _snapBones(e);
+  // Snap transitions: use inertia only when both clips share the same coordinate space
+  // (both CORR-retargeted). Cross-space snaps differ by ~165° and the inertia arc is
+  // more visible than a hard single-frame switch.
+  if (dur === 0) {
+    const fromCorr = e._inLocoMode || CORR_CLIPS.has(e.currentClip);
+    const toCorr   = CORR_CLIPS.has(to);
+    if (fromCorr && toCorr) _snapBones(e);
+  }
   const from = e.actions[e.currentClip];
   const toAct = e.actions[to];
   // Standard Three.js crossfade pattern: fade out old, reset + fade in new.
