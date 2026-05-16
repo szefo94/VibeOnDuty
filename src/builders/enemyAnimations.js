@@ -307,7 +307,7 @@ export function crossfade(e, to, dur = 0.22) {
 //   [6]=kneeL [7]=kneeR [12]=armSwingL [13]=armSwingR
 // Indices of animated child meshes inside the enemy Group (mirrors enemy.js build order)
 const ANIM_INDICES = [2, 3, 4, 5, 6, 7, 12, 13];
-let _skeletonDebugOn = true; // ON by default — toggle with F3
+let _skeletonDebugOn = false; // toggle with F3
 const _allHelpers = [];
 
 function makeAxes(size = 0.5) {
