@@ -42,7 +42,10 @@ const ALIASES = {
   hit:         ['hit',              'Hit_Chest',        'Hit_Head'],
   roll:        ['Roll',             'roll',   'Dive'],
   jump_start:  ['Jump_Start',       'Jump_start',       'jump_loop'],
-  jump_loop:   ['jump_loop',        'Jump_Loop',        'Jump_loop'],
+  // Prefer uppercase Jump_Loop (original, no CORR) so all three jump clips share
+  // the same coordinate space as Jump_Start and Jump_Land — the retargeted
+  // lowercase jump_loop has +90°X baked in, causing ~180° mismatches on crossfade.
+  jump_loop:   ['Jump_Loop',        'Jump_loop',        'jump_loop'],
   jump_land:   ['Jump_Land',        'Jump_land'],
   reload:      ['reload',           'Pistol_Reload'],
   run_back:    ['run_back'],
