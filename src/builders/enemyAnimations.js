@@ -152,9 +152,10 @@ function _setLocoWeights(actions, speedN, strN) {
 
 function _exitLocoMode(e) {
   if (!e._inLocoMode) return;
+  // Build debug label BEFORE zeroing weights (otherwise always shows loco[]).
+  if (e._dbgTransitions) e._dbgPrevClip = `loco[${Object.entries(e.actions ?? {}).filter(([k,a]) => LOCO_CLIPS.has(k) && !k.startsWith('_') && a?.weight > 0.01).map(([k,a]) => `${k}:${a.weight.toFixed(2)}`).join('+')}]`;
   for (const n of LOCO_CLIPS) { const a = e.actions[n]; if (a) a.setEffectiveWeight(0); }
   e._inLocoMode = false;
-  if (e._dbgTransitions) e._dbgPrevClip = `loco[${Object.entries(e.actions ?? {}).filter(([k,a]) => LOCO_CLIPS.has(k) && !k.startsWith('_') && a?.weight > 0.01).map(([k,a]) => `${k}:${a.weight.toFixed(2)}`).join('+')}]`;
   // Nullify currentClip so the next crossfade() call doesn't skip the incoming clip
   // due to the "to === currentClip" early-return guard.
   e.currentClip = null;
@@ -231,10 +232,18 @@ export function crossfade(e, to, dur = 0.22) {
   // Standard Three.js crossfade pattern: fade out old, reset + fade in new.
   // crossFadeTo(warp=true) was avoided — it warps the incoming clip's timeScale 0→1,
   // freezing it at frame 0 (bind/T-pose) for the entire blend duration.
-  if (from) from.fadeOut(dur);
-  // setEffectiveWeight(1) restores this.weight=1 before fadeIn schedules its 0→1 interpolant.
-  // Phase 41 pre-started loco clips at weight=0; without this, effectiveWeight = 0 * interpolant = 0 forever.
-  toAct.reset().setEffectiveWeight(1).fadeIn(dur).play();
+  if (from) {
+    from.fadeOut(dur);
+    // setEffectiveWeight(1) restores this.weight=1 before fadeIn schedules its 0→1 interpolant.
+    // Phase 41 pre-started loco clips at weight=0; without this, effectiveWeight = 0 * interpolant = 0 forever.
+    toAct.reset().setEffectiveWeight(1).fadeIn(dur).play();
+  } else {
+    // No prior clip to fade from (just exited loco — all loco clips already zeroed).
+    // Skipping fadeIn: starting toAct at weight 0 and ramping to 1 would let
+    // Three.js fill the gap with the bind/T-pose for the entire fade duration.
+    // Start immediately at full weight instead.
+    toAct.reset().setEffectiveWeight(1).play();
+  }
   e.currentClip = to;
 
   // Debug: log transitions + hemisphere check for full right-arm chain
