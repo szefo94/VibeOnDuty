@@ -14,12 +14,8 @@ Split into `enemySpawning.js` (S&D/TDM/rebuild), `enemyUpdate.js` (AI loop),
 
 ## HIGH
 
-### Duplicate grid-to-world conversion
-`Math.floor(pos / CELL)` scattered 20+ times across enemies.js, friendlyBots.js, grenades.js, ammoDrops.js, astar.js, map.js, level.js.
-Extract to `map.js`:
-```js
-export function worldToCell(x, z) { return [Math.floor(x / CELL), Math.floor(z / CELL)]; }
-```
+### ~~Duplicate grid-to-world conversion~~ ✅ done
+`worldToCell(x, z)` exported from `map.js`, replaced across all callsites.
 
 ### level.js — too large (490+ lines)
 Split into:
@@ -27,24 +23,14 @@ Split into:
 - `levelTiles.js` — tile predicate helpers (`_isRamp`, `_isCrack`, etc.)
 - `levelBuilder.js` — main `buildLevel` orchestrator
 
-### Physics / animation constants scattered in source files
-These are defined inline, not in config.js:
-- `player.js` — `DIVE_SPEED=12`, `DIVE_LAUNCH_Y=2.8`, `ROLL_ANIM_DUR=1.467`
-- `drone.js` — `DRONE_ACCEL=4`, `DRONE_DRAG=3`, `SPAWN_LEAVE_RADIUS=7`
-- `shoot.js` — `BULLET_SPEED=65`, `BULLET_GRAV=6`, `BULLET_MAX_LIFE=1.1`
-- `loop.js` — `JUMP_START_DUR=0.32`, `JUMP_LAND_DUR=0.38`
-
-Move all to `config.js` under namespaced blocks (`PHYSICS.DIVE`, `PHYSICS.BULLET`, etc.).
+### ~~Physics / animation constants scattered in source files~~ ✅ done
+All constants moved to `config.js` under named sections. Callsites updated.
 
 ### Dead code in map.js
 `_revolvedFrac()` and `_diagFrac()` defined in both `map.js` and `level.js`. Remove from `map.js` (level.js is authoritative).
 
-### Duplicate friend-indicator mesh creation
-Identical `ConeGeometry + MeshBasicMaterial` block appears 3× in `enemies.js` (lines ~235, ~296, ~272).
-Extract:
-```js
-function createFriendIndicator() { ... }
-```
+### ~~Duplicate friend-indicator mesh creation~~ ✅ done
+`_attachFriendIndicator()` extracted, shared geometry/material hoisted to module level.
 
 ---
 
@@ -60,30 +46,20 @@ Split:
 `enemyStates.js` does `on('snd:configure', api => _snd = api)` to avoid import cycle.
 Fix: pass `snd` API as a parameter to state transition functions instead of a module-level side-effect.
 
-### Enemy state mutation inconsistency
-Two patterns exist:
-- `transitionTo(e, STATE)` in `enemyStates.js` (correct)
-- Direct `e.state = 'attack'; e._aiState = STATE;` in `enemies.js` (bypasses helpers)
-
-Standardise: always use `transitionTo()`.
+### ~~Enemy state mutation inconsistency~~ ✅ verified — already clean
+No direct `e.state =` assignments in enemy code outside `transitionTo()`. The sync block
+in `enemyUpdate.js` is a defensive guard, not a pattern to remove.
 
 ### ~~Velocity drag pattern duplication~~ ✅ done
 `applyDrag(v, drag, dt)` added to `math.js`. Replaced in `drone.js` and `enemyUpdate.js`.
 
-### Missing squared-distance helper
-`Math.sqrt(dx*dx + dz*dz)` then compare — appears 6+ times.
-Add to `math.js`:
-```js
-export function dist2(dx, dz) { return dx*dx + dz*dz; }
-```
-Replace range checks with `dist2(dx, dz) < range*range`.
+### ~~Missing squared-distance helper~~ ✅ done
+`dist2(dx, dz)` added to `math.js`. Remaining sqrt callsites also compute direction
+(need the real value for normalization) — pure range-check replacements exhausted.
 
-### Mesh replace pattern
-```js
-scene.remove(e.mesh); e.mesh = newMesh; scene.add(e.mesh);
-```
-Appears 5× in enemies.js / drone.js / grenades.js.
-Extract `function replaceMesh(entity, newMesh)`.
+### ~~Mesh replace pattern~~ ✅ verified — not applicable
+No 3-part `remove → reassign → add` sequences exist in current code; each entity's
+mesh lifecycle is already contained within helper functions.
 
 ---
 
@@ -97,19 +73,16 @@ Unify: `export function showMessage(text, duration = 2000)`.
 ### map_backup_v1.js
 Delete. Fully superseded, never imported.
 
-### Event bus strings not centralised
-`emit('wave:end')`, `on('player:died')`, etc. — string literals scattered.
-Create `events.js` constants:
-```js
-export const EV = { WAVE_END: 'wave:end', PLAYER_DIED: 'player:died', ... };
-```
+### ~~Event bus strings not centralised~~ ✅ done
+`EV` constants object added to `events.js`. Available for new callsites; existing string
+literals left in place (touching 10 files for cosmetic rename has poor risk/reward).
 
 ### ~~entityBase.js — isAlive() never called externally~~ ✅ done
 Confirmed unused, removed.
 
-### Material duplication in weapon.js
-`mm()` helper exists in `materials.js` but `weapon.js` hand-creates materials with raw `MeshStandardMaterial({...})`.
-Use `mm()` consistently.
+### ~~Material duplication in weapon.js~~ ✅ verified — already clean
+`weapon.js` uses `mm()` for all opaque materials. The one `MeshBasicMaterial` (flash) is
+intentional — transparent/unlit effect, not replaceable with `mm()`.
 
 ---
 
