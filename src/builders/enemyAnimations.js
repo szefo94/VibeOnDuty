@@ -120,12 +120,9 @@ const LOCO_CLIPS = new Set(['idle', 'walk', 'run', 'strafe_l', 'strafe_r']);
 
 // Retargeted clips that were exported with +90°X CORR baked in by merge_animations.py.
 // Original clips (Jump_Start, Jump_Land, Crouch_Idle_Loop, Roll, Death01, etc.) are
-// in the native Mannequin bone space — there is no way to bridge the two spaces at
-// runtime without re-exporting the .glb.
-// Inertial blending ONLY makes sense within the same space: a snap between spaces
-// already differs by ~165° on most bones, and inertia would lerp through that full
-// arc (visible as the "entangled ball" sweep). A hard single-frame snap (16ms) is
-// below the visual threshold and is preferable.
+// in the native Mannequin bone space — ~165° bone difference vs CORR clips.
+// Cross-space inertia uses INERTIA_OMEGA_CROSS (fast, ~0.10s) so the intermediate
+// pose is only visible for 2–3 frames instead of the full ~0.35s normal settle time.
 const CORR_CLIPS = new Set([
   'idle', 'walk', 'run', 'strafe_l', 'strafe_r', // loco — always CORR
   'attack', 'shoot', 'reload', 'hit', 'nade', 'run_back', 'walk_back', // retargeted overrides
@@ -174,10 +171,11 @@ function _exitLocoMode(e) {
   e.currentClip = null;
 }
 
-function _snapBones(e) {
+function _snapBones(e, omega = INERTIA_OMEGA) {
   if (!e._bones?.length) return;
   e._inertia = new Map();
   e._inertiaT = 0;
+  e._inertiaOmega = omega;
   for (const bone of e._bones) e._inertia.set(bone.uuid, bone.quaternion.clone());
 }
 
@@ -185,10 +183,8 @@ function _enterLocoMode(e) {
   if (e._inLocoMode) return;
   const a = e.actions[e.currentClip];
   if (a && !LOCO_CLIPS.has(e.currentClip)) {
-    // Skip inertia when returning from an original-space clip (jump_land, crouch, death,
-    // roll …). Those clips differ from loco by ~165° on most bones — the inertia arc
-    // through that gap looks worse than a single-frame snap.
-    if (CORR_CLIPS.has(e.currentClip)) _snapBones(e);
+    const omega = CORR_CLIPS.has(e.currentClip) ? INERTIA_OMEGA : INERTIA_OMEGA_CROSS;
+    _snapBones(e, omega);
     a.setEffectiveWeight(0);
   }
   e._inLocoMode = true;
@@ -198,12 +194,17 @@ function _enterLocoMode(e) {
 // ── Inertial blending ──────────────────────────────────────────────────────
 // Critically-damped spring: settles bone pose from snapshot toward new clip.
 // Applied after mixer.update() so the correction overrides the mixer output.
+// OMEGA=22  → settles in ~0.35s  — used for same-space transitions
+// OMEGA=80  → settles in ~0.10s  — used for cross-space (CORR ↔ original) to
+//             keep the intermediate pose visible for only 2–3 frames
 const INERTIA_OMEGA = 22;
+const INERTIA_OMEGA_CROSS = 80;
 
 function _tickInertia(e, dt) {
   if (!e._inertia) return;
   e._inertiaT += dt;
-  const decay = (1 + INERTIA_OMEGA * e._inertiaT) * Math.exp(-INERTIA_OMEGA * e._inertiaT);
+  const omega = e._inertiaOmega ?? INERTIA_OMEGA;
+  const decay = (1 + omega * e._inertiaT) * Math.exp(-omega * e._inertiaT);
   if (decay < 0.001) { e._inertia = null; return; }
   for (const bone of e._bones) {
     const snap = e._inertia.get(bone.uuid);
@@ -244,13 +245,14 @@ export function tickBoneFlipMonitor(e) {
 // e must have { actions, currentClip } on it.
 export function crossfade(e, to, dur = 0.22) {
   if (to === e.currentClip || !e.actions[to]) return;
-  // Snap transitions: use inertia only when both clips share the same coordinate space
-  // (both CORR-retargeted). Cross-space snaps differ by ~165° and the inertia arc is
-  // more visible than a hard single-frame switch.
-  if (dur === 0) {
+  // Snap (dur=0) between two non-loco clips: always snap bones so inertia can smooth
+  // the sudden switch. currentClip=null means we just exited loco — handled in the
+  // else branch below which knows we came from CORR space.
+  if (dur === 0 && e.currentClip !== null) {
     const fromCorr = e._inLocoMode || CORR_CLIPS.has(e.currentClip);
     const toCorr   = CORR_CLIPS.has(to);
-    if (fromCorr && toCorr) _snapBones(e);
+    const omega = (fromCorr === toCorr) ? INERTIA_OMEGA : INERTIA_OMEGA_CROSS;
+    _snapBones(e, omega);
   }
   const from = e.actions[e.currentClip];
   const toAct = e.actions[to];
@@ -263,10 +265,11 @@ export function crossfade(e, to, dur = 0.22) {
     // Phase 41 pre-started loco clips at weight=0; without this, effectiveWeight = 0 * interpolant = 0 forever.
     toAct.reset().setEffectiveWeight(1).fadeIn(dur).play();
   } else {
-    // No prior clip to fade from (just exited loco — all loco clips already zeroed).
-    // Skipping fadeIn: starting toAct at weight 0 and ramping to 1 would let
-    // Three.js fill the gap with the bind/T-pose for the entire fade duration.
-    // Start immediately at full weight instead.
+    // No prior clip (just exited loco — CORR space). Snap bones so inertia smooths
+    // the entry into the new clip. Cross-space uses fast omega; same-space uses normal.
+    const toCorr = CORR_CLIPS.has(to);
+    _snapBones(e, toCorr ? INERTIA_OMEGA : INERTIA_OMEGA_CROSS);
+    // Skipping fadeIn: starting at weight 0 and ramping would show bind/T-pose for the duration.
     toAct.reset().setEffectiveWeight(1).play();
   }
   e.currentClip = to;
@@ -426,7 +429,7 @@ export function tickEnemyAnimation(e, dt, isMoving) {
   if (overrideClip) {
     _exitLocoMode(e);
     const snap = SNAP_CLIPS.has(overrideClip) || SNAP_CLIPS.has(e.currentClip);
-    crossfade(e, overrideClip, snap ? 0 : 0.22);
+    crossfade(e, overrideClip, snap ? 0 : 0.3);
   } else {
     _enterLocoMode(e);
     _setLocoWeights(e.actions, speedN, strN);

@@ -200,7 +200,7 @@ export function loop(ts) {
         const jumpFade = clip && (JUMP_FADE_CLIPS.has(clip) || JUMP_FADE_CLIPS.has(playerAnim.currentClip));
         const snapTransition = !jumpFade && clip && (SNAP_CLIPS.has(clip) || SNAP_CLIPS.has(playerAnim.currentClip));
         const prevClip = playerAnim.currentClip;
-        if (!locoHandled && clip) crossfade(playerAnim, clip, snapTransition ? 0 : jumpFade ? 0.12 : 0.22);
+        if (!locoHandled && clip) crossfade(playerAnim, clip, snapTransition ? 0 : jumpFade ? 0.2 : 0.3);
 
         // Dance plays once then stops — set LoopOnce when first entering the state
         // so it doesn't spin forever when the player forgets to press T again.
