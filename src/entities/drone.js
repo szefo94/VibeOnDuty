@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { scene, camera } from '../scene.js';
 import { CELL, PLAYER_H, DRONE_ACCEL, DRONE_STRAFE, DRONE_DRAG, DRONE_MAX_SPEED, DRONE_ORBIT_DIST, RECON_FLY_H, RECON_SPEED, RECON_SCAN_R, RECON_SCAN_CD } from '../config.js';
+import { applyDrag } from '../math.js';
 import { MAP_W, MAP_H, MAP, isRamp, groundElevation } from '../map.js';
 import { spawnSmokeCloud } from '../fx/particles.js';
 import { buildDrone } from '../builders/drone.js';
@@ -115,8 +116,8 @@ export function updateDrone(d, dt) {
   }
 
   // Drag + speed cap
-  d.velX -= d.velX * DRONE_DRAG * dt;
-  d.velZ -= d.velZ * DRONE_DRAG * dt;
+  d.velX = applyDrag(d.velX, DRONE_DRAG, dt);
+  d.velZ = applyDrag(d.velZ, DRONE_DRAG, dt);
   const spd = Math.sqrt(d.velX * d.velX + d.velZ * d.velZ);
   if (spd > DRONE_MAX_SPEED) {
     d.velX = (d.velX / spd) * DRONE_MAX_SPEED;

@@ -1,29 +1,23 @@
 import * as THREE from 'three';
-import { scene, camera } from '../scene.js';
+import { scene } from '../scene.js';
 import { applyEntityBase } from './entityBase.js';
-import { initEnemyState, alertEnemy, STATE_MAP, PATROL_STATE } from '../ai/enemyStates.js';
-import { CELL, PLAYER_H, ENEMY_HP, ENEMY_SIGHT, GRAVITY } from '../config.js';
+import { initEnemyState } from '../ai/enemyStates.js';
+import { CELL } from '../config.js';
 import { getDifficulty } from '../difficulty.js';
-import { MAP_W, MAP_H, MAP, isRamp, mapCell, canMoveTo, hAt, worldToCell } from '../map.js';
-import { buildEnemyMesh, tintEnemyMesh } from '../builders/enemyGLTF.js';
-import { crossfade, tickEnemyAnimation } from '../builders/enemyAnimations.js';
-import { tickFriendlyBot } from './friendlyBots.js';
-import { hasLOS } from '../utils/los.js';
+import { MAP_W, MAP_H, MAP, isRamp, worldToCell } from '../map.js';
+import { buildEnemyMesh } from '../builders/enemyGLTF.js';
+import { crossfade } from '../builders/enemyAnimations.js';
 import { player } from './player.js';
 import { spawnAmmoDrop } from './ammoDrops.js';
 import { showMsg, showKillFeed } from '../hud/overlay.js';
 import { setGameRunning } from '../input.js';
 import { isAnyModeActive, getMode } from '../modes/modeManager.js';
 import { wave } from './waveSystem.js';
-import { on, emit } from '../events.js';
+import { emit } from '../events.js';
 import { startKillcam } from '../replay/killcam.js';
 import { getSummary } from '../replay/damageTracker.js';
 
-// S&D API injected at runtime via 'snd:configure' event (avoids circular dep).
-let _snd = null;
-on('snd:configure', api => { _snd = api; });
-
-// ── Friend indicator ──────────────────────────────────────────────
+// ── Friend indicator ──────────────────────────────────────────────────────
 const _indGeo = new THREE.ConeGeometry(0.22, 0.45, 8);
 const _indMat = new THREE.MeshBasicMaterial({ color: 0x00ccff, depthTest: false });
 function _attachFriendIndicator(e) {
@@ -33,7 +27,12 @@ function _attachFriendIndicator(e) {
   e._friendIndicator = ind;
 }
 
-// ── Walkable cells ────────────────────────────────────────────────
+export function restoreFriendIndicator(e) {
+  if (e._friendIndicator) e._friendIndicator.visible = true;
+  else _attachFriendIndicator(e);
+}
+
+// ── Walkable cells ────────────────────────────────────────────────────────
 export const WALKABLE_CELLS = [];
 for (let r = 1; r < MAP_H - 1; r++)
   for (let c = 1; c < MAP_W - 1; c++)
@@ -49,6 +48,7 @@ function randomSpawnCell(usedCells) {
     ? cands[Math.floor(Math.random() * cands.length)]
     : WALKABLE_CELLS[Math.floor(Math.random() * WALKABLE_CELLS.length)];
 }
+
 function randomPatrol(sc, sr, rad = 2) {
   return [0, Math.PI / 2, Math.PI, Math.PI * 1.5].map((a) => {
     let bc = Math.round(sc + Math.cos(a) * rad),
@@ -58,19 +58,14 @@ function randomPatrol(sc, sr, rad = 2) {
     return MAP[br][bc] === 0 ? [bc, br] : [sc, sr];
   });
 }
+
 const NUM_ENEMIES = 10;
 
-// ── Weapon roles ──────────────────────────────────────────────────────
+// ── Weapon roles ──────────────────────────────────────────────────────────
 const _RAND_ROLES = ['assault', 'assault', 'assault', 'smg', 'smg', 'sniper'];
 function randomRole() { return _RAND_ROLES[Math.floor(Math.random() * _RAND_ROLES.length)]; }
 
-// S&D team compositions (index 0-4 = friendly, 5-9 = enemy)
-const SND_ROLES = [
-  'assault', 'smg',    'assault', 'sniper', 'assault', // friendly team
-  'assault', 'smg',    'sniper',  'assault', 'assault', // enemy team
-];
-
-// ── Enemies array ─────────────────────────────────────────────────
+// ── Enemy pool ────────────────────────────────────────────────────────────
 /**
  * @param {import('../../types/entities').Enemy} e
  * @param {[number,number]|null} [forcedCell]
@@ -189,158 +184,16 @@ export const enemies = Array.from({ length: NUM_ENEMIES }, (_) => {
   };
 });
 
-// ── Rebuild all enemies with the current buildEnemyMesh (call after GLTF loads) ──
-// Pass sndSitePositions when S&D is already active so GLTF reload doesn't scatter defenders.
-export function rebuildAllEnemies(sndSitePositions = null) {
-  if (sndSitePositions) {
-    spawnSndEnemies(sndSitePositions);
-  } else {
-    enemies.forEach((e) => spawnEnemyIntoSlot(e));
-  }
-}
+// ── Dying list — shared with enemyUpdate.js ───────────────────────────────
+// Dead enemies whose death animation still needs to play. enemyUpdate ticks them.
+export const dyingEnemies = [];
 
-// ── S&D spawn helpers ─────────────────────────────────────────────────────
-// East interior cells — player attack spawn + enemy attack spawn (role=defend)
-const ATTACKER_SLOTS = [[15,10],[16,10],[17,10],[15,12],[17,12]];
-// Defender spawn offsets relative to site cell (for enemy defenders when player attacks)
-const SND_DEF_OFFSETS = [
-  [0,-1],[1,-1],   // site A (i=0,1)
-  [0, 0],[1, 0],[-1,0], // site B (i=2,3,4)
-];
-// Friendly defender slots near sites (for friendly bots when player defends)
-const DEFENDER_FRIEND_OFFSETS = [
-  [-1,0],[0,-1],[1,0],   // near site A
-  [-1,0],[0,-1],         // near site B
-];
-
-function openNear(cx, cz) {
-  const cc = Math.max(1, Math.min(MAP_W - 2, cx));
-  const cr = Math.max(1, Math.min(MAP_H - 2, cz));
-  const c = MAP[cr][cc];
-  return (c === 0 || isRamp(c)) ? [cc, cr] : [Math.floor(cx), Math.floor(cz)];
-}
-
-export function spawnSndEnemies(sitePositions, roleOverrides = null) {
-  const playerRole = _snd?.getPlayerRole() ?? 'attack';
-  const NUM_FRIENDS = 5;
-  enemies.forEach((e, i) => {
-    const weaponRole = roleOverrides?.[i] ?? SND_ROLES[i] ?? 'assault';
-    if (i < NUM_FRIENDS) {
-      // ── Friendly team ──
-      if (playerRole === 'attack') {
-        // Rush to sites with player (east side)
-        spawnEnemyIntoSlot(e, ATTACKER_SLOTS[i % ATTACKER_SLOTS.length], weaponRole);
-      } else {
-        // Defend near sites
-        const siteIdx = i < 3 ? 0 : 1;
-        const [sx, sz] = sitePositions[siteIdx];
-        const [dc, dr] = DEFENDER_FRIEND_OFFSETS[i];
-        const [fc, fr] = openNear(Math.floor(sx / CELL) + dc, Math.floor(sz / CELL) + dr);
-        spawnEnemyIntoSlot(e, [fc, fr], weaponRole);
-      }
-      e.sndTeam = 'friend';
-      e.sndSiteTarget = i % 2;
-      tintEnemyMesh(e.mesh, 0x00bb44);
-      _attachFriendIndicator(e);
-    } else {
-      // ── Enemy team ──
-      const j = i - NUM_FRIENDS;
-      if (playerRole === 'attack') {
-        // Defenders at sites
-        const siteIdx = j < 2 ? 0 : 1;
-        const [sx, sz] = sitePositions[siteIdx];
-        const [dc, dr] = SND_DEF_OFFSETS[j];
-        const [fc, fr] = openNear(Math.floor(sx / CELL) + dc, Math.floor(sz / CELL) + dr);
-        spawnEnemyIntoSlot(e, [fc, fr], weaponRole);
-      } else {
-        // Attackers — spawn east side, rush sites
-        spawnEnemyIntoSlot(e, ATTACKER_SLOTS[j % ATTACKER_SLOTS.length], weaponRole);
-        alertEnemy(e);
-      }
-      e.sndTeam = 'enemy';
-      e.sndSiteAttack = j < 3 ? 0 : 1;
-      tintEnemyMesh(e.mesh, 0xcc2200);
-      if (e._friendIndicator) { scene.remove(e._friendIndicator); e._friendIndicator = null; }
-    }
-  });
-}
-
-// ── Restore friend indicator after respawn ────────────────────────────
-export function restoreFriendIndicator(e) {
-  if (e._friendIndicator) e._friendIndicator.visible = true;
-  else _attachFriendIndicator(e);
-}
-
-// ── TDM spawn: 5 friendly bots near player + 5 enemies on far side ──
-const TDM_OFFSETS = [[0,0],[1,0],[-1,0],[0,1],[0,-1]];
-
-export function spawnTdmEnemies(mapDef) {
-  const atkPos = mapDef.spawnAttacker ?? mapDef.spawnPlayer ?? { x: 16 * CELL + CELL / 2, z: 11 * CELL + CELL / 2 };
-  const defPos = mapDef.spawnDefender ?? { x: 4 * CELL + CELL / 2, z: 11 * CELL + CELL / 2 };
-  const atkCell = [Math.round(atkPos.x / CELL), Math.round(atkPos.z / CELL)];
-  const defCell = [Math.round(defPos.x / CELL), Math.round(defPos.z / CELL)];
-  enemies.forEach((e, i) => {
-    if (i < 5) {
-      const [dc, dr] = TDM_OFFSETS[i];
-      const [fc, fr] = openNear(atkCell[0] + dc, atkCell[1] + dr);
-      spawnEnemyIntoSlot(e, [fc, fr]);
-      e.sndTeam = 'friend';
-      tintEnemyMesh(e.mesh, 0x00bb44);
-      _attachFriendIndicator(e);
-    } else {
-      const [dc, dr] = TDM_OFFSETS[i - 5];
-      const [fc, fr] = openNear(defCell[0] + dc, defCell[1] + dr);
-      spawnEnemyIntoSlot(e, [fc, fr]);
-      e.sndTeam = 'enemy';
-      tintEnemyMesh(e.mesh, 0xcc2200);
-      if (e._friendIndicator) { scene.remove(e._friendIndicator); e._friendIndicator = null; }
-      alertEnemy(e);
-    }
-  });
-}
-
-// ── triggerDeath lives here because it reads wave ─────────────────
-export function triggerDeath() {
-  if (player.dead) return;
-  player.dead = true;
-  emit('player:died');
-  if (isAnyModeActive()) {
-    document.exitPointerLock?.();
-    if (getMode()?.name === 'snd') {
-      const allFriendsDead = enemies.every((en) => en.dead || en.sndTeam !== 'friend');
-      if (allFriendsDead) emit('round:friendTeamWiped');
-    }
-    // TDM / other modes handle 'player:died' themselves
-    return;
-  }
-  document.exitPointerLock?.();
-  const _showWaveOver = () => {
-    setGameRunning(false);
-    const { player: pd, ally: ad, enemy: ed } = getSummary();
-    const dmgLine = `<div class="stat" style="margin-top:10px;color:#aaa;font-size:11px">DMG: YOU ${pd} · ALLIES ${ad} · ENEMIES ${ed}</div>`;
-    const ov = document.getElementById('overlay');
-    ov.style.display = 'flex';
-    ov.innerHTML = `<div class="dead-h">KILLED IN ACTION</div><div class="stat">Kills: ${player.kills}</div><div class="stat" style="color:#555;margin-top:6px">Wave ${wave} — the vibes remain hostile</div>${dmgLine}<button onclick="location.reload()" style="margin-top:28px;padding:12px 52px;background:#e74c3c;color:#fff;border:none;font-family:'Courier New',monospace;font-size:14px;letter-spacing:4px;cursor:pointer">[ REDEPLOY ]</button>`;
-  };
-  const killer = player.lastAttacker;
-  if (killer && !killer.dead) {
-    startKillcam(killer, _showWaveOver);
-  } else {
-    _showWaveOver();
-  }
-}
-
-// ── Dying list — dead enemies whose death animation still needs to play ──
-const dyingEnemies = [];
-
-// ── Kill functions ────────────────────────────────────────────────
+// ── Kill functions ────────────────────────────────────────────────────────
 export function killEnemy(e) {
   if (e.dead) return;
   e.dead = true;
   if (e.sndTeam === 'friend') {
-    // Hide indicator immediately on death
     if (e._friendIndicator) e._friendIndicator.visible = false;
-    // Play death animation for friendly bots just like enemy bots
     if (e.actions && e.actions.death) {
       const dyingMesh = e.mesh, dyingMixer = e.mixer;
       crossfade(e, 'death', 0);
@@ -360,7 +213,6 @@ export function killEnemy(e) {
   spawnAmmoDrop(e.x, e.z);
 
   if (e.actions && e.actions.death) {
-    // Snapshot mesh+mixer NOW — spawnEnemyIntoSlot may overwrite e.mesh/e.mixer next round
     const dyingMesh = e.mesh, dyingMixer = e.mixer;
     crossfade(e, 'death', 0);
     dyingEnemies.push({ mesh: dyingMesh, mixer: dyingMixer, timer: 2.2 });
@@ -376,138 +228,32 @@ export function killEnemy(e) {
   if (!isAnyModeActive() && enemies.every((en) => en.dead)) emit('wave:end');
 }
 
-// ── Enemy AI ──────────────────────────────────────────────────────
-
-export function updateEnemies(ts, dt) {
-  for (const e of enemies) {
-    if (e.dead) continue;
-    if (isAnyModeActive() && e.sndTeam === 'friend') { tickFriendlyBot(e, dt, enemies, killEnemy); continue; }
-    const pdx = camera.position.x - e.x,
-      pdz = camera.position.z - e.z;
-    const distP = Math.sqrt(pdx * pdx + pdz * pdz);
-    const eGround = hAt(...worldToCell(e.x, e.z));
-    const canSee =
-      distP < getDifficulty().sight &&
-      hasLOS(
-        e.x,
-        eGround + PLAYER_H * 0.9,
-        e.z,
-        camera.position.x,
-        camera.position.y,
-        camera.position.z
-      );
-    const desiredY = Math.atan2(-pdx, -pdz);
-
-    // Sync _aiState if external code mutated e.state (e.g. shoot.js alertEnemy)
-    if (e._aiState?.name !== e.state) {
-      const next = STATE_MAP[e.state];
-      if (!next && import.meta.env.DEV) console.warn(`[Enemy] unknown state "${e.state}", resetting to patrol`);
-      e._aiState = next ?? PATROL_STATE;
-      e.state    = e._aiState.name;
+export function triggerDeath() {
+  if (player.dead) return;
+  player.dead = true;
+  emit('player:died');
+  if (isAnyModeActive()) {
+    document.exitPointerLock?.();
+    if (getMode()?.name === 'snd') {
+      const allFriendsDead = enemies.every((en) => en.dead || en.sndTeam !== 'friend');
+      if (allFriendsDead) emit('round:friendTeamWiped');
     }
-
-    let isMoving = false;
-    if (e.stunTimer > 0) {
-      // ── Stagger: drain knockback velocity, skip normal movement ──────
-      e.stunTimer = Math.max(0, e.stunTimer - dt);
-      e.velX *= 1 - dt * 8;
-      e.velZ *= 1 - dt * 8;
-      const nx = e.x + e.velX * dt;
-      const nz = e.z + e.velZ * dt;
-      if (canMoveTo(nx, e.z, eGround)) e.x = nx;
-      if (canMoveTo(e.x, nz, eGround)) e.z = nz;
-    } else if (e.state === 'patrol' && distP > ENEMY_SIGHT * 2) {
-      // ── Cull AI tick for distant patrollers — imperceptible at this range
-    } else {
-      const ctx = { ts, dt, eGround, canSee, distP, pdx, pdz, desiredY, enemies, killEnemy, triggerDeath };
-      isMoving = e._aiState.tick(e, dt, ctx) ?? false;
-    }
-
-    tickEnemyAnimation(e, dt, isMoving);
-    if (e.state === 'attack') {
-      if (!e.crouching && e.crouchTimer <= 0 && Math.random() < 0.008) {
-        e.crouching = true;
-        e.crouchTimer = 0.8 + Math.random() * 1.2;
-      }
-      if (e.crouching) {
-        e.crouchTimer -= dt;
-        if (e.crouchTimer <= 0) e.crouching = false;
-      }
-      e.jumpCd = Math.max(0, e.jumpCd - dt);
-      if (e.onGround && e.jumpCd <= 0 && Math.random() < 0.0008) {
-        e.velY = 5.5;
-        e.onGround = false;
-        e.jumpCd = 10 + Math.random() * 8;
-      }
-    } else {
-      e.crouching = false;
-    }
-    if (!e.onGround) {
-      e.velY -= GRAVITY * dt;
-      const newY = e.mesh.position.y + e.velY * dt;
-      if (newY <= eGround) {
-        e.onGround = true;
-        e.velY = 0;
-        e.mesh.position.y = eGround;
-      } else e.mesh.position.y = newY;
-    }
-    // crOff compensates for procedural mesh pivot being at centre (scale squash pulls it up).
-    // GLTF pivot is at the feet, so no offset needed — animation handles crouch visually.
-    const crOff = (!e.facingOffset && e.crouching) ? -0.45 : 0;
-    e.bobT += dt * (e.state === 'attack' ? 3.8 : 1.6);
-    if (e.onGround)
-      e.mesh.position.set(
-        e.x,
-        eGround + crOff + (isMoving ? Math.abs(Math.sin(e.bobT)) * 0.022 : 0),
-        e.z
-      );
-    else {
-      e.mesh.position.x = e.x;
-      e.mesh.position.z = e.z;
-    }
-    // GLTF enemies use Crouch_Idle_Loop/Crouch_Fwd_Loop — skip Y-squash so the rig doesn't deform
-    if (!e.facingOffset) {
-      e.mesh.scale.y += ((e.crouching ? 0.6 : 1) - e.mesh.scale.y) * Math.min(1, dt * 10);
-    } else {
-      e.mesh.scale.y = 1; // always 1 for GLTF; animation handles the visual
-    }
-    e.mesh.rotation.y = e.facingY + (e.facingOffset ?? 0);
-    if (e.muzzleFlashT > 0) {
-      e.muzzleFlash.material.opacity = e.muzzleFlashT / 55;
-      e.muzzleFlashT = Math.max(0, e.muzzleFlashT - dt * 1000);
-    } else e.muzzleFlash.material.opacity = 0;
-    if (e.hpDrain > e.hp) e.hpDrain = Math.max(e.hp, e.hpDrain - e.maxHp * dt * 0.38);
-    const [cx2, cz2] = worldToCell(e.x, e.z);
-    if (mapCell(cx2, cz2) === 1) {
-      for (let r = 1; r <= 4; r++) {
-        let found = false;
-        for (let dc = -r; dc <= r && !found; dc++)
-          for (let dr = -r; dr <= r && !found; dr++) {
-            if (Math.abs(dc) !== r && Math.abs(dr) !== r) continue;
-            const nc = cx2 + dc,
-              nr = cz2 + dr;
-            if (nc >= 0 && nr >= 0 && nc < MAP_W && nr < MAP_H && MAP[nr][nc] === 0) {
-              e.x = nc * CELL + CELL / 2;
-              e.z = nr * CELL + CELL / 2;
-              e.path = [];
-              e.pathGoal = null;
-              found = true;
-            }
-          }
-        if (found) break;
-      }
-    }
-    e.radarAge += dt;
+    return;
   }
-  // ── Tick dying enemies (death animation plays, then mesh removed) ─
-  for (let i = dyingEnemies.length - 1; i >= 0; i--) {
-    const de = dyingEnemies[i];
-    de.mixer.update(dt);
-    de.timer -= dt;
-    if (de.timer <= 0) {
-      scene.remove(de.mesh);
-      dyingEnemies.splice(i, 1);
-    }
+  document.exitPointerLock?.();
+  const _showWaveOver = () => {
+    setGameRunning(false);
+    const { player: pd, ally: ad, enemy: ed } = getSummary();
+    const dmgLine = `<div class="stat" style="margin-top:10px;color:#aaa;font-size:11px">DMG: YOU ${pd} · ALLIES ${ad} · ENEMIES ${ed}</div>`;
+    const ov = document.getElementById('overlay');
+    ov.style.display = 'flex';
+    ov.innerHTML = `<div class="dead-h">KILLED IN ACTION</div><div class="stat">Kills: ${player.kills}</div><div class="stat" style="color:#555;margin-top:6px">Wave ${wave} — the vibes remain hostile</div>${dmgLine}<button onclick="location.reload()" style="margin-top:28px;padding:12px 52px;background:#e74c3c;color:#fff;border:none;font-family:'Courier New',monospace;font-size:14px;letter-spacing:4px;cursor:pointer">[ REDEPLOY ]</button>`;
+  };
+  const killer = player.lastAttacker;
+  if (killer && !killer.dead) {
+    startKillcam(killer, _showWaveOver);
+  } else {
+    _showWaveOver();
   }
 }
 

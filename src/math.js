@@ -1,4 +1,5 @@
 export function dist2(dx, dz) { return dx * dx + dz * dz; }
+export function applyDrag(v, drag, dt) { return v * (1 - drag * dt); }
 export function normA(a) {
   while (a > Math.PI) a -= Math.PI * 2;
   while (a < -Math.PI) a += Math.PI * 2;

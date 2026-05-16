@@ -4,7 +4,8 @@ import { camera } from '../scene.js';
 import { setActiveMap } from '../map.js';
 import { buildLevel, clearLevel } from '../level.js';
 import { setGameRunning } from '../input.js';
-import { deactivateAllEnemies, rebuildAllEnemies } from '../entities/enemies.js';
+import { deactivateAllEnemies } from '../entities/enemies.js';
+import { rebuildAllEnemies } from '../entities/enemySpawning.js';
 import { setDifficulty } from '../difficulty.js';
 import { player } from '../entities/player.js';
 

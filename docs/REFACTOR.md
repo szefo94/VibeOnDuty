@@ -6,11 +6,9 @@ Audit of `/src`. Grouped by priority. Each item notes file, problem, fix.
 
 ## CRITICAL
 
-### enemies.js — too large (530+ lines, 4+ responsibilities)
-Split into:
-- `enemySpawning.js` — wave / S&D / TDM spawn variants (lines 32–312)
-- `enemyUpdate.js` — updateEnemies loop (lines 393–525)
-- keep pool + init in `enemies.js`
+### ~~enemies.js — too large (530+ lines, 4+ responsibilities)~~ ✅ done
+Split into `enemySpawning.js` (S&D/TDM/rebuild), `enemyUpdate.js` (AI loop),
+`enemies.js` kept as core pool + kill + triggerDeath (~200 lines each).
 
 ---
 
@@ -69,14 +67,8 @@ Two patterns exist:
 
 Standardise: always use `transitionTo()`.
 
-### Velocity drag pattern duplication
-Three different spellings of exponential drag across `drone.js`, `enemies.js`, `player.js`:
-```js
-vel -= vel * DRAG * dt         // additive
-vel *= 1 - DRAG * dt           // multiplicative
-vel *= Math.pow(0.9, dt * 60)  // frame-rate biased
-```
-Unify to `applyDrag(vel, drag, dt) { return vel * (1 - drag * dt); }` in `math.js`.
+### ~~Velocity drag pattern duplication~~ ✅ done
+`applyDrag(v, drag, dt)` added to `math.js`. Replaced in `drone.js` and `enemyUpdate.js`.
 
 ### Missing squared-distance helper
 `Math.sqrt(dx*dx + dz*dz)` then compare — appears 6+ times.
@@ -112,9 +104,8 @@ Create `events.js` constants:
 export const EV = { WAVE_END: 'wave:end', PLAYER_DIED: 'player:died', ... };
 ```
 
-### entityBase.js — isAlive() never called externally
-`obj.isAlive = () => !obj.dead` defined in mixin but not used anywhere in codebase.
-Verify usage; if absent, remove.
+### ~~entityBase.js — isAlive() never called externally~~ ✅ done
+Confirmed unused, removed.
 
 ### Material duplication in weapon.js
 `mm()` helper exists in `materials.js` but `weapon.js` hand-creates materials with raw `MeshStandardMaterial({...})`.
