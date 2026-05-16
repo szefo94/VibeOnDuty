@@ -246,23 +246,30 @@ export function crossfade(e, to, dur = 0.22) {
   }
   e.currentClip = to;
 
-  // Debug: log transitions + hemisphere check for full right-arm chain
+  // Debug: log transitions + full-skeleton angle audit
   if (e._dbgTransitions && e._bones?.length) {
     const fromLabel = e._dbgPrevClip ?? 'loco';
     e._dbgPrevClip = to;
     const toClip = toAct.getClip();
-    const ARM_RE = /hand_r|lower_arm_r|upper_arm_r|shoulder_r|spine|neck/i;
-    const boneResults = e._bones
-      .filter(b => ARM_RE.test(b.name))
-      .map(b => {
-        const track = toClip.tracks.find(t => t.name.includes(b.name) && t.name.endsWith('.quaternion'));
-        if (!track) return null;
-        const q = b.quaternion;
-        const dot = q.x*track.values[0] + q.y*track.values[1] + q.z*track.values[2] + q.w*track.values[3];
-        return dot < 0 ? `⚠${b.name}(${dot.toFixed(2)})` : null;
-      })
-      .filter(Boolean);
-    console.log(`[crossfade] ${fromLabel} → ${to} dur=${dur.toFixed(2)}${boneResults.length ? ' FLIPPERS: ' + boneResults.join(' ') : ' ok'}`);
+
+    // Check every bone — compute angle in degrees between current pose and incoming clip frame-0
+    const results = [];
+    for (const b of e._bones) {
+      const track = toClip.tracks.find(t => t.name.includes(b.name) && t.name.endsWith('.quaternion'));
+      if (!track || track.values.length < 4) continue;
+      const q = b.quaternion;
+      const rawDot = q.x*track.values[0] + q.y*track.values[1] + q.z*track.values[2] + q.w*track.values[3];
+      const dot = Math.max(-1, Math.min(1, rawDot));
+      // acos(|dot|)*2 = rotation angle represented by quaternion half-angle * 2
+      const angleDeg = Math.acos(Math.abs(dot)) * 2 * (180 / Math.PI);
+      if (angleDeg > 3) results.push({ name: b.name, dot, angleDeg: Math.round(angleDeg) });
+    }
+    results.sort((a, b) => b.angleDeg - a.angleDeg);
+
+    const tags = results.slice(0, 10).map(r =>
+      `${r.name}(${r.angleDeg}°${r.dot < 0 ? ',flip' : ''})`
+    );
+    console.log(`[crossfade] ${fromLabel} → ${to} dur=${dur.toFixed(2)} | ${tags.length ? tags.join(' ') : 'clean'}`);
   }
 }
 

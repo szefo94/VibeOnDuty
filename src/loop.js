@@ -102,12 +102,11 @@ export function loop(ts) {
     }
 
     // ── Player jump-phase bookkeeping ────────────────────────────────
+    const _prevJumpPhase = jumpPhase;
     if (!prevPlayerOnGround && player.onGround) {
-      // just landed
       jumpPhase = 'land';
       jumpPhaseTimer = JUMP_LAND_DUR;
     } else if (prevPlayerOnGround && !player.onGround && !player.diving) {
-      // just left ground (jumped — not a dive)
       jumpPhase = 'start';
       jumpPhaseTimer = JUMP_START_DUR;
     }
@@ -119,6 +118,10 @@ export function loop(ts) {
     if (jumpPhase === 'land') {
       jumpPhaseTimer -= dt;
       if (jumpPhaseTimer <= 0) jumpPhase = '';
+    }
+    if (jumpPhase !== _prevJumpPhase && playerAnim._dbgTransitions) {
+      const loopT = playerAnim.actions?.jump_loop?.time?.toFixed(3) ?? '?';
+      console.log(`[jumpPhase] ${_prevJumpPhase || 'idle'} → ${jumpPhase || 'idle'}  onGround=${player.onGround}  jump_loop.time=${loopT}`);
     }
 
     // ── Player animation ─────────────────────────────────────────────

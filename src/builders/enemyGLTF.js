@@ -170,27 +170,38 @@ function normaliseClipQuatSigns(clips) {
 // Fix: flip the ENTIRE clipB track for any bone whose first keyframe disagrees
 // in sign with clipA's LAST keyframe. Uniform flip preserves intra-clip dot
 // products (step 1) and the seam (step 1b) so nothing else breaks.
-function alignClipBoundaries(animations, fromKey, toKey) {
+function alignClipBoundaries(animations, fromKey, toKey, { useFirstFrame = false } = {}) {
   const clipA = findClip(animations, fromKey);
   const clipB = findClip(animations, toKey);
   if (!clipA || !clipB) return;
 
-  const lastA = {};
+  const refA = {};
   for (const track of clipA.tracks) {
     if (!track.name.endsWith('.quaternion')) continue;
     const v = track.values;
-    const n = v.length - 4;
-    lastA[track.name] = [v[n], v[n+1], v[n+2], v[n+3]];
+    // Last frame: use first frame when explicitly requested (loop clips where last≈first)
+    const off = useFirstFrame ? 0 : v.length - 4;
+    refA[track.name] = [v[off], v[off+1], v[off+2], v[off+3]];
   }
 
+  const flipped = [];
   for (const track of clipB.tracks) {
     if (!track.name.endsWith('.quaternion')) continue;
-    const ref = lastA[track.name];
+    const ref = refA[track.name];
     if (!ref) continue;
     const v = track.values;
     const dot = ref[0]*v[0] + ref[1]*v[1] + ref[2]*v[2] + ref[3]*v[3];
-    if (dot < 0) for (let i = 0; i < v.length; i++) v[i] = -v[i];
+    const angleDeg = Math.round(Math.acos(Math.max(-1, Math.min(1, Math.abs(dot)))) * 2 * 180 / Math.PI);
+    // Extract bone name from track name (e.g. "pelvis.quaternion" → "pelvis")
+    const bone = track.name.replace('.quaternion', '').split('.').pop();
+    if (dot < 0) {
+      for (let i = 0; i < v.length; i++) v[i] = -v[i];
+      flipped.push(`${bone}(${angleDeg}°flip)`);
+    } else if (angleDeg > 5) {
+      flipped.push(`${bone}(${angleDeg}°ok)`);
+    }
   }
+  console.log(`[alignBoundary] ${fromKey}→${toKey} (${useFirstFrame ? 'firstFrame' : 'lastFrame'}): ${flipped.length ? flipped.join(' ') : 'all clean'}`);
 }
 
 // ── Additive layer setup (GLTF only) ──────────────────────────────────────
@@ -240,7 +251,9 @@ export async function tryLoadEnemyGLTF() {
     // Align jump phase clip boundaries so crossfade blending never mixes
     // opposite-hemisphere quaternions (which causes the arm-flap on peak/landing).
     alignClipBoundaries(gltf.animations, 'jump_start', 'jump_loop');
-    alignClipBoundaries(gltf.animations, 'jump_loop',  'jump_land');
+    // jump_loop is looping — landing can hit any phase, so align to first frame
+    // (first frame is the stable reference after step-2 hemisphere normalisation)
+    alignClipBoundaries(gltf.animations, 'jump_loop',  'jump_land', { useFirstFrame: true });
     gltfTemplate = gltf;
     usingGLTF = true;
     const found = CLIP_KEYS.filter((k) => findClip(gltf.animations, k));
