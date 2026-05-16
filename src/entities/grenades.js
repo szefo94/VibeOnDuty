@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { scene, camera } from '../scene.js';
 import { CELL, GRENADE_ENERGY_COST, MAX_ENERGY, ENERGY_PER_DMG, MAX_HP } from '../config.js';
-import { hAt, groundElevation } from '../map.js';
+import { hAt, groundElevation, worldToCell } from '../map.js';
 import { mm } from '../materials.js';
 import { grenadeFalloff, grenadeEntityDamage, grenadePlayerDamage } from '../combat/damage.js';
 import { spawnGrenadeParticles, spawnSmokeCloud } from '../fx/particles.js';
@@ -51,7 +51,7 @@ export function tickGrenades(dt) {
     g.mesh.position.addScaledVector(g.vel, dt);
     g.mesh.rotation.x += dt * 5;
     g.mesh.rotation.z += dt * 3;
-    const eGround = hAt(Math.floor(g.mesh.position.x / CELL), Math.floor(g.mesh.position.z / CELL));
+    const eGround = hAt(...worldToCell(g.mesh.position.x, g.mesh.position.z));
     if (g.mesh.position.y < eGround + 0.07) {
       g.mesh.position.y = eGround + 0.07;
       g.vel.y *= -0.38;

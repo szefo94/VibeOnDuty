@@ -1,5 +1,5 @@
 import { CELL, PLAYER_H, ENEMY_SPEED, ENEMY_ROT_SPD, ENEMY_SHOOT_RANGE, ENEMY_SHOOT_CD, ENEMY_DAMAGE } from '../config.js';
-import { MAP_W, MAP_H, MAP, isRamp, hAt, canMoveTo } from '../map.js';
+import { MAP_W, MAP_H, MAP, isRamp, hAt, canMoveTo, worldToCell } from '../map.js';
 import { slerp } from '../math.js';
 import { astar } from '../astar.js';
 import { hasLOS } from '../utils/los.js';
@@ -13,10 +13,11 @@ import { getMode } from '../modes/modeManager.js';
 function _moveTo(e, tgX, tgZ, eGround, dt) {
   const goalDist = Math.sqrt((e.x - tgX) ** 2 + (e.z - tgZ) ** 2);
 
-  if (!e.pathGoal || e.pathGoal[0] !== Math.floor(tgX / CELL) || e.pathGoal[1] !== Math.floor(tgZ / CELL) || e.path.length === 0) {
+  const [tgC, tgR] = worldToCell(tgX, tgZ);
+  if (!e.pathGoal || e.pathGoal[0] !== tgC || e.pathGoal[1] !== tgR || e.path.length === 0) {
     e.path     = astar(e.x, e.z, tgX, tgZ);
     if (e.path.length > 0) e.path.shift();
-    e.pathGoal = [Math.floor(tgX / CELL), Math.floor(tgZ / CELL)];
+    e.pathGoal = [tgC, tgR];
     e.pathTick = 800;
   }
   e.pathTick = Math.max(0, (e.pathTick ?? 0) - dt * 1000);
@@ -46,7 +47,7 @@ function _tryShoot(e, eGround, allEnemies, killEnemy) {
     if (target.dead || target.sndTeam !== 'enemy') continue;
     const dx = target.x - e.x, dz = target.z - e.z;
     if (dx * dx + dz * dz > ENEMY_SHOOT_RANGE * ENEMY_SHOOT_RANGE) continue;
-    const tGround = hAt(Math.floor(target.x / CELL), Math.floor(target.z / CELL));
+    const tGround = hAt(...worldToCell(target.x, target.z));
     if (!hasLOS(e.x, eGround + PLAYER_H * 0.85, e.z, target.x, tGround + PLAYER_H * 0.85, target.z)) continue;
     e.shootCd      = ENEMY_SHOOT_CD;
     e.facingY      = Math.atan2(e.x - target.x, e.z - target.z);
@@ -75,7 +76,7 @@ function _updateMesh(e, eGround, isMoving, dt) {
 // ── S&D tick: escort bomb / rush site ────────────────────────────────────
 
 function _tickSnd(e, dt, allEnemies, killEnemy) {
-  const eGround = hAt(Math.floor(e.x / CELL), Math.floor(e.z / CELL));
+  const eGround = hAt(...worldToCell(e.x, e.z));
   const bombPos = getSndBombPos();
   const sites   = getSndSitePositions();
   const [tgX, tgZ] = bombPos ?? sites[e.sndSiteTarget ?? 0];
@@ -98,7 +99,7 @@ function _pickScoutTarget() {
 }
 
 function _tickTdm(e, dt, allEnemies, killEnemy) {
-  const eGround = hAt(Math.floor(e.x / CELL), Math.floor(e.z / CELL));
+  const eGround = hAt(...worldToCell(e.x, e.z));
 
   // Find nearest living enemy bot
   let nearestEnemy = null, nearestDist = Infinity;

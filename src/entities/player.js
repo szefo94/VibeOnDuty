@@ -17,7 +17,7 @@ import {
   WEAPONS,
   DEFAULT_WEAPON,
 } from '../config.js';
-import { MAP_W, MAP_H, groundElevation, canMoveTo } from '../map.js';
+import { MAP_W, MAP_H, groundElevation, canMoveTo, worldToCell } from '../map.js';
 import { keys, locked, mouseHeld } from '../input.js';
 import { tickImpacts } from '../fx/impacts.js';
 import { tickTracers } from '../fx/tracers.js';
@@ -285,8 +285,7 @@ export function updatePlayer(dt) {
   );
   camera.quaternion.setFromEuler(_euler);
 
-  const pc = Math.floor(camera.position.x / CELL),
-    pr = Math.floor(camera.position.z / CELL);
+  const [pc, pr] = worldToCell(camera.position.x, camera.position.z);
   for (let dr = -2; dr <= 2; dr++)
     for (let dc = -2; dc <= 2; dc++) {
       const vc = pc + dc,

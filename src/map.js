@@ -30,6 +30,7 @@ export function setActiveMap(def) {
 
 export const isRamp  = (c) => (c >= 4 && c <= 27) || (c >= 33 && c <= 152);
 export const isCrack = (c) => c === 2 || c === 3;
+export const worldToCell = (x, z) => [Math.floor(x / CELL), Math.floor(z / CELL)];
 
 // Revolved ramp fraction — types 0-3: quarter-turn (90°), types 4-7: half-turn (180°)
 // 0: pivot NW  1: pivot NE  2: pivot SE  3: pivot SW

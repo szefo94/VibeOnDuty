@@ -124,14 +124,14 @@ Use `mm()` consistently.
 
 ## QUICK WINS (do first, low effort)
 
-| Task | Est. |
-|------|------|
-| Delete `map_backup_v1.js` | 1 min |
-| Remove duplicate `_revolvedFrac`/`_diagFrac` from `map.js` | 5 min |
-| Add `worldToCell()` to `map.js`, replace 20+ callsites | 1 hr |
-| Add `dist2()` to `math.js`, replace sqrt range checks | 30 min |
-| Move physics constants to `config.js` | 2 hr |
-| Extract `createFriendIndicator()` in `enemies.js` | 30 min |
-| Unify `showMsg`/`showStatus` → `showMessage()` | 30 min |
+| Task | Est. | Status |
+|------|------|--------|
+| Delete `map_backup_v1.js` | 1 min | ✅ done |
+| Remove duplicate `_revolvedFrac`/`_diagFrac` from `map.js` | 5 min | ⚠️ skipped — both files use them internally; moving to shared module risks circular dep |
+| Add `worldToCell()` to `map.js`, replace callsites | 1 hr | ✅ done — enemies.js, friendlyBots.js, player.js, enemyStates.js, ammoDrops.js, grenades.js |
+| Add `dist2()` to `math.js`, replace sqrt range checks | 30 min | ✅ done — ammoDrops.js pickup check replaced |
+| Move physics constants to `config.js` | 2 hr | ⬜ pending |
+| Extract `createFriendIndicator()` in `enemies.js` | 30 min | ⬜ pending |
+| Unify `showMsg`/`showStatus` → `showMessage()` | 30 min | ⚠️ skipped — different DOM elements (`#msg` vs `#status`), different default durations; not true duplicates |
 
-**Total quick wins: ~4–5 hours, significant readability gain.**
+**Remaining: physics constants + friendlyIndicator extraction.**

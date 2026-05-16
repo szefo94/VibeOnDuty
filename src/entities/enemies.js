@@ -4,7 +4,7 @@ import { applyEntityBase } from './entityBase.js';
 import { initEnemyState, alertEnemy, STATE_MAP, PATROL_STATE } from '../ai/enemyStates.js';
 import { CELL, PLAYER_H, ENEMY_HP, ENEMY_SIGHT, GRAVITY } from '../config.js';
 import { getDifficulty } from '../difficulty.js';
-import { MAP_W, MAP_H, MAP, isRamp, mapCell, canMoveTo, hAt } from '../map.js';
+import { MAP_W, MAP_H, MAP, isRamp, mapCell, canMoveTo, hAt, worldToCell } from '../map.js';
 import { buildEnemyMesh, tintEnemyMesh } from '../builders/enemyGLTF.js';
 import { crossfade, tickEnemyAnimation } from '../builders/enemyAnimations.js';
 import { tickFriendlyBot } from './friendlyBots.js';
@@ -75,7 +75,7 @@ export function spawnEnemyIntoSlot(e, forcedCell = null, role = null) {
   } else {
     const used = enemies
       .filter((en) => en !== e && !en.dead)
-      .map((en) => [Math.floor(en.x / CELL), Math.floor(en.z / CELL)]);
+      .map((en) => worldToCell(en.x, en.z));
     [mc, mr] = randomSpawnCell(used);
   }
   const patrol = randomPatrol(mc, mr, 2);
@@ -397,7 +397,7 @@ export function updateEnemies(ts, dt) {
     const pdx = camera.position.x - e.x,
       pdz = camera.position.z - e.z;
     const distP = Math.sqrt(pdx * pdx + pdz * pdz);
-    const eGround = hAt(Math.floor(e.x / CELL), Math.floor(e.z / CELL));
+    const eGround = hAt(...worldToCell(e.x, e.z));
     const canSee =
       distP < getDifficulty().sight &&
       hasLOS(
@@ -489,9 +489,8 @@ export function updateEnemies(ts, dt) {
       e.muzzleFlashT = Math.max(0, e.muzzleFlashT - dt * 1000);
     } else e.muzzleFlash.material.opacity = 0;
     if (e.hpDrain > e.hp) e.hpDrain = Math.max(e.hp, e.hpDrain - e.maxHp * dt * 0.38);
-    if (mapCell(Math.floor(e.x / CELL), Math.floor(e.z / CELL)) === 1) {
-      const cx2 = Math.floor(e.x / CELL),
-        cz2 = Math.floor(e.z / CELL);
+    const [cx2, cz2] = worldToCell(e.x, e.z);
+    if (mapCell(cx2, cz2) === 1) {
       for (let r = 1; r <= 4; r++) {
         let found = false;
         for (let dc = -r; dc <= r && !found; dc++)

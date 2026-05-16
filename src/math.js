@@ -1,3 +1,4 @@
+export function dist2(dx, dz) { return dx * dx + dz * dz; }
 export function normA(a) {
   while (a > Math.PI) a -= Math.PI * 2;
   while (a < -Math.PI) a += Math.PI * 2;

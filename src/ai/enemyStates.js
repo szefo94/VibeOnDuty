@@ -3,7 +3,7 @@ import {
   CELL, PLAYER_H, ENEMY_SPEED, ENEMY_ROT_SPD, ENEMY_SHOOT_RANGE,
 } from '../config.js';
 import { getDifficulty } from '../difficulty.js';
-import { hAt, canMoveTo } from '../map.js';
+import { hAt, canMoveTo, worldToCell } from '../map.js';
 import { slerp, normA } from '../math.js';
 import { astar } from '../astar.js';
 import { camera } from '../scene.js';
@@ -67,7 +67,7 @@ function _tickMovement(e, dt, ctx, speedMult, rotMult) {
   const sitePos          = isEnemyAtk ? _snd?.getSitePositions()[e.sndSiteAttack ?? 0] : null;
   const goalX            = sitePos ? sitePos[0] : bombPos ? bombPos[0] : camera.position.x;
   const goalZ            = sitePos ? sitePos[1] : bombPos ? bombPos[1] : camera.position.z;
-  const goalCell         = [Math.floor(goalX / CELL), Math.floor(goalZ / CELL)];
+  const goalCell         = worldToCell(goalX, goalZ);
   const goalChanged      = !e.pathGoal || e.pathGoal[0] !== goalCell[0] || e.pathGoal[1] !== goalCell[1];
 
   if (e.path.length === 0 || e.pathTick <= 0 || goalChanged) {
@@ -96,7 +96,7 @@ function _tickMovement(e, dt, ctx, speedMult, rotMult) {
       if (friend.dead || friend.sndTeam !== 'friend') continue;
       const fdx = friend.x - e.x, fdz = friend.z - e.z;
       if (fdx * fdx + fdz * fdz > ENEMY_SHOOT_RANGE * ENEMY_SHOOT_RANGE) continue;
-      const fGround = hAt(Math.floor(friend.x / CELL), Math.floor(friend.z / CELL));
+      const fGround = hAt(...worldToCell(friend.x, friend.z));
       if (!hasLOS(e.x, eGround + PLAYER_H * 0.85, e.z, friend.x, fGround + PLAYER_H * 0.85, friend.z)) continue;
       e.botShootCd   = ts;
       e.muzzleFlashT = 55;
