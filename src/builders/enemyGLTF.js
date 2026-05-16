@@ -162,6 +162,37 @@ function normaliseClipQuatSigns(clips) {
   }
 }
 
+// ── Cross-clip boundary alignment ──────────────────────────────────────────
+// During crossfade, Three.js blends two simultaneously-running actions.
+// If bone B in clipA ends on +q and clipB starts on -q (same rotation, opposite
+// stored sign), slerpFlat short-paths toward -q. The blend output reaches -qB
+// just as clipA fades to zero, then snaps to +qB the next frame → visible flap.
+// Fix: flip the ENTIRE clipB track for any bone whose first keyframe disagrees
+// in sign with clipA's LAST keyframe. Uniform flip preserves intra-clip dot
+// products (step 1) and the seam (step 1b) so nothing else breaks.
+function alignClipBoundaries(animations, fromKey, toKey) {
+  const clipA = findClip(animations, fromKey);
+  const clipB = findClip(animations, toKey);
+  if (!clipA || !clipB) return;
+
+  const lastA = {};
+  for (const track of clipA.tracks) {
+    if (!track.name.endsWith('.quaternion')) continue;
+    const v = track.values;
+    const n = v.length - 4;
+    lastA[track.name] = [v[n], v[n+1], v[n+2], v[n+3]];
+  }
+
+  for (const track of clipB.tracks) {
+    if (!track.name.endsWith('.quaternion')) continue;
+    const ref = lastA[track.name];
+    if (!ref) continue;
+    const v = track.values;
+    const dot = ref[0]*v[0] + ref[1]*v[1] + ref[2]*v[2] + ref[3]*v[3];
+    if (dot < 0) for (let i = 0; i < v.length; i++) v[i] = -v[i];
+  }
+}
+
 // ── Additive layer setup (GLTF only) ──────────────────────────────────────
 // Called after all base actions are registered. Adds:
 //   actions._breathing   — always-on gentle spine/shoulder sway
@@ -206,6 +237,10 @@ export async function tryLoadEnemyGLTF() {
     const loader = new GLTFLoader();
     const gltf = await loader.loadAsync(import.meta.env.BASE_URL + 'models/enemy.glb');
     normaliseClipQuatSigns(gltf.animations);
+    // Align jump phase clip boundaries so crossfade blending never mixes
+    // opposite-hemisphere quaternions (which causes the arm-flap on peak/landing).
+    alignClipBoundaries(gltf.animations, 'jump_start', 'jump_loop');
+    alignClipBoundaries(gltf.animations, 'jump_loop',  'jump_land');
     gltfTemplate = gltf;
     usingGLTF = true;
     const found = CLIP_KEYS.filter((k) => findClip(gltf.animations, k));
