@@ -124,8 +124,9 @@ const LOCO_CLIPS = new Set(['idle', 'walk', 'run', 'strafe_l', 'strafe_r']);
 // Cross-space inertia uses INERTIA_OMEGA_CROSS (fast, ~0.10s) so the intermediate
 // pose is only visible for 2–3 frames instead of the full ~0.35s normal settle time.
 const CORR_CLIPS = new Set([
-  'idle', 'walk', 'run', 'strafe_l', 'strafe_r', // loco — always CORR
+  'idle', 'walk', 'run', 'strafe_l', 'strafe_r',               // loco — always CORR
   'attack', 'shoot', 'reload', 'hit', 'nade', 'run_back', 'walk_back', // retargeted overrides
+  'crouch', 'crouch_walk',                                       // CORR applied at load time by applyCORR()
 ]);
 const MAX_ENEMY_SPEED = 3.6; // ENEMY_SPEED * max speedMult
 
