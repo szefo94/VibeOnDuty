@@ -128,6 +128,10 @@ const CORR_CLIPS = new Set([
   'attack', 'shoot', 'reload', 'hit', 'nade', 'run_back', 'walk_back', // retargeted overrides
   'crouch', 'crouch_walk',                                       // CORR applied at load time by applyCORR()
 ]);
+// Clips where loco→clip or clip→loco bone pose difference is large enough that
+// slow omega (0.35s) arc looks bad (preacher hands, anime lean-back, etc.).
+// Uses fast omega even when both ends are CORR space.
+const LARGE_POSE_CLIPS = new Set(['crouch', 'crouch_walk']);
 const MAX_ENEMY_SPEED = 3.6; // ENEMY_SPEED * max speedMult
 
 function _applyLocoWeight(action, w) {
@@ -184,8 +188,9 @@ function _enterLocoMode(e) {
   if (e._inLocoMode) return;
   const a = e.actions[e.currentClip];
   if (a && !LOCO_CLIPS.has(e.currentClip)) {
-    const omega = CORR_CLIPS.has(e.currentClip) ? INERTIA_OMEGA : INERTIA_OMEGA_CROSS;
-    _snapBones(e, omega);
+    const crossSpace = !CORR_CLIPS.has(e.currentClip);
+    const largePose  = LARGE_POSE_CLIPS.has(e.currentClip);
+    _snapBones(e, crossSpace || largePose ? INERTIA_OMEGA_CROSS : INERTIA_OMEGA);
     a.setEffectiveWeight(0);
   }
   e._inLocoMode = true;
@@ -266,10 +271,9 @@ export function crossfade(e, to, dur = 0.22) {
     // Phase 41 pre-started loco clips at weight=0; without this, effectiveWeight = 0 * interpolant = 0 forever.
     toAct.reset().setEffectiveWeight(1).fadeIn(dur).play();
   } else {
-    // No prior clip (just exited loco — CORR space). Snap bones so inertia smooths
-    // the entry into the new clip. Cross-space uses fast omega; same-space uses normal.
-    const toCorr = CORR_CLIPS.has(to);
-    _snapBones(e, toCorr ? INERTIA_OMEGA : INERTIA_OMEGA_CROSS);
+    // No prior clip (just exited loco). Always use fast omega: loco bone poses
+    // differ significantly from any override clip, slow arc looks bad regardless of space.
+    _snapBones(e, INERTIA_OMEGA_CROSS);
     // Skipping fadeIn: starting at weight 0 and ramping would show bind/T-pose for the duration.
     toAct.reset().setEffectiveWeight(1).play();
   }
