@@ -136,31 +136,26 @@ function normaliseClipQuatSigns(clips) {
         }
       }
 
-      // Step 1b: loop-seam fix — ensure last frame and first frame are on the
-      // same hemisphere. When an animation loops, the mixer jumps from the
-      // final keyframe back to frame-0; a sign mismatch here causes a 180°
-      // bone snap every loop cycle. Fix: re-anchor frame-0 to last frame and
-      // redo the forward pass so all frames stay consistent.
-      if (v.length >= 8) {
-        const n = v.length - 4;
-        const seamDot = v[n]*v[0] + v[n+1]*v[1] + v[n+2]*v[2] + v[n+3]*v[3];
-        if (seamDot < 0) {
-          v[0] = -v[0]; v[1] = -v[1]; v[2] = -v[2]; v[3] = -v[3];
-          for (let i = 4; i < v.length; i += 4) {
-            const dot = v[i-4]*v[i] + v[i-3]*v[i+1] + v[i-2]*v[i+2] + v[i-1]*v[i+3];
-            if (dot < 0) {
-              v[i] = -v[i]; v[i+1] = -v[i+1]; v[i+2] = -v[i+2]; v[i+3] = -v[i+3];
-            }
-          }
-        }
-      }
-
       // Step 2: flip whole track if frame-0 disagrees with reference
       const r = ref[track.name];
       if (r) {
         const dot = r[0]*v[0] + r[1]*v[1] + r[2]*v[2] + r[3]*v[3];
         if (dot < 0) {
           for (let i = 0; i < v.length; i++) v[i] = -v[i];
+        }
+      }
+
+      // Step 1b: loop-seam fix — must run AFTER step 2 so step 2 can't undo it.
+      // If the last keyframe and first keyframe are on opposite hemispheres, the
+      // mixer output sign-flips at every loop boundary, causing blend artifacts.
+      // Fix: negate only the last frame. Three.js slerpFlat takes the short path
+      // between consecutive keyframes, so the N-1→N span interpolates correctly
+      // despite the stored sign mismatch.
+      if (v.length >= 8) {
+        const n = v.length - 4;
+        const seamDot = v[n]*v[0] + v[n+1]*v[1] + v[n+2]*v[2] + v[n+3]*v[3];
+        if (seamDot < 0) {
+          v[n] = -v[n]; v[n+1] = -v[n+1]; v[n+2] = -v[n+2]; v[n+3] = -v[n+3];
         }
       }
     }

@@ -153,9 +153,9 @@ export function loop(ts) {
           exitLocoMode(playerAnim); clip = player.punchClip;
         } else if (player.rollTimer > 0 && a.roll) {
           exitLocoMode(playerAnim); clip = 'roll';
-        } else if (jumpPhase === 'land' && a.jump_land) {
+        } else if (jumpPhase === 'land' && a.jump_land && !player.crouching && !player.sliding) {
           exitLocoMode(playerAnim); clip = 'jump_land';
-        } else if (!player.onGround) {
+        } else if (!player.onGround && !player.crouching && !player.sliding) {
           exitLocoMode(playerAnim);
           if (jumpPhase === 'start' && a.jump_start) clip = 'jump_start';
           else clip = a.jump_loop ? 'jump_loop' : 'idle';
