@@ -250,12 +250,14 @@ export async function tryLoadEnemyGLTF() {
   try {
     const loader = new GLTFLoader();
     const gltf = await loader.loadAsync(import.meta.env.BASE_URL + 'models/enemy.glb');
+    // Remove the +90°X CORR baked into the 12 retargeted clips by merge_animations.py.
+    // This brings them into the same coordinate space as the original clips (Jump_Start,
+    // Jump_Land, Crouch_Idle_Loop, Death01, Roll, etc.). Without this every crossfade
+    // between a loco clip and any non-retargeted clip blends across ~180° bone mismatches.
+    undoMergeCORR(gltf.animations);
     normaliseClipQuatSigns(gltf.animations);
-    // Align jump phase clip boundaries so crossfade blending never mixes
-    // opposite-hemisphere quaternions (which causes the arm-flap on peak/landing).
+    // Align jump phase clip boundaries — sign-flip guard after shared-space normalisation.
     alignClipBoundaries(gltf.animations, 'jump_start', 'jump_loop');
-    // jump_loop is looping — landing can hit any phase, so align to first frame
-    // (first frame is the stable reference after step-2 hemisphere normalisation)
     alignClipBoundaries(gltf.animations, 'jump_loop',  'jump_land', { useFirstFrame: true });
     gltfTemplate = gltf;
     usingGLTF = true;
