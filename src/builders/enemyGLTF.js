@@ -41,7 +41,7 @@ const ALIASES = {
   death:       ['Death01',          'Death',  'death',  'Die'],
   hit:         ['hit',              'Hit_Chest',        'Hit_Head'],
   roll:        ['Roll',             'roll',   'Dive'],
-  jump_start:  ['jump_loop',        'Jump_Start',       'Jump_start'],
+  jump_start:  ['Jump_Start',       'Jump_start',       'jump_loop'],
   jump_loop:   ['jump_loop',        'Jump_Loop',        'Jump_loop'],
   jump_land:   ['Jump_Land',        'Jump_land'],
   reload:      ['reload',           'Pistol_Reload'],
