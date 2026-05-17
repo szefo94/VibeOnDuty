@@ -92,13 +92,12 @@ export function loop(ts) {
     updatePlayer(dt);
 
     // ── Player body: GLTF mannequin if loaded, else procedural ───────
+    // Always track eye position so first-frame 3rd-person switch shows body at the right spot.
     const bodyTarget = playerMesh || playerBody;
-    if (tpTransition > 0.01) {
-      const eyeH = (player.crouching || player.sliding) ? PLAYER_H_CROUCH : PLAYER_H;
-      bodyTarget.position.set(camera.position.x, camera.position.y - eyeH, camera.position.z);
-      // Mannequin faces +Z at rotation.y=0; player.yaw+PI makes it face forward (same as look dir)
-      bodyTarget.rotation.y = player.yaw + Math.PI;
-    }
+    const eyeH = (player.crouching || player.sliding) ? PLAYER_H_CROUCH : PLAYER_H;
+    bodyTarget.position.set(camera.position.x, camera.position.y - eyeH, camera.position.z);
+    // Mannequin faces +Z at rotation.y=0; player.yaw+PI makes it face forward (same as look dir)
+    bodyTarget.rotation.y = player.yaw + Math.PI;
 
     // ── Player jump-phase bookkeeping ────────────────────────────────
     const _prevJumpPhase = jumpPhase;

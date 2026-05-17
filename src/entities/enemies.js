@@ -130,6 +130,14 @@ export function spawnEnemyIntoSlot(e, forcedCell = null, role = null) {
   });
   applyEntityBase(e);
   initEnemyState(e);
+  // Prime the mixer so the first rendered frame shows the idle pose, not T-pose.
+  // tickEnemyAnimation won't run until the next loop tick (after renderer.render).
+  if (e.mixer) e.mixer.update(0);
+  // Reset lazy bone cache — old bones belong to the previous mesh's skeleton.
+  e._bonesInit = false;
+  e._bones = [];
+  e._inertia = null;
+  e._inLocoMode = false;
 }
 
 const usedCells = [];

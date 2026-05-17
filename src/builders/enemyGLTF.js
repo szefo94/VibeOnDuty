@@ -307,6 +307,7 @@ export function buildEnemyMesh(wx, wz, role = 'assault') {
     if (ch.isMesh) {
       ch.castShadow = true;
       ch.userData.enemyGroup = clone;
+      ch.frustumCulled = false; // SkinnedMesh bounding sphere is bind-pose only; disable culling
     }
   });
   scene.add(clone);
@@ -389,7 +390,12 @@ export function buildPlayerMesh() {
 
   const clone = skeletonClone(gltfTemplate.scene);
   clone.visible = false;
-  clone.traverse((ch) => { if (ch.isMesh) ch.castShadow = true; });
+  clone.traverse((ch) => {
+    if (ch.isMesh) {
+      ch.castShadow = true;
+      ch.frustumCulled = false; // SkinnedMesh bounding sphere is bind-pose only; disable culling
+    }
+  });
   scene.add(clone);
 
   const mixer = new THREE.AnimationMixer(clone);
