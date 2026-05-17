@@ -22,6 +22,7 @@ import { attachWeapons3pToHand } from './weaponFBX.js';
 // ── State ──────────────────────────────────────────────────────────────────
 let gltfTemplate = null;
 export let usingGLTF = false;
+let _gltfDiagDone = false; // one-shot first-clone diagnostic
 
 // ── Player GLTF instance (built once after GLB loads) ─────────────────────
 export let playerMesh = null;
@@ -311,6 +312,17 @@ export function buildEnemyMesh(wx, wz, role = 'assault') {
     }
   });
   scene.add(clone);
+  if (!_gltfDiagDone) {
+    _gltfDiagDone = true;
+    const _meshInfo = [];
+    clone.traverse(ch => {
+      if (!ch.isMesh) return;
+      const mats = Array.isArray(ch.material) ? ch.material : [ch.material];
+      const matStr = mats.map(m => `transparent=${m?.transparent},opacity=${m?.opacity?.toFixed(2)},colorWrite=${m?.colorWrite}`).join(';');
+      _meshInfo.push(`  ${ch.name}: vis=${ch.visible} fc=${ch.frustumCulled} | ${matStr}`);
+    });
+    console.log(`[GLTF-DIAG] first enemy clone — pos(${wx.toFixed(1)},0,${wz.toFixed(1)}) cloneVis=${clone.visible} inScene=${!!clone.parent}\n${_meshInfo.join('\n') || '  (no meshes found!)'}`);
+  }
 
   // Build AnimationMixer — load every clip we recognise
   const mixer = new THREE.AnimationMixer(clone);

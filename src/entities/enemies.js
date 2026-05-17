@@ -265,6 +265,22 @@ export function triggerDeath() {
   }
 }
 
+window._debugEnemies = () => {
+  const rows = enemies.map((e, i) => {
+    const meshes = [];
+    e.mesh?.traverse(ch => { if (ch.isMesh) meshes.push(`${ch.name}:vis=${ch.visible},fc=${ch.frustumCulled}`); });
+    return {
+      i, dead: e.dead, state: e.state,
+      x: e.x?.toFixed(1), z: e.z?.toFixed(1),
+      meshInScene: !!e.mesh?.parent,
+      cloneVis: e.mesh?.visible,
+      meshes: meshes.join(' | ') || 'NONE',
+    };
+  });
+  console.table(rows);
+  return rows;
+};
+
 export function deactivateAllEnemies() {
   for (const e of enemies) {
     e.dead = true;
