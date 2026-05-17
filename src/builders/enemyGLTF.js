@@ -271,6 +271,16 @@ export async function tryLoadEnemyGLTF() {
   try {
     const loader = new GLTFLoader();
     const gltf = await loader.loadAsync(import.meta.env.BASE_URL + 'models/enemy.glb');
+    // GLB reuses the same Float32Array between clips that share a GLTF accessor.
+    // Any in-place mutation on one clip's track values silently corrupts others
+    // (applyCORR on Crouch_Fwd_Loop also mutates attack/idle since they share a buffer,
+    // then Crouch_Idle_Loop's pass applies CORR a second time → +180°X flip).
+    // Clone all track data once here so every subsequent mutation is independent.
+    for (const clip of gltf.animations)
+      for (const track of clip.tracks) {
+        track.values = track.values.slice();
+        track.times  = track.times.slice();
+      }
     applyCORR(gltf.animations);           // put crouch clips in CORR space (fixes hands-up)
     normaliseClipQuatSigns(gltf.animations);
     // Align jump phase clip boundaries — sign-flip guard after shared-space normalisation.
