@@ -211,9 +211,11 @@ function _enterLocoMode(e) {
 const INERTIA_OMEGA = 22;
 const INERTIA_OMEGA_CROSS = 80;
 const INERTIA_OMEGA_SNAP  = 300;
-// Clips where the end-of-clip pose is so different from loco that even OMEGA_CROSS
-// leaves a visible tilt for several frames — snap bones almost instantly instead.
-const INSTANT_SNAP_CLIPS = new Set(['roll']);
+// Clips where the end-of-clip (or entry) pose is so different from loco that even
+// OMEGA_CROSS leaves a visible sweep for several frames — snap almost instantly instead.
+// roll:         last frame mid-roll → ~34° pelvis lean when returning to loco
+// crouch/walk:  upperarm_l is ~167° different from idle → visible 6-frame arm sweep
+const INSTANT_SNAP_CLIPS = new Set(['roll', 'crouch', 'crouch_walk']);
 
 function _tickInertia(e, dt) {
   if (!e._inertia) return;
@@ -264,9 +266,11 @@ export function crossfade(e, to, dur = 0.22) {
   // the sudden switch. currentClip=null means we just exited loco — handled in the
   // else branch below which knows we came from CORR space.
   if (dur === 0 && e.currentClip !== null) {
+    const isSnap   = INSTANT_SNAP_CLIPS.has(to) || INSTANT_SNAP_CLIPS.has(e.currentClip);
     const fromCorr = e._inLocoMode || CORR_CLIPS.has(e.currentClip);
     const toCorr   = CORR_CLIPS.has(to);
-    const omega = (fromCorr === toCorr) ? INERTIA_OMEGA : INERTIA_OMEGA_CROSS;
+    const omega = isSnap ? INERTIA_OMEGA_SNAP
+                : (fromCorr === toCorr) ? INERTIA_OMEGA : INERTIA_OMEGA_CROSS;
     _snapBones(e, omega);
   }
   const from = e.actions[e.currentClip];
@@ -280,9 +284,9 @@ export function crossfade(e, to, dur = 0.22) {
     // Phase 41 pre-started loco clips at weight=0; without this, effectiveWeight = 0 * interpolant = 0 forever.
     toAct.reset().setEffectiveWeight(1).fadeIn(dur).play();
   } else {
-    // No prior clip (just exited loco). Always use fast omega: loco bone poses
-    // differ significantly from any override clip, slow arc looks bad regardless of space.
-    _snapBones(e, INERTIA_OMEGA_CROSS);
+    // No prior clip (just exited loco). Use instant-snap omega when entering a large-pose clip.
+    const omega = INSTANT_SNAP_CLIPS.has(to) ? INERTIA_OMEGA_SNAP : INERTIA_OMEGA_CROSS;
+    _snapBones(e, omega);
     // Skipping fadeIn: starting at weight 0 and ramping would show bind/T-pose for the duration.
     toAct.reset().setEffectiveWeight(1).play();
   }
