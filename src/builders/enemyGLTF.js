@@ -87,27 +87,7 @@ const RETARGETED_CLIPS = new Set([
   'jump_loop','nade','run_back','walk_back','strafe_l','strafe_r',
 ]);
 const _corrInv = new THREE.Quaternion(-Math.SQRT1_2, 0, 0, Math.SQRT1_2); // -90° X
-const _corr    = new THREE.Quaternion( Math.SQRT1_2, 0, 0, Math.SQRT1_2); // +90° X
 const _qTmp    = new THREE.Quaternion();
-
-// Original-space clips that need CORR applied to match loco clip space.
-// These were authored in UE4 mannequin original space (no merge_animations.py CORR),
-// causing arms to appear rotated ~90°X upward relative to CORR-space loco clips.
-const NEEDS_CORR_CLIPS = new Set(['Crouch_Idle_Loop', 'Crouch_Fwd_Loop']);
-
-function applyCORR(clips) {
-  for (const clip of clips) {
-    if (!NEEDS_CORR_CLIPS.has(clip.name)) continue;
-    for (const track of clip.tracks) {
-      if (!track.name.endsWith('.quaternion')) continue;
-      const v = track.values;
-      for (let i = 0; i < v.length; i += 4) {
-        _qTmp.set(v[i], v[i+1], v[i+2], v[i+3]).premultiply(_corr);
-        v[i] = _qTmp.x; v[i+1] = _qTmp.y; v[i+2] = _qTmp.z; v[i+3] = _qTmp.w;
-      }
-    }
-  }
-}
 
 function undoMergeCORR(clips) {
   for (const clip of clips) {
@@ -272,16 +252,12 @@ export async function tryLoadEnemyGLTF() {
     const loader = new GLTFLoader();
     const gltf = await loader.loadAsync(import.meta.env.BASE_URL + 'models/enemy.glb');
     // GLB reuses the same Float32Array between clips that share a GLTF accessor.
-    // Any in-place mutation on one clip's track values silently corrupts others
-    // (applyCORR on Crouch_Fwd_Loop also mutates attack/idle since they share a buffer,
-    // then Crouch_Idle_Loop's pass applies CORR a second time → +180°X flip).
-    // Clone all track data once here so every subsequent mutation is independent.
+    // Clone all track data before any mutation so each clip owns its arrays.
     for (const clip of gltf.animations)
       for (const track of clip.tracks) {
         track.values = track.values.slice();
         track.times  = track.times.slice();
       }
-    applyCORR(gltf.animations);           // put crouch clips in CORR space (fixes hands-up)
     normaliseClipQuatSigns(gltf.animations);
     // Align jump phase clip boundaries — sign-flip guard after shared-space normalisation.
     alignClipBoundaries(gltf.animations, 'jump_start', 'jump_loop');

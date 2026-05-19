@@ -189,9 +189,12 @@ function _enterLocoMode(e) {
   if (e._inLocoMode) return;
   const a = e.actions[e.currentClip];
   if (a && !LOCO_CLIPS.has(e.currentClip)) {
-    const crossSpace = !CORR_CLIPS.has(e.currentClip);
-    const largePose  = LARGE_POSE_CLIPS.has(e.currentClip);
-    _snapBones(e, crossSpace || largePose ? INERTIA_OMEGA_CROSS : INERTIA_OMEGA);
+    const crossSpace  = !CORR_CLIPS.has(e.currentClip);
+    const largePose   = LARGE_POSE_CLIPS.has(e.currentClip);
+    const instantSnap = INSTANT_SNAP_CLIPS.has(e.currentClip);
+    _snapBones(e, instantSnap ? INERTIA_OMEGA_SNAP
+                 : crossSpace || largePose ? INERTIA_OMEGA_CROSS
+                 : INERTIA_OMEGA);
     a.setEffectiveWeight(0);
   }
   e._inLocoMode = true;
@@ -204,8 +207,13 @@ function _enterLocoMode(e) {
 // OMEGA=22  → settles in ~0.35s  — used for same-space transitions
 // OMEGA=80  → settles in ~0.10s  — used for cross-space (CORR ↔ original) to
 //             keep the intermediate pose visible for only 2–3 frames
+// OMEGA=300 → settles in ~0.02s  — used for roll exit (large mid-roll pose diff)
 const INERTIA_OMEGA = 22;
 const INERTIA_OMEGA_CROSS = 80;
+const INERTIA_OMEGA_SNAP  = 300;
+// Clips where the end-of-clip pose is so different from loco that even OMEGA_CROSS
+// leaves a visible tilt for several frames — snap bones almost instantly instead.
+const INSTANT_SNAP_CLIPS = new Set(['roll']);
 
 function _tickInertia(e, dt) {
   if (!e._inertia) return;
