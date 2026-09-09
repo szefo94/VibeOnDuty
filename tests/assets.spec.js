@@ -44,6 +44,7 @@ test.describe('character asset pipeline', () => {
     const errors = [];
     page.on('pageerror', e => { if (!/pointer lock/i.test(e.message)) errors.push(e.message); });
     await page.goto('/');
+    await expect(page.locator('#startbtn')).toBeEnabled({ timeout: 20000 });
     await page.locator('#startbtn').click();
     await page.waitForTimeout(4000);   // let enemies spawn, animate and blend
     expect(errors).toEqual([]);
@@ -55,25 +56,41 @@ test.describe('animation transition logging', () => {
     const logs = [];
     page.on('console', m => logs.push(m.text()));
     await page.goto('/');
-    await page.locator('#startbtn').click();
+    await expect(page.locator('#range-startbtn')).toBeEnabled({ timeout: 20000 });
+    await page.locator('#range-startbtn').click();   // no hostiles, no incidental churn
+    await page.waitForTimeout(2500);
 
-    // Nothing should be logged until it is asked for.
-    await page.waitForTimeout(1500);
-    expect(logs.filter(l => l.includes('[crossfade:') || l.includes('[loco:'))).toEqual([]);
+    const transitions = () => logs.filter(l => l.includes('[crossfade:') || l.includes('[loco:'));
 
-    await page.evaluate(() => window.__animDebug(true));
-    await page.waitForTimeout(4000);
+    // Nothing until it is asked for.
+    await page.keyboard.down('ControlLeft');
+    await page.waitForTimeout(500);
+    await page.keyboard.up('ControlLeft');
+    await page.waitForTimeout(500);
+    expect(transitions()).toEqual([]);
 
-    // Enemies constantly change state, so transitions must appear once enabled.
-    const t = logs.filter(l => l.includes('[crossfade:') || l.includes('[loco:'));
+    // Drive the transition rather than waiting for one: crouch forces the player out
+    // of the loco blend tree and back in, which is deterministic. The previous version
+    // waited on enemies changing state by themselves and logged nothing under CI's
+    // software renderer.
+    await page.evaluate(() => window.__animDebug('player'));
+    for (let i = 0; i < 3; i++) {
+      await page.keyboard.down('ControlLeft');
+      await page.waitForTimeout(400);
+      await page.keyboard.up('ControlLeft');
+      await page.waitForTimeout(400);
+    }
+
+    const t = transitions();
     expect(t.length).toBeGreaterThan(0);
-    expect(t.every(l => /\[(crossfade|loco):(player|enemy)\]/.test(l))).toBe(true);
+    expect(t.every(l => /\[(crossfade|loco):player\]/.test(l))).toBe(true);
   });
 });
 
 test.describe('upper-body aim layer', () => {
   test('crouch keeps the arms in the aim pose, not the crouch clip pose', async ({ page }) => {
     await page.goto('/');
+    await expect(page.locator('#range-startbtn')).toBeEnabled({ timeout: 20000 });
     await page.locator('#range-startbtn').click();   // no hostiles
     await page.waitForTimeout(2500);
     await page.keyboard.press('KeyV');               // third person

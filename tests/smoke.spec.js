@@ -24,9 +24,10 @@ test.describe('VIBE ON DUTY — smoke tests', () => {
   test('clicking DROP IN hides the overlay', async ({ page }) => {
     await page.goto('/');
 
-    // Wait for the start button to be ready
+    // Buttons render immediately but stay disabled until loadAll() resolves, so
+    // waiting only for visibility can click a dead button.
     const startBtn = page.locator('#startbtn');
-    await expect(startBtn).toBeVisible();
+    await expect(startBtn).toBeEnabled({ timeout: 20000 });
 
     await startBtn.click();
 
@@ -69,6 +70,7 @@ test.describe('VIBE ON DUTY — S&D mode smoke tests', () => {
     });
 
     await page.goto('/');
+    await expect(page.locator('#snd-startbtn')).toBeEnabled({ timeout: 20000 });
     await page.locator('#snd-startbtn').click();
 
     await expect(page.locator('#overlay')).toBeHidden();
@@ -78,6 +80,7 @@ test.describe('VIBE ON DUTY — S&D mode smoke tests', () => {
 
   test('S&D match header shows correct initial values', async ({ page }) => {
     await page.goto('/');
+    await expect(page.locator('#snd-startbtn')).toBeEnabled({ timeout: 20000 });
     await page.locator('#snd-startbtn').click();
 
     await expect(page.locator('#snd-round-num')).toHaveText('ROUND 1/7');
