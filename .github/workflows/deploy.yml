@@ -1,8 +1,11 @@
 name: Deploy to GitHub Pages
 
+# Pushing to either branch republishes the whole site, because GitHub Pages serves a
+# single artifact per repo: prod at /VibeOnDuty/ and staging at /VibeOnDuty/next/ are
+# built together and uploaded as one tree.
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   workflow_dispatch:
 
 permissions:
@@ -15,8 +18,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Gate: the Pages deploy runs only if lint, types, unit and e2e all pass. Without
-  # this, deploy.yml and test.yml ran in parallel and a red build still shipped.
+  # Gate: the deploy runs only if lint, types, unit and e2e all pass. Without this,
+  # deploy.yml and test.yml raced and a red build still shipped.
   tests:
     uses: ./.github/workflows/test.yml
 
@@ -24,20 +27,53 @@ jobs:
     needs: tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out main (prod)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: prod
+          fetch-depth: 0        # tags, so the build stamp can name a release
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
 
-      - run: npm ci
+      - name: Build prod
+        working-directory: prod
+        run: npm ci && npm run build
 
-      - run: npm run build
+      - name: Does a develop branch exist?
+        id: staging
+        run: |
+          if git ls-remote --exit-code --heads "https://github.com/${GITHUB_REPOSITORY}" develop >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "No develop branch yet — publishing prod only."
+          fi
+
+      - name: Check out develop (staging)
+        if: steps.staging.outputs.exists == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+          path: staging
+          fetch-depth: 0
+
+      - name: Build staging into /next/
+        if: steps.staging.outputs.exists == 'true'
+        working-directory: staging
+        env:
+          PUBLIC_BASE: /VibeOnDuty/next/
+          BUILD_BRANCH: develop
+        run: |
+          npm ci && npm run build
+          mkdir -p ../prod/dist/next
+          cp -r dist/* ../prod/dist/next/
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: prod/dist
 
   deploy:
     needs: build

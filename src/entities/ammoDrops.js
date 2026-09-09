@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { scene, camera } from '../scene.js';
-import { CELL, RESERVE_AMMO } from '../config.js';
+import { RESERVE_AMMO } from '../config.js';
 import { groundElevation } from '../map.js';
 import { dist2 } from '../math.js';
 import { player } from './player.js';

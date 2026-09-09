@@ -6,7 +6,6 @@ import { tickEnemyAnimation } from '../builders/enemyAnimations.js';
 import { disposeEnemyMaterials } from '../builders/enemyGLTF.js';
 import { tickFriendlyBot } from './friendlyBots.js';
 import { hasLOS } from '../utils/los.js';
-import { player } from './player.js';
 import { isAnyModeActive } from '../modes/modeManager.js';
 import { STATE_MAP, PATROL_STATE } from '../ai/enemyStates.js';
 import { applyDrag } from '../math.js';

@@ -125,3 +125,4 @@ export interface Drone extends EntityBase {
 declare const __BUILD_SHA__: string;
 declare const __BUILD_BRANCH__: string;
 declare const __BUILD_TIME__: string;
+declare const __BUILD_TAG__: string;

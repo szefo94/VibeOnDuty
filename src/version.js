@@ -4,9 +4,13 @@ export const BUILD = {
   sha:    typeof __BUILD_SHA__    !== 'undefined' ? __BUILD_SHA__    : 'dev',
   branch: typeof __BUILD_BRANCH__ !== 'undefined' ? __BUILD_BRANCH__ : 'local',
   time:   typeof __BUILD_TIME__   !== 'undefined' ? __BUILD_TIME__   : '',
+  tag:    typeof __BUILD_TAG__    !== 'undefined' ? __BUILD_TAG__    : '',
 };
 
-export const VERSION_STRING = `${BUILD.branch}@${BUILD.sha}`;
+// "v0.2.0 (main@abc1234)" once a tag exists, "main@abc1234" before that.
+export const VERSION_STRING = BUILD.tag
+  ? `${BUILD.tag} (${BUILD.branch}@${BUILD.sha})`
+  : `${BUILD.branch}@${BUILD.sha}`;
 
 // Stamps the version into the DOM and the console so it can be read three ways:
 // the corner of the start overlay, the console on boot, and window.__build.

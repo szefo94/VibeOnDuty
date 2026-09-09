@@ -1,29 +1,6 @@
 import * as THREE from 'three';
 import { camera } from '../scene.js';
-import {
-  CELL,
-  PLAYER_H,
-  PLAYER_H_CROUCH,
-  PLAYER_R,
-  MOVE_SPEED,
-  SPRINT_MULT,
-  MAX_HP,
-  GRAVITY,
-  JUMP_FORCE,
-  HEAD_BOB_PITCH,
-  SLIDE_SPEED,
-  SLIDE_DUR,
-  SLIDE_CANCEL_JUMP,
-  WEAPONS,
-  DEFAULT_WEAPON,
-  LEAN_ANGLE,
-  LEAN_SHIFT,
-  LEAN_SPEED,
-  DIVE_SPEED,
-  DIVE_LAUNCH_Y,
-  DIVE_DUR,
-  ROLL_ANIM_DUR,
-} from '../config.js';
+import { PLAYER_H, PLAYER_H_CROUCH, PLAYER_R, MOVE_SPEED, SPRINT_MULT, MAX_HP, GRAVITY, JUMP_FORCE, HEAD_BOB_PITCH, SLIDE_SPEED, SLIDE_DUR, SLIDE_CANCEL_JUMP, WEAPONS, DEFAULT_WEAPON, LEAN_ANGLE, LEAN_SPEED, DIVE_SPEED, DIVE_LAUNCH_Y, DIVE_DUR, ROLL_ANIM_DUR } from '../config.js';
 import { MAP_W, MAP_H, groundElevation, canMoveTo, worldToCell } from '../map.js';
 import { keys, locked, mouseHeld } from '../input.js';
 import { tickImpacts } from '../fx/impacts.js';

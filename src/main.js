@@ -17,7 +17,7 @@ import { startLoop, setThirdPerson, getThirdPerson, toggleTpSide } from './loop.
 import { startSnd, nextRound, getSndSitePositions, isMatchOver, setSndMap, computeBotRole } from './modes/snd.js';
 import { on } from './events.js';
 import { getMode } from './modes/modeManager.js';
-import { toggleBuyPanel, isBuyPhaseActive, isBuyPanelOpen, buyWeapon } from './modes/buyMenu.js';
+import { toggleBuyPanel, isBuyPanelOpen, buyWeapon } from './modes/buyMenu.js';
 import { startTdm } from './modes/tdm.js';
 import { setDifficulty } from './difficulty.js';
 import { tryLoadEnemyGLTF, buildPlayerMesh, tintEnemyMesh, playerMesh } from './builders/enemyGLTF.js';

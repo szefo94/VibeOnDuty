@@ -1,7 +1,5 @@
 import * as THREE from 'three';
-import {
-  CELL, PLAYER_H, ENEMY_SPEED, ENEMY_ROT_SPD, ENEMY_SHOOT_RANGE,
-} from '../config.js';
+import { CELL, PLAYER_H, ENEMY_SPEED, ENEMY_ROT_SPD, ENEMY_SHOOT_RANGE } from '../config.js';
 import { getDifficulty } from '../difficulty.js';
 import { canMoveTo, worldToCell, groundElevation } from '../map.js';
 import { slerp, normA } from '../math.js';
@@ -60,7 +58,7 @@ export function semiAlertEnemy(e) {
 // Runs path-finding, S&D actions, bot-vs-bot shooting, movement, rotation.
 // Returns isMoving.
 function _tickMovement(e, dt, ctx, speedMult, rotMult) {
-  const { ts, eGround, pdx, pdz, distP } = ctx;
+  const { ts, eGround, distP } = ctx;
   const d                = getDifficulty();
   const bombPos          = _snd?.getBombPos() ?? null;
   const isEnemyAtk       = _snd?.isActive() && e.sndTeam === 'enemy' && _snd?.getPlayerRole() === 'defend';

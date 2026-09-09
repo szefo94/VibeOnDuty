@@ -15,7 +15,7 @@ const mVisor  = mm(0x0a1520, 0.10, 0.75);   // visor
 const mGlove  = mm(0x1a1a1a, 0.70, 0.08);   // gloves
 const mBoots  = mm(0x111111, 0.78, 0.10);   // boots
 const mGun    = mm(0x0f0f0f, 0.25, 0.80);   // rifle body
-const mGunW   = mm(0x1a1410, 0.55, 0.12);   // reserved (unused after weapon3p)
+const _mGunW   = mm(0x1a1410, 0.55, 0.12);   // reserved (unused after weapon3p)
 const mPad    = mm(0x4a6741, 0.80, 0.03);   // knee/elbow pads
 
 function p(geo, mat, x, y, z, rx = 0, ry = 0, rz = 0) {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { rampOf, isRamp, isCrack, isColumn, isSideWall, navCell, rampId, rampSurface } from './tiles.js';
-import { bilinearFrac, revolvedFrac, diagFrac, RAMP_PROFILE } from './rampMath.js';
+import { revolvedFrac, diagFrac, RAMP_PROFILE } from './rampMath.js';
 
 // Reference implementation: the exact arithmetic that lived inline in map.js's
 // _floorSurface() before tiles.js existed. The refactor must not move a single

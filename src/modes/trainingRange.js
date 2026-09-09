@@ -1,13 +1,8 @@
-import { CELL, PLAYER_H, WEAPONS } from '../config.js';
-import { camera } from '../scene.js';
+import { CELL, WEAPONS } from '../config.js';
 import { player } from '../entities/player.js';
-import { show1pWeapon, show3pWeapon } from '../builders/weapon.js';
 import { updateHUD, showMsg } from '../hud/overlay.js';
 import { setMode } from './modeManager.js';
-import {
-  rangeTargets, spawnRangeTargets, clearRangeTargets,
-  tickDummies, popUpTarget, dropTarget, setTargetActive, registerHit, setTargetMoveMode,
-} from '../entities/targetDummy.js';
+import { rangeTargets, spawnRangeTargets, clearRangeTargets, tickDummies, popUpTarget, dropTarget, setTargetActive, setTargetMoveMode } from '../entities/targetDummy.js';
 import { rangeMapDef } from '../maps/range.js';
 
 // ── Target layout ─────────────────────────────────────────────────────────

@@ -441,7 +441,7 @@ export function setSkeletonDebugVisible(v) {
 // Called every frame by both enemy-bot and friendly-bot tickers.
 const SNAP_CLIPS = new Set(['crouch', 'crouch_walk', 'death', 'hit', 'roll', 'jump_start', 'jump_land']);
 
-export function tickEnemyAnimation(e, dt, isMoving) {
+export function tickEnemyAnimation(e, dt, _isMoving) {
   const nowOnGround = e.onGround;
 
   // Jump phase bookkeeping

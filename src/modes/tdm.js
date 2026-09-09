@@ -1,11 +1,11 @@
 import { setMode } from './modeManager.js';
-import { on, emit } from '../events.js';
+import { on } from '../events.js';
 import { player } from '../entities/player.js';
-import { enemies, spawnEnemyIntoSlot, restoreFriendIndicator } from '../entities/enemies.js';
+import { spawnEnemyIntoSlot, restoreFriendIndicator } from '../entities/enemies.js';
 import { tintEnemyMesh } from '../builders/enemyGLTF.js';
 import { camera } from '../scene.js';
 import { PLAYER_H, MAX_HP, WEAPONS } from '../config.js';
-import { updateHUD, showMsg, showStatus } from '../hud/overlay.js';
+import { updateHUD, showMsg } from '../hud/overlay.js';
 import { setGameRunning } from '../input.js';
 import { isTouchDevice } from '../touch.js';
 import { show1pWeapon, show3pWeapon } from '../builders/weapon.js';

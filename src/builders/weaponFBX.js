@@ -64,7 +64,7 @@ export async function tryLoadWeaponFBX(path = import.meta.env.BASE_URL + 'models
 // Separate from FPV weapon — baked plain Mesh, auto-scaled, attached to hand_r.
 
 // Longest axis of P90 (barrel along Z) mapped to TARGET_LEN world units
-const P90_TARGET_LEN = 0.52; // ~52 cm — realistic SMG length in scene
+const _P90_TARGET_LEN = 0.52; // ~52 cm — realistic SMG length in scene
 
 // Rotation in hand_r bone-local space.
 // hand_r palm faces roughly +Y, fingers point +X in Quaternius rig.

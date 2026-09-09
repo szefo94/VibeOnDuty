@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { scene, camera } from '../scene.js';
-import { CELL, GRENADE_ENERGY_COST, MAX_ENERGY, ENERGY_PER_DMG, MAX_HP } from '../config.js';
+import { GRENADE_ENERGY_COST, MAX_ENERGY, ENERGY_PER_DMG, MAX_HP } from '../config.js';
 import { groundElevation } from '../map.js';
 import { mm } from '../materials.js';
 import { grenadeFalloff, grenadeEntityDamage, grenadePlayerDamage } from '../combat/damage.js';

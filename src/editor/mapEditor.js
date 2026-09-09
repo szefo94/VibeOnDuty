@@ -669,7 +669,7 @@ const SLOT_COUNT = 5;
 function _slotLabel(idx) {
   const raw = localStorage.getItem(`vod_slot_${idx}`);
   if (!raw) return '[ empty ]';
-  try { return JSON.parse(raw).name || `Map ${idx + 1}`; } catch (_) { return `Map ${idx + 1}`; }
+  try { return JSON.parse(raw).name || `Map ${idx + 1}`; } catch { return `Map ${idx + 1}`; }
 }
 function _saveToSlot(idx) {
   if (idx < 0 || idx >= SLOT_COUNT) return;
@@ -1162,7 +1162,7 @@ export function initEditor() {
 
   document.getElementById('ed-import-btn').addEventListener('click', () => {
     const v = document.getElementById('ed-share-field').value.trim();
-    if (v) { try { _decode(v); } catch (_) { alert('Invalid map data.'); } }
+    if (v) { try { _decode(v); } catch { alert('Invalid map data.'); } }
   });
 
   document.getElementById('ed-back').addEventListener('click', closeEditor);

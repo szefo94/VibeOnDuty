@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { scene, camera } from '../scene.js';
-import { CELL, PLAYER_H, DRONE_ACCEL, DRONE_STRAFE, DRONE_DRAG, DRONE_MAX_SPEED, DRONE_ORBIT_DIST, RECON_FLY_H, RECON_SPEED, RECON_SCAN_R, RECON_SCAN_CD } from '../config.js';
+import { CELL, DRONE_ACCEL, DRONE_STRAFE, DRONE_DRAG, DRONE_MAX_SPEED, DRONE_ORBIT_DIST, RECON_FLY_H, RECON_SPEED, RECON_SCAN_R, RECON_SCAN_CD } from '../config.js';
 import { applyDrag } from '../math.js';
 import { MAP_W, MAP_H, MAP, isRamp, groundElevation } from '../map.js';
 import { spawnSmokeCloud } from '../fx/particles.js';

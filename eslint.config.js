@@ -13,6 +13,7 @@ export default [
         __BUILD_SHA__: 'readonly',
         __BUILD_BRANCH__: 'readonly',
         __BUILD_TIME__: 'readonly',
+        __BUILD_TAG__: 'readonly',
       },
     },
     rules: {
