@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { scene, camera } from '../scene.js';
 import { CELL, RESERVE_AMMO } from '../config.js';
-import { hAt, worldToCell } from '../map.js';
+import { groundElevation } from '../map.js';
 import { dist2 } from '../math.js';
 import { player } from './player.js';
 import { updateHUD, showMsg } from '../hud/overlay.js';
@@ -41,7 +41,7 @@ export function spawnAmmoDrop(wx, wz) {
   g.add(s2);
   const halo = new THREE.Mesh(new THREE.SphereGeometry(0.42, 8, 8), ammoGlowMat);
   g.add(halo);
-  const eGround = hAt(...worldToCell(wx, wz));
+  const eGround = groundElevation(wx, wz);
   g.position.set(wx, eGround + 0.19, wz);
   scene.add(g);
   ammoDrops.push({

@@ -3,7 +3,7 @@ import {
   CELL, PLAYER_H, ENEMY_SPEED, ENEMY_ROT_SPD, ENEMY_SHOOT_RANGE,
 } from '../config.js';
 import { getDifficulty } from '../difficulty.js';
-import { hAt, canMoveTo, worldToCell } from '../map.js';
+import { canMoveTo, worldToCell, groundElevation } from '../map.js';
 import { slerp, normA } from '../math.js';
 import { astar } from '../astar.js';
 import { camera } from '../scene.js';
@@ -96,7 +96,7 @@ function _tickMovement(e, dt, ctx, speedMult, rotMult) {
       if (friend.dead || friend.sndTeam !== 'friend') continue;
       const fdx = friend.x - e.x, fdz = friend.z - e.z;
       if (fdx * fdx + fdz * fdz > ENEMY_SHOOT_RANGE * ENEMY_SHOOT_RANGE) continue;
-      const fGround = hAt(...worldToCell(friend.x, friend.z));
+      const fGround = groundElevation(friend.x, friend.z);
       if (!hasLOS(e.x, eGround + PLAYER_H * 0.85, e.z, friend.x, fGround + PLAYER_H * 0.85, friend.z)) continue;
       e.botShootCd   = ts;
       e.muzzleFlashT = 55;
