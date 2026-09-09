@@ -50,31 +50,6 @@ test.describe('character asset pipeline', () => {
   });
 });
 
-test.describe('experimental retarget-space fix', () => {
-  test('fits a per-bone delta with a low residual and applies cleanly', async ({ page }) => {
-    const logs = [], errors = [];
-    page.on('console', m => logs.push(m.text()));
-    page.on('pageerror', e => { if (!/pointer lock/i.test(e.message)) errors.push(e.message); });
-
-    await page.addInitScript(() => localStorage.setItem('animSpaceFix', '1'));
-    await page.goto('/');
-    await page.waitForTimeout(3500);
-
-    const residuals = logs.filter(l => l.includes('space delta'));
-    expect(residuals.length, 'both source pairs should be fitted').toBe(2);
-
-    // A constant per-bone rotation should reproduce the paired clip closely; a large
-    // residual would mean the two clips are not the same animation and the delta is junk.
-    for (const line of residuals) {
-      const deg = Number(line.match(/residual ([\d.]+) deg/)[1]);
-      expect(deg, line).toBeLessThan(12);
-    }
-
-    expect(logs.find(l => l.includes('anim space fix applied to'))).toContain('10 clips');
-    expect(errors).toEqual([]);
-  });
-});
-
 test.describe('animation transition logging', () => {
   test('window.__animDebug turns on per-transition logs at runtime', async ({ page }) => {
     const logs = [];
@@ -93,5 +68,39 @@ test.describe('animation transition logging', () => {
     const t = logs.filter(l => l.includes('[crossfade:') || l.includes('[loco:'));
     expect(t.length).toBeGreaterThan(0);
     expect(t.every(l => /\[(crossfade|loco):(player|enemy)\]/.test(l))).toBe(true);
+  });
+});
+
+test.describe('upper-body aim layer', () => {
+  test('crouch keeps the arms in the aim pose, not the crouch clip pose', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('#range-startbtn').click();   // no hostiles
+    await page.waitForTimeout(2500);
+    await page.keyboard.press('KeyV');               // third person
+    await page.waitForTimeout(800);
+
+    const read = () => page.evaluate(() => {
+      const o = {};
+      for (const n of ['upperarm_l', 'upperarm_r', 'thigh_l'])
+        o[n] = window.__debugBone(n);
+      return o;
+    });
+
+    const standing = await read();
+    await page.keyboard.down('ControlLeft');
+    await page.waitForTimeout(1500);
+    const crouched = await read();
+    await page.keyboard.up('ControlLeft');
+
+    const ang = (a, b) => {
+      const d = Math.abs(a[0]*b[0] + a[1]*b[1] + a[2]*b[2] + a[3]*b[3]);
+      return Math.acos(Math.min(1, d)) * 2 * 180 / Math.PI;
+    };
+    // Legs must actually crouch...
+    expect(ang(standing.thigh_l, crouched.thigh_l)).toBeGreaterThan(20);
+    // ...while the shoulders stay on the aim pose. Without the layer these sat
+    // ~167 deg apart, which is the "arms revolving from the shoulders" report.
+    expect(ang(standing.upperarm_l, crouched.upperarm_l)).toBeLessThan(15);
+    expect(ang(standing.upperarm_r, crouched.upperarm_r)).toBeLessThan(15);
   });
 });

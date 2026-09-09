@@ -130,6 +130,28 @@ It is off by default because the per-clip delta assignment is chosen by measurem
 rather than derived, so it is partly curve-fitting and needs a human eye before it
 ships. Turn it on, play, and judge crouch / roll / jump / death by eye.
 
+## What actually shipped: an upper-body aim layer
+
+The runtime whole-clip correction was built, measured, rendered, and **removed** — see
+the next section for why. What replaced it exploits one number from the table above:
+
+> the spine differs by only **13-15 deg** between the two families, against
+> **150-170 deg** at clavicle / upperarm / thigh.
+
+So arm rotations lifted from the aim clip land correctly on a crouch spine. The crouch
+clips keep driving legs, pelvis and spine; `clavicle/upperarm/lowerarm/hand` on both
+sides are overwritten with the aim pose after the mixer and inertia passes have run.
+Applied only to `crouch` and `crouch_walk`, where the character is meant to be holding
+the weapon — death, dance, punch and roll keep their own full-body arms.
+
+Before: crouching with both arms hanging back, ~167 deg off at the shoulder.
+After: crouched with the rifle held forward, shoulders within ~15 deg of the aim pose
+(asserted in `tests/assets.spec.js`).
+
+This does not fix the underlying split — it routes around it for the one case where it
+was most visible. Legs and spine still come from the other family, so a crouch still
+differs from an idle by more than it should. The re-export below remains the real fix.
+
 ## Why the search for a runtime correction stopped
 
 Three variants were measured. Each fixes one thing and breaks another:
@@ -154,7 +176,15 @@ Two lessons worth keeping:
 
 Taken together these are the empirical proof that the retarget was not a rigid
 rest-pose change. No constant per-bone rotation transfers across these clips, so
-runtime correction can only ever move the error around. Stop here and fix the asset.
+runtime correction can only ever move the error around.
+
+Rendering it settled the question. With the correction enabled the crouch does not
+merely sit closer to idle, it **lies flat and floats**, and the jump stretches. The
+metric (mean bone angle to the idle anchor) rewarded "looks more like idle", which is
+not the same as "is a correct pose" — a rigid per-bone rotation applied to a whole clip
+destroys it. The code was removed rather than left switched off, because a default-off
+trap is exactly how the +90X theory survived four rounds. Screenshot the pose before
+trusting any angle table, including the ones above.
 
 ## The actual fix (upstream, in Blender)
 

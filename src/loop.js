@@ -5,7 +5,7 @@ import { touchLook } from './touch.js';
 import { gameRunning, keys } from './input.js';
 import { player, updatePlayer } from './entities/player.js';
 import { playerBody } from './builders/playerBody.js';
-import { wpn } from './builders/weapon.js';
+import { wpn, weapon3p as wpn3p } from './builders/weapon.js';
 import { enemies, spawnEnemyIntoSlot } from './entities/enemies.js';
 import { updateEnemies } from './entities/enemyUpdate.js';
 import { tickWave } from './entities/waveSystem.js';
@@ -18,7 +18,7 @@ import { tickScreenShake } from './fx/screenShake.js';
 import { updateWeaponDeath } from './combat/shoot.js';
 import { tickGamepad } from './gamepad.js';
 import { drawMinimap } from './hud/radar.js';
-import { playerMesh, playerMixer, playerActions } from './builders/enemyGLTF.js';
+import { playerMesh, playerMixer, playerActions, playerAimLayer } from './builders/enemyGLTF.js';
 import { crossfade, tickInertia, setLocoWeights, enterLocoMode, exitLocoMode, tickBoneFlipMonitor } from './builders/enemyAnimations.js';
 import { tickKillcam, isKillcamActive } from './replay/killcam.js';
 import { adaptTick } from './ai/difficultyAdapter.js';
@@ -129,6 +129,7 @@ export function loop(ts) {
     if (playerMesh && playerMixer) {
       // Sync action table once playerActions is populated after load
       if (!playerAnim.actions && playerActions) playerAnim.actions = playerActions;
+      if (!playerAnim._aimLayer && playerAimLayer) playerAnim._aimLayer = playerAimLayer;
 
       // Lazy bone collection for inertial blending
       if (!playerAnim._bonesInit) {
@@ -328,6 +329,47 @@ export function loop(ts) {
   drawHUD();
   requestAnimationFrame(loop);
 }
+
+// Console helper for third-person problems: reports where the 3p weapon group
+// actually lives in the scene graph, whether anything in it is visible, and the
+// state of the first/third person blend. window.__debug3p()
+// Reads one bone's current local quaternion off the player rig — used by the
+// aim-layer test and handy when diagnosing a pose by hand.
+window.__debugBone = (name) => {
+  const b = playerMesh?.getObjectByName(name);
+  return b ? b.quaternion.toArray() : null;
+};
+
+window.__debug3p = () => {
+  const chain = [];
+  for (let n = wpn3p.parent; n; n = n.parent) chain.push(n.name || n.type);
+  const groups = wpn3p.children.map(
+    (g) => `${g.name || g.type}:vis=${g.visible},meshes=${g.children.length}`
+  );
+  const wp = new THREE.Vector3(), ws = new THREE.Vector3();
+  wpn3p.getWorldPosition(wp);
+  wpn3p.getWorldScale(ws);
+  const bb = new THREE.Box3().setFromObject(wpn3p);
+  const bs = bb.isEmpty() ? new THREE.Vector3() : bb.getSize(new THREE.Vector3());
+  const camDist = camera.position.distanceTo(wp);
+  const info = {
+    thirdPerson, tpTransition: +tpTransition.toFixed(3),
+    playerMesh: playerMesh ? `vis=${playerMesh.visible},inScene=${!!playerMesh.parent}` : 'NONE',
+    playerBodyVisible: playerBody.visible,
+    weapon3pParent: chain.join(' < ') || 'DETACHED',
+    weapon3pVisible: wpn3p.visible,
+    weapon3pWorldPos: `${wp.x.toFixed(2)},${wp.y.toFixed(2)},${wp.z.toFixed(2)}`,
+    weapon3pLocalScale: `${wpn3p.scale.x.toFixed(3)}`,
+    weapon3pWORLDscale: `${ws.x.toFixed(4)},${ws.y.toFixed(4)},${ws.z.toFixed(4)}`,
+    weapon3pWorldSizeM: `${bs.x.toFixed(3)} x ${bs.y.toFixed(3)} x ${bs.z.toFixed(3)}`,
+    distFromCamera: camDist.toFixed(2),
+    frustumCulledFlags: wpn3p.children.flatMap(g=>g.children.map(m=>m.frustumCulled)).join(','),
+    groups: groups.join(' | '),
+    fpWeaponVisible: wpn.visible,
+  };
+  console.table(info);
+  return info;
+};
 
 export function startLoop() {
   last = performance.now();

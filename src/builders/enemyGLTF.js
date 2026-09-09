@@ -27,6 +27,7 @@ export let usingGLTF = false;
 export let playerMesh = null;
 export let playerMixer = null;
 export let playerActions = null;
+export let playerAimLayer = null;
 
 // ── Clip aliases — maps internal state names to GLB clip names ────────────
 // Retargeted rifle clips listed first so they win over old pistol clips.
@@ -271,137 +272,51 @@ function stripRedundantTracks(gltf) {
   console.log(`[GLTF] stripped ${dropped} inert position/scale tracks (${kept} live tracks remain)`);
 }
 
-// ── EXPERIMENTAL: retarget-space correction (default OFF) ──────────────────
-// enemy.glb holds two clip families that were retargeted differently. Measured mean
-// bone angle from each clip to the idle anchor (`attack`):
+// ── Upper-body aim layer ──────────────────────────────────────────────────
+// enemy.glb's clips come from two retarget families (docs/ANIMATION-SPACES.md).
+// The crouch clips are in the family that does NOT hold a rifle, so their arms sit
+// ~167 deg away from the aim pose at the shoulder — the character crouches with its
+// arms hanging back instead of holding the weapon.
 //
-//   already aligned : shoot 0.4  reload 3.5  nade 6.2  strafe_l 4.2  walk 6.7  run 8.9
-//   misaligned      : Jump_Loop 39.9  Death01 42.4  Jump_Start 44.9  Crouch 45.7/46.3
-//                     Roll 48.5  Jump_Land 62.1  Punch 66.0/66.1  Dance_Loop 67.6
+// A whole-clip rotation cannot fix that: it was measured, built and rendered, and it
+// wrecks the pose (the crouch ends up lying flat). What does work is the standard
+// upper-body layer. The spine is nearly identical between the two families
+// (spine_01/02/03 differ by 13-15 deg, against 150-170 deg at clavicle/upperarm/thigh),
+// so arm rotations taken from the aim clip land correctly on a crouch spine.
 //
-// Every override transition therefore blends across 38-68 deg, which is what the
-// INSTANT_SNAP/omega machinery in enemyAnimations.js exists to hide.
-//
-// The two families differ by a per-bone rotation, recoverable from a pair of clips
-// that are the same animation in both spaces (fitting walk<-Walk_Loop reproduces the
-// retargeted clip to 3.2 deg, and predicts a held-out pair to 9.8 deg vs 70.4 deg
-// uncorrected). Applying it drops the misaligned clips to roughly 10-26 deg.
-//
-// It is OFF by default because the best-fitting delta differs per clip family, so it
-// is partly curve-fitting rather than a pure space transform, and the result needs a
-// human eye on it. The real fix is upstream: re-export from Blender against one rest
-// pose. See docs/ANIMATION-SPACES.md.
-//
-// Enable for a session with:  localStorage.animSpaceFix = 1  (then reload)
-const SPACE_FIX_SOURCES = {
-  // targetClip -> [retargetedClip, originalClip] pair to fit the delta from,
-  // chosen per clip by measured post-fix distance to the idle anchor.
-  Crouch_Idle_Loop: ['jump_loop', 'Jump_Loop'],   // 46.3 -> 19.3
-  Crouch_Fwd_Loop:  ['jump_loop', 'Jump_Loop'],   // 45.7 -> 18.1
-  Roll:             ['jump_loop', 'Jump_Loop'],   // 48.5 -> 25.8
-  Jump_Start:       ['jump_loop', 'Jump_Loop'],   // 44.9 -> 14.5
-  Jump_Loop:        ['jump_loop', 'Jump_Loop'],   // 39.9 ->  9.7
-  Death01:          ['jump_loop', 'Jump_Loop'],   // 42.4 -> 23.4
-  // Jump_Land MUST use the same delta as Jump_Start/Jump_Loop even though the walk
-  // delta scores better against idle (15 vs 34). Those three clips blend with each
-  // other in sequence on every landing, and correcting them differently wrecks that:
-  // jump_loop -> jump_land measures 5 deg raw, 5 deg with a shared delta, and 39 deg
-  // with mixed deltas. A clip's distance to idle is worth less than staying coherent
-  // with the clip it is actually blended from.
-  Jump_Land:        ['jump_loop', 'Jump_Loop'],   // 62.1 -> 33.8, keeps jump chain at 5
-  Dance_Loop:       ['walk',      'Walk_Loop'],   // 67.6 ->  9.2  (standalone -> loco)
-  Punch_Cross:      ['walk',      'Walk_Loop'],   // 66.1 -> 11.9  (paired with Punch_Jab)
-  Punch_Jab:        ['walk',      'Walk_Loop'],   // 66.0 -> 11.7  (paired with Punch_Cross)
-};
-// Invariant: clips that blend with each other must share a source pair above.
-//   jump_start/jump_loop/jump_land -> jump   |   crouch idle/fwd -> jump
-//   punch cross/jab -> walk                  |   roll, death, dance are standalone
+// So: legs and spine keep playing the crouch clip, arms are overwritten with the aim
+// pose. Applied only to clips where the character is meant to be holding the weapon —
+// death, dance, punch and roll keep their own full-body arms.
+const AIM_LAYER_BONES = [
+  'clavicle_l', 'upperarm_l', 'lowerarm_l', 'hand_l',
+  'clavicle_r', 'upperarm_r', 'lowerarm_r', 'hand_r',
+];
+let _aimPose = null;   // boneName -> THREE.Quaternion, sampled once from the aim clip
 
-function spaceFixEnabled() {
-  try { return localStorage.getItem('animSpaceFix') === '1'; } catch { return false; }
-}
-
-// Sample a quaternion track at normalised phase u in [0,1).
-function _sampleQ(track, u, out) {
-  const t = track.times, v = track.values;
-  const x = u * t[t.length - 1];
-  let i = 0;
-  while (i < t.length - 2 && t[i + 1] < x) i++;
-  const a = t[i], b = t[i + 1] ?? a;
-  const f = b > a ? (x - a) / (b - a) : 0;
-  THREE.Quaternion.slerpFlat(_sfArr, 0, v, i * 4, v, (i + 1) * 4 < v.length ? (i + 1) * 4 : i * 4, f);
-  return out.fromArray(_sfArr);
-}
-const _sfArr = [0, 0, 0, 1];
-
-// Fit D_bone so that  q_retargeted(t) ~= D_bone * q_original(t), searching phase offset.
-function fitSpaceDelta(clips, retName, origName) {
-  const R = clips.find(c => c.name === retName), O = clips.find(c => c.name === origName);
-  if (!R || !O) return null;
-  const qt = (clip) => Object.fromEntries(clip.tracks
-    .filter(t => t.name.endsWith('.quaternion'))
-    .map(t => [t.name.slice(0, -'.quaternion'.length), t]));
-  const rT = qt(R), oT = qt(O);
-  const bones = Object.keys(oT).filter(b => rT[b]);
-  const N = 24, qa = new THREE.Quaternion(), qb = new THREE.Quaternion(), acc = new THREE.Quaternion();
-
-  let best = null;
-  for (let p = 0; p < 24; p++) {
-    const shift = p / 24, D = {};
-    let err = 0, n = 0;
-    for (const b of bones) {
-      let ax = 0, ay = 0, az = 0, aw = 0;
-      for (let i = 0; i < N; i++) {
-        const u = i / N;
-        _sampleQ(rT[b], (u + shift) % 1, qa);
-        _sampleQ(oT[b], u, qb);
-        acc.copy(qa).multiply(qb.invert());          // D = q_ret * q_orig^-1
-        const sgn = (ax * acc.x + ay * acc.y + az * acc.z + aw * acc.w) < 0 ? -1 : 1;
-        ax += sgn * acc.x; ay += sgn * acc.y; az += sgn * acc.z; aw += sgn * acc.w;
-      }
-      const d = new THREE.Quaternion(ax, ay, az, aw).normalize();
-      D[b] = d;
-      for (let i = 0; i < N; i++) {
-        const u = i / N;
-        _sampleQ(oT[b], u, qb);
-        _sampleQ(rT[b], (u + shift) % 1, qa);
-        qb.premultiply(d);
-        err += Math.acos(Math.min(1, Math.abs(qa.dot(qb)))) * 2; n++;
-      }
-    }
-    const mean = err / n;
-    if (!best || mean < best.mean) best = { D, mean };
+function _buildAimPose() {
+  if (_aimPose) return _aimPose;
+  _aimPose = new Map();
+  const clip = findClip(gltfTemplate.animations, 'attack');
+  if (!clip) return _aimPose;
+  for (const bone of AIM_LAYER_BONES) {
+    const track = clip.tracks.find((t) => t.name === `${bone}.quaternion`);
+    if (!track) continue;
+    const v = track.values;
+    _aimPose.set(bone, new THREE.Quaternion(v[0], v[1], v[2], v[3]));
   }
-  return best;
+  return _aimPose;
 }
 
-function applySpaceFix(clips) {
-  const cache = new Map(), q = new THREE.Quaternion();
-  let done = 0;
-  for (const [target, [ret, orig]] of Object.entries(SPACE_FIX_SOURCES)) {
-    const clip = clips.find(c => c.name === target);
-    if (!clip) continue;
-    const key = ret + '|' + orig;
-    if (!cache.has(key)) {
-      const f = fitSpaceDelta(clips, ret, orig);
-      if (f) console.log(`[GLTF] space delta ${ret} <- ${orig}: fit residual ${(f.mean * 180 / Math.PI).toFixed(1)} deg`);
-      cache.set(key, f);
-    }
-    const fit = cache.get(key);
-    if (!fit) continue;
-    for (const track of clip.tracks) {
-      if (!track.name.endsWith('.quaternion')) continue;
-      const D = fit.D[track.name.slice(0, -'.quaternion'.length)];
-      if (!D) continue;
-      const v = track.values;
-      for (let i = 0; i < v.length; i += 4) {
-        q.set(v[i], v[i + 1], v[i + 2], v[i + 3]).premultiply(D);
-        v[i] = q.x; v[i + 1] = q.y; v[i + 2] = q.z; v[i + 3] = q.w;
-      }
-    }
-    done++;
+// Resolve the aim-layer bones on one character once, so the per-frame path is a
+// plain array walk with no name lookups.
+export function bindAimLayer(root) {
+  const pose = _buildAimPose();
+  const out = [];
+  for (const [name, q] of pose) {
+    const bone = root.getObjectByName(name);
+    if (bone) out.push([bone, q]);
   }
-  console.log(`[GLTF] anim space fix applied to ${done} clips (experimental; unset localStorage.animSpaceFix to disable)`);
+  return out;
 }
 
 // ── Load ───────────────────────────────────────────────────────────────────
@@ -425,7 +340,6 @@ export async function tryLoadEnemyGLTF() {
         track.times  = track.times.slice();
       }
     stripRedundantTracks(gltf);
-    if (spaceFixEnabled()) applySpaceFix(gltf.animations);
     normaliseClipQuatSigns(gltf.animations);
     // Align jump phase clip boundaries — sign-flip guard after shared-space normalisation.
     alignClipBoundaries(gltf.animations, 'jump_start', 'jump_loop');
@@ -540,10 +454,11 @@ export function buildEnemyMesh(wx, wz, role = 'assault') {
 
   attachSkeletonDebug(clone);
   attachEnemyWeapon(clone, role);
+  const aimLayer = bindAimLayer(clone);
 
   // Quaternius mannequin faces +Z at rotation.y=0; game convention is -Z forward.
   // Callers add facingOffset to e.mesh.rotation.y so enemies face the right direction.
-  return { mesh: clone, muzzleFlash, mixer, actions, facingOffset: Math.PI };
+  return { mesh: clone, muzzleFlash, mixer, actions, aimLayer, facingOffset: Math.PI };
 }
 
 // ── Player GLTF instance ──────────────────────────────────────────────────
@@ -598,6 +513,7 @@ export function buildPlayerMesh() {
   playerMesh = clone;
   playerMixer = mixer;
   playerActions = actions;
+  playerAimLayer = bindAimLayer(clone);
   return true;
 }
 
