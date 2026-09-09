@@ -271,6 +271,9 @@ export function triggerDeath() {
   }
 }
 
+// Console helper for inspecting live enemies: visibility, frustum culling, scene
+// membership, per-mesh state. Kept (rather than DEV-gated) because the bugs it was
+// written for were only reproducible in a production build.
 window._debugEnemies = () => {
   const rows = enemies.map((e, i) => {
     const meshes = [];
