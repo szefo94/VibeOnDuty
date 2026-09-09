@@ -317,3 +317,18 @@ body{background:#000;overflow:hidden;font-family:'Courier New',monospace}
 .ed-floor-tab{flex:1;padding:5px 3px;background:#1a1a1a;color:#888;border:1px solid #2a2a2a;font-family:'Courier New',monospace;font-size:9px;letter-spacing:0px;cursor:pointer;text-align:center}
 .ed-floor-tab:hover{background:#252525;color:#fff}
 .ed-floor-tab.selected{background:#306080;color:#aef;border-color:#4080a0}
+
+/* Build stamp — which commit this build came from. Deliberately low-contrast:
+   present when you look for it, invisible when you're not. */
+#build-stamp {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  font-family: 'Courier New', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: #4a5560;
+  user-select: text;
+  pointer-events: auto;
+  z-index: 10;
+}

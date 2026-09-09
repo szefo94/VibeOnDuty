@@ -9,6 +9,10 @@ export default [
       sourceType: 'module',
       globals: {
         ...globals.browser,
+        // Injected by vite.config.js `define` at build time — see src/version.js
+        __BUILD_SHA__: 'readonly',
+        __BUILD_BRANCH__: 'readonly',
+        __BUILD_TIME__: 'readonly',
       },
     },
     rules: {

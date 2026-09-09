@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { initVersionStamp } from './version.js';
 import { MOUSE_SENS, MAX_AMMO, MAX_HP, PLAYER_H, WEAPONS } from './config.js';
 import { camera } from './scene.js';
 import { debugLines } from './level.js';
@@ -36,6 +37,8 @@ import { vanguardMapDef } from './maps/vanguard.js';
 import { startTrainingRange } from './modes/trainingRange.js';
 import { initEditor, openEditor, mapDefFromB64 } from './editor/mapEditor.js';
 import { adaptStart, adaptStop } from './ai/difficultyAdapter.js';
+
+initVersionStamp();
 
 const _euler = new THREE.Euler(0, 0, 0, 'YXZ');
 let debugVisible = true;

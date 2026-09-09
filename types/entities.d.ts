@@ -120,3 +120,8 @@ export interface Drone extends EntityBase {
   /** Stamped by applyEntityBase */
   takeDamage(dmg: number, onDie: (self: Drone) => void): void;
 }
+
+// Injected by vite.config.js `define` at build time — see src/version.js
+declare const __BUILD_SHA__: string;
+declare const __BUILD_BRANCH__: string;
+declare const __BUILD_TIME__: string;

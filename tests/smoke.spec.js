@@ -85,3 +85,23 @@ test.describe('VIBE ON DUTY — S&D mode smoke tests', () => {
     await expect(page.locator('#snd-enemy-score')).toHaveText('0');
   });
 });
+
+test.describe('build version stamp', () => {
+  test('shows the commit on the overlay, in the console and on window', async ({ page }) => {
+    const logs = [];
+    page.on('console', m => logs.push(m.text()));
+    await page.goto('/');
+
+    // Visible on the start overlay, so you can tell what a deployed build is running
+    // without opening devtools.
+    const stamp = page.locator('#build-stamp');
+    await expect(stamp).toBeVisible();
+    await expect(stamp).toHaveText(/^[\w.\/-]+@[0-9a-f]{7}(\+dirty)?$/);
+
+    // Logged on boot, and readable programmatically.
+    expect(logs.find(l => l.includes('[BUILD]'))).toBeTruthy();
+    const build = await page.evaluate(() => window.__build);
+    expect(build.sha).toMatch(/^[0-9a-f]{7}(\+dirty)?$/);
+    expect(build.branch).toBeTruthy();
+  });
+});
