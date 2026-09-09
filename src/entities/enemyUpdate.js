@@ -1,9 +1,9 @@
-import { scene, camera } from '../scene.js';
+import { camera } from '../scene.js';
 import { CELL, PLAYER_H, ENEMY_SIGHT, GRAVITY } from '../config.js';
 import { getDifficulty } from '../difficulty.js';
 import { MAP_W, MAP_H, MAP, mapCell, canMoveTo, groundElevation, worldToCell } from '../map.js';
 import { tickEnemyAnimation } from '../builders/enemyAnimations.js';
-import { disposeEnemyMaterials } from '../builders/enemyGLTF.js';
+import { disposeEnemyMesh } from '../builders/enemyGLTF.js';
 import { tickFriendlyBot } from './friendlyBots.js';
 import { hasLOS } from '../utils/los.js';
 import { isAnyModeActive } from '../modes/modeManager.js';
@@ -140,8 +140,7 @@ export function updateEnemies(ts, dt) {
     de.mixer.update(dt);
     de.timer -= dt;
     if (de.timer <= 0) {
-      disposeEnemyMaterials(de.mesh);
-      scene.remove(de.mesh);
+      disposeEnemyMesh(de.mesh, de.mixer);
       dyingEnemies.splice(i, 1);
     }
   }

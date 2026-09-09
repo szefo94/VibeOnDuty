@@ -3,27 +3,18 @@ import * as THREE from 'three';
 /**
  * Placement of the third-person weapon group inside the hand_r bone.
  *
- * Measured off the live rig rather than guessed. Expressed in hand_r local space the
- * character's axes are:
- *     forward = +Y      up = +X      right = -Z
- * and the 3p weapon models are built barrel along -Z with up +Y. The basis that maps
- * model space onto character space is therefore
- *     model +X -> (0, 0,-1)      model +Y -> (1, 0, 0)      model +Z -> (0,-1, 0)
- * which is Euler XYZ (PI/2, 0, -PI/2).
- *
- * The previous value was (PI/2, 0, +PI/2). It aims the barrel forward too — the two
- * differ only by a 180 deg roll about the barrel — so every third-person weapon was
- * mounted upside down.
+ * Current retargeted rifle pose: hand +Y is forward, +Z up, -X right.
+ * Weapon models use -Z forward and +Y up. Rotating +90 degrees about X
+ * maps these axes without rolling the scope/magazine sideways. Browser regression
+ * tests measure the posed GLB hand, not just this documented basis.
  */
-export const WEAPON3P_ROT = new THREE.Euler(Math.PI / 2, 0, -Math.PI / 2);
+export const WEAPON3P_ROT = new THREE.Euler(Math.PI / 2, 0, 0);
 
 /**
- * Grip offset in hand_r local space (+Y forward, +X up, -Z right). Sits the weapon
- * slightly forward of and outboard from the fist so it clears the forearms: the aim
- * pose holds both hands together at chest centre, and a weapon centred exactly on the
- * hand is swallowed by the character's own silhouette from the chase camera.
+ * Lift the receiver above the palm; move slightly forward and outboard. The old
+ * -Z offset moved the weapon below the fingers after the rig was retargeted.
  */
-export const WEAPON3P_GRIP = new THREE.Vector3(-0.03, 0.15, -0.10);
+export const WEAPON3P_GRIP = new THREE.Vector3(-0.015, 0.015, 0.025);
 
 /**
  * Per-weapon shift along the model's own barrel axis (-Z), aligning the grip rather

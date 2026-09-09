@@ -5,7 +5,7 @@ import { initEnemyState } from '../ai/enemyStates.js';
 import { CELL } from '../config.js';
 import { getDifficulty } from '../difficulty.js';
 import { MAP_W, MAP_H, MAP, isRamp, worldToCell } from '../map.js';
-import { buildEnemyMesh, disposeEnemyMaterials } from '../builders/enemyGLTF.js';
+import { buildEnemyMesh, disposeEnemyMesh } from '../builders/enemyGLTF.js';
 import { crossfade } from '../builders/enemyAnimations.js';
 import { player } from './player.js';
 import { spawnAmmoDrop } from './ammoDrops.js';
@@ -77,7 +77,7 @@ export function spawnEnemyIntoSlot(e, forcedCell = null, role = null) {
   // cut the death animation short whenever a respawn landed inside its 2.2 s window.
   const stillDying = dyingEnemies.some((d) => d.mesh === e.mesh);
   if (!stillDying) {
-    if (e.mesh) { disposeEnemyMaterials(e.mesh); scene.remove(e.mesh); }
+    if (e.mesh) { disposeEnemyMesh(e.mesh, e.mixer); }
     if (e.mixer) e.mixer.stopAllAction();
   }
   let mc, mr;
@@ -213,7 +213,7 @@ export function killEnemy(e) {
       crossfade(e, 'death', 0);
       dyingEnemies.push({ mesh: dyingMesh, mixer: dyingMixer, timer: 2.2 });
     } else {
-      scene.remove(e.mesh);
+      disposeEnemyMesh(e.mesh, e.mixer);
     }
     emit('friendly:killed', e);
     if (getMode()?.name === 'snd' && player.dead && enemies.every((en) => en.dead || en.sndTeam !== 'friend'))
@@ -231,7 +231,7 @@ export function killEnemy(e) {
     crossfade(e, 'death', 0);
     dyingEnemies.push({ mesh: dyingMesh, mixer: dyingMixer, timer: 2.2 });
   } else {
-    scene.remove(e.mesh);
+    disposeEnemyMesh(e.mesh, e.mixer);
   }
 
   emit('enemy:killed', e);
@@ -293,6 +293,9 @@ window._debugEnemies = () => {
 export function deactivateAllEnemies() {
   for (const e of enemies) {
     e.dead = true;
-    if (e.mesh) e.mesh.visible = false;
+    disposeEnemyMesh(e.mesh, e.mixer);
+    if (e._friendIndicator) e._friendIndicator.visible = false;
   }
+  for (const dying of dyingEnemies) disposeEnemyMesh(dying.mesh, dying.mixer);
+  dyingEnemies.length = 0;
 }

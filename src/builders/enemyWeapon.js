@@ -1,14 +1,10 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
+import { WEAPON3P_ROT, WEAPON3P_GRIP, WEAPON3P_BARREL_SHIFT } from './weapon3pTransform.js';
+import { preserveTemplateGeometry } from './characterResources.js';
 
 // ── Tuning ────────────────────────────────────────────────────────────────────
 const TARGET_LENGTH = 0.17; // pistol longest axis in Three.js world units (~17 cm)
-
-// Rotation inside hand_r bone-local space — adjust if barrel faces wrong way
-const ROT = new THREE.Euler(Math.PI / 2, 0, Math.PI / 2);
-
-// Nudge so grip sits in palm after centering
-const GRIP_OFFSET = new THREE.Vector3(0.05, 0.0, 0.01);
 
 // ── Material palette ──────────────────────────────────────────────────────────
 const PALETTE = {
@@ -67,14 +63,18 @@ export async function tryLoadPistolFBX() {
     const longest = Math.max(rawSize.x, rawSize.y, rawSize.z);
     group.scale.setScalar(TARGET_LENGTH / longest);
 
-    // ── 3. Center at origin then apply grip nudge ────────────────────────────
+    // Center inside a separate wrapper. The hand mount can then set its own
+    // transform without overwriting the FBX centering or unit conversion.
     group.updateMatrixWorld(true);
     const centeredBox = new THREE.Box3().setFromObject(group);
     const center      = centeredBox.getCenter(new THREE.Vector3());
-    group.position.sub(center).add(GRIP_OFFSET);
-    group.rotation.copy(ROT);
-
-    _template = group;
+    group.position.sub(center);
+    const canonical = new THREE.Group();
+    canonical.add(group);
+    canonical.rotation.y = Math.PI / 2; // FBX barrel +X -> model barrel -Z
+    _template = new THREE.Group();
+    _template.add(canonical);
+    preserveTemplateGeometry(_template);
 
     const s = TARGET_LENGTH / longest;
     console.log(`[EnemyWeapon] Pistol loaded — ${(rawSize.x*s).toFixed(3)} × ${(rawSize.y*s).toFixed(3)} × ${(rawSize.z*s).toFixed(3)} m`);
@@ -129,19 +129,23 @@ export function buildEnemyWeapon3p(role = 'assault') {
   return g;
 }
 
-const _WPN_ROT  = new THREE.Euler(Math.PI / 2, 0, Math.PI / 2);
-const _WPN_GRIP = {
-  assault: new THREE.Vector3(0.02, 0.0, 0.04),
-  smg:     new THREE.Vector3(0.01, 0.0, 0.02),
-  sniper:  new THREE.Vector3(0.02, 0.0, 0.05),
-  pistol:  new THREE.Vector3(0.05, 0.0, 0.01),
-};
+const ROLE_WEAPON = { assault: 'm4', smg: 'p90', sniper: 'awp', pistol: 'pistol' };
+const MUZZLE_Z = { assault: -0.43, smg: -0.31, sniper: -0.775, pistol: -0.21 };
 
-export function attachEnemyWeapon(enemyRoot, role = 'assault') {
+export function attachEnemyWeapon(enemyRoot, role = 'assault', muzzleFlash = null) {
   const hand = enemyRoot.getObjectByName('hand_r');
   if (!hand) return;
   const wpn = (role === 'pistol' && _template) ? _template.clone() : buildEnemyWeapon3p(role);
-  wpn.rotation.copy(_WPN_ROT);
-  wpn.position.copy(_WPN_GRIP[role] ?? _WPN_GRIP.assault);
-  hand.add(wpn);
+  const mount = new THREE.Group();
+  mount.name = 'enemyWeaponMount';
+  mount.rotation.copy(WEAPON3P_ROT);
+  mount.position.copy(WEAPON3P_GRIP);
+  wpn.position.z = WEAPON3P_BARREL_SHIFT[ROLE_WEAPON[role] ?? 'm4'];
+  mount.add(wpn);
+  hand.add(mount);
+  if (muzzleFlash) {
+    wpn.add(muzzleFlash);
+    const tip = role === 'pistol' && _template ? -TARGET_LENGTH / 2 : MUZZLE_Z[role] ?? MUZZLE_Z.assault;
+    muzzleFlash.position.set(0, 0.01, tip);
+  }
 }

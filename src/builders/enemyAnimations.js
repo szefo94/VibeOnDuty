@@ -119,49 +119,21 @@ export function buildEnemyMixer(mesh) {
 // Override clips (death, jump, hit, crouch, shoot, attack-idle) use crossfade.
 const LOCO_CLIPS = new Set(['idle', 'walk', 'run', 'strafe_l', 'strafe_r']);
 
-// Which retarget family each clip belongs to. enemy.glb holds two families that were
-// retargeted differently — see docs/ANIMATION-SPACES.md. A transition inside one family
-// blends across a few degrees; a transition between families blends across 38-68° on the
-// limb-root bones, which is what the fast/snap omegas below exist to hide.
-//
-// NOT a coordinate space in the ±90°X sense the old name implied — that theory was
-// measured and disproven, and the applyCORR() this list used to reference is gone.
-// Kept as-is only because the transition costs happen to follow the family split.
-//
-// Measured mean bone angle to the idle anchor, per game key:
-//   in-family : shoot 0.4  reload 3.5  walk_back 2.5  run_back 4.6  strafe 4.2  walk 6.7
-//               nade 6.2  run 8.9
-//   off-family: jump_loop 39.9  death 42.4  crouch 45.5  crouch_walk 45.7  roll 48.5
-//               jump_land 62.1  punch 66.0/66.1  dance 67.6
-const CORR_CLIPS = new Set([
-  'idle', 'walk', 'run', 'strafe_l', 'strafe_r',                       // loco blend tree
-  'attack', 'shoot', 'reload', 'hit', 'nade', 'run_back', 'walk_back', // retargeted overrides
-  // 'crouch'/'crouch_walk' were listed here on the assumption that applyCORR() moved
-  // them into this family at load. It never did, and applyCORR is deleted: they resolve
-  // to Crouch_Idle_Loop / Crouch_Fwd_Loop, which sit 45° off the loco tree. Classifying
-  // them as same-family selected the slow 0.35 s spring for a 45° sweep. Currently
-  // masked because INSTANT_SNAP_CLIPS takes precedence on both paths, but the entry was
-  // wrong and would resurface the moment that precedence changed.
-]);
-// Clips whose pose sits far enough from the loco tree that the slow 0.35 s arc reads
-// badly even within one family. Both crouch clips are off-family (above) so they no
-// longer need listing here.
-const LARGE_POSE_CLIPS = new Set();
 const MAX_ENEMY_SPEED = 3.6; // ENEMY_SPEED * max speedMult
 
 function _applyLocoWeight(action, w) {
   if (!action) return;
-  // play() forces enabled=true via _activateAction — a completed fadeOut sets
-  // enabled=false which makes setEffectiveWeight return 0 even at weight=1.
-  action.play();
-  // Set weight directly rather than via setEffectiveWeight: we don't want
-  // stopFading() to clobber a running interpolant on other actions, and we need
-  // _effectiveWeight to match immediately (not after the next mixer tick).
-  action.weight = w;
-  action._effectiveWeight = w;
+  // Locomotion owns these weights. Cancel a previous override's fade (idle and
+  // attack can be the same action) and restore actions disabled by completed fades.
+  action.enabled = true;
+  action.paused = false;
+  action.setEffectiveTimeScale(1).setEffectiveWeight(w).play();
 }
 
 function _setLocoWeights(actions, speedN, strN) {
+  // Procedural/minimal rigs may have no lateral or run clips.
+  if ((strN < 0 && !actions.strafe_l) || (strN > 0 && !actions.strafe_r)) strN = 0;
+  if (!actions.run) speedN = Math.min(speedN, 0.5);
   const strAmt = Math.abs(strN);
   const fwdFrac = Math.max(0, 1 - strAmt);
 
@@ -203,13 +175,12 @@ function _enterLocoMode(e) {
   if (e._inLocoMode) return;
   const a = e.actions[e.currentClip];
   if (a && !LOCO_CLIPS.has(e.currentClip)) {
-    const crossSpace  = !CORR_CLIPS.has(e.currentClip);
-    const largePose   = LARGE_POSE_CLIPS.has(e.currentClip);
     const instantSnap = INSTANT_SNAP_CLIPS.has(e.currentClip);
-    _snapBones(e, instantSnap ? INERTIA_OMEGA_SNAP
-                 : crossSpace || largePose ? INERTIA_OMEGA_CROSS
-                 : INERTIA_OMEGA);
-    a.setEffectiveWeight(0);
+    _snapBones(e, instantSnap ? INERTIA_OMEGA_SNAP : INERTIA_OMEGA);
+  }
+  const locoActions = new Set([...LOCO_CLIPS].map(k => e.actions[k]));
+  for (const [key, action] of Object.entries(e.actions)) {
+    if (!key.startsWith('_') && !locoActions.has(action)) action.stop();
   }
   if (_dbgWants(e)) console.log(`[loco:${e._dbgName ?? 'enemy'}] enter (from ${e.currentClip ?? 'none'})`);
   e._inLocoMode = true;
@@ -219,18 +190,12 @@ function _enterLocoMode(e) {
 // ── Inertial blending ──────────────────────────────────────────────────────
 // Critically-damped spring: settles bone pose from snapshot toward new clip.
 // Applied after mixer.update() so the correction overrides the mixer output.
-// OMEGA=22  → settles in ~0.35s  — used for same-space transitions
-// OMEGA=80  → settles in ~0.10s  — used for cross-space (CORR ↔ original) to
-//             keep the intermediate pose visible for only 2–3 frames
-// OMEGA=300 → settles in ~0.02s  — used for roll exit (large mid-roll pose diff)
+// Normal returns settle over ~0.35s; override entries use ~0.10s. Roll changes
+// the whole body orientation and uses a near-instant settle to avoid a long sweep.
 const INERTIA_OMEGA = 22;
-const INERTIA_OMEGA_CROSS = 80;
-const INERTIA_OMEGA_SNAP  = 300;
-// Clips where the end-of-clip (or entry) pose is so different from loco that even
-// OMEGA_CROSS leaves a visible sweep for several frames — snap almost instantly instead.
-// roll:         last frame mid-roll → ~34° pelvis lean when returning to loco
-// crouch/walk:  upperarm_l is ~167° different from idle → visible 6-frame arm sweep
-const INSTANT_SNAP_CLIPS = new Set(['roll', 'crouch', 'crouch_walk']);
+const INERTIA_OMEGA_FAST = 80;
+const INERTIA_OMEGA_SNAP = 300;
+const INSTANT_SNAP_CLIPS = new Set(['roll']);
 
 function _tickInertia(e, dt) {
   if (!e._inertia) return;
@@ -245,16 +210,15 @@ function _tickInertia(e, dt) {
   }
 }
 
-// The upper-body aim layer that used to live here grafted the aim pose's arms onto the
-// crouch clips. It existed because the two clip families sat ~167 deg apart at the
-// shoulder; retargeting them onto one skeleton (tools/retarget.py) removed that gap, and
-// with a correct rig the graft makes crouch worse -- hunched, arms tucked -- rather than
-// better. Removed with the fault it was hiding.
-
 export function tickInertia(e, dt) { _tickInertia(e, dt); }
 export function setLocoWeights(actions, speedN, strN) { _setLocoWeights(actions, speedN, strN); }
 export function enterLocoMode(e) { _enterLocoMode(e); }
 export function exitLocoMode(e) { _exitLocoMode(e); }
+
+/** Match a one-shot to its gameplay window, without changing the shared clip. */
+export function fitActionDuration(action, seconds) {
+  if (action && seconds > 0) action.setEffectiveTimeScale(action.getClip().duration / seconds);
+}
 
 // ── Per-frame bone-flip monitor ───────────────────────────────────────────
 // Detects quaternion sign flips (dot < 0 vs previous frame) in any bone.
@@ -302,20 +266,38 @@ function _dbgWants(e) {
 // Call once per frame after computing the desired clip name.
 // e must have { actions, currentClip } on it.
 export function crossfade(e, to, dur = 0.22) {
-  if (to === e.currentClip || !e.actions[to]) return;
+  if (!e.actions[to]) return;
+  // Callers such as killEnemy can enter an override directly from the blend tree.
+  _exitLocoMode(e);
+  if (to === e.currentClip) return;
+  if (to === 'death') {
+    for (const action of new Set(Object.values(e.actions))) action.stop();
+    e._inertia = null;
+    e.actions.death.reset().setEffectiveTimeScale(1).setEffectiveWeight(1).play();
+    e.currentClip = to;
+    return;
+  }
   // Snap (dur=0) between two non-loco clips: always snap bones so inertia can smooth
   // the sudden switch. currentClip=null means we just exited loco — handled in the
-  // else branch below which knows we came from CORR space.
+  // else branch below which handles leaving the blend tree.
   if (dur === 0 && e.currentClip !== null) {
     const isSnap   = INSTANT_SNAP_CLIPS.has(to) || INSTANT_SNAP_CLIPS.has(e.currentClip);
-    const fromCorr = e._inLocoMode || CORR_CLIPS.has(e.currentClip);
-    const toCorr   = CORR_CLIPS.has(to);
-    const omega = isSnap ? INERTIA_OMEGA_SNAP
-                : (fromCorr === toCorr) ? INERTIA_OMEGA : INERTIA_OMEGA_CROSS;
+    const omega = isSnap ? INERTIA_OMEGA_SNAP : INERTIA_OMEGA_FAST;
     _snapBones(e, omega);
   }
   const from = e.actions[e.currentClip];
   const toAct = e.actions[to];
+  if (from === toAct) {
+    toAct.enabled = true;
+    toAct.paused = false;
+    toAct.setEffectiveWeight(1).play();
+    e.currentClip = to;
+    return;
+  }
+  // An interrupted crossfade must not leave an older base clip contributing too.
+  for (const [key, action] of Object.entries(e.actions)) {
+    if (!key.startsWith('_') && action !== from && action !== toAct) action.stop();
+  }
   // Standard Three.js crossfade pattern: fade out old, reset + fade in new.
   // crossFadeTo(warp=true) was avoided — it warps the incoming clip's timeScale 0→1,
   // freezing it at frame 0 (bind/T-pose) for the entire blend duration.
@@ -326,7 +308,7 @@ export function crossfade(e, to, dur = 0.22) {
     toAct.reset().setEffectiveWeight(1).fadeIn(dur).play();
   } else {
     // No prior clip (just exited loco). Use instant-snap omega when entering a large-pose clip.
-    const omega = INSTANT_SNAP_CLIPS.has(to) ? INERTIA_OMEGA_SNAP : INERTIA_OMEGA_CROSS;
+    const omega = INSTANT_SNAP_CLIPS.has(to) ? INERTIA_OMEGA_SNAP : INERTIA_OMEGA_FAST;
     _snapBones(e, omega);
     // Skipping fadeIn: starting at weight 0 and ramping would show bind/T-pose for the duration.
     toAct.reset().setEffectiveWeight(1).play();
@@ -374,6 +356,7 @@ const _allHelpers = [];
 
 function makeAxes(size = 0.5) {
   const ax = new THREE.AxesHelper(size);
+  ax.material.userData.characterOwned = true;
   // Render on top of all geometry so they're never hidden inside a mesh
   ax.material.depthTest = false;
   ax.material.depthWrite = false;
@@ -420,6 +403,14 @@ export function attachSkeletonDebug(mesh) {
       node.add(ax);
       _allHelpers.push(ax);
     }
+  }
+}
+
+export function detachSkeletonDebug(mesh) {
+  const nodes = new Set();
+  mesh.traverse(node => nodes.add(node));
+  for (let i = _allHelpers.length - 1; i >= 0; i--) {
+    if (nodes.has(_allHelpers[i])) _allHelpers.splice(i, 1);
   }
 }
 
@@ -500,6 +491,8 @@ export function tickEnemyAnimation(e, dt, _isMoving) {
     _exitLocoMode(e);
     const snap = SNAP_CLIPS.has(overrideClip) || SNAP_CLIPS.has(e.currentClip);
     crossfade(e, overrideClip, snap ? 0 : 0.3);
+    if (overrideClip === 'jump_start') fitActionDuration(e.actions.jump_start, JUMP_START_DUR);
+    if (overrideClip === 'jump_land') fitActionDuration(e.actions.jump_land, JUMP_LAND_DUR);
   } else {
     _enterLocoMode(e);
     _setLocoWeights(e.actions, speedN, strN);

@@ -66,6 +66,7 @@ export function buildEnemy(wx, wz) {
     new THREE.MeshBasicMaterial({ color: 0xffcc33, transparent: true, opacity: 0 })
   );
   ef.position.set(0.295, 1.19, -0.52);
+  ef.material.userData.characterOwned = true;
   g.add(ef);                                                        // [33] muzzle flash
   g.position.set(wx, 0, wz);
   scene.add(g);

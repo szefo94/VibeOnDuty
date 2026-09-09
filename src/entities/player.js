@@ -19,6 +19,8 @@ export const player = /** @type {any} */ ({
   reserve: WEAPONS[DEFAULT_WEAPON].reserve,
   kills: 0,
   reloading: false,
+  throwingNade: false,
+  throwTimer: 0,
   reloadTimer: 0,
   reloadTotal: 0,
   shootCd: 0,

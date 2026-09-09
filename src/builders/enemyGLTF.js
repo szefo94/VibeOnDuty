@@ -18,6 +18,9 @@ import { buildEnemy } from './enemy.js';
 import { buildEnemyMixer, attachSkeletonDebug, buildGLTFBreathingClip } from './enemyAnimations.js';
 import { attachEnemyWeapon } from './enemyWeapon.js';
 import { attachWeapons3pToHand } from './weaponFBX.js';
+import { buildRifleMovementClips } from './rifleClips.js';
+import { preserveTemplateGeometry, disposeCharacter } from './characterResources.js';
+export { disposeCharacter as disposeEnemyMesh } from './characterResources.js';
 
 // ── State ──────────────────────────────────────────────────────────────────
 let gltfTemplate = null;
@@ -36,17 +39,15 @@ const ALIASES = {
   run:         ['run',              'Jog_Fwd_Loop',     'Sprint_Loop',  'Run'],
   attack:      ['attack',           'Pistol_Aim_Neutral', 'Pistol_Idle_Loop'],
   shoot:       ['shoot',            'Pistol_Shoot',     'Shoot',  'Fire'],
-  crouch:      ['Crouch_Idle_Loop', 'Crouch_Idle', 'Crouch'],
-  crouch_walk: ['Crouch_Fwd_Loop',  'Crouch_Walk'],
+  crouch:      ['rifle_Crouch_Idle_Loop', 'Crouch_Idle_Loop', 'Crouch_Idle', 'Crouch'],
+  crouch_walk: ['rifle_Crouch_Fwd_Loop', 'Crouch_Fwd_Loop',  'Crouch_Walk'],
   death:       ['Death01',          'Death',  'death',  'Die'],
   hit:         ['hit',              'Hit_Chest',        'Hit_Head'],
   roll:        ['Roll',             'roll',   'Dive'],
-  jump_start:  ['Jump_Start',       'Jump_start',       'jump_loop'],
-  // Prefer uppercase Jump_Loop (original, no CORR) so all three jump clips share
-  // the same coordinate space as Jump_Start and Jump_Land — the retargeted
-  // lowercase jump_loop has +90°X baked in, causing ~180° mismatches on crossfade.
-  jump_loop:   ['Jump_Loop',        'Jump_loop',        'jump_loop'],
-  jump_land:   ['Jump_Land',        'Jump_land'],
+  jump_start:  ['rifle_Jump_Start', 'Jump_Start',       'Jump_start',       'jump_loop'],
+  // Armed variants preserve the original jump chain's lower-body motion.
+  jump_loop:   ['rifle_Jump_Loop', 'Jump_Loop',        'Jump_loop',        'jump_loop'],
+  jump_land:   ['rifle_Jump_Land', 'Jump_Land',        'Jump_land'],
   reload:      ['reload',           'Pistol_Reload'],
   run_back:    ['run_back'],
   walk_back:   ['walk_back'],
@@ -292,7 +293,9 @@ export async function tryLoadEnemyGLTF() {
         track.times  = track.times.slice();
       }
     stripRedundantTracks(gltf);
+    gltf.animations.push(...buildRifleMovementClips(gltf.scene, gltf.animations));
     normaliseClipQuatSigns(gltf.animations);
+    preserveTemplateGeometry(gltf.scene);
     // Align jump phase clip boundaries — sign-flip guard after shared-space normalisation.
     alignClipBoundaries(gltf.animations, 'jump_start', 'jump_loop');
     alignClipBoundaries(gltf.animations, 'jump_loop',  'jump_land', { useFirstFrame: true });
@@ -361,7 +364,7 @@ export function buildEnemyMesh(wx, wz, role = 'assault') {
   // Require at least idle + walk — otherwise fall back to procedural
   if (REQUIRED_KEYS.some((k) => !actions[k])) {
     console.warn('[GLTF] Required clips missing — falling back to procedural');
-    scene.remove(clone);
+    disposeCharacter(clone, mixer);
     usingGLTF = false;
     const { mesh, muzzleFlash } = buildEnemy(wx, wz);
     const { mixer: m2, actions: a2 } = buildEnemyMixer(mesh);
@@ -390,6 +393,7 @@ export function buildEnemyMesh(wx, wz, role = 'assault') {
     new THREE.SphereGeometry(0.03, 5, 5),
     new THREE.MeshBasicMaterial({ color: 0xffcc33, transparent: true, opacity: 0 })
   );
+  muzzleFlash.material.userData.characterOwned = true;
   // Mannequin rig: right hand bone is "hand_r"
   const muzzleBone =
     clone.getObjectByName('hand_r') ||
@@ -405,7 +409,7 @@ export function buildEnemyMesh(wx, wz, role = 'assault') {
   }
 
   attachSkeletonDebug(clone);
-  attachEnemyWeapon(clone, role);
+  attachEnemyWeapon(clone, role, muzzleFlash);
 
   // Quaternius mannequin faces +Z at rotation.y=0; game convention is -Z forward.
   // Callers add facingOffset to e.mesh.rotation.y so enemies face the right direction.
@@ -470,15 +474,11 @@ export function buildPlayerMesh() {
 // ── Team tint ─────────────────────────────────────────────────────────────
 // Clones every material on the mesh so siblings are unaffected, then
 // applies an emissive tint (preserves GLTF textures). Falls back to color.
-export function disposeEnemyMaterials(mesh) {
-  _disposeTinted(mesh);
-}
-
 function _disposeTinted(mesh) {
   mesh.traverse((ch) => {
     if (!ch.isMesh || !ch.material) return;
     for (const m of (Array.isArray(ch.material) ? ch.material : [ch.material]))
-      if (m?.userData?._tinted) m.dispose();
+      if (m?.userData?._tinted || m?.userData?.characterOwned) m.dispose();
   });
 }
 

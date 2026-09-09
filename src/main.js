@@ -9,7 +9,7 @@ import { player, startReload } from './entities/player.js';
 import { deactivateAllEnemies } from './entities/enemies.js';
 import { rebuildAllEnemies, spawnSndEnemies, spawnTdmEnemies } from './entities/enemySpawning.js';
 import { spawnNewDrone, spawnSndDrones, clearSndDrones } from './entities/drone.js';
-import { tryThrowGrenade } from './entities/grenades.js';
+import { tryThrowGrenade, cancelGrenadeThrow } from './entities/grenades.js';
 import { tryShoot, tryPunchDamage } from './combat/shoot.js';
 import { flashMeleeRing } from './fx/meleeRange.js';
 import { updateHUD, showMsg, showStatus } from './hud/overlay.js';
@@ -222,6 +222,7 @@ document.getElementById('c').addEventListener('click', () => {
 const _pauseEl = document.getElementById('pause-menu');
 
 function returnToMainMenu() {
+  cancelGrenadeThrow();
   _pauseEl.style.display = 'none';
   setGameRunning(false);
   adaptStop();
@@ -337,6 +338,7 @@ document.getElementById('editor-startbtn').addEventListener('click', openEditor)
 
 // ── S&D next round ─────────────────────────────────────────────────
 document.getElementById('snd-next-btn').addEventListener('click', () => {
+  cancelGrenadeThrow();
   if (isMatchOver()) { location.reload(); return; }
   clearSndDrones();
   nextRound();

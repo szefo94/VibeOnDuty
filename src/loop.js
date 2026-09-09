@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { renderer, scene, camera } from './scene.js';
-import { PLAYER_H, PLAYER_H_CROUCH, WEAPONS, LEAN_SHIFT, JUMP_START_DUR, JUMP_LAND_DUR } from './config.js';
+import { PLAYER_H, PLAYER_H_CROUCH, WEAPONS, LEAN_SHIFT, JUMP_START_DUR, JUMP_LAND_DUR, ROLL_ANIM_DUR, GRENADE_THROW_DUR } from './config.js';
 import { touchLook } from './touch.js';
 import { gameRunning, keys } from './input.js';
 import { player, updatePlayer } from './entities/player.js';
@@ -19,7 +19,7 @@ import { updateWeaponDeath } from './combat/shoot.js';
 import { tickGamepad } from './gamepad.js';
 import { drawMinimap } from './hud/radar.js';
 import { playerMesh, playerMixer, playerActions } from './builders/enemyGLTF.js';
-import { crossfade, tickInertia, setLocoWeights, enterLocoMode, exitLocoMode, tickBoneFlipMonitor } from './builders/enemyAnimations.js';
+import { crossfade, tickInertia, setLocoWeights, enterLocoMode, exitLocoMode, tickBoneFlipMonitor, fitActionDuration } from './builders/enemyAnimations.js';
 import { tickKillcam, isKillcamActive } from './replay/killcam.js';
 import { adaptTick } from './ai/difficultyAdapter.js';
 
@@ -152,6 +152,8 @@ export function loop(ts) {
           exitLocoMode(playerAnim); clip = 'dance';
         } else if (player.punching && a[player.punchClip]) {
           exitLocoMode(playerAnim); clip = player.punchClip;
+        } else if (player.throwingNade && a.nade) {
+          exitLocoMode(playerAnim); clip = 'nade';
         } else if (player.rollTimer > 0 && a.roll) {
           exitLocoMode(playerAnim); clip = 'roll';
         } else if (jumpPhase === 'land' && a.jump_land && !player.crouching && !player.sliding) {
@@ -160,8 +162,6 @@ export function loop(ts) {
           exitLocoMode(playerAnim);
           if (jumpPhase === 'start' && a.jump_start) clip = 'jump_start';
           else clip = a.jump_loop ? 'jump_loop' : 'idle';
-        } else if (player.throwingNade && a.nade) {
-          exitLocoMode(playerAnim); clip = 'nade';
         } else if (player.reloading && a.reload) {
           exitLocoMode(playerAnim); clip = 'reload';
         } else if (player.crouching || player.sliding) {
@@ -199,6 +199,17 @@ export function loop(ts) {
         const snapTransition = !jumpFade && clip && (SNAP_CLIPS.has(clip) || SNAP_CLIPS.has(playerAnim.currentClip));
         const prevClip = playerAnim.currentClip;
         if (!locoHandled && clip) crossfade(playerAnim, clip, snapTransition ? 0 : jumpFade ? 0.2 : 0.3);
+        const timed = clip === 'reload' ? [player.reloadTotal / 1000, player.reloadTimer / 1000]
+          : clip === 'nade' ? [GRENADE_THROW_DUR, player.throwTimer]
+          : clip === 'roll' ? [ROLL_ANIM_DUR, player.rollTimer]
+          : clip === 'jump_start' ? [JUMP_START_DUR, jumpPhaseTimer]
+          : clip === 'jump_land' ? [JUMP_LAND_DUR, jumpPhaseTimer] : null;
+        if (timed) {
+          fitActionDuration(a[clip], timed[0]);
+          // Resume an interrupted action at its gameplay phase, not at frame zero.
+          if (prevClip !== clip)
+            a[clip].time = a[clip].getClip().duration * Math.max(0, 1 - timed[1] / timed[0]);
+        }
 
         // Dance plays once then stops — set LoopOnce when first entering the state
         // so it doesn't spin forever when the player forgets to press T again.
@@ -222,6 +233,7 @@ export function loop(ts) {
             : (sprint && player.moving) ? 1.1
             : 0.75;
           playerAnim.actions._breathing.setEffectiveWeight(breathW);
+          if (!player.dead) playerAnim.actions._breathing.play();
         }
       }
     }
@@ -249,6 +261,7 @@ export function loop(ts) {
   // ── Transition lerp + visibility handoff ─────────────────────────
   tpTransition += (tpTarget - tpTransition) * Math.min(1, TP_SPEED * dt);
   const bodyVisible = tpTransition > 0.05;
+  wpn3p.visible = !player.throwingNade && !player.punching && !player.dancing;
   // Don't override wpn.visible while death-drop is playing
   if (!player.dead) wpn.visible = tpTransition < 0.15;
   // Show GLTF player when loaded, hide procedural fallback, or show procedural if no GLTF

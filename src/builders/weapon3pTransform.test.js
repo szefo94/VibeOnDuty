@@ -4,8 +4,8 @@ import { WEAPON3P_ROT, WEAPON3P_GRIP, WEAPON3P_BARREL_SHIFT } from './weapon3pTr
 
 // Character axes as measured on the live rig, expressed in hand_r local space.
 const FORWARD = new THREE.Vector3(0, 1, 0);
-const UP      = new THREE.Vector3(1, 0, 0);
-const RIGHT   = new THREE.Vector3(0, 0, -1);
+const UP      = new THREE.Vector3(0, 0, 1);
+const RIGHT   = new THREE.Vector3(-1, 0, 0);
 // Weapon model axes: built barrel along -Z, up +Y.
 const BARREL    = new THREE.Vector3(0, 0, -1);
 const MODEL_UP  = new THREE.Vector3(0, 1, 0);
@@ -19,12 +19,12 @@ describe('third-person weapon transform', () => {
 
   it('keeps the weapon upright rather than rolled', () => {
     // The bug this guards: (PI/2, 0, +PI/2) also aims the barrel forward, so a barrel
-    // check alone passes while every weapon hangs upside down. Only the roll differs.
+    // check alone passes while every weapon lies sideways. Only the roll differs.
     expect(applied(MODEL_UP).dot(UP)).toBeCloseTo(1, 6);
 
     const rolled = MODEL_UP.clone().applyQuaternion(
       new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, Math.PI / 2)));
-    expect(rolled.dot(UP)).toBeCloseTo(-1, 6);   // the old value, inverted
+    expect(rolled.dot(UP)).toBeCloseTo(0, 6);    // the old value, sideways
   });
 
   it('is a proper rotation, not a reflection', () => {

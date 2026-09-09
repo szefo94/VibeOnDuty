@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { scene, camera } from '../scene.js';
-import { GRENADE_ENERGY_COST, MAX_ENERGY, ENERGY_PER_DMG, MAX_HP } from '../config.js';
+import { GRENADE_ENERGY_COST, MAX_ENERGY, ENERGY_PER_DMG, MAX_HP, GRENADE_THROW_DUR, GRENADE_RELEASE_FRACTION } from '../config.js';
+import { on } from '../events.js';
 import { groundElevation } from '../map.js';
 import { mm } from '../materials.js';
 import { grenadeFalloff, grenadeEntityDamage, grenadePlayerDamage } from '../combat/damage.js';
@@ -13,15 +14,29 @@ import { activeDrone, killDrone } from './drone.js';
 import { showStatus, triggerHitFlash, updateHUD } from '../hud/overlay.js';
 
 export const grenades = [];
+let pendingThrow = false;
 const grenMat = mm(0x2a4a1a, 0.6, 0.4),
   grenPinMat = mm(0xcccc44, 0.3, 0.8);
 
 export function tryThrowGrenade() {
-  if (player.dead || player.energy < GRENADE_ENERGY_COST) return;
+  if (player.dead || player.throwingNade || player.energy < GRENADE_ENERGY_COST) return;
   player.energy = 0;
   player.throwingNade = true;
-  setTimeout(() => { player.throwingNade = false; }, 900); // ~clip duration
+  player.throwTimer = GRENADE_THROW_DUR;
+  pendingThrow = true;
   document.getElementById('energy-label').textContent = 'ENERGY: 0%';
+  showStatus('GRENADE!');
+}
+
+export function cancelGrenadeThrow() {
+  pendingThrow = false;
+  player.throwingNade = false;
+  player.throwTimer = 0;
+}
+on('player:died', cancelGrenadeThrow);
+on('snd:configure', cancelGrenadeThrow);
+
+function releaseGrenade() {
   const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
   dir.y += 0.18;
   dir.normalize();
@@ -37,10 +52,17 @@ export function tryThrowGrenade() {
   g.position.copy(camera.position).addScaledVector(dir, 0.5);
   scene.add(g);
   grenades.push({ mesh: g, vel: dir.clone().multiplyScalar(12), life: 2.2, exploded: false });
-  showStatus('GRENADE!');
 }
 
 export function tickGrenades(dt) {
+  if (player.throwingNade) {
+    player.throwTimer = Math.max(0, player.throwTimer - dt);
+    if (pendingThrow && player.throwTimer <= GRENADE_THROW_DUR * (1 - GRENADE_RELEASE_FRACTION)) {
+      pendingThrow = false;
+      releaseGrenade();
+    }
+    if (player.throwTimer === 0) player.throwingNade = false;
+  }
   for (let i = grenades.length - 1; i >= 0; i--) {
     const g = grenades[i];
     if (g.exploded) {
