@@ -4,7 +4,8 @@ import { mm } from './materials.js';
 import { renderer, scene } from './scene.js';
 import { torchLights, ambientLight, sunLight } from './lighting.js';
 import { isCrack } from './map.js';
-import { bilinearFrac, revolvedFrac, diagFrac, RAMP_PROFILE } from './rampMath.js';
+import { bilinearFrac, revolvedFrac, diagFrac } from './rampMath.js';
+import { rampOf, rampHeights } from './tiles.js';
 
 export const wallMeshes = [];
 export let debugLines = null;
@@ -23,9 +24,12 @@ export function clearLevel() {
   torchLights.length = 0;
 }
 
-const _isDiagRamp = (c) => c >= 33 && c <= 80;
-const _isRevRamp  = (c) => c >= 81 && c <= 128;
-const _isBiRamp   = (c) => c >= 129 && c <= 152;
+// Ramp family + height band come from tiles.js; buildLevel only decides geometry.
+const _family = (c) => rampOf(c)?.family ?? null;
+const _isDiagRamp = (c) => _family(c) === 'diagonal';
+const _isRevRamp  = (c) => _family(c) === 'revolved';
+const _isBiRamp   = (c) => _family(c) === 'corner';
+const _isStraight = (c) => _family(c) === 'straight';
 
 export function buildLevel(mapDef) {
   clearLevel();
@@ -173,10 +177,9 @@ export function buildLevel(mapDef) {
           debugLineData.push({ x: wx - gw / 2, y: BASE, z: wz - gd / 2, w: gw, h: loH, d: gd, col: 0x0088ff });
           debugLineData.push({ x: wx - gw / 2, y: BASE + PLAYER_H + 0.28, z: wz - gd / 2, w: gw, h: upH, d: gd, col: 0x0088ff });
         } else if (_isDiagRamp(cell)) {
-          const diagType = Math.floor((cell - 33) / 6);
-          const grp      = (cell - 33) % 6;
-          const [loYr, hiYRaw] = RAMP_PROFILE[grp];
-          const hiYr = hiYRaw ?? H2;
+          const _r = rampOf(cell);
+          const diagType = _r.shape;
+          const [loYr, hiYr] = rampHeights(_r, H2);
           const RAMP_T = 0.10;
           const x0 = col * CELL, x1 = (col + 1) * CELL;
           const z0 = row * CELL, z1 = (row + 1) * CELL;
@@ -203,10 +206,9 @@ export function buildLevel(mapDef) {
           _levelGroup.add(dm);
           debugLineData.push({ x: x0, y: loYr, z: z0, w: CELL, h: hiYr - loYr, d: CELL, col: 0xffcc00 });
         } else if (_isBiRamp(cell)) {
-          const type = Math.floor((cell - 129) / 6);
-          const grp  = (cell - 129) % 6;
-          const [loYr, hiYRaw] = RAMP_PROFILE[grp];
-          const hiYr = hiYRaw ?? H2;
+          const _r = rampOf(cell);
+          const type = _r.shape;
+          const [loYr, hiYr] = rampHeights(_r, H2);
           const RAMP_T = 0.10;
           const N = 8, M = N + 1;
           const x0 = col * CELL, z0 = row * CELL;
@@ -242,10 +244,9 @@ export function buildLevel(mapDef) {
           _levelGroup.add(bm);
           debugLineData.push({ x: x0, y: loYr, z: z0, w: CELL, h: hiYr - loYr, d: CELL, col: 0xcc44ff });
         } else if (_isRevRamp(cell)) {
-          const type = Math.floor((cell - 81) / 6);
-          const grp  = (cell - 81) % 6;
-          const [loYr, hiYRaw] = RAMP_PROFILE[grp];
-          const hiYr = hiYRaw ?? H2;
+          const _r = rampOf(cell);
+          const type = _r.shape;
+          const [loYr, hiYr] = rampHeights(_r, H2);
           const RAMP_T = 0.10;
           const N = 8, M = N + 1;
           const x0 = col * CELL, z0 = row * CELL;
@@ -280,11 +281,10 @@ export function buildLevel(mapDef) {
           rm.castShadow = rm.receiveShadow = true;
           _levelGroup.add(rm);
           debugLineData.push({ x: x0, y: loYr, z: z0, w: CELL, h: hiYr - loYr, d: CELL, col: 0xff88ff });
-        } else if (cell >= 4 && cell <= 27) {
-          const dir = (cell - 4) % 4;
-          const grp = Math.floor((cell - 4) / 4);
-          const [loY, hiYRaw] = RAMP_PROFILE[grp];
-          const hiY = hiYRaw ?? H2;
+        } else if (_isStraight(cell)) {
+          const _r = rampOf(cell);
+          const dir = _r.shape;
+          const [loY, hiY] = rampHeights(_r, H2);
           const RAMP_T   = 0.10;
           const slopeLen = Math.sqrt(CELL * CELL + (hiY - loY) * (hiY - loY));
           const angle    = Math.atan2(hiY - loY, CELL);

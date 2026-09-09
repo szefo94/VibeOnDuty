@@ -1,6 +1,6 @@
 import { CELL, PLAYER_H, PLAYER_R } from './config.js';
 import { bunkerMapDef, H1 as _bH1, H2 as _bH2 } from './maps/bunker.js';
-import { revolvedFrac, diagFrac, RAMP_PROFILE } from './rampMath.js';
+import { isRamp, isCrack, isColumn, navCell, rampSurface } from './tiles.js';
 
 // 0=floor 1=solid 2=E-W crack 3=N-S crack 4=ramp-N 5=ramp-S 6=ramp-W 7=ramp-E
 // Mutable live bindings — updated by setActiveMap() before each game start.
@@ -29,16 +29,14 @@ export function setActiveMap(def) {
   }
 }
 
-export const isRamp  = (c) => (c >= 4 && c <= 27) || (c >= 33 && c <= 152);
-export const isCrack = (c) => c === 2 || c === 3;
+// Tile-ID semantics live in tiles.js — re-exported here because map.js is the
+// import everything already reaches for.
+export { isRamp, isCrack };
 export const worldToCell = (x, z) => [Math.floor(x / CELL), Math.floor(z / CELL)];
 
 export function mapCell(mx, mz) {
   if (mx < 0 || mz < 0 || mx >= MAP_W || mz >= MAP_H) return 1;
-  const c = MAP[mz][mx];
-  if (c === 28) return 1;  // column: solid
-  if (c >= 29 && c <= 32) return 0;  // side wall: floor-passable (thin panel)
-  return c;
+  return navCell(MAP[mz][mx]);
 }
 
 // Height levels — ramp geometry uses H2; see groundElevation below.
@@ -51,10 +49,7 @@ export function hAt(c, r) {
 
 function _cellFrom(tiles, mx, mz) {
   if (mx < 0 || mz < 0 || mx >= MAP_W || mz >= MAP_H) return 1;
-  const c = tiles[mz][mx];
-  if (c === 28) return 1;
-  if (c >= 29 && c <= 32) return 0;
-  return c;
+  return navCell(tiles[mz][mx]);
 }
 
 function _hFrom(hmap, c, r) {
@@ -65,36 +60,8 @@ function _hFrom(hmap, c, r) {
 function _floorSurface(fl, c0, r0, tx, tz) {
   const { tiles, heightmap } = fl;
   const cell = _cellFrom(tiles, c0, r0);
-  if (cell >= 129 && cell <= 152) {
-    const type = Math.floor((cell - 129) / 6);
-    const grp  = (cell - 129) % 6;
-    const [loY, hiYRaw] = RAMP_PROFILE[grp];
-    const hiY = hiYRaw ?? H2;
-    const f = [tx*(1-tz), (1-tx)*(1-tz), tx*tz, (1-tx)*tz][type];
-    return loY + (hiY - loY) * f;
-  }
-  if (cell >= 81 && cell <= 128) {
-    const type = Math.floor((cell - 81) / 6);
-    const grp  = (cell - 81) % 6;
-    const [loY, hiYRaw] = RAMP_PROFILE[grp];
-    const hiY = hiYRaw ?? H2;
-    return loY + (hiY - loY) * revolvedFrac(type, tx, tz);
-  }
-  if (cell >= 33 && cell <= 80) {
-    const diagType = Math.floor((cell - 33) / 6);
-    const grp = (cell - 33) % 6;
-    const [loY, hiYRaw] = RAMP_PROFILE[grp];
-    const hiY = hiYRaw ?? H2;
-    return loY + (hiY - loY) * diagFrac(diagType, tx, tz);
-  }
-  if (cell >= 4 && cell <= 27) {
-    const dir = (cell - 4) % 4;
-    const grp = Math.floor((cell - 4) / 4);
-    const [loY, hiYRaw] = RAMP_PROFILE[grp];
-    const hiY = hiYRaw ?? H2;
-    const frac = dir === 0 ? tz : dir === 1 ? (1 - tz) : dir === 2 ? tx : (1 - tx);
-    return loY + (hiY - loY) * frac;
-  }
+  const surface = rampSurface(cell, tx, tz, H2);
+  if (surface !== null) return surface;
   // Flat floor cells return their exact height — bilinear interpolation between
   // cells at different heights would make slab edges behave like ramps.
   return _hFrom(heightmap, c0, r0);
@@ -146,7 +113,7 @@ export function canMoveTo(nx, nz, currentGroundY, airborne = false) {
 
   // Column (tile 28): circular collision instead of full-cell AABB.
   // mapCell/cellFrom return 1 for tile 28, so we must handle it before the wall check.
-  if (FLOORS.some(fl => fl.tiles[mr]?.[mc] === 28)) {
+  if (FLOORS.some(fl => isColumn(fl.tiles[mr]?.[mc]))) {
     const cx = (mc + 0.5) * CELL, cz = (mr + 0.5) * CELL;
     return (nx - cx) ** 2 + (nz - cz) ** 2 >= _COL_BLOCK_R2;
   }
