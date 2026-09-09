@@ -341,7 +341,20 @@ function makeAxes(size = 0.5) {
   return ax;
 }
 
+// Helpers are retained here so F3 can toggle them all. Each helper holds a parent
+// chain back to its enemy's skeleton, so entries for despawned enemies would pin the
+// whole mesh graph in memory — every wave respawn leaked 10 skeletons. Drop detached
+// entries on each attach so the list only ever holds live helpers.
+function _pruneHelpers() {
+  for (let i = _allHelpers.length - 1; i >= 0; i--) {
+    let n = _allHelpers[i], inScene = false;
+    while (n) { if (n.isScene) { inScene = true; break; } n = n.parent; }
+    if (!inScene) _allHelpers.splice(i, 1);
+  }
+}
+
 export function attachSkeletonDebug(mesh) {
+  _pruneHelpers();
   let attached = 0;
   // Procedural enemies: use fixed child indices (guaranteed by enemy.js build order)
   for (const idx of ANIM_INDICES) {
