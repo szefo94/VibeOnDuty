@@ -90,7 +90,7 @@ export function spawnEnemyIntoSlot(e, forcedCell = null, role = null) {
     [mc, mr] = randomSpawnCell(used);
   }
   const patrol = randomPatrol(mc, mr, 2);
-  const { mesh, muzzleFlash, mixer, actions, aimLayer, facingOffset = 0 } = buildEnemyMesh(
+  const { mesh, muzzleFlash, mixer, actions, facingOffset = 0 } = buildEnemyMesh(
     mc * CELL + CELL / 2,
     mr * CELL + CELL / 2,
     role
@@ -100,7 +100,6 @@ export function spawnEnemyIntoSlot(e, forcedCell = null, role = null) {
     muzzleFlash,
     mixer,
     actions,
-    _aimLayer: aimLayer,
     facingOffset,
     weaponRole: role,
     currentClip: 'idle',
@@ -153,7 +152,7 @@ export const enemies = Array.from({ length: NUM_ENEMIES }, (_) => {
   usedCells.push([mc, mr]);
   const patrol = randomPatrol(mc, mr, 2);
   const role = randomRole();
-  const { mesh, muzzleFlash, mixer, actions, aimLayer, facingOffset = 0 } = buildEnemyMesh(
+  const { mesh, muzzleFlash, mixer, actions, facingOffset = 0 } = buildEnemyMesh(
     mc * CELL + CELL / 2,
     mr * CELL + CELL / 2,
     role
@@ -163,7 +162,6 @@ export const enemies = Array.from({ length: NUM_ENEMIES }, (_) => {
     muzzleFlash,
     mixer,
     actions,
-    _aimLayer: aimLayer,
     facingOffset,
     weaponRole: role,
     currentClip: 'idle',

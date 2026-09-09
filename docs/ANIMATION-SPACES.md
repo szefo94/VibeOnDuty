@@ -130,7 +130,48 @@ It is off by default because the per-clip delta assignment is chosen by measurem
 rather than derived, so it is partly curve-fitting and needs a human eye before it
 ships. Turn it on, play, and judge crouch / roll / jump / death by eye.
 
-## What actually shipped: an upper-body aim layer
+## Resolved: the clips were retargeted onto one skeleton
+
+`tools/retarget.py` (Blender, headless) fixes this at the asset level. The 12 Mixamo
+source FBX files were recovered from git history — they had been deleted in `11ece0e`
+when the GLB replaced the runtime FBX loader — and are now retargeted onto the
+mannequin skeleton properly rather than nudged by a fixed rotation.
+
+The retarget is the exact formulation, not a fitted correction. A bone's animation is
+its world-space delta from its own rest pose, `D = pose_src · rest_src⁻¹`; applying that
+delta to the *target's* rest pose, `pose_tgt = D · rest_tgt`, transfers the motion onto a
+rig with different bone rolls and proportions. Bones are processed parents-first.
+
+| mean angle between the two clip families | all bones | limb roots |
+|---|---|---|
+| before | 61.7° | **162.7°** |
+| after  | 28.5° | **36.5°** |
+
+The ~180° limb-root offset — the actual defect — is gone. What remains is genuine pose
+difference: a crouch legitimately differs from a stand.
+
+Three things fell out of this:
+
+* **The upper-body aim layer was removed.** It grafted the aim pose's arms onto the
+  crouch clips to hide the 167° shoulder gap. With a correct rig the graft makes crouch
+  *worse* — hunched, arms tucked — so it went out with the fault it was hiding.
+* **Root motion is stripped.** Mixamo locomotion travels; the game drives position
+  itself, so transferred travel slid the character away from its own transform.
+* **Two failure modes worth remembering** (both caught by screenshotting, not by
+  metrics): computing the delta in *armature* space rather than world space, because the
+  glTF and FBX importers apply different up-axis conversions — the character leans back
+  with its arms straight up; and setting a pose bone's full matrix without zeroing its
+  location, which bakes stale translations and tears the limbs apart.
+
+### Still outstanding
+
+The mannequin-family clips (crouch, crouch_walk, roll, jump_start, jump_land, death,
+dance, punch) have no Mixamo counterpart and pass through untouched. They are now on the
+right skeleton but were authored without a rifle, so the character crouches with its
+arms down. Sourcing rifle-holding replacements from Mixamo and adding them to
+`tools/anim-sources/` is the remaining work — the pipeline handles them automatically.
+
+## Superseded: the upper-body aim layer
 
 The runtime whole-clip correction was built, measured, rendered, and **removed** — see
 the next section for why. What replaced it exploits one number from the table above:

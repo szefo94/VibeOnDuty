@@ -18,7 +18,7 @@ import { tickScreenShake } from './fx/screenShake.js';
 import { updateWeaponDeath } from './combat/shoot.js';
 import { tickGamepad } from './gamepad.js';
 import { drawMinimap } from './hud/radar.js';
-import { playerMesh, playerMixer, playerActions, playerAimLayer } from './builders/enemyGLTF.js';
+import { playerMesh, playerMixer, playerActions } from './builders/enemyGLTF.js';
 import { crossfade, tickInertia, setLocoWeights, enterLocoMode, exitLocoMode, tickBoneFlipMonitor } from './builders/enemyAnimations.js';
 import { tickKillcam, isKillcamActive } from './replay/killcam.js';
 import { adaptTick } from './ai/difficultyAdapter.js';
@@ -129,7 +129,6 @@ export function loop(ts) {
     if (playerMesh && playerMixer) {
       // Sync action table once playerActions is populated after load
       if (!playerAnim.actions && playerActions) playerAnim.actions = playerActions;
-      if (!playerAnim._aimLayer && playerAimLayer) playerAnim._aimLayer = playerAimLayer;
 
       // Lazy bone collection for inertial blending
       if (!playerAnim._bonesInit) {

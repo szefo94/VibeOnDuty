@@ -245,21 +245,13 @@ function _tickInertia(e, dt) {
   }
 }
 
-// Clips where the character should still be holding the weapon, so the arms come
-// from the aim pose instead of the clip. See bindAimLayer() in enemyGLTF.js.
-const AIM_LAYER_CLIPS = new Set(['crouch', 'crouch_walk']);
+// The upper-body aim layer that used to live here grafted the aim pose's arms onto the
+// crouch clips. It existed because the two clip families sat ~167 deg apart at the
+// shoulder; retargeting them onto one skeleton (tools/retarget.py) removed that gap, and
+// with a correct rig the graft makes crouch worse -- hunched, arms tucked -- rather than
+// better. Removed with the fault it was hiding.
 
-// Runs after mixer.update() and the inertia pass, so it is the final word on those
-// bones. e._aimLayer is bound lazily by the caller that owns the mesh.
-function _applyAimLayer(e) {
-  if (!e._aimLayer?.length) return;
-  const inLoco = e._inLocoMode;
-  if (inLoco || !AIM_LAYER_CLIPS.has(e.currentClip)) return;
-  for (const [bone, q] of e._aimLayer) bone.quaternion.copy(q);
-}
-export function applyAimLayer(e) { _applyAimLayer(e); }
-
-export function tickInertia(e, dt) { _tickInertia(e, dt); _applyAimLayer(e); }
+export function tickInertia(e, dt) { _tickInertia(e, dt); }
 export function setLocoWeights(actions, speedN, strN) { _setLocoWeights(actions, speedN, strN); }
 export function enterLocoMode(e) { _enterLocoMode(e); }
 export function exitLocoMode(e) { _exitLocoMode(e); }
@@ -515,5 +507,4 @@ export function tickEnemyAnimation(e, dt, _isMoving) {
 
   e.mixer.update(dt);
   _tickInertia(e, dt);
-  _applyAimLayer(e);
 }

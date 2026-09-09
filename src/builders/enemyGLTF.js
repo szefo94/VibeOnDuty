@@ -27,7 +27,6 @@ export let usingGLTF = false;
 export let playerMesh = null;
 export let playerMixer = null;
 export let playerActions = null;
-export let playerAimLayer = null;
 
 // ── Clip aliases — maps internal state names to GLB clip names ────────────
 // Retargeted rifle clips listed first so they win over old pistol clips.
@@ -272,53 +271,6 @@ function stripRedundantTracks(gltf) {
   console.log(`[GLTF] stripped ${dropped} inert position/scale tracks (${kept} live tracks remain)`);
 }
 
-// ── Upper-body aim layer ──────────────────────────────────────────────────
-// enemy.glb's clips come from two retarget families (docs/ANIMATION-SPACES.md).
-// The crouch clips are in the family that does NOT hold a rifle, so their arms sit
-// ~167 deg away from the aim pose at the shoulder — the character crouches with its
-// arms hanging back instead of holding the weapon.
-//
-// A whole-clip rotation cannot fix that: it was measured, built and rendered, and it
-// wrecks the pose (the crouch ends up lying flat). What does work is the standard
-// upper-body layer. The spine is nearly identical between the two families
-// (spine_01/02/03 differ by 13-15 deg, against 150-170 deg at clavicle/upperarm/thigh),
-// so arm rotations taken from the aim clip land correctly on a crouch spine.
-//
-// So: legs and spine keep playing the crouch clip, arms are overwritten with the aim
-// pose. Applied only to clips where the character is meant to be holding the weapon —
-// death, dance, punch and roll keep their own full-body arms.
-const AIM_LAYER_BONES = [
-  'clavicle_l', 'upperarm_l', 'lowerarm_l', 'hand_l',
-  'clavicle_r', 'upperarm_r', 'lowerarm_r', 'hand_r',
-];
-let _aimPose = null;   // boneName -> THREE.Quaternion, sampled once from the aim clip
-
-function _buildAimPose() {
-  if (_aimPose) return _aimPose;
-  _aimPose = new Map();
-  const clip = findClip(gltfTemplate.animations, 'attack');
-  if (!clip) return _aimPose;
-  for (const bone of AIM_LAYER_BONES) {
-    const track = clip.tracks.find((t) => t.name === `${bone}.quaternion`);
-    if (!track) continue;
-    const v = track.values;
-    _aimPose.set(bone, new THREE.Quaternion(v[0], v[1], v[2], v[3]));
-  }
-  return _aimPose;
-}
-
-// Resolve the aim-layer bones on one character once, so the per-frame path is a
-// plain array walk with no name lookups.
-export function bindAimLayer(root) {
-  const pose = _buildAimPose();
-  const out = [];
-  for (const [name, q] of pose) {
-    const bone = root.getObjectByName(name);
-    if (bone) out.push([bone, q]);
-  }
-  return out;
-}
-
 // ── Load ───────────────────────────────────────────────────────────────────
 export async function tryLoadEnemyGLTF() {
   // HEAD probe first so no 404 noise when file is absent
@@ -454,11 +406,10 @@ export function buildEnemyMesh(wx, wz, role = 'assault') {
 
   attachSkeletonDebug(clone);
   attachEnemyWeapon(clone, role);
-  const aimLayer = bindAimLayer(clone);
 
   // Quaternius mannequin faces +Z at rotation.y=0; game convention is -Z forward.
   // Callers add facingOffset to e.mesh.rotation.y so enemies face the right direction.
-  return { mesh: clone, muzzleFlash, mixer, actions, aimLayer, facingOffset: Math.PI };
+  return { mesh: clone, muzzleFlash, mixer, actions, facingOffset: Math.PI };
 }
 
 // ── Player GLTF instance ──────────────────────────────────────────────────
@@ -513,7 +464,6 @@ export function buildPlayerMesh() {
   playerMesh = clone;
   playerMixer = mixer;
   playerActions = actions;
-  playerAimLayer = bindAimLayer(clone);
   return true;
 }
 
