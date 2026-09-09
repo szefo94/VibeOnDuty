@@ -1,8 +1,9 @@
 import { scene, camera } from '../scene.js';
 import { CELL, PLAYER_H, ENEMY_SIGHT, GRAVITY } from '../config.js';
 import { getDifficulty } from '../difficulty.js';
-import { MAP_W, MAP_H, MAP, mapCell, canMoveTo, hAt, worldToCell } from '../map.js';
+import { MAP_W, MAP_H, MAP, mapCell, canMoveTo, groundElevation, worldToCell } from '../map.js';
 import { tickEnemyAnimation } from '../builders/enemyAnimations.js';
+import { disposeEnemyMaterials } from '../builders/enemyGLTF.js';
 import { tickFriendlyBot } from './friendlyBots.js';
 import { hasLOS } from '../utils/los.js';
 import { player } from './player.js';
@@ -18,7 +19,10 @@ export function updateEnemies(ts, dt) {
     const pdx = camera.position.x - e.x,
       pdz = camera.position.z - e.z;
     const distP = Math.sqrt(pdx * pdx + pdz * pdz);
-    const eGround = hAt(...worldToCell(e.x, e.z));
+    // Interpolated ramp surface — must match the height combat/shoot.js uses for the
+    // hitbox, otherwise the mesh and the hit sphere desync by up to a full body height
+    // on ramp cells (HMAP is 0 there while the ramp surface rises to H2).
+    const eGround = groundElevation(e.x, e.z, e.mesh.position.y + PLAYER_H);
     const canSee =
       distP < getDifficulty().sight &&
       hasLOS(
@@ -137,6 +141,7 @@ export function updateEnemies(ts, dt) {
     de.mixer.update(dt);
     de.timer -= dt;
     if (de.timer <= 0) {
+      disposeEnemyMaterials(de.mesh);
       scene.remove(de.mesh);
       dyingEnemies.splice(i, 1);
     }

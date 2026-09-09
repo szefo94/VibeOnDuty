@@ -5,7 +5,7 @@ import { initEnemyState } from '../ai/enemyStates.js';
 import { CELL } from '../config.js';
 import { getDifficulty } from '../difficulty.js';
 import { MAP_W, MAP_H, MAP, isRamp, worldToCell } from '../map.js';
-import { buildEnemyMesh } from '../builders/enemyGLTF.js';
+import { buildEnemyMesh, disposeEnemyMaterials } from '../builders/enemyGLTF.js';
 import { crossfade } from '../builders/enemyAnimations.js';
 import { player } from './player.js';
 import { spawnAmmoDrop } from './ammoDrops.js';
@@ -72,8 +72,14 @@ function randomRole() { return _RAND_ROLES[Math.floor(Math.random() * _RAND_ROLE
  */
 export function spawnEnemyIntoSlot(e, forcedCell = null, role = null) {
   role = role ?? e.weaponRole ?? randomRole();
-  if (e.mesh) scene.remove(e.mesh);
-  if (e.mixer) e.mixer.stopAllAction();
+  // Only tear down the old mesh if it isn't still playing its death animation —
+  // killEnemy hands that mesh + mixer to dyingEnemies, and removing/stopping it here
+  // cut the death animation short whenever a respawn landed inside its 2.2 s window.
+  const stillDying = dyingEnemies.some((d) => d.mesh === e.mesh);
+  if (!stillDying) {
+    if (e.mesh) { disposeEnemyMaterials(e.mesh); scene.remove(e.mesh); }
+    if (e.mixer) e.mixer.stopAllAction();
+  }
   let mc, mr;
   if (forcedCell) {
     [mc, mr] = forcedCell;
@@ -265,6 +271,9 @@ export function triggerDeath() {
   }
 }
 
+// Console helper for inspecting live enemies: visibility, frustum culling, scene
+// membership, per-mesh state. Kept (rather than DEV-gated) because the bugs it was
+// written for were only reproducible in a production build.
 window._debugEnemies = () => {
   const rows = enemies.map((e, i) => {
     const meshes = [];

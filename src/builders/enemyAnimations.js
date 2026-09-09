@@ -119,20 +119,34 @@ export function buildEnemyMixer(mesh) {
 // Override clips (death, jump, hit, crouch, shoot, attack-idle) use crossfade.
 const LOCO_CLIPS = new Set(['idle', 'walk', 'run', 'strafe_l', 'strafe_r']);
 
-// Retargeted clips that were exported with +90°X CORR baked in by merge_animations.py.
-// Original clips (Jump_Start, Jump_Land, Crouch_Idle_Loop, Roll, Death01, etc.) are
-// in the native Mannequin bone space — ~165° bone difference vs CORR clips.
-// Cross-space inertia uses INERTIA_OMEGA_CROSS (fast, ~0.10s) so the intermediate
-// pose is only visible for 2–3 frames instead of the full ~0.35s normal settle time.
+// Which retarget family each clip belongs to. enemy.glb holds two families that were
+// retargeted differently — see docs/ANIMATION-SPACES.md. A transition inside one family
+// blends across a few degrees; a transition between families blends across 38-68° on the
+// limb-root bones, which is what the fast/snap omegas below exist to hide.
+//
+// NOT a coordinate space in the ±90°X sense the old name implied — that theory was
+// measured and disproven, and the applyCORR() this list used to reference is gone.
+// Kept as-is only because the transition costs happen to follow the family split.
+//
+// Measured mean bone angle to the idle anchor, per game key:
+//   in-family : shoot 0.4  reload 3.5  walk_back 2.5  run_back 4.6  strafe 4.2  walk 6.7
+//               nade 6.2  run 8.9
+//   off-family: jump_loop 39.9  death 42.4  crouch 45.5  crouch_walk 45.7  roll 48.5
+//               jump_land 62.1  punch 66.0/66.1  dance 67.6
 const CORR_CLIPS = new Set([
-  'idle', 'walk', 'run', 'strafe_l', 'strafe_r',               // loco — always CORR
+  'idle', 'walk', 'run', 'strafe_l', 'strafe_r',                       // loco blend tree
   'attack', 'shoot', 'reload', 'hit', 'nade', 'run_back', 'walk_back', // retargeted overrides
-  'crouch', 'crouch_walk',                                       // CORR applied at load time by applyCORR()
+  // 'crouch'/'crouch_walk' were listed here on the assumption that applyCORR() moved
+  // them into this family at load. It never did, and applyCORR is deleted: they resolve
+  // to Crouch_Idle_Loop / Crouch_Fwd_Loop, which sit 45° off the loco tree. Classifying
+  // them as same-family selected the slow 0.35 s spring for a 45° sweep. Currently
+  // masked because INSTANT_SNAP_CLIPS takes precedence on both paths, but the entry was
+  // wrong and would resurface the moment that precedence changed.
 ]);
-// Clips where loco→clip or clip→loco bone pose difference is large enough that
-// slow omega (0.35s) arc looks bad (preacher hands, anime lean-back, etc.).
-// Uses fast omega even when both ends are CORR space.
-const LARGE_POSE_CLIPS = new Set(['crouch', 'crouch_walk']);
+// Clips whose pose sits far enough from the loco tree that the slow 0.35 s arc reads
+// badly even within one family. Both crouch clips are off-family (above) so they no
+// longer need listing here.
+const LARGE_POSE_CLIPS = new Set();
 const MAX_ENEMY_SPEED = 3.6; // ENEMY_SPEED * max speedMult
 
 function _applyLocoWeight(action, w) {
@@ -341,7 +355,20 @@ function makeAxes(size = 0.5) {
   return ax;
 }
 
+// Helpers are retained here so F3 can toggle them all. Each helper holds a parent
+// chain back to its enemy's skeleton, so entries for despawned enemies would pin the
+// whole mesh graph in memory — every wave respawn leaked 10 skeletons. Drop detached
+// entries on each attach so the list only ever holds live helpers.
+function _pruneHelpers() {
+  for (let i = _allHelpers.length - 1; i >= 0; i--) {
+    let n = _allHelpers[i], inScene = false;
+    while (n) { if (n.isScene) { inScene = true; break; } n = n.parent; }
+    if (!inScene) _allHelpers.splice(i, 1);
+  }
+}
+
 export function attachSkeletonDebug(mesh) {
+  _pruneHelpers();
   let attached = 0;
   // Procedural enemies: use fixed child indices (guaranteed by enemy.js build order)
   for (const idx of ANIM_INDICES) {

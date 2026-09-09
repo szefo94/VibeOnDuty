@@ -90,7 +90,7 @@ function _respawnPlayer(spawnX, spawnZ) {
   setGameRunning(true);
   show1pWeapon(player.weapon);
   show3pWeapon(player.weapon);
-  if (isTouchDevice) {} else document.getElementById('c').requestPointerLock();
+  if (!isTouchDevice) document.getElementById('c').requestPointerLock();
   showMsg('BACK IN ACTION', 2000);
 }
 

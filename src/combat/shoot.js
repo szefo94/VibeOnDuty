@@ -5,6 +5,7 @@ import { wallMeshes } from '../level.js';
 import { wpn, flash, flashMat, muzzleLight } from '../builders/weapon.js';
 import { spawnImpact } from '../fx/impacts.js';
 import { groundElevation } from '../map.js';
+import { segPointDist2 } from '../math.js';
 import { player, startReload } from '../entities/player.js';
 import { enemies, killEnemy } from '../entities/enemies.js';
 import { rangeTargets, registerHit } from '../entities/targetDummy.js';
@@ -137,6 +138,9 @@ export function spawnBullet(origin, dir, damage = 28, isSniper = false) {
   });
 }
 
+const HIT_R2 = 0.75 * 0.75;
+const _ePos = new THREE.Vector3();
+
 export function tickBullets(dt) {
   for (let i = liveBullets.length - 1; i >= 0; i--) {
     const b = liveBullets[i];
@@ -179,8 +183,12 @@ export function tickBullets(dt) {
     for (const e of enemies) {
       if (e.dead) continue;
       if (e.sndTeam === 'friend') continue; // never shoot allied bots
-      const ePos = new THREE.Vector3(e.x, groundElevation(e.x, e.z) + PLAYER_H * 0.6, e.z);
-      if (b.pos.distanceTo(ePos) < 0.75) {
+      // Reused scratch — this runs once per live bullet per enemy per frame.
+      _ePos.set(e.x, groundElevation(e.x, e.z) + PLAYER_H * 0.6, e.z);
+      // Swept test: BULLET_SPEED=65 advances the bullet ~1.1 m per frame at 60 fps and
+      // up to 3.25 m at the dt clamp, so a point test against a 0.75 m sphere tunnels
+      // straight through enemies on slow frames. Measure the segment prevPos->pos instead.
+      if (segPointDist2(b.prevPos, b.pos, _ePos) < HIT_R2) {
         const dmg = b.damage;
         alertEnemy(e);
         player.energy = Math.min(MAX_ENERGY, player.energy + dmg * ENERGY_PER_DMG);
@@ -191,7 +199,7 @@ export function tickBullets(dt) {
         e.stunTimer = 0.28;
         addPlayerDmg(dmg);
         spawnHitMarker();
-        spawnDamageNumber(ePos.x, ePos.y + 0.4, ePos.z, dmg);
+        spawnDamageNumber(_ePos.x, _ePos.y + 0.4, _ePos.z, dmg);
         e.takeDamage(dmg, killEnemy);
         _removeBullet(i);
         hit = true;
