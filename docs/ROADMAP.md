@@ -654,3 +654,139 @@ Tags — **complexity:** `easy` `medium` `hard` `very hard` · **player demand:*
 | 76 | Colorblind mode — recolors enemy outlines, radar dots, bomb indicators, and hitmarker to work under Protanopia / Deuteranopia / Tritanopia, switchable in settings. | `medium` | `hot` | `polish` |
 | 77 | FOV slider — adjustable 70–110° with live preview in the editor or settings menu, stored in `localStorage`. | `easy` | `hot` | `polish` |
 | 78 | Subtitles for audio cues — on-screen text label when an important audio event fires (bomb planted, enemy reloading, grenade incoming) for hearing-impaired players. | `easy` | `solid` | `polish` |
+
+### Engineering & tooling
+
+| # | Idea | complexity | demand | feel |
+|---|------|-----------|--------|------|
+| 79 | Proper dev → quality → prod environments, with tests gating the deploy and a visible version on every build. | `medium` | `solid` | `meta` |
+| 80 | Research map-creation approaches used elsewhere, weigh them against the square-tile grid, and pick a direction before the tile-ID space runs out. | `medium` | `solid` | `meta` |
+
+---
+
+## 79 — dev → quality → prod
+
+### Where the project actually is
+
+- One branch (`main`), one environment. Every push to `main` publishes to GitHub Pages.
+- **`deploy.yml` does not run the tests.** It is `npm ci` → `npm run build` → deploy.
+  `test.yml` runs on push and PR but gates nothing, so a red build still ships.
+- Playwright never runs in CI at all — `test:e2e` is local-only, and it is the suite
+  that covers the GLB pipeline and the animation rig.
+- `base: '/VibeOnDuty/'` is hardcoded in `vite.config.js`, so a build is bound to one
+  URL prefix.
+- Build provenance now exists: `main@<sha>` on the overlay, in the console and on
+  `window.__build`.
+
+Nothing here is broken for a solo hobby project. The gap that actually bites is the
+one already hit twice: a change reaches the live URL before anyone has looked at it,
+and there is no second URL to look at it on.
+
+### Proposed shape
+
+Three tiers, deliberately small:
+
+| tier | branch | URL | gate |
+|---|---|---|---|
+| dev | any feature branch | `npm run dev`, local only | nothing |
+| quality | `develop` | Pages sub-path `/VibeOnDuty/next/` | unit + e2e green |
+| prod | `main` | `/VibeOnDuty/` | quality signed off by eye, tag pushed |
+
+Steps, in dependency order:
+
+1. **Gate the deploy on tests first.** Add `npm run test:unit` and `npm run test:e2e`
+   as steps in `deploy.yml` before the build. This is a five-line change and is worth
+   more than the rest of the list combined. Split `test` into `test:unit`
+   (`vitest run`) so CI never lands in watch mode.
+2. **Make `base` configurable** — `base: process.env.PUBLIC_BASE ?? '/VibeOnDuty/'`.
+   Nothing else can be layered on until a build can target two prefixes.
+3. **Publish `develop` to `/next/`.** One workflow, `PUBLIC_BASE=/VibeOnDuty/next/`,
+   writing into a `next/` folder of the same Pages artifact. Costs one more workflow
+   and no new hosting.
+4. **Tag prod releases** — `v0.2.0` etc, and surface the tag in the build stamp so it
+   reads `v0.2.0 (main@abc1234)` rather than a bare SHA.
+5. *(optional)* GitHub Environments with a required reviewer on `github-pages`, so
+   promoting to prod is an explicit click.
+
+### Fit and cost
+
+Steps 1–2 are an afternoon and remove the "did that reach the live site?" question
+permanently. Step 3 is the real win — a URL to test animation changes on that is not
+the one people play. Steps 4–5 only start paying once someone other than you plays it.
+
+Worth saying plainly: for a one-person project this can stop after step 1. Test-gated
+deploys plus the existing build stamp cover the failure mode that has actually
+occurred. The rest is insurance against a team that does not exist yet.
+
+---
+
+## 80 — map creation: grid vs the alternatives
+
+### What the project does now
+
+A 2D array of ints per floor, `MAP[r][c]`, plus a parallel heightmap; `FLOORS` bolted
+on for multi-storey. Geometry is implied by the tile ID, and the ID space has grown to
+encode ramp shape, direction and height:
+
+```
+0 floor · 1 solid · 2-3 cracks · 4-27 straight ramps (dir x height)
+28 column · 29-32 side walls · 33-80 diagonal ramps · 81-128 revolved
+129-152 corner ramps
+```
+
+`isRamp()` is now `(c >= 4 && c <= 27) || (c >= 33 && c <= 152)`. That is the tell:
+**geometry variants are being encoded in integer ranges**, and every new shape costs
+another 24-ID block plus a branch in `_floorSurface()`, `canMoveTo()` and the editor
+palette. Five maps and a 1263-line editor already lean on it.
+
+### How other games solve this
+
+| approach | used by | fits us? |
+|---|---|---|
+| **Tile grid** (current) | Wolfenstein, Doom, roguelikes, Dungeon Keeper | already here |
+| **BSP / CSG brushes** | Quake radiant, Valve Hammer, TrenchBroom | powerful, needs a real 3D editor and a compile step |
+| **Modular prefab kits** | most AAA (Unreal/Unity) — meshes snapped to a grid | strong fit, keeps the grid |
+| **Heightmap + props** | Battlefield, open-world shooters | wrong shape for close-quarters arenas |
+| **Voxel** | Minecraft, Teardown | heavier, buys destructibility we do not need |
+| **WFC / procedural** | Bad North, Caves of Qud | complements a grid, see idea #51 |
+| **In-game sandbox** | Roblox, Fortnite Creative | whole product in itself |
+
+### Grid — honest ledger
+
+**For**
+- Serialisation is a nested array. Maps are diffable, tiny, hand-editable.
+- A\* runs directly on it (`astar.js`) with no navmesh bake.
+- Collision is an array lookup (`canMoveTo`), trivially cheap and fully deterministic.
+- The editor is 2D, so it was buildable at all by one person.
+- Procedural generation is easy on a grid and hard on brushes.
+
+**Against**
+- **The ID space is the bug.** Shape, direction and height packed into one int, decoded
+  by range checks in three separate files.
+- 45° walls are impossible; the 120 ramp IDs are a workaround for that.
+- Verticality is bolted on — `FLOORS` re-runs the whole surface query per layer.
+- Everything is axis-aligned, so maps read as visually repetitive.
+- Grid resolution (`CELL = 4`) is the floor on detail; halving it quadruples memory.
+
+### Directions, cheapest first
+
+1. **Replace the tile ID with a struct** — `{ type, height, rot, variant }` instead of
+   packing into 0-152. Pure refactor, no visual change, kills the range checks and
+   makes every future shape one field rather than 24 IDs. **Do this one regardless of
+   what else is chosen.**
+2. **Split collision from rendering.** Keep the grid as the authority for physics and
+   AI; let each cell reference a prefab mesh with rotation and variant. Same navmesh
+   and pathfinding, arbitrary visual detail, no more axis-aligned look. Best value per
+   unit of work, and the industry-standard modular-kit answer.
+3. **Add a decoration layer** — free-placed props with their own collision, stored
+   outside the grid. Small change, breaks up the repetition immediately.
+4. **Import an external format.** Emit/consume Tiled `.tmx` for layout, or a glTF scene
+   per map, so maps can be authored in a real editor. Only worth it if map-making
+   becomes someone else's job.
+5. **CSG/brush layer**, baked to grid collision at load. Most expressive, by far the
+   most work; a rewrite of the editor rather than a change to it.
+
+**Recommendation:** 1 → 3 → 2. Step 1 removes the actual maintenance hazard now, step 3
+buys the biggest visual improvement for the least code, and step 2 is the real answer
+whenever map variety becomes the bottleneck. Steps 4 and 5 stay parked unless the
+project gains contributors.
