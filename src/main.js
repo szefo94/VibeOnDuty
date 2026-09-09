@@ -22,7 +22,7 @@ import { setDifficulty } from './difficulty.js';
 import { tryLoadEnemyGLTF, buildPlayerMesh, tintEnemyMesh, playerMesh } from './builders/enemyGLTF.js';
 import { show1pWeapon, show3pWeapon, weapon3p } from './builders/weapon.js';
 import { playerBody } from './builders/playerBody.js';
-import { tryLoadWeaponFBX, tryLoadP90ForHand } from './builders/weaponFBX.js';
+import { tryLoadWeaponFBX } from './builders/weaponFBX.js';
 import { tryLoadPistolFBX } from './builders/enemyWeapon.js';
 import { setSkeletonDebugVisible } from './builders/enemyAnimations.js';
 import { register, loadAll } from './builders/assetManager.js';
@@ -94,7 +94,7 @@ document.querySelectorAll('.map-card').forEach(card => {
           _selectedMap = customDef;
         });
       }
-    } catch (_) {}
+    } catch { /* asset probe failed — fall through to procedural */ }
   }
 }
 
@@ -349,7 +349,6 @@ initTouch();
 register('enemy-glb',  tryLoadEnemyGLTF);
 register('weapon-fbx', tryLoadWeaponFBX);
 register('pistol-fbx', tryLoadPistolFBX);
-register('player-p90', tryLoadP90ForHand);
 
 // ── Kick off ───────────────────────────────────────────────────────
 window.loadGLTF = tryLoadEnemyGLTF;

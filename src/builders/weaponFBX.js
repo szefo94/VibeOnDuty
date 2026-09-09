@@ -74,59 +74,10 @@ const P90_ROT = new THREE.Euler(Math.PI / 2, 0, Math.PI / 2);
 // Nudge so grip sits in palm
 const P90_GRIP = new THREE.Vector3(-0.02, 0.0, 0.05);
 
-let _p90HandTemplate = null;
-
-export async function tryLoadP90ForHand(path = import.meta.env.BASE_URL + 'models/FBX/P90.fbx') {
-  try {
-    const probe = await fetch(path, { method: 'HEAD' });
-    if (!probe.ok) return false;
-  } catch { return false; }
-
-  try {
-    const loader = new FBXLoader();
-    const fbx    = await loader.loadAsync(path);
-    fbx.updateMatrixWorld(true);
-
-    const group = new THREE.Group();
-    fbx.traverse(ch => {
-      if (!ch.isMesh && !ch.isSkinnedMesh) return;
-      const remap = m => PALETTE[m?.name] ?? m;
-      const mats  = Array.isArray(ch.material)
-        ? ch.material.map(remap)
-        : remap(ch.material);
-      const mesh = new THREE.Mesh(ch.geometry, mats);
-      mesh.applyMatrix4(ch.matrixWorld);
-      mesh.castShadow = mesh.receiveShadow = false;
-      group.add(mesh);
-    });
-
-    if (!group.children.length) {
-      console.warn('[P90Hand] No mesh found in P90.fbx');
-      return false;
-    }
-
-    // Auto-scale to target length
-    const rawBox  = new THREE.Box3().setFromObject(group);
-    const rawSize = rawBox.getSize(new THREE.Vector3());
-    const longest = Math.max(rawSize.x, rawSize.y, rawSize.z);
-    group.scale.setScalar(P90_TARGET_LEN / longest);
-
-    // Centre then apply grip nudge
-    group.updateMatrixWorld(true);
-    const center = new THREE.Box3().setFromObject(group).getCenter(new THREE.Vector3());
-    group.position.sub(center).add(P90_GRIP);
-    group.rotation.copy(P90_ROT);
-
-    _p90HandTemplate = group;
-
-    const s = P90_TARGET_LEN / longest;
-    console.log(`[P90Hand] loaded — ${(rawSize.x*s).toFixed(3)} × ${(rawSize.y*s).toFixed(3)} × ${(rawSize.z*s).toFixed(3)} m`);
-    return true;
-  } catch (err) {
-    console.warn('[P90Hand] Failed to load P90.fbx for hand:', err);
-    return false;
-  }
-}
+// NOTE: there used to be a tryLoadP90ForHand() here that fetched and parsed P90.fbx a
+// second time to build a hand-attachable template. Nothing ever read that template —
+// attachWeapons3pToHand() below uses the shared weapon3p object from weapon.js — so it
+// was a duplicate download + FBXLoader parse on the boot critical path. Removed.
 
 export function attachWeapons3pToHand(playerRoot) {
   const hand = playerRoot.getObjectByName('hand_r');

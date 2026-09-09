@@ -694,7 +694,7 @@ function _loadFromSlot(idx) {
     _decode(data.map);
     _activeSlot = idx;
     _updateSlotUI();
-  } catch (_) {}
+  } catch { /* ignore — best-effort */ }
 }
 function _updateSlotUI() {
   document.querySelectorAll('.ed-slot-btn').forEach(btn => {
@@ -1255,7 +1255,7 @@ export function initEditor() {
     try {
       _decode(mapParam);
       requestAnimationFrame(() => openEditor());
-    } catch (_) {}
+    } catch { /* ignore — best-effort */ }
   }
 
   _draw();

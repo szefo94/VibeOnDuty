@@ -85,13 +85,6 @@ export async function tryLoadPistolFBX() {
   }
 }
 
-export function attachPistolToHand(enemyRoot) {
-  if (!_template) return;
-  const hand = enemyRoot.getObjectByName('hand_r');
-  if (!hand) { console.warn('[EnemyWeapon] hand_r not found in enemy mesh'); return; }
-  hand.add(_template.clone());
-}
-
 // ── Procedural enemy weapons (role-based 3p models) ───────────────────────
 const _eGun  = new THREE.MeshStandardMaterial({ color: 0x1a1c1e, roughness: 0.35, metalness: 0.85 });
 const _eGun2 = new THREE.MeshStandardMaterial({ color: 0x201810, roughness: 0.70, metalness: 0.20 });
