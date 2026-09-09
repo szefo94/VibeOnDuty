@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { WEAPON3P_BARREL_SHIFT } from './weapon3pTransform.js';
 import { mm } from '../materials.js';
 import { scene, camera } from '../scene.js';
 
@@ -112,7 +113,16 @@ b3(_w3.pistol, box(0.040, 0.058, 0.18),  mGun,  0, 0,      0);
 b3(_w3.pistol, box(0.036, 0.070, 0.042), mGun2, 0, -0.064, 0.05);
 r3(_w3.pistol, 0.008, 0.008, 0.14,       0, 0.008, -0.18);
 
-for (const [k, g] of Object.entries(_w3)) { g.visible = k === 'm4'; weapon3p.add(g); }
+// Per-weapon grip alignment along the model's own barrel axis (-Z). The models are
+// centred on their body box, so without this the hand sits mid-receiver and roughly
+// half the weapon ends up behind the hands. Shorter weapons need a smaller shift,
+// which is why the pistol and P90 read as missing while the longer M4 and AWP poked
+// out far enough to be seen.
+for (const [k, g] of Object.entries(_w3)) {
+  g.visible = k === 'm4';
+  g.position.z = WEAPON3P_BARREL_SHIFT[k] ?? 0;
+  weapon3p.add(g);
+}
 
 // ── Switch helpers ────────────────────────────────────────────────────
 export function show1pWeapon(key) {
@@ -136,4 +146,19 @@ export function attachWeapon3pToHand(hand, rotation, offset) {
   weapon3p.position.copy(offset);
   hand.add(weapon3p);
   weapon3pAttached = true;
+}
+
+// Live tuning hook for the 3p weapon transform. The models sit inside the character
+// unless the grip offset is right, and "right" is only decidable by looking, so this
+// exists to iterate without a rebuild: window.__tuneWeapon3p({x,y,z,rx,ry,rz}).
+if (typeof window !== 'undefined') {
+  window.__tuneWeapon3p = (t = {}) => {
+    if ('x' in t || 'y' in t || 'z' in t)
+      weapon3p.position.set(t.x ?? weapon3p.position.x, t.y ?? weapon3p.position.y, t.z ?? weapon3p.position.z);
+    if ('rx' in t || 'ry' in t || 'rz' in t)
+      weapon3p.rotation.set(t.rx ?? weapon3p.rotation.x, t.ry ?? weapon3p.rotation.y, t.rz ?? weapon3p.rotation.z);
+    const p = weapon3p.position, r = weapon3p.rotation;
+    return { x: +p.x.toFixed(3), y: +p.y.toFixed(3), z: +p.z.toFixed(3),
+             rx: +r.x.toFixed(3), ry: +r.y.toFixed(3), rz: +r.z.toFixed(3) };
+  };
 }

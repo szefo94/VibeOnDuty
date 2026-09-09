@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import { flash, replaceFbxModel, attachWeapon3pToHand } from './weapon.js';
+import { WEAPON3P_ROT, WEAPON3P_GRIP } from './weapon3pTransform.js';
 
 // ── Tuning constants — FPV P90 ────────────────────────────────────────────────
 // P90.fbx is ~1108 FBX units long → ~0.55 m at this scale
@@ -66,21 +67,8 @@ export async function tryLoadWeaponFBX(path = import.meta.env.BASE_URL + 'models
 // Longest axis of P90 (barrel along Z) mapped to TARGET_LEN world units
 const _P90_TARGET_LEN = 0.52; // ~52 cm — realistic SMG length in scene
 
-// Rotation in hand_r bone-local space.
-// hand_r palm faces roughly +Y, fingers point +X in Quaternius rig.
-// P90 barrel runs along +Z in FBX → rotate so barrel goes along +X (finger dir).
-const P90_ROT = new THREE.Euler(Math.PI / 2, 0, Math.PI / 2);
-
-// Nudge so grip sits in palm
-const P90_GRIP = new THREE.Vector3(-0.02, 0.0, 0.05);
-
-// NOTE: there used to be a tryLoadP90ForHand() here that fetched and parsed P90.fbx a
-// second time to build a hand-attachable template. Nothing ever read that template —
-// attachWeapons3pToHand() below uses the shared weapon3p object from weapon.js — so it
-// was a duplicate download + FBXLoader parse on the boot critical path. Removed.
-
 export function attachWeapons3pToHand(playerRoot) {
   const hand = playerRoot.getObjectByName('hand_r');
   if (!hand) { console.warn('[Weapon3p] hand_r not found in player mesh'); return; }
-  attachWeapon3pToHand(hand, P90_ROT, P90_GRIP);
+  attachWeapon3pToHand(hand, WEAPON3P_ROT, WEAPON3P_GRIP);
 }

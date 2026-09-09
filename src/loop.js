@@ -335,6 +335,10 @@ export function loop(ts) {
 // state of the first/third person blend. window.__debug3p()
 // Reads one bone's current local quaternion off the player rig — used by the
 // aim-layer test and handy when diagnosing a pose by hand.
+window.__THREE = THREE;
+window.__handRef = () => playerMesh?.getObjectByName('hand_r');
+window.__bodyRef = () => playerMesh;
+
 window.__debugBone = (name) => {
   const b = playerMesh?.getObjectByName(name);
   return b ? b.quaternion.toArray() : null;
@@ -365,6 +369,26 @@ window.__debug3p = () => {
     distFromCamera: camDist.toFixed(2),
     frustumCulledFlags: wpn3p.children.flatMap(g=>g.children.map(m=>m.frustumCulled)).join(','),
     groups: groups.join(' | '),
+    visibleWeaponBox: (() => {
+      const g = wpn3p.children.find((c) => c.visible);
+      if (!g) return 'none visible';
+      const b = new THREE.Box3().setFromObject(g);
+      if (b.isEmpty()) return 'empty';
+      const s2 = b.getSize(new THREE.Vector3()), c2 = b.getCenter(new THREE.Vector3());
+      return `size ${s2.x.toFixed(2)}x${s2.y.toFixed(2)}x${s2.z.toFixed(2)} @ ${c2.x.toFixed(2)},${c2.y.toFixed(2)},${c2.z.toFixed(2)}`;
+    })(),
+    bodyBox: (() => {
+      if (!playerMesh) return 'none';
+      const b = new THREE.Box3().setFromObject(playerMesh);
+      const s2 = b.getSize(new THREE.Vector3()), c2 = b.getCenter(new THREE.Vector3());
+      return `size ${s2.x.toFixed(2)}x${s2.y.toFixed(2)}x${s2.z.toFixed(2)} @ ${c2.x.toFixed(2)},${c2.y.toFixed(2)},${c2.z.toFixed(2)}`;
+    })(),
+    handWorld: (() => {
+      const h = playerMesh?.getObjectByName('hand_r');
+      if (!h) return 'none';
+      const w = new THREE.Vector3(); h.getWorldPosition(w);
+      return `${w.x.toFixed(2)},${w.y.toFixed(2)},${w.z.toFixed(2)}`;
+    })(),
     fpWeaponVisible: wpn.visible,
   };
   console.table(info);
