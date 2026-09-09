@@ -20,6 +20,17 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test:unit
+      - name: Disable unused Chrome package source
+        # Playwright downloads its own Chromium. A broken Google apt index on the
+        # hosted runner must not block installation of Ubuntu system libraries.
+        shell: bash
+        run: |
+          for source_file in /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do
+            [ -f "$source_file" ] || continue
+            if grep -qE 'https?://dl\.google\.com/linux/chrome' "$source_file"; then
+              sudo mv "$source_file" "$source_file.disabled"
+            fi
+          done
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
       - name: Upload Playwright report on failure
