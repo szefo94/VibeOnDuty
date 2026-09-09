@@ -130,6 +130,32 @@ It is off by default because the per-clip delta assignment is chosen by measurem
 rather than derived, so it is partly curve-fitting and needs a human eye before it
 ships. Turn it on, play, and judge crouch / roll / jump / death by eye.
 
+## Why the search for a runtime correction stopped
+
+Three variants were measured. Each fixes one thing and breaks another:
+
+| variant | clip -> idle | `jump_loop -> jump_land` | crouch `upperarm_r` |
+|---|---|---|---|
+| none | 40-68 deg | **5 deg** | 161 deg |
+| one delta per clip, picked by distance to idle | **9-26 deg** | 39 deg | **36 deg** |
+| one uniform delta, per bone by model fit | 25-30 deg | **5 deg** | 95 deg |
+
+Two lessons worth keeping:
+
+* **Clips that blend with each other must share a correction.** Picking each clip's
+  delta independently by its distance to idle took `jump_loop -> jump_land` from 5 deg
+  to 39 deg -- the correction broke a pair that was already perfect. Distance to the
+  idle anchor is worth less than staying coherent with the clip you are blended from.
+  The `SPACE_FIX_SOURCES` table now records that invariant explicitly.
+* **A low fit residual does not mean a delta transfers.** Per-bone selection preferred
+  `attack <- Pistol_Idle_Loop` (1.4 deg residual) for the arms, but both clips are
+  near-static, so the delta is underdetermined -- it reproduces that pair almost
+  exactly and generalises badly (crouch `upperarm_r` 36 -> 95 deg).
+
+Taken together these are the empirical proof that the retarget was not a rigid
+rest-pose change. No constant per-bone rotation transfers across these clips, so
+runtime correction can only ever move the error around. Stop here and fix the asset.
+
 ## The actual fix (upstream, in Blender)
 
 Do this and the whole `CORR_CLIPS` / `LARGE_POSE_CLIPS` / `INSTANT_SNAP_CLIPS` /

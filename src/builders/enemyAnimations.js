@@ -211,6 +211,7 @@ function _enterLocoMode(e) {
                  : INERTIA_OMEGA);
     a.setEffectiveWeight(0);
   }
+  if (_dbgWants(e)) console.log(`[loco:${e._dbgName ?? 'enemy'}] enter (from ${e.currentClip ?? 'none'})`);
   e._inLocoMode = true;
   e.currentClip = 'idle';
 }
@@ -271,6 +272,26 @@ export function tickBoneFlipMonitor(e) {
   }
 }
 
+// ── Runtime animation debug switch ────────────────────────────────────────
+// Transition logging used to be gated on a per-object _dbgTransitions flag that
+// nothing exposed, so it was unreachable from the console on a deployed build.
+// This module-level switch turns it on for the player and every enemy at once.
+//   window.__animDebug(true)      every character
+//   window.__animDebug('player')  player only
+//   window.__animDebug(false)     off
+let _dbgMode = false;
+export function setAnimDebug(mode = true) {
+  _dbgMode = mode;
+  console.log(`[animDebug] ${mode === false ? 'off' : `on (${mode === true ? 'all characters' : mode})`}`);
+  return mode;
+}
+function _dbgWants(e) {
+  if (e._dbgTransitions) return true;
+  if (_dbgMode === false) return false;
+  if (_dbgMode === true) return true;
+  return (e._dbgName ?? 'enemy') === _dbgMode;   // string mode = match this name only
+}
+
 // ── Crossfade helper ──────────────────────────────────────────────────────
 // Call once per frame after computing the desired clip name.
 // e must have { actions, currentClip } on it.
@@ -307,7 +328,7 @@ export function crossfade(e, to, dur = 0.22) {
   e.currentClip = to;
 
   // Debug: log transitions + full-skeleton angle audit
-  if (e._dbgTransitions && e._bones?.length) {
+  if (_dbgWants(e) && e._bones?.length) {
     const fromLabel = e._dbgPrevClip ?? 'loco';
     e._dbgPrevClip = to;
     const toClip = toAct.getClip();
@@ -329,7 +350,7 @@ export function crossfade(e, to, dur = 0.22) {
     const tags = results.slice(0, 10).map(r =>
       `${r.name}(${r.angleDeg}°${r.dot < 0 ? ',flip' : ''})`
     );
-    console.log(`[crossfade] ${fromLabel} → ${to} dur=${dur.toFixed(2)} | ${tags.length ? tags.join(' ') : 'clean'}`);
+    console.log(`[crossfade:${e._dbgName ?? 'enemy'}] ${fromLabel} → ${to} dur=${dur.toFixed(2)} | ${tags.length ? tags.join(' ') : 'clean'}`);
   }
 }
 

@@ -25,7 +25,7 @@ import { show1pWeapon, show3pWeapon, weapon3p } from './builders/weapon.js';
 import { playerBody } from './builders/playerBody.js';
 import { tryLoadWeaponFBX } from './builders/weaponFBX.js';
 import { tryLoadPistolFBX } from './builders/enemyWeapon.js';
-import { setSkeletonDebugVisible } from './builders/enemyAnimations.js';
+import { setSkeletonDebugVisible, setAnimDebug } from './builders/enemyAnimations.js';
 import { register, loadAll } from './builders/assetManager.js';
 import { setActiveMap } from './map.js';
 import { buildLevel } from './level.js';
@@ -39,6 +39,8 @@ import { initEditor, openEditor, mapDefFromB64 } from './editor/mapEditor.js';
 import { adaptStart, adaptStop } from './ai/difficultyAdapter.js';
 
 initVersionStamp();
+// Console hook for diagnosing animation transitions on any build, deployed included.
+window.__animDebug = setAnimDebug;
 
 const _euler = new THREE.Euler(0, 0, 0, 'YXZ');
 let debugVisible = true;

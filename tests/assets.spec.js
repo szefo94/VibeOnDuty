@@ -74,3 +74,24 @@ test.describe('experimental retarget-space fix', () => {
     expect(errors).toEqual([]);
   });
 });
+
+test.describe('animation transition logging', () => {
+  test('window.__animDebug turns on per-transition logs at runtime', async ({ page }) => {
+    const logs = [];
+    page.on('console', m => logs.push(m.text()));
+    await page.goto('/');
+    await page.locator('#startbtn').click();
+
+    // Nothing should be logged until it is asked for.
+    await page.waitForTimeout(1500);
+    expect(logs.filter(l => l.includes('[crossfade:') || l.includes('[loco:'))).toEqual([]);
+
+    await page.evaluate(() => window.__animDebug(true));
+    await page.waitForTimeout(4000);
+
+    // Enemies constantly change state, so transitions must appear once enabled.
+    const t = logs.filter(l => l.includes('[crossfade:') || l.includes('[loco:'));
+    expect(t.length).toBeGreaterThan(0);
+    expect(t.every(l => /\[(crossfade|loco):(player|enemy)\]/.test(l))).toBe(true);
+  });
+});

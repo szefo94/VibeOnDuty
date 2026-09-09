@@ -302,11 +302,20 @@ const SPACE_FIX_SOURCES = {
   Jump_Start:       ['jump_loop', 'Jump_Loop'],   // 44.9 -> 14.5
   Jump_Loop:        ['jump_loop', 'Jump_Loop'],   // 39.9 ->  9.7
   Death01:          ['jump_loop', 'Jump_Loop'],   // 42.4 -> 23.4
-  Jump_Land:        ['walk',      'Walk_Loop'],   // 62.1 -> 14.9
-  Dance_Loop:       ['walk',      'Walk_Loop'],   // 67.6 ->  9.2
-  Punch_Cross:      ['walk',      'Walk_Loop'],   // 66.1 -> 11.9
-  Punch_Jab:        ['walk',      'Walk_Loop'],   // 66.0 -> 11.7
+  // Jump_Land MUST use the same delta as Jump_Start/Jump_Loop even though the walk
+  // delta scores better against idle (15 vs 34). Those three clips blend with each
+  // other in sequence on every landing, and correcting them differently wrecks that:
+  // jump_loop -> jump_land measures 5 deg raw, 5 deg with a shared delta, and 39 deg
+  // with mixed deltas. A clip's distance to idle is worth less than staying coherent
+  // with the clip it is actually blended from.
+  Jump_Land:        ['jump_loop', 'Jump_Loop'],   // 62.1 -> 33.8, keeps jump chain at 5
+  Dance_Loop:       ['walk',      'Walk_Loop'],   // 67.6 ->  9.2  (standalone -> loco)
+  Punch_Cross:      ['walk',      'Walk_Loop'],   // 66.1 -> 11.9  (paired with Punch_Jab)
+  Punch_Jab:        ['walk',      'Walk_Loop'],   // 66.0 -> 11.7  (paired with Punch_Cross)
 };
+// Invariant: clips that blend with each other must share a source pair above.
+//   jump_start/jump_loop/jump_land -> jump   |   crouch idle/fwd -> jump
+//   punch cross/jab -> walk                  |   roll, death, dance are standalone
 
 function spaceFixEnabled() {
   try { return localStorage.getItem('animSpaceFix') === '1'; } catch { return false; }
