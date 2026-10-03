@@ -1,0 +1,9 @@
+{
+  "command": "npm run test:unit -- server/cli.test.js server/hosting.test.js --reporter=junit",
+  "exitCode": 1,
+  "targetTest": "operator CLI &gt; help exits successfully without listening",
+  "targetFile": "server/cli.test.js",
+  "expected": "--help exits 0 without starting a listener and describes operator options",
+  "actual": "AssertionError: expected 1 to be +0 at server/cli.test.js:23",
+  "output": "<testsuites tests=\"24\" failures=\"8\"><testsuite name=\"server/cli.test.js\" tests=\"15\" failures=\"5\"><testcase name=\"operator CLI &gt; help exits successfully without listening\"><failure type=\"AssertionError\" message=\"expected 1 to be +0\">AssertionError at server/cli.test.js:23</failure></testcase></testsuite></testsuites>"
+}
