@@ -9,8 +9,8 @@ notes or roadmap proposals. Update relevant context when the architecture change
 
 - Browser FPS: Three.js r160, Vite 8, plain JavaScript ES modules. Node 24 and
   Colyseus provide an initial dedicated-server online TDM slice alongside offline play.
-  Walking, M4 fire/reload, server health and score replication are implemented;
-  extended movement and complete match lifecycle remain later Phase 1 plans.
+  Walking/sprinting/jumping/crouching/ADS, M4 fire/reload, server health and score
+  replication are implemented; complete match lifecycle remains later Phase 1 plans.
 - Entry/UI: `index.html`, `style.css`, `src/main.js`. Rendering and DOM access happen
   at module initialization in several modules; importing gameplay code in Node often
   requires mocks. Pure helpers are easier to unit test independently.
@@ -68,6 +68,13 @@ Greek Columns gameplay arrays/spawns live in `shared/maps/bunker.js`; the visual
 map consumes them and each world clones them. Server code must not import browser
 singletons. Frozen `window.__mpDebug()` is observation only. `clearAllDrones()` also
 cancels delayed offline drone respawns during mode transitions.
+
+`shared/movement.js` owns numeric eye/body stepping. Crouched walk speed retains
+`6 * 0.72 = 4.32 m/s`; floor references convert crouched eyes to standing-equivalent
+eye Y, and `world.supportElevation()` includes radius contact with platform edges.
+The room schema replicates stance, vertical velocity, aiming, sprinting, current tick
+and consumed sequence. Online input sends the latest snapshot tick and a `neutral`
+boolean on unlock/blur/hidden state; server snapshots and cosmetics continue then.
 
 Important dependencies and lifecycle constraints:
 

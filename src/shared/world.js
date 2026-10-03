@@ -86,17 +86,18 @@ function segmentColumn(start, end, col) {
   }
   return near <= far ? near : null;
 }
-/** @param {Point} body @param {Box} box */
-function overlapsBox(body, box) {
-  if (body.y - PLAYER_H >= box.hi.y - EPS || body.y <= box.lo.y + EPS) return false;
+/** @param {Point} body @param {Box} box @param {number} [height] */
+function overlapsBox(body, box, height = PLAYER_H) {
+  if (body.y - height >= box.hi.y - EPS || body.y <= box.lo.y + EPS) return false;
   const dx = body.x - Math.max(box.lo.x, Math.min(body.x, box.hi.x));
   const dz = body.z - Math.max(box.lo.z, Math.min(body.z, box.hi.z));
   return dx * dx + dz * dz < PLAYER_R ** 2 - EPS;
 }
 /** Horizontal bodies collide only when their vertical spans overlap. @param {Point} a @param {Point} b */
-export function bodiesOverlap(a, b) {
+export function bodiesOverlap(a, b, heightA = PLAYER_H, heightB = PLAYER_H) {
   return (
-    Math.abs(a.y - b.y) < PLAYER_H - EPS && Math.hypot(a.x - b.x, a.z - b.z) < 2 * PLAYER_R - EPS
+    a.y > b.y - heightB + EPS && b.y > a.y - heightA + EPS &&
+    Math.hypot(a.x - b.x, a.z - b.z) < 2 * PLAYER_R - EPS
   );
 }
 
@@ -261,8 +262,21 @@ export function createWorld(data) {
         }
       }
   }
-  /** @param {Point} body */
-  function canOccupy(body) {
+  /** Supporting platform edges must be reachable before the center crosses them.
+   * Ramps retain their interpolated center surface. @param {number} x @param {number} z @param {number} refY */
+  function supportElevation(x, z, refY) {
+    let ground = groundElevation(x, z, refY);
+    const feet = refY - PLAYER_H;
+    for (const b of boxes) {
+      if (!b.body || b.hi.y > feet + MAX_STEP + EPS || b.hi.y < ground) continue;
+      const dx = x - Math.max(b.lo.x, Math.min(x, b.hi.x));
+      const dz = z - Math.max(b.lo.z, Math.min(z, b.hi.z));
+      if (dx * dx + dz * dz < PLAYER_R ** 2 - EPS) ground = b.hi.y;
+    }
+    return ground;
+  }
+  /** @param {Point} body @param {number} [height] @param {boolean} [allowStep] */
+  function canOccupy(body, height = PLAYER_H, allowStep = true) {
     if (![body.x, body.y, body.z].every(Number.isFinite)) return false;
     if (
       body.x < PLAYER_R - EPS ||
@@ -271,18 +285,19 @@ export function createWorld(data) {
       body.z > map.height * CELL - PLAYER_R + EPS
     )
       return false;
-    if (groundElevation(body.x, body.z, body.y) - (body.y - PLAYER_H) > MAX_STEP + EPS)
+    const ground = (allowStep ? supportElevation : groundElevation)(body.x, body.z, body.y - height + PLAYER_H);
+    if (ground - (body.y - height) > (allowStep ? MAX_STEP : 0) + EPS)
       return false;
     // A supporting slab may be up to MAX_STEP higher; evaluate collision at the
     // selected eye height, just as movement places the body after taking a step.
     const stood = {
       ...body,
-      y: Math.max(body.y, groundElevation(body.x, body.z, body.y) + PLAYER_H),
+      y: allowStep ? Math.max(body.y, ground + height) : body.y,
     };
-    if (boxes.some((b) => b.body && overlapsBox(stood, b))) return false;
+    if (boxes.some((b) => b.body && overlapsBox(stood, b, height))) return false;
     return columns.every(
       (col) =>
-        stood.y - PLAYER_H >= col.top - EPS ||
+        stood.y - height >= col.top - EPS ||
         stood.y <= col.base + EPS ||
         Math.hypot(stood.x - col.x, stood.z - col.z) >= col.radius + PLAYER_R - EPS
     );
@@ -317,5 +332,5 @@ export function createWorld(data) {
       candidates.find((p) => canOccupy(p) && occupied.every((b) => !bodiesOverlap(p, b))) ?? null
     );
   }
-  return { worldToCell, groundElevation, canOccupy, sweepObstruction, chooseSpawn };
+  return { worldToCell, groundElevation, supportElevation, canOccupy, sweepObstruction, chooseSpawn };
 }

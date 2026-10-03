@@ -19,8 +19,14 @@ export const PlayerState = schema(
     ammo: t.number(),
     reserve: t.number(),
     moving: t.boolean(),
+    crouching: t.boolean(),
+    onGround: t.boolean(),
+    verticalVelocity: t.number(),
+    aiming: t.boolean(),
+    sprinting: t.boolean(),
     reloadRemaining: t.number(),
     lastSeq: t.number(),
+    lastConsumedSeq: t.number(),
   },
   'PlayerState'
 );
@@ -31,6 +37,7 @@ export const MatchState = schema(
     mapId: t.string(),
     phase: t.string(),
     matchGeneration: t.number(),
+    currentTick: t.number(),
     scoreAlpha: t.number(),
     scoreBravo: t.number(),
     timeRemaining: t.number(),
@@ -46,6 +53,7 @@ export class TdmRoom extends Room {
     mapId: 'bunker',
     phase: 'waiting',
     matchGeneration: 1,
+    currentTick: 0,
     scoreAlpha: 0,
     scoreBravo: 0,
     timeRemaining: 600,
@@ -86,11 +94,12 @@ export class TdmRoom extends Room {
         replicated = new PlayerState();
         this.state.players.set(p.sessionId, replicated);
       }
-      const { shootRemaining: _shoot, ...fields } = p;
+      const { shootRemaining: _shoot, airVelX: _ax, airVelZ: _az, jumpHeld: _jump, ...fields } = p;
       Object.assign(replicated, fields);
     }
     this.state.phase = s.phase;
     this.state.matchGeneration = s.matchGeneration;
+    this.state.currentTick = s.currentTick;
     this.state.timeRemaining = s.timeRemaining;
     this.state.scoreAlpha = s.score.alpha;
     this.state.scoreBravo = s.score.bravo;

@@ -2,22 +2,25 @@
 // @ts-ignore Three vendor declarations are absent; strict authority uses typed plain numbers.
 import * as THREE from 'three';
 import { Client } from '@colyseus/sdk';
-import { PLAYER_H, MOUSE_SENS } from '../config.js';
+import { PLAYER_H, PLAYER_H_CROUCH, MOUSE_SENS } from '../config.js';
 import { camera } from '../scene.js';
 import { player } from '../entities/player.js';
-import { keys, setGameRunning, gameRunning } from '../input.js';
+import { keys, locked, setGameRunning, gameRunning } from '../input.js';
 import { bunkerMapDef } from '../maps/bunker.js';
 import { setActiveMap } from '../map.js';
 import { buildLevel } from '../level.js';
 import { deactivateAllEnemies } from '../entities/enemies.js';
 import { clearAllDrones } from '../entities/drone.js';
 import { buildEnemyMesh, disposeEnemyMesh, usingGLTF } from '../builders/enemyGLTF.js';
-import { enterLocoMode, setLocoWeights, crossfade } from '../builders/enemyAnimations.js';
+import { enterLocoMode, exitLocoMode, setLocoWeights, crossfade } from '../builders/enemyAnimations.js';
 import { show1pWeapon, show3pWeapon } from '../builders/weapon.js';
 import { spawnHitMarker, tickHitMarker } from '../hud/hitmarker.js';
 import { spawnDamageNumber } from '../fx/damageNumbers.js';
 import { updateHUD, showStatus } from '../hud/overlay.js';
-import { updateWeapon } from '../combat/shoot.js';
+import { updateWeapon, coolSpray } from '../combat/shoot.js';
+import { tickImpacts } from '../fx/impacts.js';
+import { tickTracers } from '../fx/tracers.js';
+import { tickGrenadeParticles, tickSmokeCloud } from '../fx/particles.js';
 import { cancelGrenadeThrow } from '../entities/grenades.js';
 import { setMode, getMode } from '../modes/modeManager.js';
 import { adaptStop } from '../ai/difficultyAdapter.js';
@@ -31,18 +34,21 @@ import { stopKillcam } from '../replay/killcam.js';
   new Map();
 let joining = false,
   seq = 0,
-  sendTimer = 0,
   yaw = 0,
   pitch = 0,
   fire = false,
   held = false,
-  reload = false;
+  reload = false,
+  jump = false,
+  aiming = false;
 let sessionEpoch = 0;
+let lastSentTime = 0;
 /** @type {Hit|null} */ let lastConfirmedHit = null;
 let lastEventId = 0;
 /** @type {ReturnType<typeof setInterval>|null} */ let heartbeat = null;
 const euler = new THREE.Euler(0, 0, 0, 'YXZ');
 const onlineKeys = /** @type {Record<string,boolean>} */ (keys);
+const aimView = /** @type {{aimT:number}} */ (/** @type {unknown} */ (player));
 const blockedKeys = new Set([
   'Digit1',
   'Digit2',
@@ -55,12 +61,6 @@ const blockedKeys = new Set([
   'KeyE',
   'KeyZ',
   'KeyB',
-  'Space',
-  'ControlLeft',
-  'ControlRight',
-  'KeyC',
-  'ShiftLeft',
-  'ShiftRight',
 ]);
 
 export function isOnline() {
@@ -69,6 +69,7 @@ export function isOnline() {
 /** @param {KeyboardEvent} event */
 function onKeyDown(event) {
   if (!isOnline()) return;
+  if (event.code === 'Space' && !event.repeat) jump = true;
   if (event.code === 'KeyR') {
     requestOnlineAction('reload');
     event.stopImmediatePropagation();
@@ -76,7 +77,7 @@ function onKeyDown(event) {
   } else if (blockedKeys.has(event.code)) {
     event.stopImmediatePropagation();
     event.preventDefault();
-    showStatus('Online: M4, walk and reload');
+    showStatus('Online: M4, walk, sprint, jump, crouch, aim and reload');
   } else {
     onlineKeys[event.code] = true;
     sendIntent();
@@ -97,7 +98,10 @@ function onMouseDown(event) {
   if (event.button === 0) {
     held = true;
     requestOnlineAction('fire');
-  } else showStatus('Online: M4, walk and reload');
+  } else if (event.button === 2) {
+    aiming = true;
+    sendIntent();
+  }
 }
 /** Capture touch actions before the offline dispatcher; cross-device movement expands later.
  * @param {TouchEvent} event */
@@ -111,6 +115,8 @@ function onTouch(event) {
 function onMouseUp(event) {
   if (isOnline()) {
     if (event.button === 0) held = false;
+    if (event.button === 2) aiming = false;
+    sendIntent();
     event.stopImmediatePropagation();
   }
 }
@@ -118,6 +124,7 @@ function onMouseUp(event) {
 function onMouseMove(event) {
   if (!isOnline()) return;
   event.stopImmediatePropagation();
+  if (!locked || document.hidden) return;
   yaw -= event.movementX * MOUSE_SENS;
   yaw = Math.atan2(Math.sin(yaw), Math.cos(yaw));
   pitch = Math.max(-1.38, Math.min(1.38, pitch - event.movementY * MOUSE_SENS));
@@ -125,8 +132,14 @@ function onMouseMove(event) {
 function onBlur() {
   held = false;
   fire = false;
+  reload = false;
+  jump = false;
+  aiming = false;
   for (const key of Object.keys(onlineKeys)) onlineKeys[key] = false;
+  sendIntent();
 }
+function onLockChange() { if (!document.pointerLockElement) onBlur(); }
+function onVisibilityChange() { if (document.hidden) onBlur(); }
 function installHandlers() {
   document.addEventListener('keydown', onKeyDown, true);
   document.addEventListener('keyup', onKeyUp, true);
@@ -134,6 +147,8 @@ function installHandlers() {
   document.addEventListener('mouseup', onMouseUp, true);
   document.addEventListener('mousemove', onMouseMove, true);
   window.addEventListener('blur', onBlur);
+  document.addEventListener('pointerlockchange', onLockChange);
+  document.addEventListener('visibilitychange', onVisibilityChange);
   for (const name of /** @type {const} */ (['touchstart', 'touchmove', 'touchend', 'touchcancel']))
     document.addEventListener(name, onTouch, { capture: true, passive: false });
 }
@@ -144,12 +159,15 @@ function removeHandlers() {
   document.removeEventListener('mouseup', onMouseUp, true);
   document.removeEventListener('mousemove', onMouseMove, true);
   window.removeEventListener('blur', onBlur);
+  document.removeEventListener('pointerlockchange', onLockChange);
+  document.removeEventListener('visibilitychange', onVisibilityChange);
   for (const name of /** @type {const} */ (['touchstart', 'touchmove', 'touchend', 'touchcancel']))
     document.removeEventListener(name, onTouch, true);
 }
 /** @param {string} action */
 export function requestOnlineAction(action) {
   if (!isOnline()) return false;
+  if (!locked || document.hidden) return false;
   if (action === 'fire') fire = true;
   else if (action === 'reload') reload = true;
   else return false;
@@ -184,7 +202,7 @@ export async function joinOnline() {
     pitch = 0;
     lastConfirmedHit = null;
     lastEventId = 0;
-    heartbeat = setInterval(sendIntent, 1000 / 30);
+    heartbeat = setInterval(sendHeartbeat, 1000 / 30);
     room.onMessage(
       'hit',
       /** @param {Hit} event */ (event) => {
@@ -274,33 +292,51 @@ function sendIntent() {
   if (!room?.state?.players) return;
   const me = room.state.players.get(room.sessionId);
   if (!me) return;
+  lastSentTime = performance.now();
+  if (seq === 2147483647) {
+    connectionError('Input sequence exhausted. Leave and join again.');
+    void leaveOnline();
+    return;
+  }
+  const active = locked && !document.hidden && me.alive && room.state.phase === 'playing';
   room.send('input', {
     protocolVersion: 1,
     seq: ++seq,
+    ackTick: room.state.currentTick ?? 0,
     matchGeneration: room.state.matchGeneration,
     lifeGeneration: me.lifeGeneration,
-    moveX: Number(!!onlineKeys.KeyD) - Number(!!onlineKeys.KeyA),
-    moveZ: Number(!!onlineKeys.KeyW) - Number(!!onlineKeys.KeyS),
+    moveX: active ? Number(!!onlineKeys.KeyD) - Number(!!onlineKeys.KeyA) : 0,
+    moveZ: active ? Number(!!onlineKeys.KeyW) - Number(!!onlineKeys.KeyS) : 0,
     yaw,
     pitch,
-    fire: fire || held,
-    reload,
+    fire: active && (fire || held),
+    reload: active && reload,
+    sprint: active && !!(onlineKeys.ShiftLeft || onlineKeys.ShiftRight),
+    jump: active && jump,
+    crouch: active && !!(onlineKeys.ControlLeft || onlineKeys.ControlRight || onlineKeys.KeyC),
+    aiming: active && aiming,
+    neutral: !active,
   });
   fire = false;
   reload = false;
+  jump = false;
+}
+function sendHeartbeat() {
+  if (performance.now() - lastSentTime >= 1000 / 30) sendIntent();
 }
 
 /** @param {number} dt */
 export function tickOnline(dt) {
   if (!room?.state?.players) return;
+  sendHeartbeat();
   tickHitMarker(dt);
+  tickImpacts(dt);
+  tickTracers(dt);
+  tickGrenadeParticles(dt);
+  tickSmokeCloud(dt);
+  coolSpray(dt);
   const me = room.state.players.get(room.sessionId);
   if (me) {
-    sendTimer += dt;
-    if (sendTimer >= 1 / 30) {
-      sendTimer %= 1 / 30;
-      sendIntent();
-    }
     camera.position.set(me.x, me.y, me.z);
     euler.set(pitch, yaw, 0);
     camera.quaternion.setFromEuler(euler);
@@ -312,11 +348,15 @@ export function tickOnline(dt) {
       reserve: me.reserve,
       dead: !me.alive,
       moving: me.moving,
-      onGround: true,
+      onGround: me.onGround,
+      velY: me.verticalVelocity,
+      crouching: me.crouching,
+      aiming: me.aiming,
       reloading: me.reloadRemaining > 0,
       reloadTimer: me.reloadRemaining * 1000,
       reloadTotal: 1800,
     });
+    aimView.aimT += ((me.aiming ? 1 : 0) - aimView.aimT) * Math.min(1, dt * 14);
     updateHUD();
     document.getElementById('tdm-bar')?.style.setProperty('display', 'block');
     const label = document.getElementById('tdm-label');
@@ -328,7 +368,7 @@ export function tickOnline(dt) {
     const timer = document.getElementById('tdm-timer');
     if (timer) timer.textContent = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
     document.getElementById('reloadwrap')?.style.setProperty('display', me.reloadRemaining > 0 ? 'block' : 'none');
-    updateWeapon(dt, me.moving, false, false, false);
+    updateWeapon(dt, me.moving, me.sprinting, me.crouching, false);
   }
   const active = new Set();
   room.state.players.forEach((p) => {
@@ -339,12 +379,15 @@ export function tickOnline(dt) {
       actor = { ...buildEnemyMesh(p.x, p.z, 'assault'), currentClip: 'idle' };
       actors.set(p.sessionId, actor);
     }
-    actor.mesh.position.set(p.x, p.y - PLAYER_H, p.z);
+    actor.mesh.position.set(p.x, p.y - (p.crouching ? PLAYER_H_CROUCH : PLAYER_H), p.z);
     actor.mesh.rotation.y = p.yaw + actor.facingOffset;
-    if (!p.alive) crossfade(actor, 'death', 0.2);
+    if (!p.alive || p.crouching || !p.onGround) {
+      exitLocoMode(actor);
+      crossfade(actor, !p.alive ? 'death' : p.crouching ? (p.moving ? 'crouch_walk' : 'crouch') : 'jump_loop', 0.2);
+    }
     else {
       enterLocoMode(actor);
-      setLocoWeights(actor.actions, p.moving ? 0.45 : 0, 0);
+      setLocoWeights(actor.actions, p.moving ? (p.sprinting ? 1 : 0.45) : 0, 0);
     }
     actor.mixer?.update(dt);
   });
@@ -372,6 +415,11 @@ export function getOnlineSnapshot() {
     roomId: room?.roomId ?? null,
     mapId: s?.mapId ?? null,
     matchGeneration: s?.matchGeneration ?? 0,
+    currentTick: s?.currentTick ?? 0,
+    inputSeq: seq,
+    simulationEye: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
+    cameraFov: camera.fov,
+    aimT: aimView.aimT,
     phase: s?.phase ?? 'offline',
     score: { alpha: s?.scoreAlpha ?? 0, bravo: s?.scoreBravo ?? 0 },
     timeRemaining: s?.timeRemaining ?? 0,

@@ -11,6 +11,14 @@ async function snapshot(page) {
   return page.evaluate(() => window.__mpDebug());
 }
 
+async function focusControls(page) {
+  await page.bringToFront();
+  if (!(await page.evaluate(() => !!document.pointerLockElement))) {
+    await page.locator('#pause-resume-btn').click();
+    await expect.poll(() => page.evaluate(() => !!document.pointerLockElement)).toBe(true);
+  }
+}
+
 /** Observe transient presentation without awarding outcomes or changing game state.
  * @param {import('@playwright/test').Page} page
  */
@@ -45,8 +53,8 @@ async function observeFeedback(page) {
  * @param {number} z
  */
 async function walkTo(page, sessionId, x, z) {
-  await page.bringToFront();
-  const deadline = Date.now() + 15000;
+  await focusControls(page);
+  const deadline = Date.now() + 45000;
   while (Date.now() < deadline) {
     const state = await snapshot(page);
     const me = state.players.find((player) => player.sessionId === sessionId);
@@ -64,17 +72,19 @@ async function walkTo(page, sessionId, x, z) {
         : right > 0
           ? 'KeyD'
           : 'KeyA';
-    await page.keyboard.down(key);
-    try {
-      await page.waitForTimeout(Math.min(150, Math.max(40, distance * 40)));
-    } finally {
-      await page.keyboard.up(key);
-    }
+    const precise = distance < 2;
+    await page.keyboard.press(precise ? `ControlLeft+${key}` : key, {
+      delay: Math.min(150, Math.max(40, distance * 40)),
+    });
     // Wait for the neutral command's replicated body before choosing another pulse.
-    await page.waitForTimeout(100);
+    const releaseSeq = (await snapshot(page)).inputSeq;
+    await expect.poll(async () => {
+      const current = (await snapshot(page)).players.find((b) => b.sessionId === sessionId);
+      return !current.moving && current.lastConsumedSeq >= releaseSeq;
+    }).toBe(true);
   }
   throw new Error(
-    `Keyboard route did not reach (${x}, ${z}) within 15s: ${JSON.stringify(await snapshot(page))}`
+    `Keyboard route did not reach (${x}, ${z}) within 45s: ${JSON.stringify(await snapshot(page))}`
   );
 }
 
@@ -113,7 +123,7 @@ test('tracer: two browsers join and move', async ({ browser }) => {
     await expect.poll(async () => (await snapshot(target)).remoteActorCount).toBe(1);
 
     const before = second.players.find((player) => player.sessionId === initial.sessionId);
-    await shooter.bringToFront();
+    await focusControls(shooter);
     await shooter.keyboard.down('KeyW');
     try {
       await expect
@@ -207,6 +217,116 @@ test('tracer: two browsers join and move', async ({ browser }) => {
   }
 });
 
+test('movement: real sprint jump crouch ADS, ramps, walls and camera restore agree in two browsers', async ({ browser }) => {
+  test.setTimeout(180000);
+  const fixture = await startMpFixture();
+  const contexts = [];
+  try {
+    for (let i = 0; i < 2; i++) contexts.push(await browser.newContext({ viewport: { width: 800, height: 600 }, deviceScaleFactor: 0.5 }));
+    const [page, peer] = await Promise.all(contexts.map((c) => c.newPage()));
+    for (const p of [page, peer]) {
+      await p.goto(fixture.url);
+      await expect(p.locator('#mp-join-btn')).toBeEnabled({ timeout: 20000 });
+      await p.locator('#mp-join-btn').click();
+      await expect.poll(async () => (await snapshot(p)).sessionId).toBeTruthy();
+      await p.evaluate(() => {
+        const seen = { moving: false, airborne: false };
+        window.__movementSeen = () => ({ ...seen });
+        setInterval(() => {
+          const state = window.__mpDebug();
+          const b = state.players.find((p) => p.sessionId === state.players[0]?.sessionId);
+          if (b?.moving) seen.moving = true;
+          if (b?.onGround === false) seen.airborne = true;
+        }, 10);
+      });
+    }
+    await expect.poll(async () => (await snapshot(page)).players.length).toBe(2);
+    const initial = await snapshot(page);
+    const id = initial.sessionId;
+    const body = async (p = page) => (await snapshot(p)).players.find((b) => b.sessionId === id);
+    const same = async (field, value) => {
+      if ((field === 'moving' && value === true) || (field === 'onGround' && value === false)) {
+        const observed = field === 'moving' ? 'moving' : 'airborne';
+        for (const p of [page, peer]) await expect.poll(() => p.evaluate((key) => window.__movementSeen()[key], observed)).toBe(true);
+        return;
+      }
+      await expect.poll(async () => (await body())[field]).toBe(value);
+      await expect.poll(async () => (await body(peer))[field]).toBe(value);
+    };
+    await focusControls(page);
+    await page.keyboard.down('ShiftLeft');
+    await page.keyboard.down('KeyD');
+    try {
+      await same('sprinting', true);
+      await same('moving', true);
+      await expect.poll(async () => (await body()).x).toBeGreaterThan(67);
+    } finally { await page.keyboard.up('KeyD'); await page.keyboard.up('ShiftLeft'); }
+    await same('moving', false);
+    await page.keyboard.down('ControlLeft');
+    try {
+      await same('crouching', true);
+      await expect.poll(async () => (await body()).y).toBeCloseTo(0.85, 5);
+      await page.keyboard.down('KeyA');
+      try { await same('moving', true); } finally { await page.keyboard.up('KeyA'); }
+    } finally { await page.keyboard.up('ControlLeft'); }
+    await same('crouching', false);
+    await page.keyboard.down('Space');
+    try { await same('onGround', false); } finally { await page.keyboard.up('Space'); }
+    await same('onGround', true);
+    await expect.poll(async () => (await body()).y).toBeCloseTo(1.65, 5);
+    await page.mouse.down({ button: 'right' });
+    try {
+      await same('aiming', true);
+      await expect.poll(async () => (await snapshot(page)).aimT).toBeGreaterThan(0.9);
+      await expect.poll(async () => (await snapshot(page)).cameraFov).toBeLessThan(52);
+    } finally { await page.mouse.up({ button: 'right' }); }
+    await same('aiming', false);
+    // East ramp (tile6) rises from x76 to80 into the existing 1.4m walkway.
+    await walkTo(page, id, 74, 46);
+    await walkTo(page, id, 74, 30);
+    await walkTo(page, id, 78, 30);
+    await expect.poll(async () => {
+      const b = await body(); return Math.abs(b.y - (1.65 + (b.x - 76) / 4 * 1.4));
+    }).toBeLessThan(0.001);
+    await walkTo(page, id, 82, 30);
+    await expect.poll(async () => (await body()).y).toBeCloseTo(3.05, 5);
+    await page.keyboard.down('KeyC');
+    try { await same('crouching', true); await expect.poll(async () => (await body()).y).toBeCloseTo(2.25, 5); }
+    finally { await page.keyboard.up('KeyC'); }
+    await same('crouching', false);
+    await page.keyboard.press('KeyV');
+    await page.waitForTimeout(700);
+    const restored = await snapshot(page);
+    const current = restored.players.find((b) => b.sessionId === id);
+    expect(restored.simulationEye).toEqual({ x: current.x, y: current.y, z: current.z });
+    expect(restored.usingGLTF).toBe(true);
+    await page.screenshot({ path: test.info().outputPath('movement-rig.png') });
+    await page.keyboard.down('KeyD');
+    try {
+      await expect.poll(async () => (await body()).x).toBeGreaterThan(91.3);
+      await page.waitForTimeout(300);
+      expect((await body()).x).toBeLessThanOrEqual(92 - 0.35);
+    } finally { await page.keyboard.up('KeyD'); }
+    await same('moving', false);
+    const stopped = await body();
+    await expect.poll(async () => {
+      const remote = await body(peer); return Math.abs(remote.x - stopped.x) + Math.abs(remote.y - stopped.y) + Math.abs(remote.z - stopped.z);
+    }).toBeLessThan(0.00001);
+    await page.evaluate(() => document.exitPointerLock());
+    await expect(page.locator('#pause-resume-btn')).toBeVisible();
+    await page.keyboard.down('KeyA');
+    const tick = (await snapshot(page)).currentTick;
+    try {
+      await expect.poll(async () => (await snapshot(page)).currentTick).toBeGreaterThan(tick + 8);
+      expect((await body()).x).toBe(stopped.x);
+      expect((await body()).aiming).toBe(false);
+    } finally { await page.keyboard.up('KeyA'); }
+  } finally {
+    await Promise.all(contexts.map((c) => c.close()));
+    await fixture.stop();
+  }
+});
+
 test('entry: assets gate online join, leave clears actors, and offline controls remain usable', async ({ browser }) => {
   test.setTimeout(120000);
   const fixture = await startMpFixture();
@@ -247,7 +367,7 @@ test('entry: assets gate online join, leave clears actors, and offline controls 
     await expect(page.locator('#hp-num')).toHaveText(String(me.health));
     await expect(page.locator('#ammo-cur')).toHaveText(String(me.ammo));
     await expect(page.locator('#tdm-us')).toHaveText(String(initial.score[me.team]));
-    for (const key of ['Digit2', 'Digit3', 'Digit4', 'KeyF', 'KeyG', 'KeyT', 'KeyQ', 'KeyE', 'KeyZ', 'KeyB', 'Space', 'ControlLeft', 'ShiftLeft'])
+    for (const key of ['Digit2', 'Digit3', 'Digit4', 'KeyF', 'KeyG', 'KeyT', 'KeyQ', 'KeyE', 'KeyZ', 'KeyB'])
       await page.keyboard.press(key);
     await page.mouse.click(400, 300, { button: 'middle' });
     await page.mouse.click(400, 300, { button: 'right' });
