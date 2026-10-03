@@ -1,0 +1,5 @@
+{
+  "test_command": "npm run test:unit -- src/shared/world.test.js --reporter=junit",
+  "exit_code": 1,
+  "output": "<testsuites tests=\"1\" failures=\"1\"><testsuite name=\"src/shared/world.test.js\" tests=\"1\" failures=\"1\"><testcase name=\"room-owned world > allows exactly tangent wall contact but blocks inward penetration\"><failure message=\"expected false to be true // Object.is equality\" type=\"AssertionError\">AssertionError: expected false to be true at src/shared/world.test.js:21:69</failure></testcase></testsuite></testsuites>"
+}
