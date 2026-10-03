@@ -20,22 +20,25 @@ export async function waitFor(predicate, timeoutMs = 2000) {
 }
 
 /** Real SDK, actual transport identity, no server mutation/test endpoint.
- * @param {string} serverUrl @param {{roomId?:string,create?:boolean}} [options] */
+ * @param {string} serverUrl @param {{roomId?:string,create?:boolean,joinOptions?:Record<string,unknown>}} [options] */
 export async function createHostileClient(serverUrl, options = {}) {
   const origin = new URL(serverUrl).origin;
   const client = new Client(serverUrl, { headers: { Origin: origin } });
+  const joinOptions = options.joinOptions ?? { protocolVersion: 1 };
   /** @type {import('@colyseus/sdk').Room<State>} */
   const room = options.roomId
-    ? await client.joinById(options.roomId, { protocolVersion: 1 })
+    ? await client.joinById(options.roomId, joinOptions)
     : options.create
-      ? await client.create('tdm', { protocolVersion: 1 })
-      : await client.joinOrCreate('tdm', { protocolVersion: 1 });
+      ? await client.create('tdm', joinOptions)
+      : await client.joinOrCreate('tdm', joinOptions);
   /** @type {string[]} */ const rejections = [];
   let closedCode = 0,
     seq = 0;
   room.onMessage('inputRejected', (/** @type {{reason:string}} */ message) =>
     rejections.push(message.reason)
   );
+  /** @type {string[]} */ const teamRejections = [];
+  room.onMessage('teamRejected', (/** @type {{reason:string}} */ message) => teamRejections.push(message.reason));
   /** @type {import('../../src/shared/combat.js').Hit[]} */ const confirmations = [];
   room.onMessage('hit-confirmed', (/** @type {import('../../src/shared/combat.js').Hit} */ hit) => confirmations.push(hit));
   room.onLeave((code) => {
@@ -76,6 +79,7 @@ export async function createHostileClient(serverUrl, options = {}) {
     command,
     rejections,
     confirmations,
+    teamRejections,
     get closedCode() {
       return closedCode;
     },

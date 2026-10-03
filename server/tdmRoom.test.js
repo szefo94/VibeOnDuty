@@ -7,7 +7,7 @@ import { createSimulation } from '../src/shared/tdmSimulation.js';
 
 let server, url;
 beforeAll(async () => {
-  server = await startMpFixture();
+  server = await startMpFixture({ env: { VOD_COMBAT_SEED: '7' } });
   url = server.url;
 }, 30000);
 afterAll(async () => {
@@ -15,6 +15,24 @@ afterAll(async () => {
 }, 15000);
 
 describe('real room input boundary', () => {
+  it('binds guest identity and team requests to membership, life and operator rules', async () => {
+    const a = await createHostileClient(url, { create: true, joinOptions: { protocolVersion: 1, nickname: '\u0000<script>guest</script>', team: 'red', settings: { killLimit: 999, matchSeconds: 9999 } } });
+    const b = await createHostileClient(url, { roomId: a.roomId });
+    try {
+      await waitFor(() => Object.keys(a.snapshot().players).length === 2);
+      expect(a.snapshot().settings).toMatchObject({ killLimit: 50, matchSeconds: 600, resultsSeconds: 15 });
+      expect(a.snapshot().players[a.sessionId]).toMatchObject({ team: 'blue', joinOrdinal: 1, nickname: '<script>guest</script>' });
+      expect(b.snapshot().players[b.sessionId]).toMatchObject({ team: 'red', joinOrdinal: 2 });
+      const command = { protocolVersion: 1, matchGeneration: 1, lifeGeneration: 1, team: 'red' };
+      for (const [raw, reason] of [[command, 'alive'], [{ ...command, lifeGeneration: 0 }, 'wrong_generation'], [{ ...command, matchGeneration: 0 }, 'wrong_generation'], [{ ...command, sessionId: b.sessionId }, 'invalid_shape']]) {
+        const count = a.teamRejections.length; a.sendMessage('switch-team', raw);
+        await waitFor(() => a.teamRejections.length > count);
+        expect(a.teamRejections.at(-1)).toBe(reason);
+      }
+      expect(a.snapshot().players[a.sessionId].team).toBe('blue');
+      expect(b.snapshot().players[a.sessionId].team).toBe('blue');
+    } finally { await Promise.all([a.close(), b.close()]); }
+  });
   it('explicitly rejects outcome messages without awarding damage, ammo or score', async () => {
     const a = await createHostileClient(url, { create: true });
     const b = await createHostileClient(url, { roomId: a.roomId });
@@ -68,7 +86,7 @@ describe('real room input boundary', () => {
       const me = a.snapshot().players[a.sessionId], target = b.snapshot().players[b.sessionId];
       a.send(a.command({ fire: true, yaw: Math.atan2(me.x - target.x, me.z - target.z), pitch: Math.atan2(target.y - me.y - 0.1, Math.hypot(target.x - me.x, target.z - me.z)) }));
       await waitFor(() => a.confirmations.length === 1 && b.snapshot().players[b.sessionId].health === 72);
-      expect(a.confirmations).toHaveLength(1);
+      expect(a.confirmations, JSON.stringify({ state: a.snapshot(), rejections: a.rejections })).toHaveLength(1);
       expect(a.confirmations[0]).toMatchObject({ shooterSessionId: a.sessionId, targetSessionId: b.sessionId, damage: 28, shotId: 1, eventId: 1, targetLifeGeneration: 1 });
       expect(a.snapshot().players[b.sessionId].health).toBe(72);
       expect(b.snapshot().players[b.sessionId].health).toBe(72);

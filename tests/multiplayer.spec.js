@@ -6,6 +6,34 @@ import { MOUSE_SENS } from '../src/config.js';
 // Keep the action/network trace; capture explicit gameplay evidence below.
 test.use({ trace: { mode: 'retain-on-failure', screenshots: false, snapshots: false } });
 
+test('teams: solo start and smaller-team assignments are visible in both browsers', async ({ browser }) => {
+  test.setTimeout(120000);
+  const fixture = await startMpFixture({ testSettings: { killLimit: 7, matchSeconds: 120, respawnSeconds: 2, friendlyFire: 0.5 } });
+  const contexts = [];
+  try {
+    for (let i = 0; i < 2; i++) contexts.push(await browser.newContext({ viewport: { width: 800, height: 600 }, deviceScaleFactor: 0.25 }));
+    const [a, b] = await Promise.all(contexts.map((c) => c.newPage()));
+    await a.goto(fixture.url); await expect(a.locator('#mp-join-btn')).toBeEnabled({ timeout: 60000 }); await a.locator('#mp-join-btn').click();
+    await expect.poll(async () => (await snapshot(a)).phase).toBe('active');
+    const solo = await snapshot(a);
+    expect(solo.players).toHaveLength(1);
+    expect(solo.players[0]).toMatchObject({ team: 'blue', joinOrdinal: 1, nickname: 'Guest-1' });
+    expect(solo.settings).toEqual({ killLimit: 7, matchSeconds: 120, respawnSeconds: 2, friendlyFire: 0.5, resultsSeconds: 15 });
+    await expect(a.locator('#tdm-label')).toHaveText('ONLINE · BLUE');
+    await expect(a.locator('#mp-switch-team')).toBeDisabled();
+    await b.goto(fixture.url); await expect(b.locator('#mp-join-btn')).toBeEnabled({ timeout: 60000 }); await b.locator('#mp-join-btn').click();
+    for (const page of [a, b]) {
+      await expect.poll(async () => (await snapshot(page)).players.length).toBe(2);
+      expect((await snapshot(page)).players.map((p) => [p.team, p.joinOrdinal])).toEqual([['blue', 1], ['red', 2]]);
+      await expect(page.locator('#mp-switch-team')).toBeDisabled();
+      await expect(page.locator('#tdm-us')).toHaveText('0'); await expect(page.locator('#tdm-them')).toHaveText('0');
+    }
+    await expect(b.locator('#tdm-label')).toHaveText('ONLINE · RED');
+    expect((await snapshot(a)).timeRemaining).toBeLessThan(solo.timeRemaining);
+    await a.screenshot({ path: test.info().outputPath('teams.png') });
+  } finally { await Promise.all(contexts.map((c) => c.close())); await fixture.stop(); }
+});
+
 /** @param {import('@playwright/test').Page} page */
 async function snapshot(page) {
   return page.evaluate(() => window.__mpDebug());
@@ -478,7 +506,7 @@ test('entry: assets gate online join, leave clears actors, and offline controls 
     await expect(page.locator('#tdm-label')).toHaveText(`ONLINE · ${me.team.toUpperCase()}`);
     await expect(page.locator('#hp-num')).toHaveText(String(me.health));
     await expect(page.locator('#ammo-cur')).toHaveText(String(me.ammo));
-    await expect(page.locator('#tdm-us')).toHaveText(String(initial.score[me.team]));
+    await expect(page.locator('#tdm-us')).toHaveText(String(me.team === 'blue' ? initial.scoreBlue : initial.scoreRed));
     await focusControls(page);
     for (const key of ['Digit2', 'Digit3', 'Digit4', 'KeyF', 'KeyG', 'KeyT', 'KeyQ', 'KeyE', 'KeyZ', 'KeyB'])
       await page.keyboard.press(key);

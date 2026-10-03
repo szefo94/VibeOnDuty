@@ -318,7 +318,7 @@ export function createWorld(data) {
   }
   /** @param {string} team @param {Point[]} occupied */
   function chooseSpawn(team, occupied) {
-    const primary = team === 'alpha' ? map.spawnAttacker : map.spawnDefender;
+    const primary = team === 'alpha' || team === 'blue' ? map.spawnAttacker : map.spawnDefender;
     const candidates = [{ ...primary, y: groundElevation(primary.x, primary.z) + PLAYER_H }];
     for (const fl of floors)
       for (let r = 0; r < map.height; r++)

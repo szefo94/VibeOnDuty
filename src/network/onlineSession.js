@@ -43,6 +43,7 @@ let joining = false,
   aiming = false;
 let sessionEpoch = 0;
 let lastSentTime = 0;
+let lastTeamRejection = '';
 /** @type {Hit|null} */ let lastConfirmedHit = null;
 let lastEventId = 0;
 /** @type {string|null} */ let lastInputRejection = null;
@@ -209,6 +210,9 @@ export async function joinOnline() {
     room.onMessage('inputRejected', (/** @type {{reason:string}} */ rejection) => {
       lastInputRejection = rejection.reason;
     });
+    room.onMessage('teamRejected', (/** @type {{reason:string}} */ rejection) => {
+      lastTeamRejection = rejection.reason;
+    });
     heartbeat = setInterval(sendHeartbeat, 1000 / 30);
     room.onMessage(
       'hit-confirmed',
@@ -266,6 +270,7 @@ export async function joinOnline() {
     document.getElementById('buy-panel')?.style.setProperty('display', 'none');
     document.getElementById('buy-banner')?.style.setProperty('display', 'none');
     setGameRunning(true);
+    installMatchControls();
   } catch (error) {
     if (epoch !== sessionEpoch) return;
     room = null;
@@ -293,6 +298,7 @@ export async function leaveOnline() {
   lastConfirmedHit = null;
   document.getElementById('mp-leave-btn')?.setAttribute('hidden', '');
   document.getElementById('tdm-bar')?.style.setProperty('display', 'none');
+  document.getElementById('mp-match-controls')?.remove();
   if (previous) await previous.leave().catch(() => {});
 }
 
@@ -307,7 +313,7 @@ function sendIntent(forceNeutral = false) {
     void leaveOnline();
     return;
   }
-  const active = !forceNeutral && locked && !document.hidden && me.alive && room.state.phase === 'playing';
+  const active = !forceNeutral && locked && !document.hidden && me.alive && room.state.phase === 'active';
   room.send('input', {
     protocolVersion: 1,
     seq: ++seq,
@@ -371,13 +377,17 @@ export function tickOnline(dt) {
     const label = document.getElementById('tdm-label');
     if (label) label.textContent = `ONLINE · ${me.team.toUpperCase()}`;
     const us = document.getElementById('tdm-us'), them = document.getElementById('tdm-them');
-    if (us) us.textContent = String(me.team === 'alpha' ? room.state.scoreAlpha : room.state.scoreBravo);
-    if (them) them.textContent = String(me.team === 'alpha' ? room.state.scoreBravo : room.state.scoreAlpha);
+    if (us) us.textContent = String(me.team === 'blue' ? room.state.scoreBlue : room.state.scoreRed);
+    if (them) them.textContent = String(me.team === 'blue' ? room.state.scoreRed : room.state.scoreBlue);
     const seconds = Math.ceil(room.state.timeRemaining);
     const timer = document.getElementById('tdm-timer');
     if (timer) timer.textContent = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
     document.getElementById('reloadwrap')?.style.setProperty('display', me.reloadRemaining > 0 ? 'block' : 'none');
     updateWeapon(dt, me.moving, me.sprinting, me.crouching, false);
+    const switchButton = /** @type {HTMLButtonElement|null} */ (document.getElementById('mp-switch-team'));
+    if (switchButton) switchButton.disabled = me.alive && room.state.phase !== 'results';
+    const rejection = document.getElementById('mp-team-rejection');
+    if (rejection) rejection.textContent = lastTeamRejection ? `Team switch rejected: ${lastTeamRejection.replace(/_/g, ' ')}` : '';
   }
   const active = new Set();
   room.state.players.forEach((p) => {
@@ -434,6 +444,10 @@ export function getOnlineSnapshot() {
     phase: s?.phase ?? 'offline',
     score: { alpha: s?.scoreAlpha ?? 0, bravo: s?.scoreBravo ?? 0 },
     timeRemaining: s?.timeRemaining ?? 0,
+    settings: s?.settings?.toJSON() ?? null,
+    scoreBlue: s?.scoreBlue ?? 0,
+    scoreRed: s?.scoreRed ?? 0,
+    lastTeamRejection,
     presentation: { weapon: view.weapon, punching: view.punching, throwingNade: view.throwingNade, dancing: view.dancing, aiming: view.aiming, mode: getMode()?.name ?? null, gameRunning },
     players: s?.players ? Array.from(s.players.values(), (p) => ({ ...p.toJSON() })) : [],
     remoteActorCount: actors.size,
@@ -447,6 +461,27 @@ Object.defineProperty(window, '__mpDebug', {
   writable: false,
   configurable: false,
 });
+
+function installMatchControls() {
+  document.getElementById('mp-match-controls')?.remove();
+  lastTeamRejection = '';
+  const panel = document.createElement('div');
+  panel.id = 'mp-match-controls';
+  panel.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:120;color:white;font:14px monospace;background:#111b;padding:10px;max-width:320px';
+  const button = document.createElement('button');
+  button.id = 'mp-switch-team';
+  button.textContent = 'Switch team';
+  button.addEventListener('click', () => {
+    const me = room?.state.players.get(room.sessionId);
+    if (!room || !me) return;
+    lastTeamRejection = '';
+    room.send('switch-team', { protocolVersion: 1, matchGeneration: room.state.matchGeneration, lifeGeneration: me.lifeGeneration, team: me.team === 'blue' ? 'red' : 'blue' });
+  });
+  const text = document.createElement('div');
+  text.id = 'mp-team-rejection';
+  panel.append(button, text);
+  document.body.append(panel);
+}
 
 // Called by the asset-ready loop; main owns the single explicit entry handler.
 export function initOnlineEntry() {

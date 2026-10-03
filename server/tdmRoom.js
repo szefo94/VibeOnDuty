@@ -9,6 +9,9 @@ export const PlayerState = schema(
   {
     sessionId: t.string(),
     team: t.string(),
+    nickname: t.string(),
+    joinOrdinal: t.number(),
+    respawnAtMs: t.float64(),
     x: t.number(),
     y: t.number(),
     z: t.number(),
@@ -31,6 +34,7 @@ export const PlayerState = schema(
   },
   'PlayerState'
 );
+export const SettingsState = schema({ killLimit: t.number(), matchSeconds: t.float64(), respawnSeconds: t.float64(), friendlyFire: t.float64(), resultsSeconds: t.number() }, 'SettingsState');
 export const MatchState = schema(
   {
     players: t.map(PlayerState),
@@ -42,6 +46,15 @@ export const MatchState = schema(
     scoreAlpha: t.number(),
     scoreBravo: t.number(),
     timeRemaining: t.number(),
+    settings: SettingsState,
+    scoreBlue: t.number(),
+    scoreRed: t.number(),
+    winner: t.string(),
+    nowMs: t.float64(),
+    startedAtMs: t.float64(),
+    endsAtMs: t.float64(),
+    resultsEndsAtMs: t.float64(),
+    resultsRemaining: t.float64(),
   },
   'MatchState'
 );
@@ -58,6 +71,8 @@ export class TdmRoom extends Room {
     scoreAlpha: 0,
     scoreBravo: 0,
     timeRemaining: 600,
+    settings: new SettingsState({ killLimit: 50, matchSeconds: 600, respawnSeconds: 3, friendlyFire: 0.25, resultsSeconds: 15 }),
+    scoreBlue: 0, scoreRed: 0, winner: '', nowMs: 0, startedAtMs: 0, endsAtMs: 0, resultsEndsAtMs: 0, resultsRemaining: 0,
   });
   simulation = createSimulation(bunkerData);
   /** @type {Map<string,ReturnType<typeof createInputGate>>} */
@@ -103,6 +118,20 @@ export class TdmRoom extends Room {
         }
       }
     });
+    this.onMessage('switch-team', (client, command) => {
+      const gate = this.inputGates.get(client.sessionId);
+      const body = this.state.players.get(client.sessionId);
+      if (!gate || !body) return;
+      const budget = gate.receive(null, this.inputContext(body, gate.lastSeq), performance.now());
+      if (!budget.ok && budget.reason === 'rate_limit') {
+        client.send('teamRejected', { reason: 'rate_limit' });
+        if (budget.disconnect) client.leave(4008);
+        return;
+      }
+      const reason = this.simulation.requestTeamSwitch(client.sessionId, command);
+      if (reason) client.send('teamRejected', { reason });
+      else this.syncState();
+    });
     this.onMessage('*', (client) => {
       const gate = this.inputGates.get(client.sessionId);
       const body = this.state.players.get(client.sessionId);
@@ -147,9 +176,9 @@ export class TdmRoom extends Room {
       this.clients.find((c) => c.sessionId === event.shooterSessionId)?.send('hit-confirmed', event);
     }
   }
-  /** @param {import('@colyseus/core').Client} client */
-  onJoin(client) {
-    this.simulation.addPlayer(client.sessionId);
+  /** @param {import('@colyseus/core').Client} client @param {unknown} [options] */
+  onJoin(client, options) {
+    this.simulation.addPlayer(client.sessionId, options);
     this.inputGates.set(client.sessionId, createInputGate());
     this.syncState();
   }
@@ -174,7 +203,7 @@ export class TdmRoom extends Room {
   consumeInputs(nowMs) {
     for (const [id, gate] of this.inputGates) {
       const body = this.state.players.get(id);
-      if (!body || !body.alive || this.state.phase !== 'playing') {
+      if (!body || !body.alive || this.state.phase !== 'active') {
         gate.clear();
         this.simulation.clearInput(id);
         continue;
@@ -207,5 +236,11 @@ export class TdmRoom extends Room {
     this.state.timeRemaining = s.timeRemaining;
     this.state.scoreAlpha = s.score.alpha;
     this.state.scoreBravo = s.score.bravo;
+    this.state.scoreBlue = s.scoreBlue;
+    this.state.scoreRed = s.scoreRed;
+    this.state.nowMs = s.nowMs;
+    this.state.startedAtMs = s.startedAtMs;
+    this.state.endsAtMs = s.endsAtMs;
+    Object.assign(this.state.settings, s.settings);
   }
 }

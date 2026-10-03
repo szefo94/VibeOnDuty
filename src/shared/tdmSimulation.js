@@ -4,24 +4,20 @@ import { createWorld, bodiesOverlap } from './world.js';
 import { stepMovement } from './movement.js';
 import { validateInput } from './protocol.js';
 import { requestFire, requestReload, updateWeaponState, stepProjectiles } from './combat.js';
+import { createTdmRules, onJoin, requestTeamSwitch } from './tdmRules.js';
 export { segmentBox } from './world.js';
 
 /** @typedef {{x:number,y:number,z:number}} Point */
 /** @typedef {import('./world.js').MapData} MapData */
 /** @typedef {import('./protocol.js').Command} Command */
-/** @typedef {import('./movement.js').MovementBody & import('./combat.js').WeaponBody & {sessionId:string,team:string,health:number,lifeGeneration:number,ammo:number,reserve:number,lastSeq:number,lastConsumedSeq:number,reloadRemaining:number,shootRemaining:number,input:Command|null,inputAge:number}} Body */
+/** @typedef {import('./movement.js').MovementBody & import('./combat.js').WeaponBody & import('./tdmRules.js').Member & {health:number,lastSeq:number,lastConsumedSeq:number,input:Command|null,inputAge:number}} Body */
 
 /** @param {MapData} mapData @param {{killLimit?:number,matchSeconds?:number,respawnSeconds?:number,friendlyDamage?:number,resultsSeconds?:number}} [settings] @param {{randomSeed?:number}} [options] */
 export function createSimulation(mapData, settings = {}, options = {}) {
   const world = createWorld(mapData);
-  const rules = {
-    killLimit: 50,
-    matchSeconds: 600,
-    respawnSeconds: 3,
-    friendlyDamage: 0.25,
-    resultsSeconds: 15,
-    ...settings,
-  };
+  const { friendlyDamage, ...configured } = settings;
+  const lifecycle = createTdmRules({ ...configured, ...(friendlyDamage === undefined ? {} : { friendlyFire: friendlyDamage }) });
+  const rules = { ...lifecycle.settings, friendlyDamage: lifecycle.settings.friendlyFire };
   /** @type {Map<string,Body>} */
   const players = new Map();
   /** @type {import('./combat.js').Projectile[]} */
@@ -40,22 +36,19 @@ export function createSimulation(mapData, settings = {}, options = {}) {
     return randomState / 4294967296;
   };
   const score = { alpha: 0, bravo: 0 };
-  /** @param {string} sessionId */
-  function addPlayer(sessionId) {
+  /** @param {string} sessionId @param {unknown} [options] */
+  function addPlayer(sessionId, options = undefined) {
     if (players.has(sessionId)) return players.get(sessionId);
-    const alpha = [...players.values()].filter((p) => p.team === 'alpha').length;
-    const team = alpha <= players.size - alpha ? 'alpha' : 'bravo';
-    const spawn = world.chooseSpawn(
-      team,
-      [...players.values()].filter((p) => p.alive)
-    );
     /** @type {Body} */
     const body = {
       sessionId,
-      team,
-      x: spawn?.x ?? 0,
-      y: spawn?.y ?? 0,
-      z: spawn?.z ?? 0,
+      team: '',
+      nickname: '',
+      joinOrdinal: 0,
+      respawnAtMs: -1,
+      x: 0,
+      y: 0,
+      z: 0,
       yaw: 0,
       pitch: 0,
       health: 100,
@@ -64,7 +57,7 @@ export function createSimulation(mapData, settings = {}, options = {}) {
       reloadEndsAtMs: 0,
       spread: 0,
       spreadUpdatedAtMs: nowMs,
-      alive: !!spawn,
+      alive: false,
       lifeGeneration: 1,
       ammo: WEAPONS.m4.maxAmmo,
       reserve: WEAPONS.m4.reserve,
@@ -84,6 +77,9 @@ export function createSimulation(mapData, settings = {}, options = {}) {
       input: null,
       inputAge: 0,
     };
+    onJoin(lifecycle, body, nowMs, options);
+    const spawn = world.chooseSpawn(body.team, [...players.values()].filter((p) => p.alive));
+    if (spawn) Object.assign(body, spawn, { alive: true });
     players.set(sessionId, body);
     return body;
   }
@@ -192,7 +188,7 @@ export function createSimulation(mapData, settings = {}, options = {}) {
             shooter.team === projectile.shooterTeam &&
             shooter.team !== target.team
           )
-            score[/** @type {'alpha'|'bravo'} */ (shooter.team)]++;
+            score[shooter.team === 'blue' ? 'alpha' : 'bravo']++;
         },
       },
       dt
@@ -202,7 +198,13 @@ export function createSimulation(mapData, settings = {}, options = {}) {
     return {
       protocolVersion: 1,
       mapId: 'bunker',
-      phase: players.size ? 'playing' : 'waiting',
+      phase: lifecycle.phase,
+      settings: lifecycle.settings,
+      scoreBlue: score.alpha,
+      scoreRed: score.bravo,
+      startedAtMs: lifecycle.startedAtMs,
+      endsAtMs: lifecycle.endsAtMs,
+      nowMs,
       matchGeneration,
       currentTick,
       timeRemaining,
@@ -214,6 +216,8 @@ export function createSimulation(mapData, settings = {}, options = {}) {
   /** @param {string} id */
   const removePlayer = (id) => {
     players.delete(id);
+    lifecycle.members.delete(id);
+    if (!players.size) lifecycle.phase = 'waiting';
   };
   /** Retire held intentions on death, generation change, expiry or leave.
    * @param {string} id */
@@ -235,5 +239,7 @@ export function createSimulation(mapData, settings = {}, options = {}) {
     events,
     world,
     rules,
+    lifecycle,
+    requestTeamSwitch: (/** @type {string} */ id, /** @type {unknown} */ command) => requestTeamSwitch(lifecycle, id, command),
   };
 }
