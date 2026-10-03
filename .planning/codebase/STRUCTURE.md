@@ -27,10 +27,13 @@ VibeOnDuty/
 │   ├── hud/                  # DOM/canvas HUD and radar
 │   ├── maps/                 # Built-in map definitions
 │   ├── modes/                # Modes, shop and economy
+│   ├── shared/               # Headless room simulation/world and canonical map data
+│   ├── network/              # Same-origin session, remote actors and private feedback
 │   ├── replay/               # Killcam and damage summaries
 │   └── utils/                # Visibility helper
 ├── public/                   # Models and browser-served static assets
 ├── tests/                    # Playwright browser regression suites
+├── server/                   # Colyseus authoritative room/schema and built-game HTTP host
 ├── types/                    # Reference entity declarations
 ├── tools/                    # Blender asset pipeline and FBX sources
 ├── docs/                     # Human documentation and investigation reports

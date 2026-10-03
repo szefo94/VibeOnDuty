@@ -9,9 +9,9 @@ last_mapped_at: 2026-10-03
 ## APIs & External Services
 
 **Gameplay services:**
-- Not detected: `package.json` declares only Three.js as a production dependency; `src/main.js` starts a local browser simulation without remote gameplay service calls.
-  - SDK/Client: none detected in `package.json`.
-  - Auth: not applicable to `src/main.js`.
+- `server/index.js` serves the validated root-base production build, `/health`, and Colyseus transport on one HTTP origin. `--host`, `--port`, and `--build-dir` are implemented; omitted build directory defaults to repository `dist`. TLS/operator expansion belongs to 01-06.
+  - SDK/Client: pinned `@colyseus/sdk` in `src/network/onlineSession.js`, connecting through `location.origin` to the server-local `tdm` room.
+  - Authority: room-bound session intentions drive isolated shared simulation; state replicates to participants and hit confirmations go only to the shooter. No account credentials or persistence.
 
 **Static asset delivery:**
 - Same-origin HTTP model loading, using the deployed static site or Vite server.
@@ -85,7 +85,7 @@ last_mapped_at: 2026-10-03
 ## Webhooks & Callbacks
 
 **Incoming:**
-- No application webhook endpoints detected in `src/main.js` or `package.json`; this is a static browser application.
+- The dedicated server exposes readiness, static game assets and Colyseus matchmaking/WebSocket endpoints; no application webhook receiver is implemented.
 - The `map` query parameter is a browser import entry in `src/main.js` and `src/editor/mapEditor.js`, not a webhook receiver.
 - Repository push, pull-request, and manual workflow events are configured in `.github/workflows/test.yml` and `.github/workflows/deploy.yml`.
 

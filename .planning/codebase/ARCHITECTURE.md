@@ -29,7 +29,7 @@ index.html + style.css -> src/main.js
           src/editor/mapEditor.js -> localStorage / URL
 ```
 
-The application is a browser FPS built from JavaScript ES modules. There is no application framework, server request pipeline, database layer, or multiplayer transport in `package.json` and `src/main.js`.
+The application is a browser FPS built from JavaScript ES modules. Offline modes retain browser singletons. The initial online slice adds `server/index.js` (one built-game HTTP/Colyseus link), `server/tdmRoom.js` (replicated state and server tick), `src/shared/tdmSimulation.js` and `world.js` (owned headless state/queries), and `src/network/onlineSession.js` (intentions, remote rigs and private feedback). `main.js` owns online entry/leave; `loop.js` skips offline simulation online and processes snapshots before life/play gates. Greek Columns gameplay data is canonical under `src/shared/maps/bunker.js`, while visual materials/extras remain under `src/maps/bunker.js`. Extended movement/combat/lifecycle and TLS hosting expand in subsequent Phase 1 plans. No database or account layer is implemented.
 
 ## Component Responsibilities
 

@@ -31,7 +31,7 @@ last_mapped_at: 2026-10-03
 
 **Core:**
 - Three.js 0.160.1 (r160), declared `^0.160.0`: scene graph, meshes, rendering, animation mixers, loaders, and math in `src/scene.js`, `src/builders/enemyGLTF.js`, and `src/loop.js`.
-- No application UI framework; entry and DOM events remain plain JavaScript in `src/main.js`. Approved server dependencies are installed; server gameplay implementation starts in plan 01-02.
+- No application UI framework; entry and DOM events remain plain JavaScript in `src/main.js`. The approved Node 24/Colyseus stack implements the initial authoritative online slice in `server/`, `src/shared/`, and `src/network/`; offline browser gameplay remains available.
 
 **Testing:**
 - Vitest 4.1.3: `src/**/*.test.js` and `server/**/*.test.js`, configured by `vitest.config.js`; `npm test` and `npm run test:unit` run once, `npm run test:watch` watches (`package.json`).
