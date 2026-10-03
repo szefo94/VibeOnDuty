@@ -139,11 +139,13 @@
   <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
     <button id="startbtn">[ DROP IN ]</button>
     <button id="tdm-startbtn">[ TEAM DEATHMATCH ]</button>
+    <button id="mp-join-btn" disabled aria-describedby="mp-actions">Online TDM</button>
     <button id="snd-startbtn">[ S&amp;D MODE ]</button>
     <button id="adaptive-startbtn">[ ADAPTIVE ]</button>
     <button id="range-startbtn">[ TRAINING RANGE ]</button>
     <button id="editor-startbtn">[ MAP EDITOR ]</button>
   </div>
+  <p id="mp-actions">Online: M4 · WASD move · mouse fire/look · R reload.<br>Other weapons, sprint, jump, crouch, ADS, melee, grenades, slide, dive, lean, dance, shop and drones are unavailable in this slice.</p>
 </div>
 
 <!-- Pause Menu -->
@@ -152,6 +154,7 @@
   <div style="display:flex;flex-direction:column;gap:12px;align-items:center;margin-top:24px">
     <button id="pause-resume-btn">[ RESUME ]</button>
     <button id="pause-mainmenu-btn">[ MAIN MENU ]</button>
+    <button id="mp-leave-btn" hidden>Leave Online TDM</button>
   </div>
 </div>
 

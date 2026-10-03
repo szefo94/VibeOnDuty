@@ -8,7 +8,7 @@ import { initTouch, isTouchDevice } from './touch.js';
 import { player, startReload } from './entities/player.js';
 import { deactivateAllEnemies } from './entities/enemies.js';
 import { rebuildAllEnemies, spawnSndEnemies, spawnTdmEnemies } from './entities/enemySpawning.js';
-import { spawnNewDrone, spawnSndDrones, clearSndDrones } from './entities/drone.js';
+import { spawnNewDrone, spawnSndDrones, clearSndDrones, clearAllDrones } from './entities/drone.js';
 import { tryThrowGrenade, cancelGrenadeThrow } from './entities/grenades.js';
 import { tryShoot, tryPunchDamage } from './combat/shoot.js';
 import { flashMeleeRing } from './fx/meleeRange.js';
@@ -16,7 +16,9 @@ import { updateHUD, showMsg, showStatus } from './hud/overlay.js';
 import { startLoop, setThirdPerson, getThirdPerson, toggleTpSide } from './loop.js';
 import { startSnd, nextRound, getSndSitePositions, isMatchOver, setSndMap, computeBotRole } from './modes/snd.js';
 import { on } from './events.js';
-import { getMode } from './modes/modeManager.js';
+import { getMode, setMode } from './modes/modeManager.js';
+import { isOnline, joinOnline, leaveOnline, requestOnlineAction } from './network/onlineSession.js';
+import { stopKillcam } from './replay/killcam.js';
 import { toggleBuyPanel, isBuyPanelOpen, buyWeapon } from './modes/buyMenu.js';
 import { startTdm } from './modes/tdm.js';
 import { setDifficulty } from './difficulty.js';
@@ -44,6 +46,7 @@ window.__animDebug = setAnimDebug;
 
 const _euler = new THREE.Euler(0, 0, 0, 'YXZ');
 let debugVisible = true;
+const meleeTimers = new Set();
 
 // ── S&D: drop to pistol on death mid-round ────────────────────────────────
 on('player:died', () => {
@@ -111,6 +114,7 @@ function _activateMap() {
 
 // ── Weapon switching ───────────────────────────────────────────────
 function switchWeapon(key) {
+  if (isOnline()) return;
   if (!WEAPONS[key] || player.dead) return;
   showStatus(`[${['m4','p90','awp','pistol'].indexOf(key)+1}] ${WEAPONS[key].name}`);
   if (player.weapon === key) return;
@@ -131,6 +135,8 @@ function switchWeapon(key) {
 
 // ── Input: game-action handlers ────────────────────────────────────
 document.addEventListener('keydown', (e) => {
+  if (isOnline() && e.code === 'KeyR') { requestOnlineAction('reload'); return; }
+  if (isOnline() && !['F3', 'KeyV'].includes(e.code)) return;
   if (
     e.code === 'KeyR' &&
     gameRunning &&
@@ -164,14 +170,19 @@ document.addEventListener('keydown', (e) => {
   if (e.code === 'KeyF' && !player.dead && !player.punching) {
     player.punching = true;
     player.punchClip = player.punchClip === 'punch_cross' ? 'punch_jab' : 'punch_cross';
-    setTimeout(() => {
+    const hitTimer = setTimeout(() => {
+      meleeTimers.delete(hitTimer);
+      if (isOnline() || !gameRunning) return;
       tryPunchDamage();
       flashMeleeRing(camera.position.x, camera.position.z);
     }, 350);
-    setTimeout(() => { player.punching = false; }, 700);
+    const endTimer = setTimeout(() => { meleeTimers.delete(endTimer); player.punching = false; }, 700);
+    meleeTimers.add(hitTimer);
+    meleeTimers.add(endTimer);
   }
 });
 document.addEventListener('mousemove', (e) => {
+  if (isOnline()) return;
   if (!locked || !gameRunning || player.dead) return;
   player.yaw -= e.movementX * MOUSE_SENS;
   player.pitch = Math.max(-1.38, Math.min(1.38, player.pitch - e.movementY * MOUSE_SENS));
@@ -179,6 +190,7 @@ document.addEventListener('mousemove', (e) => {
   camera.quaternion.setFromEuler(_euler);
 });
 document.addEventListener('mousedown', (e) => {
+  if (isOnline()) { if (e.button === 0) requestOnlineAction('fire'); return; }
   if (e.button === 0) {
     if (!locked && gameRunning && !isBuyPanelOpen()) {
       document.getElementById('c').requestPointerLock();
@@ -190,6 +202,7 @@ document.addEventListener('mousedown', (e) => {
   if (e.button === 2 && locked && gameRunning) player.aiming = true;
 });
 document.addEventListener('mouseup', (e) => {
+  if (isOnline()) return;
   if (e.button === 2) player.aiming = false;
 });
 
@@ -221,23 +234,52 @@ document.getElementById('c').addEventListener('click', () => {
 // ── Pause menu ─────────────────────────────────────────────────────
 const _pauseEl = document.getElementById('pause-menu');
 
-function returnToMainMenu() {
+async function returnToMainMenu() {
+  await leaveOnline();
   cancelGrenadeThrow();
+  for (const timer of meleeTimers) clearTimeout(timer);
+  meleeTimers.clear();
+  stopKillcam();
   _pauseEl.style.display = 'none';
   setGameRunning(false);
   adaptStop();
   deactivateAllEnemies();
-  clearSndDrones();
+  clearAllDrones();
+  setMode(null);
   player.dead      = false;
   player.hp        = MAX_HP;
   player.reloading = false;
   player.reloadTimer = 0;
   player.sliding   = false;
   player.diving    = false;
+  player.crouching = false;
+  player.punching = false;
+  player.dancing = false;
+  player.aiming = false;
+  player.aimT = 0;
+  player.lean = 0;
+  player.velY = 0;
+  player.airVelX = player.airVelZ = 0;
+  player.slowTimer = player.rollTimer = player.diveTimer = 0;
+  player.onGround = true;
+  player.moving = false;
+  player.kills = player.energy = 0;
+  player.weapon = 'm4';
+  for (const [key, weapon] of Object.entries(WEAPONS)) {
+    player.weaponAmmo[key] = weapon.maxAmmo;
+    player.weaponReserve[key] = weapon.reserve;
+  }
   player.ammo      = WEAPONS[player.weapon].maxAmmo;
   player.reserve   = WEAPONS[player.weapon].reserve;
   document.getElementById('reloadwrap').style.display = 'none';
   document.getElementById('snd-result').style.display = 'none';
+  document.getElementById('tdm-bar').style.display = 'none';
+  document.getElementById('snd-bar').style.display = 'none';
+  document.getElementById('mp-leave-btn').hidden = true;
+  document.exitPointerLock?.();
+  setLocked(false);
+  show1pWeapon('m4');
+  show3pWeapon('m4');
   document.getElementById('overlay').style.display = 'flex';
   updateHUD();
 }
@@ -254,6 +296,17 @@ document.getElementById('pause-resume-btn').addEventListener('click', () => {
   document.getElementById('c').requestPointerLock();
 });
 document.getElementById('pause-mainmenu-btn').addEventListener('click', returnToMainMenu);
+document.getElementById('mp-leave-btn').addEventListener('click', returnToMainMenu);
+document.getElementById('mp-join-btn').addEventListener('click', async () => {
+  if (isOnline()) return;
+  const button = document.getElementById('mp-join-btn');
+  button.disabled = true;
+  for (const timer of meleeTimers) clearTimeout(timer);
+  meleeTimers.clear();
+  try { await joinOnline(); }
+  finally { button.disabled = false; }
+  document.getElementById('mp-leave-btn').hidden = !isOnline();
+});
 
 function sndStart() {
   _activateMap();

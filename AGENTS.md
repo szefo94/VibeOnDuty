@@ -1,14 +1,16 @@
 # VibeOnDuty — repository context
 
 Initial onboarding: 2026-09-09, source commit `dc27c6f` on `main`.
-Updated for the animation/model fixes in the working tree on the same date.
+Updated for the animation/model fixes and the initial authoritative online slice on 2026-10-03.
 Use this as a navigation guide; verify current source before acting on historical
 notes or roadmap proposals. Update relevant context when the architecture changes.
 
 ## Project and tooling
 
-- Browser FPS: Three.js r160, Vite 8, plain JavaScript ES modules. No application
-  framework, backend, or multiplayer transport is implemented in this repo.
+- Browser FPS: Three.js r160, Vite 8, plain JavaScript ES modules. Node 24 and
+  Colyseus provide an initial dedicated-server online TDM slice alongside offline play.
+  Walking, M4 fire/reload, server health and score replication are implemented;
+  extended movement and complete match lifecycle remain later Phase 1 plans.
 - Entry/UI: `index.html`, `style.css`, `src/main.js`. Rendering and DOM access happen
   at module initialization in several modules; importing gameplay code in Node often
   requires mocks. Pure helpers are easier to unit test independently.
@@ -17,7 +19,7 @@ notes or roadmap proposals. Update relevant context when the architecture change
   editor supports multi-floor maps, preview/playtest, save slots, and URL sharing.
 - Four weapon keys: `m4`, `p90`, `awp`, `pistol`. Balance and most movement/physics
   constants live in `src/config.js`; some tuning still lives beside its consumer.
-- Install with `npm ci` using the tracked `package-lock.json`. CI uses Node 20;
+- Install with `npm ci` using the tracked `package-lock.json`. Test CI uses Node 24;
   onboarding checks ran with Node 24.14.1 / npm 11.12.1. Serve through Vite, not `file://`.
 
 | Command | Purpose |
@@ -29,6 +31,8 @@ notes or roadmap proposals. Update relevant context when the architecture change
 | `npm test` / `npm run test:unit` | Vitest, `src/**/*.test.js` |
 | `npm run test:watch` | Vitest watch mode |
 | `npm run test:e2e` | Playwright, `tests/`; manages Vite on port 5173 |
+| `npm run build:mp` / `npm run mp-server` | Root-base production build / same-origin dedicated HTTP game server |
+| `npm run test:mp` / `npm run typecheck:mp` | Isolated production multiplayer browser tests / strict checked JS boundaries |
 
 Prettier settings: two spaces, semicolons, single quotes, ES5 trailing commas,
 100-column print width. Follow surrounding style and keep unrelated reformatting out
@@ -50,11 +54,20 @@ for example, it still declares `isAlive()`, which `applyEntityBase()` no longer 
 | World | `map.js`: live map data/collision; `tiles.js`: tile codec; `rampMath.js`: surface math; `level.js`: mesh construction; `maps/*`: definitions |
 | Visuals | `scene.js`, `materials.js`, `lighting.js`; `builders/*`: models/animation; `fx/*`: effects; `hud/*`: DOM/canvas overlays and radar |
 | Editor/replay | `editor/mapEditor.js`; `replay/killcam.js`: live camera following killer, not recorded replay; `replay/damageTracker.js`: damage totals |
+| Online authority | `server/tdmRoom.js`, `shared/tdmSimulation.js`, `shared/world.js`: room-owned state and terrain queries; `network/onlineSession.js`: browser intentions, remote actors and confirmed feedback |
 
 Boot registers the character GLB, player weapon FBX, and pistol FBX with
 `builders/assetManager.js`. `loadAll()` uses `Promise.allSettled`; failures retain
 procedural fallbacks. Menu buttons are disabled until loading settles. Afterward,
 `main.js` builds GLTF instances if available, initializes the editor, and starts the loop.
+
+Online entry/leave markup and handlers belong to `main.js` and `index.html`.
+The adapter installs named capture handlers while active; `loop.js` processes
+snapshots before offline simulation gates and skips offline gameplay/gamepad ticks.
+Greek Columns gameplay arrays/spawns live in `shared/maps/bunker.js`; the visual
+map consumes them and each world clones them. Server code must not import browser
+singletons. Frozen `window.__mpDebug()` is observation only. `clearAllDrones()` also
+cancels delayed offline drone respawns during mode transitions.
 
 Important dependencies and lifecycle constraints:
 

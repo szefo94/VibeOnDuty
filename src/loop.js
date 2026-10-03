@@ -79,7 +79,7 @@ export function loop(ts) {
   tickOnline(dt);
 
   // ── Touch look (consumed once per frame) ─────────────────────────
-  if ((touchLook.dx || touchLook.dy) && gameRunning && !player.dead) {
+  if (!isOnline() && (touchLook.dx || touchLook.dy) && gameRunning && !player.dead) {
     player.yaw  -= touchLook.dx * TOUCH_SENS;
     player.pitch = Math.max(-1.38, Math.min(1.38, player.pitch - touchLook.dy * TOUCH_SENS));
     _tEuler.set(player.pitch, player.yaw, 0);
@@ -87,7 +87,7 @@ export function loop(ts) {
   }
   touchLook.dx = touchLook.dy = 0;
 
-  tickGamepad(dt);
+  if (!isOnline()) tickGamepad(dt);
 
   const _t0 = performance.now();
   if (gameRunning) {

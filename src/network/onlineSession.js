@@ -1,16 +1,16 @@
 // @ts-check
-// @ts-expect-error The existing renderer has no Three vendor declarations; authority uses typed plain numbers.
+// @ts-ignore Three vendor declarations are absent; strict authority uses typed plain numbers.
 import * as THREE from 'three';
 import { Client } from '@colyseus/sdk';
 import { PLAYER_H, MOUSE_SENS } from '../config.js';
 import { camera } from '../scene.js';
 import { player } from '../entities/player.js';
-import { keys, setGameRunning } from '../input.js';
+import { keys, setGameRunning, gameRunning } from '../input.js';
 import { bunkerMapDef } from '../maps/bunker.js';
 import { setActiveMap } from '../map.js';
 import { buildLevel } from '../level.js';
 import { deactivateAllEnemies } from '../entities/enemies.js';
-import { dronePool, clearSndDrones } from '../entities/drone.js';
+import { clearAllDrones } from '../entities/drone.js';
 import { buildEnemyMesh, disposeEnemyMesh, usingGLTF } from '../builders/enemyGLTF.js';
 import { enterLocoMode, setLocoWeights, crossfade } from '../builders/enemyAnimations.js';
 import { show1pWeapon, show3pWeapon } from '../builders/weapon.js';
@@ -19,7 +19,7 @@ import { spawnDamageNumber } from '../fx/damageNumbers.js';
 import { updateHUD, showStatus } from '../hud/overlay.js';
 import { updateWeapon } from '../combat/shoot.js';
 import { cancelGrenadeThrow } from '../entities/grenades.js';
-import { setMode } from '../modes/modeManager.js';
+import { setMode, getMode } from '../modes/modeManager.js';
 import { adaptStop } from '../ai/difficultyAdapter.js';
 import { stopKillcam } from '../replay/killcam.js';
 
@@ -37,6 +37,7 @@ let joining = false,
   fire = false,
   held = false,
   reload = false;
+let sessionEpoch = 0;
 /** @type {Hit|null} */ let lastConfirmedHit = null;
 let lastEventId = 0;
 /** @type {ReturnType<typeof setInterval>|null} */ let heartbeat = null;
@@ -58,6 +59,8 @@ const blockedKeys = new Set([
   'ControlLeft',
   'ControlRight',
   'KeyC',
+  'ShiftLeft',
+  'ShiftRight',
 ]);
 
 export function isOnline() {
@@ -94,7 +97,15 @@ function onMouseDown(event) {
   if (event.button === 0) {
     held = true;
     requestOnlineAction('fire');
-  }
+  } else showStatus('Online: M4, walk and reload');
+}
+/** Capture touch actions before the offline dispatcher; cross-device movement expands later.
+ * @param {TouchEvent} event */
+function onTouch(event) {
+  if (!isOnline() || /** @type {HTMLElement} */ (event.target)?.closest('#mp-leave-btn, #pause-mainmenu-btn, #pause-resume-btn')) return;
+  event.stopImmediatePropagation();
+  event.preventDefault();
+  if (event.type === 'touchstart') showStatus('Online: use WASD, mouse and R in this slice');
 }
 /** @param {MouseEvent} event */
 function onMouseUp(event) {
@@ -123,6 +134,8 @@ function installHandlers() {
   document.addEventListener('mouseup', onMouseUp, true);
   document.addEventListener('mousemove', onMouseMove, true);
   window.addEventListener('blur', onBlur);
+  for (const name of /** @type {const} */ (['touchstart', 'touchmove', 'touchend', 'touchcancel']))
+    document.addEventListener(name, onTouch, { capture: true, passive: false });
 }
 function removeHandlers() {
   document.removeEventListener('keydown', onKeyDown, true);
@@ -131,6 +144,8 @@ function removeHandlers() {
   document.removeEventListener('mouseup', onMouseUp, true);
   document.removeEventListener('mousemove', onMouseMove, true);
   window.removeEventListener('blur', onBlur);
+  for (const name of /** @type {const} */ (['touchstart', 'touchmove', 'touchend', 'touchcancel']))
+    document.removeEventListener(name, onTouch, true);
 }
 /** @param {string} action */
 export function requestOnlineAction(action) {
@@ -148,6 +163,8 @@ function connectionError(message) {
 export async function joinOnline() {
   if (isOnline()) return;
   joining = true;
+  const epoch = ++sessionEpoch;
+  onBlur();
   installHandlers();
   // Pointer lock requires the entry click's synchronous user activation.
   const canvas = document.getElementById('c');
@@ -158,7 +175,10 @@ export async function joinOnline() {
     /* Browser may deny headless pointer lock. */
   }
   try {
-    room = await new Client(location.origin).joinOrCreate('tdm', { protocolVersion: 1 });
+    /** @type {import('@colyseus/sdk').Room<State>} */
+    const joined = await new Client(location.origin).joinOrCreate('tdm', { protocolVersion: 1 });
+    if (epoch !== sessionEpoch) { await joined.leave(); return; }
+    room = joined;
     seq = 0;
     yaw = 0;
     pitch = 0;
@@ -184,12 +204,8 @@ export async function joinOnline() {
     );
     room.onError((_code, message) => connectionError(message ?? 'Connection failed'));
     room.onLeave(() => {
-      if (room) {
-        room = null;
-        if (heartbeat) clearInterval(heartbeat);
-        heartbeat = null;
-        disposeActors();
-        removeHandlers();
+      if (room === joined) {
+        void leaveOnline();
         setGameRunning(false);
         document.getElementById('overlay')?.style.setProperty('display', 'flex');
       }
@@ -201,12 +217,7 @@ export async function joinOnline() {
     setActiveMap(bunkerMapDef);
     buildLevel(bunkerMapDef);
     deactivateAllEnemies();
-    clearSndDrones();
-    for (const drone of dronePool) {
-      drone.dead = true;
-      drone.dying = false;
-      drone.mesh.visible = false;
-    }
+    clearAllDrones();
     Object.assign(player, {
       weapon: 'm4',
       dead: false,
@@ -224,13 +235,18 @@ export async function joinOnline() {
     show3pWeapon('m4');
     document.getElementById('overlay')?.style.setProperty('display', 'none');
     document.getElementById('pause-menu')?.style.setProperty('display', 'none');
+    document.getElementById('mp-leave-btn')?.removeAttribute('hidden');
+    document.getElementById('snd-bar')?.style.setProperty('display', 'none');
+    document.getElementById('buy-panel')?.style.setProperty('display', 'none');
+    document.getElementById('buy-banner')?.style.setProperty('display', 'none');
     setGameRunning(true);
   } catch (error) {
+    if (epoch !== sessionEpoch) return;
     room = null;
     removeHandlers();
     connectionError(String(error));
   } finally {
-    joining = false;
+    if (epoch === sessionEpoch) joining = false;
   }
 }
 function disposeActors() {
@@ -238,6 +254,7 @@ function disposeActors() {
   actors.clear();
 }
 export async function leaveOnline() {
+  sessionEpoch++;
   const previous = room;
   room = null;
   joining = false;
@@ -248,7 +265,9 @@ export async function leaveOnline() {
   onBlur();
   reload = false;
   lastConfirmedHit = null;
-  if (previous) await previous.leave();
+  document.getElementById('mp-leave-btn')?.setAttribute('hidden', '');
+  document.getElementById('tdm-bar')?.style.setProperty('display', 'none');
+  if (previous) await previous.leave().catch(() => {});
 }
 
 function sendIntent() {
@@ -299,6 +318,16 @@ export function tickOnline(dt) {
       reloadTotal: 1800,
     });
     updateHUD();
+    document.getElementById('tdm-bar')?.style.setProperty('display', 'block');
+    const label = document.getElementById('tdm-label');
+    if (label) label.textContent = `ONLINE · ${me.team.toUpperCase()}`;
+    const us = document.getElementById('tdm-us'), them = document.getElementById('tdm-them');
+    if (us) us.textContent = String(me.team === 'alpha' ? room.state.scoreAlpha : room.state.scoreBravo);
+    if (them) them.textContent = String(me.team === 'alpha' ? room.state.scoreBravo : room.state.scoreAlpha);
+    const seconds = Math.ceil(room.state.timeRemaining);
+    const timer = document.getElementById('tdm-timer');
+    if (timer) timer.textContent = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+    document.getElementById('reloadwrap')?.style.setProperty('display', me.reloadRemaining > 0 ? 'block' : 'none');
     updateWeapon(dt, me.moving, false, false, false);
   }
   const active = new Set();
@@ -336,12 +365,17 @@ function frozen(value) {
 }
 export function getOnlineSnapshot() {
   const s = room?.state;
+  // Legacy Player declarations omit these existing presentation fields.
+  const view = /** @type {{weapon:string,punching:boolean,throwingNade:boolean,dancing:boolean,aiming:boolean}} */ (/** @type {unknown} */ (player));
   return frozen({
     sessionId: room?.sessionId ?? null,
     roomId: room?.roomId ?? null,
     mapId: s?.mapId ?? null,
     matchGeneration: s?.matchGeneration ?? 0,
     phase: s?.phase ?? 'offline',
+    score: { alpha: s?.scoreAlpha ?? 0, bravo: s?.scoreBravo ?? 0 },
+    timeRemaining: s?.timeRemaining ?? 0,
+    presentation: { weapon: view.weapon, punching: view.punching, throwingNade: view.throwingNade, dancing: view.dancing, aiming: view.aiming, mode: getMode()?.name ?? null, gameRunning },
     players: s?.players ? Array.from(s.players.values(), (p) => ({ ...p.toJSON() })) : [],
     remoteActorCount: actors.size,
     usingGLTF,
@@ -355,12 +389,8 @@ Object.defineProperty(window, '__mpDebug', {
   configurable: false,
 });
 
-// First tracer entry; explicit menu ownership replaces this at task 3.
+// Called by the asset-ready loop; main owns the single explicit entry handler.
 export function initOnlineEntry() {
-  if (document.getElementById('mp-join-btn')) return;
-  const button = document.createElement('button');
-  button.id = 'mp-join-btn';
-  button.textContent = 'Online TDM';
-  document.getElementById('tdm-startbtn')?.insertAdjacentElement('afterend', button);
-  button.addEventListener('click', joinOnline);
+  const button = /** @type {HTMLButtonElement|null} */ (document.getElementById('mp-join-btn'));
+  if (button && document.getElementById('mp-leave-btn')) button.disabled = false;
 }

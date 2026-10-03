@@ -70,6 +70,10 @@ body{background:#000;overflow:hidden;font-family:'Courier New',monospace}
 #startbtn:hover,#snd-startbtn:hover,#tdm-startbtn:hover,#adaptive-startbtn:hover,#range-startbtn:hover,#editor-startbtn:hover{background:#fff}
 #tdm-startbtn{background:#27ae60;color:#fff}
 #tdm-startbtn:hover{background:#2ecc71;color:#000}
+#mp-join-btn,#mp-leave-btn{padding:12px 28px;background:#3498db;color:#fff;border:none;font:13px 'Courier New',monospace;letter-spacing:2px;cursor:pointer}
+#mp-join-btn:disabled{opacity:0.45;cursor:wait}
+#mp-join-btn:hover:enabled,#mp-leave-btn:hover{background:#5dade2}
+#mp-actions{max-width:680px;margin:12px 20px 0;text-align:center;color:#aaa;font:11px/1.6 'Courier New',monospace}
 #adaptive-startbtn{background:#8b5cf6;color:#fff}
 #adaptive-startbtn:hover{background:#a78bfa;color:#000}
 #scope-overlay{position:fixed;top:0;left:0;width:100%;height:100%;z-index:15;pointer-events:none;background:radial-gradient(ellipse at center,transparent 32%,rgba(0,0,0,0.97) 68%)}

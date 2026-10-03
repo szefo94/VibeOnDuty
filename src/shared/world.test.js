@@ -7,6 +7,7 @@ import { bunkerMapDef } from '../maps/bunker.js';
 import { groundElevation as renderedGround, setActiveMap } from '../map.js';
 import { rampId, rampSurface } from '../tiles.js';
 import { execFileSync } from 'node:child_process';
+import process from 'node:process';
 
 function fixture(tiles, heightmap = tiles.map((row) => row.map(() => 0))) {
   return {
@@ -77,6 +78,20 @@ describe('room-owned world', () => {
     expect(
       execFileSync(process.execPath, ['--input-type=module', '-e', source], { encoding: 'utf8' })
     ).toContain('headless');
+  }, 15000);
+
+  it('rejects client-claimed damage and identity without changing authoritative bodies', () => {
+    const sim = createSimulation(fixture([[0, 0]]));
+    const shooter = sim.addPlayer('a');
+    sim.addPlayer('b');
+    const intent = { protocolVersion: 1, seq: 1, matchGeneration: 1, lifeGeneration: shooter.lifeGeneration, moveX: 0, moveZ: 0, yaw: 0, pitch: 0, fire: false, reload: false };
+    expect(sim.queueInput('a', { ...intent, damage: 1000, targetSessionId: 'b' })).toBe(false);
+    expect(sim.queueInput('unknown-session', intent)).toBe(false);
+    sim.stepSimulation(1 / 30);
+    expect(sim.snapshot().players.map((p) => p.health)).toEqual([100, 100]);
+    expect(sim.snapshot().players.map((p) => p.ammo)).toEqual([30, 30]);
+    expect(sim.events).toEqual([]);
+    expect(sim.snapshot().score).toEqual({ alpha: 0, bravo: 0 });
   });
 
   it('shares canonical renderer arrays and matches every bunker surface sample', () => {

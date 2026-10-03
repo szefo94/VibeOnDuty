@@ -29,6 +29,21 @@ function _randomCell() {
 export const DRONE_FLY_H = 4.5;
 export const dronePool   = [];
 export let   activeDrone = null;
+const respawnTimers = new Set();
+
+// A mode transition must also retire delayed offline drone spawns.
+export function clearAllDrones() {
+  for (const timer of respawnTimers) clearTimeout(timer);
+  respawnTimers.clear();
+  clearSndDrones();
+  for (const drone of dronePool) {
+    drone.dead = true;
+    drone.dying = false;
+    scene.remove(drone.mesh);
+  }
+  dronePool.length = 0;
+  activeDrone = null;
+}
 
 /** @returns {import('../../types/entities').Drone} */
 export function spawnNewDrone() {
@@ -55,7 +70,11 @@ export function killDrone(d) {
   document.getElementById('kills-num').textContent = player.kills;
   showMsg('DRONE DOWN — NEW DRONE INCOMING', 2000);
   spawnAmmoDrop(d.x, d.z);
-  setTimeout(() => { if (gameRunning) spawnNewDrone(); }, 4500);
+  const timer = setTimeout(() => {
+    respawnTimers.delete(timer);
+    if (gameRunning) spawnNewDrone();
+  }, 4500);
+  respawnTimers.add(timer);
 }
 
 export function updateDrone(d, dt) {
