@@ -1,8 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { readFile, writeFile } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
 import WebSocket from 'ws';
-import { startMpFixture } from '../tests/helpers/mpServer.js';
+import { allocateMpBuild, buildMpClient, startMpFixture } from '../tests/helpers/mpServer.js';
+import { validateBuildDir } from './index.js';
+import { defaultCertificateDir } from './cli.js';
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
+import { createServer } from 'node:net';
 import { createHostileClient } from './testHelpers/hostileClient.js';
 
 let fixture;
@@ -24,6 +29,60 @@ function rejectedSocket(url, origin) {
 }
 
 describe('built-game host boundary', () => {
+  it('rejects source/secret/non-root-base builds', async () => {
+    for (const dir of [resolve('.'), resolve('src'), defaultCertificateDir])
+      await expect(validateBuildDir(dir, defaultCertificateDir)).rejects.toThrow('npm run build:mp');
+    await expect(validateBuildDir(fixture.buildDir, fixture.buildDir)).rejects.toThrow('TLS storage');
+    const owned = await allocateMpBuild();
+    try {
+      await buildMpClient({ outDir: owned.buildDir });
+      const html = await readFile(join(owned.buildDir, 'index.html'), 'utf8');
+      await writeFile(join(owned.buildDir, 'index.html'), html.replaceAll('/assets/', '/other/assets/'));
+      await expect(validateBuildDir(owned.buildDir, defaultCertificateDir)).rejects.toThrow('root-base');
+      expect((await fetch(fixture.url)).status).toBe(200);
+    } finally { await owned.cleanup(); }
+  }, 30000);
+  it('reports finite occupied-port and unresolved-bind startup errors', async () => {
+    for (const [host, port, message] of [['127.0.0.1', fixture.port, 'EADDRINUSE'],
+      ['unresolvable.invalid', fixture.port, 'ENOTFOUND']]) {
+      const child = spawn(process.execPath, [resolve('server/index.js'), '--host', host,
+        '--port', String(port), '--build-dir', fixture.buildDir], { windowsHide: true });
+      let output = '';
+      child.stdout.on('data', (data) => { output += data; });
+      child.stderr.on('data', (data) => { output += data; });
+      const timer = setTimeout(() => child.kill(), 4000);
+      try {
+        const [code] = await once(child, 'exit');
+        expect(code).toBe(1);
+        expect(output).toContain(message);
+        expect(output).toContain(message === 'EADDRINUSE' ? 'Choose another --port' : 'Check --host');
+      } finally { clearTimeout(timer); child.kill(); }
+    }
+  }, 12000);
+  it('default build resolves repository dist even when the operator cwd differs', async () => {
+    // Operator build intentionally uses dist; every fixture still owns an OS-temp root.
+    await buildMpClient();
+    const probe = createServer();
+    probe.listen(0, '127.0.0.1');
+    await once(probe, 'listening');
+    const port = probe.address().port;
+    await new Promise((ok) => probe.close(ok));
+    const child = spawn(process.execPath, [resolve('server/index.js'), '--host', '127.0.0.1', '--port', String(port)],
+      { cwd: fixture.tempRoot, windowsHide: true });
+    let output = '';
+    child.stdout.on('data', (data) => { output += data; });
+    child.stderr.on('data', (data) => { output += data; });
+    const exited = once(child, 'exit');
+    try {
+      const deadline = Date.now() + 4000;
+      while (!output.includes('[mp server] ready') && Date.now() < deadline)
+        await new Promise((ok) => setTimeout(ok, 50));
+      expect(output).toContain('[mp server] ready');
+      const html = await (await fetch(`http://127.0.0.1:${port}`)).text();
+      expect(html).toBe(await readFile(resolve('dist/index.html'), 'utf8'));
+      expect((await fetch(`http://127.0.0.1:${port}/models/enemy.glb`)).status).toBe(200);
+    } finally { child.kill(); await exited; }
+  }, 30000);
   it('rejects absent and foreign WebSocket origins at handshake', async () => {
     expect(await rejectedSocket(fixture.url)).toBe(403);
     expect(await rejectedSocket(fixture.url, 'https://foreign.example')).toBe(403);

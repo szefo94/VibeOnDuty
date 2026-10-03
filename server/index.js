@@ -3,28 +3,54 @@
 import express from 'express';
 import { createServer } from 'node:http';
 import { readFile, realpath, stat } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Server, matchMaker } from '@colyseus/core';
 import { WebSocketTransport } from '@colyseus/ws-transport';
 import { TdmRoom } from './tdmRoom.js';
+import { defaultBuildDir, defaultCertificateDir, help, isWildcard, loadRoomSettings,
+  parseArgs, repoRoot, urlHost, validateAdvertisedAddress, validateHostname } from './cli.js';
 
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-
-/** @param {{host?: string, port?: number, buildDir?: string}} [options] */
-export async function startServer(options = {}) {
-  const host = options.host ?? '127.0.0.1';
-  const port = options.port ?? 2567;
-  if (!host || /[\s/\\]/.test(host)) throw new Error('--host must be a bind hostname or IP');
-  if (!Number.isSafeInteger(port) || port < 0 || port > 65535)
-    throw new Error('--port must be 0..65535');
-  const buildDir = await realpath(resolve(options.buildDir ?? join(repoRoot, 'dist')));
-  const html = await readFile(join(buildDir, 'index.html'), 'utf8');
-  if (!/(?:src|href)="\/assets\//.test(html) || html.includes('/VibeOnDuty/')) {
-    throw new Error('--build-dir must contain a root-base production build (npm run build:mp)');
+/** @param {string} parent @param {string} child */
+function inside(parent, child) {
+  const rel = relative(parent, child);
+  return !rel || (!rel.startsWith('..') && !isAbsolute(rel));
+}
+/** @param {string} selected @param {string} certificateDir */
+export async function validateBuildDir(selected, certificateDir) {
+  try {
+    const root = await realpath(resolve(selected));
+    const source = await realpath(repoRoot);
+    const secret = await realpath(certificateDir).catch(() => resolve(certificateDir));
+    if (root === source || inside(secret, root) || inside(root, secret) ||
+        ['src', 'server', '.git', '.planning', '.vod-server'].some((dir) => inside(join(source, dir), root))) throw new Error();
+    const html = await readFile(join(root, 'index.html'), 'utf8');
+    const assets = [...html.matchAll(/(?:src|href)="([^" ]+)"/g)]
+      .map((match) => match[1]).filter((path) => /\/assets\//.test(path));
+    if (!assets.length || assets.some((path) => !path.startsWith('/assets/')) ||
+        !(await stat(join(root, 'assets'))).isDirectory()) throw new Error();
+    for (const asset of assets) if (!(await stat(join(root, asset.slice(1)))).isFile()) throw new Error();
+    for (const dir of ['src', 'server', '.git', '.vod-server', 'tls'])
+      if (await stat(join(root, dir)).then(() => true, () => false)) throw new Error();
+    return root;
+  } catch {
+    throw new Error('--build-dir must contain only root-base built game/assets, outside source and TLS storage. Build the multiplayer client with npm run build:mp');
   }
-  if (!(await stat(join(buildDir, 'assets'))).isDirectory())
-    throw new Error('Missing built assets');
+}
+
+/** @typedef {{host?:string,port?:number,buildDir?:string,tls?:boolean,publicAddress?:string,certificateDir?:string,rulesFile?:string}} ServerOptions */
+/** @param {ServerOptions} [options] */
+export async function startServer(options = {}) {
+  const host = validateHostname(options.host ?? '0.0.0.0');
+  const port = options.port ?? 2567;
+  if (!Number.isSafeInteger(port) || port < 1 || port > 65535) throw new Error('--port must be an integer 1..65535');
+  const advertised = validateAdvertisedAddress(options.publicAddress, { host, port, tls: options.tls });
+  const certificateDir = resolve(options.certificateDir ?? process.env.VOD_TLS_DIR ?? defaultCertificateDir);
+  const settings = await loadRoomSettings(options.rulesFile);
+  const buildDir = await validateBuildDir(options.buildDir ?? defaultBuildDir, certificateDir);
+  const localHost = isWildcard(host) ? 'localhost' : host;
+  const listenUrl = `${options.tls ? 'https' : 'http'}://${urlHost(localHost)}:${port}`;
+  const origins = new Set([new URL(listenUrl).origin, advertised.publicUrl]);
   const app = express();
   app.disable('x-powered-by');
   app.get(
@@ -32,44 +58,54 @@ export async function startServer(options = {}) {
     (/** @type {unknown} */ _req, /** @type {{json:(value:object)=>void}} */ res) =>
       res.json({ ready: true })
   );
-  app.use(express.static(buildDir, { dotfiles: 'deny', fallthrough: false }));
+  app.use(express.static(buildDir, { dotfiles: 'deny', fallthrough: false, redirect: false }));
+  app.use((/** @type {unknown} */ _err, /** @type {unknown} */ _req,
+    /** @type {{status:(n:number)=>{send:(s:string)=>void}}} */ res,
+    /** @type {unknown} */ _next) => { res.status(404).send('Not found'); });
   const http = createServer(app);
   const server = new Server({
-    transport: new WebSocketTransport({ server: http, maxPayload: 2048 }),
+    transport: new WebSocketTransport({ server: http, maxPayload: 2048,
+      beforeUpgrade: (context) => origins.has(context.headers.get('origin') ?? '')
+        ? undefined : new Response('Origin not allowed', { status: 403 }),
+    }),
     greet: false,
     gracefullyShutdown: false,
   });
-  server.define('tdm', TdmRoom);
-  await server.listen(port, host);
-  await matchMaker.createRoom('tdm', {});
-  return { http, buildDir, server, close: () => server.gracefullyShutdown(false) };
-}
-
-/** @param {string[]} args */
-function parseArgs(args) {
-  const options = { host: '127.0.0.1', port: 2567, buildDir: join(repoRoot, 'dist') };
-  for (let i = 0; i < args.length; i += 2) {
-    const flag = args[i],
-      value = args[i + 1];
-    if (!value) throw new Error(`Missing value for ${flag}`);
-    if (flag === '--host') options.host = value;
-    else if (flag === '--port' && /^\d+$/.test(value)) options.port = Number(value);
-    else if (flag === '--build-dir') options.buildDir = value;
-    else throw new Error(`Unknown or invalid option ${flag}`);
+  // Room lifecycle in 01-05 consumes this existing operator-owned definition seam.
+  // @ts-expect-error Current room has a zero-argument onCreate until that lifecycle task.
+  server.define('tdm', TdmRoom, { settings });
+  /** @type {(error:Error)=>void} */
+  let onError = () => {};
+  const failure = new Promise((_, reject) => { onError = reject; http.once('error', onError); });
+  try {
+    await Promise.race([server.listen(port, host), failure]);
+    await matchMaker.createRoom('tdm', {});
+  } catch (error) {
+    await server.gracefullyShutdown(false).catch(() => {});
+    const code = /** @type {NodeJS.ErrnoException} */ (error).code;
+    throw new Error(`Cannot listen on ${host}:${port} (${code ?? 'startup failed'}). ${
+      code === 'EADDRINUSE' ? 'Choose another --port or stop its owning server.' :
+      code === 'EACCES' ? 'Choose an unprivileged port and check bind permissions.' :
+      'Check --host resolves to an available local interface.'}`, { cause: error });
+  } finally {
+    http.off('error', onError);
   }
-  return options;
+  return { http, buildDir, server, settings, certificateDir, listenUrl,
+    ...advertised, close: () => server.gracefullyShutdown(false) };
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
-    const server = await startServer(parseArgs(process.argv.slice(2)));
-    console.log(`[mp server] ready ${JSON.stringify(server.http.address())}`);
-    for (const signal of ['SIGTERM', 'SIGINT'])
-      process.once(signal, () => {
-        void server.close();
-      });
+    const options = parseArgs(process.argv.slice(2));
+    if (options.help) console.log(help);
+    else {
+      const server = await startServer(options);
+      console.log(`[mp server] ready bind=${options.host}:${options.port}; advertised=${server.publicUrl}`);
+      console.log('[mp server] Advertised address does not establish public reachability.');
+      for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => { void server.close(); });
+    }
   } catch (error) {
-    console.error(String(error));
+    console.error(error instanceof Error ? error.message : 'Server startup failed; check --help');
     process.exitCode = 1;
   }
 }
