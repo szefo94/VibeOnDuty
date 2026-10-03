@@ -32,6 +32,7 @@ This is the selected overhaul scope, delivered incrementally in the user's order
 
 - [ ] **HOST-01**: An operator can launch the dedicated server on the identified ARM64 Raspberry Pi configuration using documented setup, endpoint configuration, and startup/restart procedures.
 - [ ] **HOST-02**: An operator can select a qualified capacity using published sustained 8/12/16/24-slot human/bot benchmark results that record tick time, memory, network load, and hardware conditions.
+- [ ] **HOST-03**: An operator can launch the first multiplayer server with `npm run mp-server -- --port <port> --host <bind-address> --tls --public <advertised-address>`, using documented TLS certificate configuration, an advertised address distinct from the bind address, and clear startup/help/configuration-error output.
 - [ ] **PLAT-01**: Players on keyboard/mouse PCs, touch phones, and supported gamepad configurations can join and complete the same multiplayer match using usable device-specific controls.
 - [ ] **PERF-01**: Players can choose scalable visual settings, with a reproducible browser benchmark targeting sustained 60 FPS on agreed representative phone, integrated-graphics PC, and gaming-PC devices.
 - [ ] **PERF-02**: Each major movement, character, weapon, and final-map delivery is checked against the established client/server performance scenarios, with measured limits and regressions recorded.
@@ -138,11 +139,85 @@ This is the selected overhaul scope, delivered incrementally in the user's order
 
 ## Traceability
 
-The roadmapper will assign every v1 requirement to exactly one phase and populate coverage totals here. No implementation requirement is complete yet.
+All 67 v1 requirements are assigned to exactly one roadmap phase. The initial roadmap is accepted; every implementation requirement remains pending.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
+| NET-01 | Phase 1 | Pending |
+| NET-02 | Phase 2 | Pending |
+| NET-03 | Phase 1 | Pending |
+| NET-04 | Phase 1 | Pending |
+| NET-05 | Phase 2 | Pending |
+| NET-06 | Phase 2 | Pending |
+| NET-07 | Phase 2 | Pending |
+| MODE-01 | Phase 1 | Pending |
+| MODE-02 | Phase 2 | Pending |
+| MODE-03 | Phase 3 | Pending |
+| MODE-04 | Phase 3 | Pending |
+| MODE-05 | Phase 3 | Pending |
+| BOT-01 | Phase 4 | Pending |
+| BOT-02 | Phase 4 | Pending |
+| BOT-03 | Phase 4 | Pending |
+| HOST-01 | Phase 4 | Pending |
+| HOST-02 | Phase 4 | Pending |
+| HOST-03 | Phase 1 | Pending |
+| PLAT-01 | Phase 2 | Pending |
+| PERF-01 | Phase 2 | Pending |
+| PERF-02 | Phase 12 | Pending |
+| MOVE-01 | Phase 5 | Pending |
+| MOVE-02 | Phase 5 | Pending |
+| MOVE-03 | Phase 5 | Pending |
+| MOVE-04 | Phase 5 | Pending |
+| MOVE-05 | Phase 5 | Pending |
+| MOVE-06 | Phase 5 | Pending |
+| ART-01 | Phase 6 | Pending |
+| ART-02 | Phase 6 | Pending |
+| ART-03 | Phase 6 | Pending |
+| ART-04 | Phase 6 | Pending |
+| ANIM-01 | Phase 7 | Pending |
+| ANIM-02 | Phase 7 | Pending |
+| ANIM-03 | Phase 7 | Pending |
+| ANIM-04 | Phase 7 | Pending |
+| ANIM-05 | Phase 7 | Pending |
+| GUN-01 | Phase 8 | Pending |
+| GUN-02 | Phase 8 | Pending |
+| GUN-03 | Phase 8 | Pending |
+| GUN-04 | Phase 8 | Pending |
+| GUN-05 | Phase 8 | Pending |
+| GUN-06 | Phase 8 | Pending |
+| GUN-07 | Phase 8 | Pending |
+| GUN-08 | Phase 9 | Pending |
+| GUN-09 | Phase 9 | Pending |
+| LOAD-01 | Phase 9 | Pending |
+| LOAD-02 | Phase 9 | Pending |
+| LOAD-03 | Phase 9 | Pending |
+| PROG-01 | Phase 9 | Pending |
+| PROG-02 | Phase 9 | Pending |
+| PROG-03 | Phase 9 | Pending |
+| EQP-01 | Phase 10 | Pending |
+| STREAK-01 | Phase 10 | Pending |
+| UAV-01 | Phase 10 | Pending |
+| EDIT-01 | Phase 11 | Pending |
+| EDIT-02 | Phase 11 | Pending |
+| EDIT-03 | Phase 11 | Pending |
+| EDIT-04 | Phase 11 | Pending |
+| EDIT-05 | Phase 11 | Pending |
+| EDIT-06 | Phase 11 | Pending |
+| AIEDIT-01 | Phase 11 | Pending |
+| AIEDIT-02 | Phase 11 | Pending |
+| IMPORT-01 | Phase 12 | Pending |
+| IMPORT-02 | Phase 12 | Pending |
+| MAP-01 | Phase 12 | Pending |
+| MAP-02 | Phase 12 | Pending |
+| MAP-03 | Phase 12 | Pending |
+
+**Coverage:**
+- v1 requirements: 67 total
+- Mapped to phases: 67
+- Unmapped requirements: 0
+- Duplicate phase assignments: 0
+- Completed requirements: 0
 
 ---
 *Requirements defined: 2026-10-03 from the user's project dialogue and source-backed enabling dependencies.*
-*Last updated: 2026-10-03 before roadmap traceability assignment.*
+*Last updated: 2026-10-03 after acceptance of the roadmap with console-server startup assigned to Phase 1.*

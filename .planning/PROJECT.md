@@ -24,6 +24,7 @@ These capabilities are inferred from the existing implementation and the 2026-10
 ### Active
 
 - [ ] Build netcode, multiplayer lobbies, and a dedicated server before the later movement and content overhaul.
+- [ ] Launch the first multiplayer server from the console with `npm run mp-server -- --port <port> --host <bind-address> --tls --public <advertised-address>`, with documented TLS configuration and clear startup/help/error output.
 - [ ] Make the server authoritative over match rules, player movement, firing, hit recognition, damage, kills, and score; research prediction, reconciliation, interpolation, and latency handling for responsive browser play.
 - [ ] Support adjustable 8-, 12-, 16-, and 24-player match capacities with maps appropriate to each size and an optional lobby setting to fill empty slots with bots.
 - [ ] Provide multiplayer Team Deathmatch, Search & Destroy with bomb planting and no respawns during a round, free-for-all Deathmatch, Capture the Flag, and rotating King of the Hill/Hardpoint.
@@ -63,7 +64,7 @@ These capabilities are inferred from the existing implementation and the 2026-10
 
 ### Workflow Defaults
 
-Project initialization uses reversible proposed defaults while no alternative preferences have been supplied: autonomous routine steps, fine-grained phases, independent work in parallel, tracked planning documents, research/plan checking/verification enabled, full instructions, and the current session model. These preferences can be revised with `$gsd-settings`. The initial roadmap is prepared for review before implementation.
+Project initialization uses reversible proposed defaults while no alternative preferences have been supplied: autonomous routine steps, fine-grained phases, independent work in parallel, tracked planning documents, research/plan checking/verification enabled, full instructions, and the current session model. These preferences can be revised with `$gsd-settings`. The 12-phase roadmap is accepted; implementation begins after Phase 1 discussion and planning.
 
 ### User-Selected Delivery Order
 
@@ -112,7 +113,7 @@ Necessary foundations may be added inside earlier phases when they enable a play
 | Fast kills, health regen, ADS, headshots, recoil, bullet travel, and penetration | Explicit combat selection | Pending balancing and authoritative combat implementation |
 | Progressive weapon/attachment availability | Explicit loadout/progression choice | Pending identity, persistence, and unlock design |
 | Combined modular, extrusion, sculpting, and prompt-assisted editor | User wants a new flexible map workflow alongside the existing editor | Pending authoring format and tooling research |
-| Multiplayer-first delivery order | Explicit user priority | Accepted scope order; phase breakdown pending |
+| Multiplayer-first delivery order | Explicit user priority | Accepted scope order and 12-phase roadmap |
 | Armor plates deferred | User reserves them for future longer modes | Deferred |
 
 ## Evolution
@@ -124,4 +125,4 @@ After each phase transition, move verified requirements to Validated, move inval
 After each milestone, review every section, check the Core Value, reconsider deferred items, and update the current technical and player context.
 
 ---
-*Last updated: 2026-10-03 after project-scope dialogue, research synthesis, and formal requirements; roadmap preparation is in progress.*
+*Last updated: 2026-10-03 after acceptance of the initial 12-phase roadmap, including Phase 1 console-server startup.*

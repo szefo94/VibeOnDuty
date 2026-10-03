@@ -1,0 +1,299 @@
+# Roadmap: VibeOnDuty
+
+## Overview
+
+Deliver the full selected v1 scope in the user's order: multiplayer first, then omnimovement and collision, human characters and animation, weapons/loadouts/progression/equipment, the second editor, and final maps. Phase 1 is a playable two-client authoritative TDM result using existing maps and assets, with a straightforward console startup command. Each phase is an MVP delivery boundary within the full 67-requirement scope; an early playable slice does not remove later commitments.
+
+**Granularity:** fine
+**Project mode:** mvp
+**Roadmap status:** Accepted on 2026-10-03; implementation has not started.
+
+The proposed Node/Colyseus/WSS/shared-Rapier stack is a research candidate, not a frozen or validated choice. Early multiplayer work includes only necessary shared movement/collision/map-schema and lifecycle foundations. Full movement, art, editor, and final-map overhauls retain their selected position.
+
+## Phases
+
+Integer phases are the planned work. Decimal phases are reserved for later urgent insertions. Execute in numeric order.
+
+- [ ] **Phase 1: Two-Client Authoritative TDM** - Two browser players can complete a fair, server-scored TDM match using the current maps and assets.
+- [ ] **Phase 2: Responsive Cross-Device Lobbies and Deathmatch** - Players on PCs and phones can choose a lobby, complete responsive TDM or free-for-all sessions, and safely start another match.
+- [ ] **Phase 3: Bomb, Flag, and Hardpoint Matches** - Players can complete all five selected multiplayer modes with authoritative objectives and consistent outcomes.
+- [ ] **Phase 4: Bot-Filled Matches on Measured Pi Hosting** - An operator can host the five modes on identified Raspberry Pi hardware and offer only measured human/bot capacities.
+- [ ] **Phase 5: Omnimovement with Reliable Body and Camera Collision** - Players use the selected directional movement on every input device while bodies, aim, and cameras remain consistent with the world and server.
+- [ ] **Phase 6: Human Characters and Comic-Book Blender Iteration** - Players see an accepted human character and comic-book visual slice that creators can reproduce and improve through Blender.
+- [ ] **Phase 7: Movement-Matched and Action-Safe Animation** - Human characters move and act smoothly in first- and third-person views while staying aligned with authoritative gameplay.
+- [ ] **Phase 8: Distinct Weapons and Authoritative Fast Combat** - Players fight with a small distinct rifle/SMG roster, readable aiming and recoil, fast kills, regeneration, and consistent projectile rules.
+- [ ] **Phase 9: Live Loadouts, Attachments, and Durable Unlocks** - Players earn legal weapon options, build and preview loadouts, and retain their choices and progress across sessions.
+- [ ] **Phase 10: Useful Equipment, Score Streaks, and Reconnaissance** - Players use expanded equipment and earned streaks with authoritative effects and a useful, bounded reconnaissance decision.
+- [ ] **Phase 11: Combined Second Editor with Inspectable Prompt Edits** - Creators build, revise, and playtest editable maps using modular placement, drawing/extrusion, sculpting, and natural-language proposals.
+- [ ] **Phase 12: Qualified Adaptations and Two Playable Final Maps** - Players get at least two sourced or original maps with tested modes, capacity variants, and recorded performance on the selected devices and hosting profiles.
+
+## Phase Details
+
+### Phase 1: Two-Client Authoritative TDM
+
+**Goal:** Two browser players can complete a fair, server-scored TDM match using the current maps and assets.
+**Mode:** mvp
+**Depends on:** Nothing (first phase)
+**Requirements:** NET-01, NET-03, NET-04, MODE-01, HOST-03
+**Success Criteria** (what must be TRUE):
+
+1. Two real browser clients join the same dedicated-server match on an existing map, see each other, move, fire, die, and respawn.
+2. Both clients view the same team assignment, confirmed damage, kills, score, and match winner through a complete TDM session.
+3. Invalid, stale, duplicated, and impossible movement commands do not change the authoritative player state.
+4. Modified client messages cannot grant firing eligibility, create trusted hit outcomes, award damage or kills, or overwrite server score.
+5. An operator starts the server with `npm run mp-server -- --port <port> --host <bind-address> --tls --public <advertised-address>`; port/binding/TLS/advertised-address configuration takes effect, certificate setup is documented, and invalid configuration produces actionable errors.
+
+**Plans:** TBD
+**UI hint:** yes
+
+**Research/discussion focus:** Validate the proposed runtime/transport/physics combination, shared headless simulation boundaries, fixed-step input contract, and minimum authoritative collision/projectile behavior. Define CLI defaults, `--help`, port/bind validation, TLS certificate configuration, and the client-facing hostname/URL semantics of `--public`, including direct TLS and proxy hosting. Keep existing art and maps; extract only the collision/map/lifecycle foundations needed for this playable slice.
+
+### Phase 2: Responsive Cross-Device Lobbies and Deathmatch
+
+**Goal:** Players on PCs and phones can choose a lobby, complete responsive TDM or free-for-all sessions, and safely start another match.
+**Mode:** mvp
+**Depends on:** Phase 1
+**Requirements:** NET-02, NET-05, NET-06, NET-07, MODE-02, PLAT-01, PERF-01
+**Success Criteria** (what must be TRUE):
+
+1. Players create or join a lobby, choose an available mode and supported existing map, and request 8, 12, 16, or 24 total slots; the active hosting profile permits only qualified capacities.
+2. Keyboard/mouse, touch-phone, and supported gamepad players complete the same match; free-for-all has individual respawns and a server-scored winner.
+3. Under the agreed latency, jitter, and loss scenarios, local input stays responsive, corrections remain within agreed limits, and remote motion is smooth enough to aim at.
+4. Moving-target, cover, death, and respawn trials produce consistent confirmed projectile outcomes under a documented bounded latency policy; arbitrary client timestamps cannot change the result.
+5. Players leave, reconnect according to the chosen policy, finish, and restart without stale match state; they can select visual quality using published sustained benchmarks targeting 60 FPS on named phone, integrated-graphics PC, and gaming-PC devices.
+
+**Plans:** TBD
+**UI hint:** yes
+
+**Research/discussion focus:** Set network impairment and device baselines; compare bounded travelling-projectile policies and prediction replay. Decide input ergonomics, reconnect policy, endpoint topology, tick/snapshot rates, and initial capacity gating. Phase 4 qualifies Raspberry Pi profiles; this phase does not imply that every requested capacity is supported on that hardware.
+
+### Phase 3: Bomb, Flag, and Hardpoint Matches
+
+**Goal:** Players can complete all five selected multiplayer modes with authoritative objectives and consistent outcomes.
+**Mode:** mvp
+**Depends on:** Phase 2
+**Requirements:** MODE-03, MODE-04, MODE-05
+**Success Criteria** (what must be TRUE):
+
+1. Search & Destroy players plant and defuse the bomb, view the same round outcome, and remain dead until the next round after elimination.
+2. Capture the Flag players pick up, carry, drop, return, and capture flags, with consistent ownership and team score across clients.
+3. Hardpoint players contest and control rotating locations, with the chosen occupancy rules producing the same authoritative team score and winner on every client.
+4. Players switch among TDM, Deathmatch, Search & Destroy, Capture the Flag, and Hardpoint through supported lobby/map combinations without objective or round state leaking between matches.
+
+**Plans:** TBD
+**UI hint:** yes
+
+**Research/discussion focus:** Discuss mode timers, win/tie rules, occupancy, objective/drop behavior, and join/reconnect rules during rounds. Add only essential markers/spawns and existing-map fixes needed to play these modes; final map production remains Phase 12.
+
+### Phase 4: Bot-Filled Matches on Measured Pi Hosting
+
+**Goal:** An operator can host the five modes on identified Raspberry Pi hardware and offer only measured human/bot capacities.
+**Mode:** mvp
+**Depends on:** Phase 3
+**Requirements:** BOT-01, BOT-02, BOT-03, HOST-01, HOST-02
+**Success Criteria** (what must be TRUE):
+
+1. A lobby creator uses the lobby interface to toggle vacant-slot bot filling, and humans plus server-controlled bots never exceed the chosen capacity.
+2. Bots traverse, fight, respect teams and life states, and pursue the selected objectives in all five modes under the same authoritative rules as humans.
+3. Human joins and leaves follow the chosen bot replacement policy without broken teams, illegal S&D respawns, corrupted objectives, or changed scores.
+4. An operator launches, configures endpoints, restarts, and reconnects clients to the server on the identified ARM64 Raspberry Pi configuration using reproducible instructions.
+5. Published sustained 8/12/16/24-slot trials record human/bot mix, tick time, memory, network load, and hardware/cooling conditions; the operator and lobby enforce the resulting qualified profiles, including rejected or unmeasured capacities.
+
+**Plans:** TBD
+**UI hint:** yes
+
+**Research/discussion focus:** Confirm the actual Pi model, 4 GB/16 GB alternatives, ARM64 OS, cooling, storage, network access, and bot workloads. Benchmark measured limits rather than infer 24-player capacity from RAM. This closes the multiplayer-first delivery group before the full movement overhaul.
+
+### Phase 5: Omnimovement with Reliable Body and Camera Collision
+
+**Goal:** Players use the selected directional movement on every input device while bodies, aim, and cameras remain consistent with the world and server.
+**Mode:** mvp
+**Depends on:** Phase 4
+**Requirements:** MOVE-01, MOVE-02, MOVE-03, MOVE-04, MOVE-05, MOVE-06
+**Success Criteria** (what must be TRUE):
+
+1. Players sprint forward, backward, and sideways and enter/cancel directional slides under agreed speed, stance, and action rules, with prediction and server validation agreeing.
+2. Players dive in the selected directions and transition into the agreed prone/supine movement and aiming states; other clients observe the same posture.
+3. Players jump, land, and traverse supported ramps, stairs, uneven terrain, and overlapping floors without entering terrain, falling through it, or snapping to another floor.
+4. Stance changes respect wall, ceiling, and body clearance; pressing or leaning near walls cannot reveal the opposite side through the camera.
+5. Keyboard/mouse, touch, and gamepad players perform the selected simultaneous movement/actions using documented, configurable controls in the settings menu.
+
+**Plans:** TBD
+**UI hint:** yes
+
+**Research/discussion focus:** Define the exact Call of Duty-inspired move/action transitions, collider rotation/resizing, clearance rules, and cross-device mappings. Re-run the established network/device/server scenarios and retain movement metrics needed by later animation and maps.
+
+### Phase 6: Human Characters and Comic-Book Blender Iteration
+
+**Goal:** Players see an accepted human character and comic-book visual slice that creators can reproduce and improve through Blender.
+**Mode:** mvp
+**Depends on:** Phase 5
+**Requirements:** ART-01, ART-02, ART-03, ART-04
+**Success Criteria** (what must be TRUE):
+
+1. Players inspect accepted humanlike proportions, silhouettes, and weapon grips in the running game; editable model sources and asset-specific provenance accompany the accepted character.
+2. A representative character, weapon, and existing-environment slice shows the chosen illustrated textures, stylized lighting, and scalable outlines at the agreed visual quality settings.
+3. A creator changes a model or material using the verified Blender automation path, exports it reproducibly, and compares the result in-game before acceptance.
+4. A creator performs an LLM-assisted Blender change through an available documented integration or script workflow, inspects the change, and restores the prior editable source version.
+
+**Plans:** TBD
+**UI hint:** yes
+
+**Research/discussion focus:** Confirm installed Blender/tooling, reusable human rigs and asset terms, exporter compatibility, and browser material/outline costs. Choose art from repeated in-game review; do not assume a Blender connector or discard the working rig pipeline without comparison. Re-run device/server scenarios.
+
+### Phase 7: Movement-Matched and Action-Safe Animation
+
+**Goal:** Human characters move and act smoothly in first- and third-person views while staying aligned with authoritative gameplay.
+**Mode:** mvp
+**Depends on:** Phase 6
+**Requirements:** ANIM-01, ANIM-02, ANIM-03, ANIM-04, ANIM-05
+**Success Criteria** (what must be TRUE):
+
+1. Characters visibly follow actual simulated idle, directional locomotion, sprint, slide, dive, prone, jump, and landing without unacceptable snapping at transitions.
+2. ADS, firing, reload, melee, equipment, damage, and death action animations retain accepted grips and avoid unintended overlap in first- and third-person views.
+3. Remote posture and aim match the server state; visual blending and root motion never shift the gameplay body independently of simulation.
+4. A creator imports or retargets approved reusable motion onto the selected rig, regenerates runtime clips, and reviews the resulting transitions through the Blender-to-game workflow.
+5. Repeated spawn, character replacement, and disposal keep shared templates usable and release instance resources within the measured browser budget.
+
+**Plans:** TBD
+**UI hint:** yes
+
+**Research/discussion focus:** Select compatible licensed motion, transition/action permissions, authoritative pose signals, and resource ownership. Evaluate actual in-game poses and export reproducibility; future weapons/equipment must preserve this animation acceptance. Re-run device/server scenarios.
+
+### Phase 8: Distinct Weapons and Authoritative Fast Combat
+
+**Goal:** Players fight with a small distinct rifle/SMG roster, readable aiming and recoil, fast kills, regeneration, and consistent projectile rules.
+**Mode:** mvp
+**Depends on:** Phase 7
+**Requirements:** GUN-01, GUN-02, GUN-03, GUN-04, GUN-05, GUN-06, GUN-07
+**Success Criteria** (what must be TRUE):
+
+1. Players select multiple distinct rifles and multiple distinct SMGs plus the agreed supporting categories, with visibly different handling under the documented fast-kill and server-owned health-regeneration rules.
+2. Players aim down the equipped sights, and aim, accuracy, recoil, and permitted action states follow reproducible server-compatible rules.
+3. Head and body hits apply the documented server-owned damage differences correctly through the supported movement postures.
+4. Traveling shots collide consistently with moving players and map geometry using the agreed swept-collision and latency rules.
+5. Shots penetrate only selected materials within the documented thickness, energy/damage-loss, and subsequent-hit limits; all clients observe the confirmed result.
+
+**Plans:** TBD
+**UI hint:** yes
+
+**Research/discussion focus:** Choose roster, damage/regen/recoil values, hit regions, ADS permissions, travel behavior, and penetration materials. Refine the multiplayer projectile policy using combat trials; recheck accepted grips/action animation and device/server scenarios.
+
+### Phase 9: Live Loadouts, Attachments, and Durable Unlocks
+
+**Goal:** Players earn legal weapon options, build and preview loadouts, and retain their choices and progress across sessions.
+**Mode:** mvp
+**Depends on:** Phase 8
+**Requirements:** GUN-08, GUN-09, LOAD-01, LOAD-02, LOAD-03, PROG-01, PROG-02, PROG-03
+**Success Criteria** (what must be TRUE):
+
+1. Players equip legal attachments and tuning with documented handling/stat tradeoffs, and choose supported scopes, reticles, and red/green dot sights whose aiming presentation matches the equipped parts.
+2. Players assemble and save a weapon/attachment/optic/equipment loadout while a live 3D preview updates the gun and supported loadout elements.
+3. Preview parts and effective stats match the saved and spawned equipment; the server rejects incompatible or locked selections.
+4. Players start with a small usable selection, earn weapon and attachment unlocks under documented rules, and retain progression and loadouts through reconnects and server restarts using the chosen identity/persistence policy.
+5. Match awards are server-owned and applied once through retries and restarts; changing browser saves cannot create unlocks.
+
+**Plans:** TBD
+**UI hint:** yes
+
+**Research/discussion focus:** Decide minimal player identity/recovery, save lifetime, unlock/reward rules, catalog legality, and durable storage. Validate the proposed storage choice rather than add an account/social suite. Recheck preview cost, equipped appearance, and client/server scenarios.
+
+### Phase 10: Useful Equipment, Score Streaks, and Reconnaissance
+
+**Goal:** Players use expanded equipment and earned streaks with authoritative effects and a useful, bounded reconnaissance decision.
+**Mode:** mvp
+**Depends on:** Phase 9
+**Requirements:** EQP-01, STREAK-01, UAV-01
+**Success Criteria** (what must be TRUE):
+
+1. Players select and use the agreed expanded equipment set with server-owned inventory, effects, and action timing, reflected in saved loadouts and equipped presentation.
+2. Players earn and activate the chosen score streaks only when authoritative score, eligibility, and match/life rules permit them; effects end correctly on the defined lifecycle transitions.
+3. An explicit gameplay review results in useful UAV-style reconnaissance with agreed team visibility, duration, bounds, and counterplay, or removal of the ineffective existing drone system.
+
+**Plans:** TBD
+**UI hint:** yes
+
+**Research/discussion focus:** Select equipment/streak catalog, scoring and reset rules, reconnaissance/counterplay, and the UAV-or-removal outcome. Recheck action animation, objective modes, network load, and device/server scenarios.
+
+### Phase 11: Combined Second Editor with Inspectable Prompt Edits
+
+**Goal:** Creators build, revise, and playtest editable maps using modular placement, drawing/extrusion, sculpting, and natural-language proposals.
+**Mode:** mvp
+**Depends on:** Phase 10
+**Requirements:** EDIT-01, EDIT-02, EDIT-03, EDIT-04, EDIT-05, EDIT-06, AIEDIT-01, AIEDIT-02
+**Success Criteria** (what must be TRUE):
+
+1. Creators open the second 3D editor and place, transform, duplicate, and group modular environment pieces.
+2. Creators draw and extrude editable structures, sculpt terrain, and traverse the compiled result with actual game movement and matching gameplay collision.
+3. Creators undo/redo, save/reopen editable sources, and return from map playtests without losing authoring state.
+4. Creators author spawns, teams, objectives, and mode/capacity support; versioned compilation produces matching visual, collision, material, and navigation data, with a documented coexistence/import path preserving supported existing-map serialization.
+5. Creators inspect an editable natural-language proposal before applying ordinary undoable commands; bounded validation rejects invalid generated/imported content and prevents arbitrary code execution or bypass of authoritative map validation.
+
+**Plans:** TBD
+**UI hint:** yes
+
+**Research/discussion focus:** Choose authoring/bake schema, modular/extrusion/sculpt limits, navigation and import formats, professional map workflow, prompt backend/provider, and old-editor migration policy. Prompt assistance needs its own AI contract and evaluations; no project-wide model rewrite or assumed SDK/connector is required.
+
+### Phase 12: Qualified Adaptations and Two Playable Final Maps
+
+**Goal:** Players get at least two sourced or original maps with tested modes, capacity variants, and recorded performance on the selected devices and hosting profiles.
+**Mode:** mvp
+**Depends on:** Phase 11
+**Requirements:** IMPORT-01, IMPORT-02, MAP-01, MAP-02, MAP-03, PERF-02
+**Success Criteria** (what must be TRUE):
+
+1. Creators can review a researched shortlist of popular reusable FPS map sources with inspected editable files, provenance, modification/redistribution terms, and mode suitability.
+2. A qualified source can be adapted through the new workflow with attribution and editable output; unsuitable/unavailable candidates and any required original-map fallback are documented for explicit review.
+3. Players complete matches on at least two maps produced or adapted through the new editor/Blender workflow, with coherent locations and layouts for their advertised modes.
+4. The map set supplies declared, tested layouts or variants for 8-, 12-, 16-, and 24-slot play; each map advertises only its supported mode/size combinations, and hosting profiles still gate usable capacity.
+5. Every advertised combination passes human/bot objectives, spawn safety, movement/camera/collision, and client/server scenarios; final evidence also records earlier movement, character, and weapon delivery checks, measured limits/regressions, editable sources, and provenance.
+
+**Plans:** TBD
+**UI hint:** yes
+
+**Research/discussion focus:** Qualify actual reusable source/component terms and import files; no complete reusable source map is currently qualified. Choose two settings and the mode/capacity matrix, iterate blockouts before art, and benchmark final sustained loads against the established 60 FPS device target and Pi envelopes.
+
+
+## Recurring Acceptance Gates
+
+- Before multiplayer acceptance, name the impaired-network scenarios, numeric correction/tick limits, target devices, frame-time limits, bot mixes, and hardware conditions. Do not report unrun tests as evidence.
+- Phase 2 establishes scalable visual settings and reproducible sustained browser scenarios targeting 60 FPS across phones, integrated-graphics PCs, and gaming PCs. Phase 4 publishes measured ARM64 Pi hosting profiles for 8/12/16/24 total human-plus-bot slots; unqualified sizes remain unavailable on that profile.
+- Re-run the established client/server scenarios at the movement, character/animation, and weapon/loadout/equipment deliveries. Record limits and regressions at each delivery; Phase 12 owns final closure of the cross-delivery performance requirement and qualification of every advertised final-map combination.
+- Assess art/animation through running-game visual review, not numerical pose checks alone. Keep editable sources, reproducible exports, asset-specific provenance, safe shared resource ownership, existing serialization compatibility, and prefix-aware asset URLs throughout.
+
+## Open Decisions
+
+| Decision | Resolve in |
+|----------|------------|
+| Installed compatible server/shared stack, tick/snapshot rates, prediction replay, projectile history/timestamp/obstruction/death policy | Phases 1-2 |
+| Named phone/iGPU/gaming-PC baselines, network impairment, numeric frame/tick acceptance, LAN/Internet endpoint topology | Phases 2 and 4 |
+| Exact Pi model, 4 GB or 16 GB configuration, ARM64 OS, cooling/storage/connectivity, sustained player/bot capacity | Phase 4 |
+| Sprint/slide/dive/prone/supine rules, collider clearance, shoot/ADS permissions, simultaneous touch/gamepad bindings | Phase 5 |
+| Actual Blender automation path, human rig/source licenses, motion compatibility, accepted poses and art budget | Phases 6-7 |
+| Weapon/balance/penetration catalogs, minimal identity/recovery/save lifetime, durable unlock awards, equipment/streak/UAV choices | Phases 8-10 |
+| Second-editor document/compiler/import/navigation formats, prompt provider/backend, safe editable operations and old-editor path | Phase 11 |
+| Qualified reusable complete map sources, component terms, original fallback if necessary, two settings and supported mode/size matrix | Phase 12 |
+
+Armor plates remain future longer-mode scope. Monetization and generic authentication/social suites are outside this release.
+
+## Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 1. Two-Client Authoritative TDM | 0/TBD | Not started | - |
+| 2. Responsive Cross-Device Lobbies and Deathmatch | 0/TBD | Not started | - |
+| 3. Bomb, Flag, and Hardpoint Matches | 0/TBD | Not started | - |
+| 4. Bot-Filled Matches on Measured Pi Hosting | 0/TBD | Not started | - |
+| 5. Omnimovement with Reliable Body and Camera Collision | 0/TBD | Not started | - |
+| 6. Human Characters and Comic-Book Blender Iteration | 0/TBD | Not started | - |
+| 7. Movement-Matched and Action-Safe Animation | 0/TBD | Not started | - |
+| 8. Distinct Weapons and Authoritative Fast Combat | 0/TBD | Not started | - |
+| 9. Live Loadouts, Attachments, and Durable Unlocks | 0/TBD | Not started | - |
+| 10. Useful Equipment, Score Streaks, and Reconnaissance | 0/TBD | Not started | - |
+| 11. Combined Second Editor with Inspectable Prompt Edits | 0/TBD | Not started | - |
+| 12. Qualified Adaptations and Two Playable Final Maps | 0/TBD | Not started | - |
+
+**Coverage:** 67/67 v1 requirements assigned exactly once; no orphaned or duplicate assignments. Traceability lives in REQUIREMENTS.md. Plans and implementation evidence are pending.
+
+---
+*Created: 2026-10-03. Accepted with Phase 1 console-server startup on 2026-10-03.*
