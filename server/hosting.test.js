@@ -31,6 +31,22 @@ function rejectedSocket(url, origin) {
 }
 
 describe('built-game host boundary', () => {
+  it('permits configured proxy Origin over private HTTP and rejects a foreign real join', async () => {
+    const proxy = await startMpFixture({ publicAddress: 'https://play.example' });
+    try {
+      const { Client } = await import('@colyseus/sdk');
+      const accepted = await new Client(proxy.url, { headers: { Origin: 'https://play.example' } })
+        .joinOrCreate('tdm', { protocolVersion: 1 });
+      try {
+        await expect.poll(() => accepted.state?.players?.size ?? 0).toBe(1);
+        await expect(new Client(proxy.url, { headers: { Origin: 'https://foreign.example' } })
+          .joinOrCreate('tdm', { protocolVersion: 1 })).rejects.toThrow();
+        expect(accepted.state.players.size).toBe(1);
+        expect(proxy.output()).toContain('advertised=https://play.example');
+        expect((await fetch(proxy.url)).status).toBe(200);
+      } finally { await accepted.leave(); }
+    } finally { await proxy.stop(); }
+  }, 30000);
   it('bridges validated operator settings into the current room without trusting join options', async () => {
     const room = new TdmRoom();
     room.onCreate({ settings: { killLimit: 5, matchSeconds: 7, respawnSeconds: 1, friendlyFire: 0.5, resultsSeconds: 15 } });

@@ -31,7 +31,7 @@ notes or roadmap proposals. Update relevant context when the architecture change
 | `npm test` / `npm run test:unit` | Vitest, `src/**/*.test.js` |
 | `npm run test:watch` | Vitest watch mode |
 | `npm run test:e2e` | Playwright, `tests/`; manages Vite on port 5173 |
-| `npm run build:mp` / `npm run mp-server` | Root-base production build / same-origin dedicated HTTP game server |
+| `npm run build:mp` / `npm run mp-server` | Root-base production build / same-origin dedicated HTTP or testing HTTPS game server |
 | `npm run test:mp` / `npm run typecheck:mp` | Isolated production multiplayer browser tests / strict checked JS boundaries |
 
 Prettier settings: two spaces, semicolons, single quotes, ES5 trailing commas,
@@ -68,6 +68,14 @@ Greek Columns gameplay arrays/spawns live in `shared/maps/bunker.js`; the visual
 map consumes them and each world clones them. Server code must not import browser
 singletons. Frozen `window.__mpDebug()` is observation only. `clearAllDrones()` also
 cancels delayed offline drone respawns during mode transitions.
+
+`server/cli.js` validates bind/port/public URL, root-base builds and operator rules.
+`server/tls.js` publishes one atomic certificate/key manifest under ignored
+`.vod-server/tls/` with actual restricted Windows ACL or POSIX permission checks.
+Use `docs/MULTIPLAYER.md` for self-signed trust and reverse-proxy setup. Advertised
+addresses select printed links/SAN and approved WebSocket Origin, while browser
+transport uses the page origin. Fixture TLS storage and builds are owned OS-temp
+paths; their restart helper retains those paths until stopping the owned server.
 
 `shared/movement.js` owns numeric eye/body stepping. Crouched walk speed retains
 `6 * 0.72 = 4.32 m/s`; floor references convert crouched eyes to standing-equivalent
