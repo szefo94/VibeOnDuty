@@ -27,13 +27,14 @@ VibeOnDuty/
 │   ├── hud/                  # DOM/canvas HUD and radar
 │   ├── maps/                 # Built-in map definitions
 │   ├── modes/                # Modes, shop and economy
-│   ├── shared/               # Headless room simulation/world and canonical map data
+│   ├── shared/               # Headless movement, protocol, room simulation/world and canonical map data
 │   ├── network/              # Same-origin session, remote actors and private feedback
 │   ├── replay/               # Killcam and damage summaries
 │   └── utils/                # Visibility helper
 ├── public/                   # Models and browser-served static assets
 ├── tests/                    # Playwright browser regression suites
 ├── server/                   # Colyseus authoritative room/schema and built-game HTTP host
+│   └── testHelpers/          # Raw SDK hostile client with explicit server-derived Origin
 ├── types/                    # Reference entity declarations
 ├── tools/                    # Blender asset pipeline and FBX sources
 ├── docs/                     # Human documentation and investigation reports
@@ -82,6 +83,13 @@ VibeOnDuty/
 - Runtime loading must be verified in `src/builders/weaponFBX.js` and `src/builders/enemyWeapon.js`; an asset's presence alone does not establish use.
 
 ## Key File Locations
+
+**Online movement and input boundary (01-03):**
+- `src/shared/movement.js`: Numeric movement with stance clearance, jump/gravity and radius-aware terrain.
+- `src/shared/protocol.js`: Exact versioned intentions, acknowledged-tick and receipt age, sequence/generation gates, bounded session queues and token rate.
+- `server/tdmRoom.js`: Framework session ownership, one consumption per fixed tick, replicated body flags/ticks and rejection/disconnect signals.
+- `server/testHelpers/hostileClient.js`: Existing pinned SDK plus existing Node WebSocket transport for raw malformed inputs; Origin derives from the ephemeral server URL.
+- `tests/multiplayer.spec.js`: Real controls and snapshots through built production assets; observers never mutate trusted state.
 
 **Entry Points:**
 - `index.html`: Loads `src/main.js` as an ES module and provides UI IDs.
