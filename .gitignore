@@ -3,3 +3,4 @@ node_modules/
 dist/
 test-results/
 public/**/.DS_Store
+.planning/research/.cache/
