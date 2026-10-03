@@ -54,7 +54,7 @@ for example, it still declares `isAlive()`, which `applyEntityBase()` no longer 
 | World | `map.js`: live map data/collision; `tiles.js`: tile codec; `rampMath.js`: surface math; `level.js`: mesh construction; `maps/*`: definitions |
 | Visuals | `scene.js`, `materials.js`, `lighting.js`; `builders/*`: models/animation; `fx/*`: effects; `hud/*`: DOM/canvas overlays and radar |
 | Editor/replay | `editor/mapEditor.js`; `replay/killcam.js`: live camera following killer, not recorded replay; `replay/damageTracker.js`: damage totals |
-| Online authority | `server/tdmRoom.js`, `shared/tdmSimulation.js`, `shared/world.js`: room-owned state and terrain queries; `network/onlineSession.js`: browser intentions, remote actors and confirmed feedback |
+| Online authority | `server/tdmRoom.js`, `shared/tdmSimulation.js`, `shared/movement.js`, `shared/world.js`: room-owned state, movement and terrain; `shared/protocol.js`: exact intent rejection and bounded session queues; `network/onlineSession.js`: browser intentions, remote actors and confirmed feedback |
 
 Boot registers the character GLB, player weapon FBX, and pistol FBX with
 `builders/assetManager.js`. `loadAll()` uses `Promise.allSettled`; failures retain

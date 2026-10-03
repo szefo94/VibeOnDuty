@@ -10,11 +10,12 @@ import {
 } from '../config.js';
 import { createWorld, segmentBox, bodiesOverlap } from './world.js';
 import { stepMovement } from './movement.js';
+import { validateInput } from './protocol.js';
 export { segmentBox } from './world.js';
 
 /** @typedef {{x:number,y:number,z:number}} Point */
 /** @typedef {import('./world.js').MapData} MapData */
-/** @typedef {{protocolVersion:number,seq:number,ackTick:number,matchGeneration:number,lifeGeneration:number,moveX:number,moveZ:number,yaw:number,pitch:number,fire:boolean,reload:boolean,sprint:boolean,jump:boolean,crouch:boolean,aiming:boolean,neutral:boolean}} Command */
+/** @typedef {import('./protocol.js').Command} Command */
 /** @typedef {import('./movement.js').MovementBody & {sessionId:string,team:string,health:number,lifeGeneration:number,ammo:number,reserve:number,lastSeq:number,lastConsumedSeq:number,reloadRemaining:number,shootRemaining:number,input:Command|null,inputAge:number}} Body */
 
 /** @param {MapData} mapData @param {{killLimit?:number,matchSeconds?:number,respawnSeconds?:number,friendlyDamage?:number,resultsSeconds?:number}} [settings] */
@@ -85,48 +86,25 @@ export function createSimulation(mapData, settings = {}) {
   /** @param {string} sessionId @param {unknown} raw */
   function queueInput(sessionId, raw) {
     const p = players.get(sessionId);
-    if (!p || !raw || typeof raw !== 'object') return false;
-    const c = /** @type {Command} */ (raw);
-    const fields = [
-      'protocolVersion',
-      'seq',
-      'matchGeneration',
-      'lifeGeneration',
-      'moveX',
-      'moveZ',
-      'yaw',
-      'pitch',
-      'fire',
-      'reload',
-      'ackTick',
-      'sprint',
-      'jump',
-      'crouch',
-      'aiming',
-      'neutral',
-    ];
-    if (Object.keys(c).some((k) => !fields.includes(k))) return false;
-    if (
-      c.protocolVersion !== 1 ||
-      c.matchGeneration !== matchGeneration ||
-      c.lifeGeneration !== p.lifeGeneration
-    )
-      return false;
-    if (!Number.isSafeInteger(c.seq) || c.seq < 0 || c.seq <= p.lastSeq) return false;
-    if (
-      ![c.moveX, c.moveZ, c.yaw, c.pitch].every(Number.isFinite) ||
-      Math.abs(c.moveX) > 1 ||
-      Math.abs(c.moveZ) > 1 ||
-      Math.abs(c.yaw) > Math.PI ||
-      Math.abs(c.pitch) > 1.38 ||
-      typeof c.fire !== 'boolean' ||
-      typeof c.reload !== 'boolean' ||
-      ![c.sprint, c.jump, c.crouch, c.aiming].every((value) => typeof value === 'boolean')
-    )
-      return false;
+    if (!p) return false;
+    const validation = validateInput(raw, {
+      currentTick,
+      lastSeq: p.lastSeq,
+      matchGeneration,
+      lifeGeneration: p.lifeGeneration,
+    });
+    if (!validation.ok) return false;
+    const c = validation.command;
     p.lastSeq = c.seq;
     // Latest movement replaces older intent; one fire edge persists until consumed.
-    p.input = c.neutral ? { ...c } : { ...c, fire: c.fire || !!p.input?.fire, reload: c.reload || !!p.input?.reload, jump: c.jump || !!p.input?.jump };
+    p.input = c.neutral
+      ? { ...c }
+      : {
+          ...c,
+          fire: c.fire || !!p.input?.fire,
+          reload: c.reload || !!p.input?.reload,
+          jump: c.jump || !!p.input?.jump,
+        };
     p.inputAge = 0;
     return true;
   }
@@ -165,11 +143,22 @@ export function createSimulation(mapData, settings = {}) {
       p.inputAge += dt;
       p.moving = false;
       const activeInput = c && p.inputAge <= 0.5 ? c : null;
-      stepMovement(p, activeInput, {
-        groundElevation: world.supportElevation,
-        canOccupy: (next, height, allowStep) => world.canOccupy(next, height, allowStep) &&
-          [...players.values()].every((b) => b === p || !b.alive || !bodiesOverlap(next, b, height, b.crouching ? PLAYER_H_CROUCH : PLAYER_H)),
-      }, dt);
+      stepMovement(
+        p,
+        activeInput,
+        {
+          groundElevation: world.supportElevation,
+          canOccupy: (next, height, allowStep) =>
+            world.canOccupy(next, height, allowStep) &&
+            [...players.values()].every(
+              (b) =>
+                b === p ||
+                !b.alive ||
+                !bodiesOverlap(next, b, height, b.crouching ? PLAYER_H_CROUCH : PLAYER_H)
+            ),
+        },
+        dt
+      );
       if (!activeInput || !c) continue;
       p.lastConsumedSeq = c.seq;
       if (c.reload && p.ammo < WEAPONS.m4.maxAmmo && p.reserve > 0 && !p.reloadRemaining)
@@ -211,7 +200,11 @@ export function createSimulation(mapData, settings = {}) {
         const t = segmentBox(
           start,
           end,
-          { x: p.x - PLAYER_R, y: p.y - (p.crouching ? PLAYER_H_CROUCH : PLAYER_H), z: p.z - PLAYER_R },
+          {
+            x: p.x - PLAYER_R,
+            y: p.y - (p.crouching ? PLAYER_H_CROUCH : PLAYER_H),
+            z: p.z - PLAYER_R,
+          },
           { x: p.x + PLAYER_R, y: p.y + 0.1, z: p.z + PLAYER_R }
         );
         if (t !== null && (best === null || t < best)) {
@@ -268,5 +261,25 @@ export function createSimulation(mapData, settings = {}) {
   const removePlayer = (id) => {
     players.delete(id);
   };
-  return { addPlayer, removePlayer, queueInput, stepSimulation, snapshot, events, world, rules };
+  /** Retire held intentions on death, generation change, expiry or leave.
+   * @param {string} id */
+  function clearInput(id) {
+    const body = players.get(id);
+    if (body) {
+      body.input = null;
+      body.inputAge = 0;
+      body.jumpHeld = false;
+    }
+  }
+  return {
+    addPlayer,
+    removePlayer,
+    queueInput,
+    clearInput,
+    stepSimulation,
+    snapshot,
+    events,
+    world,
+    rules,
+  };
 }

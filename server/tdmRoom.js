@@ -3,6 +3,7 @@ import { Room } from '@colyseus/core';
 import { schema, t, MapSchema } from '@colyseus/schema';
 import { bunkerData } from '../src/shared/maps/bunker.js';
 import { createSimulation } from '../src/shared/tdmSimulation.js';
+import { createInputGate, MAX_SEQ } from '../src/shared/protocol.js';
 
 export const PlayerState = schema(
   {
@@ -59,15 +60,42 @@ export class TdmRoom extends Room {
     timeRemaining: 600,
   });
   simulation = createSimulation(bunkerData);
+  /** @type {Map<string,ReturnType<typeof createInputGate>>} */
+  inputGates = new Map();
+  /** @type {Map<string,string>} */
+  inputGenerations = new Map();
   onCreate() {
     this.maxClients = 2;
     this.patchRate = 50;
     this.autoDispose = false;
     this.onMessage('input', (client, command) => {
-      this.simulation.queueInput(client.sessionId, command);
+      const gate = this.inputGates.get(client.sessionId);
+      const body = this.state.players.get(client.sessionId);
+      if (!gate || !body) return;
+      if (gate.lastSeq === MAX_SEQ) {
+        client.send('inputRejected', { reason: 'duplicate_seq' });
+        gate.clear();
+        this.simulation.clearInput(client.sessionId);
+        client.leave(4002);
+        return;
+      }
+      const result = gate.receive(
+        command,
+        this.inputContext(body, gate.lastSeq),
+        performance.now()
+      );
+      if (!result.ok) {
+        client.send('inputRejected', { reason: result.reason });
+        if (result.disconnect) {
+          gate.clear();
+          this.simulation.clearInput(client.sessionId);
+          client.leave(4008);
+        }
+      }
     });
     this.onMessage('*', () => {});
     this.setFixedTimestep((ctx) => {
+      this.consumeInputs(performance.now());
       this.simulation.stepSimulation(ctx.dt);
       this.syncState();
       for (const event of this.simulation.events) {
@@ -78,13 +106,45 @@ export class TdmRoom extends Room {
   /** @param {import('@colyseus/core').Client} client */
   onJoin(client) {
     this.simulation.addPlayer(client.sessionId);
+    this.inputGates.set(client.sessionId, createInputGate());
     this.syncState();
   }
   /** @param {import('@colyseus/core').Client} client */
   onLeave(client) {
+    this.inputGates.delete(client.sessionId);
+    this.inputGenerations.delete(client.sessionId);
     this.simulation.removePlayer(client.sessionId);
     this.state.players.delete(client.sessionId);
     this.syncState();
+  }
+  /** @param {InstanceType<typeof PlayerState>} body @param {number} lastSeq */
+  inputContext(body, lastSeq) {
+    return {
+      currentTick: this.state.currentTick,
+      lastSeq,
+      matchGeneration: this.state.matchGeneration,
+      lifeGeneration: body.lifeGeneration,
+    };
+  }
+  /** @param {number} nowMs */
+  consumeInputs(nowMs) {
+    for (const [id, gate] of this.inputGates) {
+      const body = this.state.players.get(id);
+      if (!body || !body.alive || this.state.phase !== 'playing') {
+        gate.clear();
+        this.simulation.clearInput(id);
+        continue;
+      }
+      const generation = `${this.state.matchGeneration}/${body.lifeGeneration}`;
+      if (this.inputGenerations.has(id) && this.inputGenerations.get(id) !== generation)
+        this.simulation.clearInput(id);
+      this.inputGenerations.set(id, generation);
+      const result = gate.consume(this.inputContext(body, gate.lastSeq), nowMs);
+      const client = this.clients.find((c) => c.sessionId === id);
+      for (const reason of result.rejections) client?.send('inputRejected', { reason });
+      if (result.rejections.length && !result.command) this.simulation.clearInput(id);
+      if (result.command) this.simulation.queueInput(id, result.command);
+    }
   }
   syncState() {
     const s = this.simulation.snapshot();
