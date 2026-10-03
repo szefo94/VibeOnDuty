@@ -1,0 +1,9 @@
+{
+  "command": "npm run test:unit -- server/tdmRoom.test.js -t 'explicitly rejects outcome' --reporter=junit",
+  "exitCode": 1,
+  "targetTest": "real room input boundary &gt; explicitly rejects outcome messages without awarding damage, ammo or score",
+  "targetFile": "server/tdmRoom.test.js",
+  "expected": "A damage message receives unknown_message rejection and leaves trusted outcomes unchanged",
+  "actual": "AssertionError: expected [] to include 'unknown_message'; wildcard silently ignores unsupported messages",
+  "output": "<testsuites tests=\"10\" failures=\"1\"><testsuite name=\"server/tdmRoom.test.js\" tests=\"10\" failures=\"1\"><testcase name=\"real room input boundary &gt; explicitly rejects outcome messages without awarding damage, ammo or score\"><failure type=\"AssertionError\" message=\"expected [] to include unknown_message\">AssertionError at server/tdmRoom.test.js:24</failure></testcase></testsuite></testsuites>"
+}

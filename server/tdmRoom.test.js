@@ -14,6 +14,20 @@ afterAll(async () => {
 }, 15000);
 
 describe('real room input boundary', () => {
+  it('explicitly rejects outcome messages without awarding damage, ammo or score', async () => {
+    const a = await createHostileClient(url, { create: true });
+    const b = await createHostileClient(url, { roomId: a.roomId });
+    try {
+      const before = a.snapshot();
+      a.sendMessage('damage', { targetSessionId: b.sessionId, damage: 100, score: 999 });
+      await waitFor(() => a.rejections.includes('unknown_message'));
+      expect(a.rejections).toContain('unknown_message');
+      expect(a.snapshot().players).toEqual(before.players);
+      expect([a.snapshot().scoreAlpha, a.snapshot().scoreBravo]).toEqual([0, 0]);
+    } finally {
+      await Promise.all([a.close(), b.close()]);
+    }
+  });
   it('reports raw nonfinite rejection without mutation over the real SDK transport', async () => {
     const client = await createHostileClient(url, { create: true });
     try {

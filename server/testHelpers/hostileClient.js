@@ -79,6 +79,7 @@ export async function createHostileClient(serverUrl, options = {}) {
     },
     snapshot: () => structuredClone(room.state.toJSON()),
     /** @param {unknown} raw */ send: (raw) => room.send('input', raw),
+    /** @param {string} type @param {unknown} raw */ sendMessage: (type, raw) => room.send(type, raw),
     close: () => (closedCode ? Promise.resolve() : room.leave().then(() => {})),
   };
 }
