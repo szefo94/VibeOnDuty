@@ -1,0 +1,5 @@
+# Deferred items
+
+- 01-01 dependency verification: retained development dependencies have six npm audit findings (three moderate, three high): @humanfs/node, @vitest/mocker, brace-expansion, postcss, Vite, Vitest. Their versions already existed before this plan; updating them would contradict the planned retention of tooling. Production `npm audit --omit=dev` is clean after updating newly production-reachable nanoid from 3.3.11 to 3.3.19 within Colyseus's supported range. No broad npm audit fix was applied.
+- Test CI now uses Node 24 as planned; deploy.yml assembly still uses Node 20 because this task explicitly preserves deployment behavior. Recheck that runtime choice before later deployment work involving the new server/client SDK.
+- Browser tracer GREEN is intentionally assigned to 01-02. Current RED is MODULE_NOT_FOUND for server/index.js, not a gameplay test pass. Its real keyboard route must avoid central bunker walls; input/aim/hit presentation need integration verification with the implementation.

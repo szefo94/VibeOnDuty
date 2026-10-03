@@ -1,6 +1,6 @@
 # Phase 01 exact-package review
 
-Refreshed 2026-10-03, approximately 10:23–10:28 UTC, for task 01-01-01. Human approval is pending. No packages were installed, package code executed, application files changed, tasks completed, or task commits created by this review.
+Refreshed 2026-10-03, approximately 10:23–10:28 UTC, for task 01-01-01. Human approval was pending at that checkpoint; the approval received below now satisfies the gate. No packages were installed, package code executed, application files changed, tasks completed, or task commits created by the initial review itself.
 
 All four exact npm view commands exited 0 and returned the requested version with registry source/publication metadata. Research publication dates and package-wide weekly download observations match the refresh. The download window is 2026-09-25 through 2026-10-01; these are not exact-release download counts.
 
@@ -35,6 +35,9 @@ The existing isolated --ignore-scripts probe supplies install/import, two Node S
 
 Task 01-01-01 in [01-01-PLAN.md](01-01-PLAN.md) says: "Do not install flagged packages until the human explicitly approves these versions."
 
-Await approval of @colyseus/core 0.18.18, @colyseus/sdk 0.18.4, @colyseus/schema 5.0.35, and @colyseus/ws-transport 0.18.4 with the disclosed limitations. A changed version requires refreshed compatibility research/planning. Approval remains unrecorded; 0/3 tasks and 0/7 plans are complete.
+The checkpoint requested approval of @colyseus/core 0.18.18, @colyseus/sdk 0.18.4, @colyseus/schema 5.0.35, and @colyseus/ws-transport 0.18.4 with the disclosed limitations. A changed version requires refreshed compatibility research/planning. At the checkpoint, approval was unrecorded and 0/3 tasks and 0/7 plans were complete; the subsequent human response is recorded below.
 
 Continuation must use a fresh executor with the response and this review, resume task 01-01-01 to record actual approval, and then execute 01-01-02 and 01-01-03. The dispatch root-pin assignment has been corrected without substituting its literal unbound-marker case arm; verify the guard before continuation writes.
+## Human approval received
+
+On 2026-10-03, the human replied **approve** to the exact four-release approval request, after receiving the review and its limitations. This authorizes @colyseus/core 0.18.18, @colyseus/sdk 0.18.4, @colyseus/schema 5.0.35 and @colyseus/ws-transport 0.18.4. The blocking-human condition is satisfied; resume the first plan with a fresh executor. No substitute versions are authorized by this record.

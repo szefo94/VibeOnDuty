@@ -93,6 +93,7 @@ VibeOnDuty/
 - `eslint.config.js`: JavaScript lint rules.
 - `tsconfig.json`: JS-aware TypeScript no-emit setup.
 - `vitest.config.js`, `playwright.config.js`: Unit and browser runners.
+- `playwright.multiplayer.config.js`, `tsconfig.multiplayer.json`: Separate production-server browser discovery and strict checked multiplayer boundaries.
 - `src/config.js`: Gameplay constants and weapon balance.
 - `src/difficulty.js`: Difficulty presets and override.
 - `AGENTS.md`: Project guidance and navigation context.
@@ -112,6 +113,8 @@ VibeOnDuty/
 - `src/combat/damage.test.js`, `src/modes/snd.test.js`: Rules tests.
 - `src/builders/enemyAnimations.test.js`, `src/builders/rifleClips.test.js`, `src/builders/weapon3pTransform.test.js`: Animation and mount helpers.
 - `tests/smoke.spec.js`, `tests/assets.spec.js`, `tests/animation-regressions.spec.js`: Browser flows, real assets and animation/resource regressions.
+- `tests/multiplayer.spec.js`: First real two-context movement/M4 tracer, intentionally RED until plan 01-02.
+- `tests/helpers/mpServer.js`: Root-base client builds, owned dedicated-server fixture, bounded readiness, scoped temp cleanup and concurrent isolation checks. `server/`, `src/shared/`, and `src/network/` are checked/discovered future implementation paths, not shipped gameplay here.
 - `docs/TESTING.md`: Manual editor checklist.
 
 ## Naming Conventions
