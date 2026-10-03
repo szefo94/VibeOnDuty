@@ -1,7 +1,7 @@
 # VibeOnDuty — repository context
 
 Initial onboarding: 2026-09-09, source commit `dc27c6f` on `main`.
-Updated for the animation/model fixes and the initial authoritative online slice on 2026-10-03.
+Updated for the animation/model fixes and authoritative online M4 combat on 2026-10-03.
 Use this as a navigation guide; verify current source before acting on historical
 notes or roadmap proposals. Update relevant context when the architecture changes.
 
@@ -54,7 +54,7 @@ for example, it still declares `isAlive()`, which `applyEntityBase()` no longer 
 | World | `map.js`: live map data/collision; `tiles.js`: tile codec; `rampMath.js`: surface math; `level.js`: mesh construction; `maps/*`: definitions |
 | Visuals | `scene.js`, `materials.js`, `lighting.js`; `builders/*`: models/animation; `fx/*`: effects; `hud/*`: DOM/canvas overlays and radar |
 | Editor/replay | `editor/mapEditor.js`; `replay/killcam.js`: live camera following killer, not recorded replay; `replay/damageTracker.js`: damage totals |
-| Online authority | `server/tdmRoom.js`, `shared/tdmSimulation.js`, `shared/movement.js`, `shared/world.js`: room-owned state, movement and terrain; `shared/protocol.js`: exact intent rejection and bounded session queues; `network/onlineSession.js`: browser intentions, remote actors and confirmed feedback |
+| Online authority | `server/tdmRoom.js`, `shared/tdmSimulation.js`: room-owned state and score; `shared/combat.js`: server-time M4, seeded spread, swept first impacts and life checks; `shared/movement.js`, `shared/world.js`: movement and terrain; `shared/protocol.js`: exact intent rejection and bounded session queues; `network/onlineSession.js`: intentions, remote actors and private confirmed feedback |
 
 Boot registers the character GLB, player weapon FBX, and pistol FBX with
 `builders/assetManager.js`. `loadAll()` uses `Promise.allSettled`; failures retain
@@ -83,6 +83,16 @@ eye Y, and `world.supportElevation()` includes radius contact with platform edge
 The room schema replicates stance, vertical velocity, aiming, sprinting, current tick
 and consumed sequence. Online input sends the latest snapshot tick and a `neutral`
 boolean on unlock/blur/hidden state; server snapshots and cosmetics continue then.
+
+`shared/combat.js` uses milliseconds for 88ms cadence/1800ms reload and seconds
+for 65m/s gravity-affected travel with a half-open 1.1s lifetime. All actors move
+before current-step hit sweeps. Earliest contact wins, with a 1e-7 obstruction-first
+tie band and stable actor session IDs. Head damage is 4x the M4 base; default
+friendly damage is 0.25 with float64 health and actual clamped damage in feedback.
+Room-owned shot/event/life IDs deduplicate private `hit-confirmed` delivery.
+Only exact input intentions are accepted; unsupported messages receive bounded
+rejections. `VOD_COMBAT_SEED` is an optional validated operator-only room RNG seed,
+used by production fixtures; clients cannot choose spread or combat outcomes.
 
 Important dependencies and lifecycle constraints:
 

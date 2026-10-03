@@ -1,5 +1,5 @@
 ---
-last_mapped_commit: 748d8199047ad3344e6356a82371757d90413145
+last_mapped_commit: 6ec59feb26327c8f9090cacdfedfd95e5d06bd61
 last_mapped_at: 2026-10-03
 ---
 # Codebase Structure
@@ -83,6 +83,14 @@ VibeOnDuty/
 - Runtime loading must be verified in `src/builders/weaponFBX.js` and `src/builders/enemyWeapon.js`; an asset's presence alone does not establish use.
 
 ## Key File Locations
+
+**Online combat and outcome authority (01-04):**
+- `src/shared/combat.js`: Eligible M4 fire/reload, room RNG spread, projectile lifetime, actor regions, swept first impacts and current-life damage.
+- `src/combat/damage.js`: Pure body/head bullet damage and existing grenade formulas.
+- `src/shared/combat.test.js`: Cadence/ammo/deadline, epsilon ordering, terrain, current-step targets, lifetime and fractional-health cases.
+- `server/tdmRoom.js`: Float64 health, bounded unsupported-message rejection and private generation-aware event deduplication.
+- `server/tdmRoom.test.js`: Real SDK forged claims/private hits and controlled-clock death/score/life transitions.
+- `tests/multiplayer.spec.js`: Production combat and authority scenarios. Test-only response instrumentation binds the actual bundled offline emitter; the production room exposes no test mutation endpoint.
 
 **Online movement and input boundary (01-03):**
 - `src/shared/movement.js`: Numeric movement with stance clearance, jump/gravity and radius-aware terrain.

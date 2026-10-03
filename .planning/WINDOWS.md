@@ -2,9 +2,9 @@
 schema_version: 1
 open_count: 2
 waived_count: 0
-fixed_count: 15
-total_count: 17
-last_updated: 2026-10-03T17:01:39.601Z
+fixed_count: 18
+total_count: 20
+last_updated: 2026-10-03T19:49:23.780Z
 ---
 
 # Broken Windows Ledger
@@ -32,6 +32,9 @@ last_updated: 2026-10-03T17:01:39.601Z
 | 15 | 01 | deviation | server/tdmRoom.js |  | Typed onCreate bridge applies validated operator match time and friendly damage without importing Node CLI types into the browser graph; complete lifecycle remains 01-05. | fixed |  | 2026-10-03T17:01:37.869Z | 2026-10-03T17:01:38.289Z |
 | 16 | 01 | deviation | server/index.js |  | Validate static tree for symlinks and copied secret files; sanitize TLS error causes and give TLS fixtures private owned storage before browser acceptance. | fixed |  | 2026-10-03T17:01:38.724Z | 2026-10-03T17:01:39.145Z |
 | 17 | 01 | unrun-verify | docs/MULTIPLAYER.md |  | Phase-end human check of actual self-signed LAN trust in two browser windows and gesture-driven pointer lock remains pending; automated HTTPS bypass proves transport only. | open |  | 2026-10-03T17:01:39.601Z |  |
+| 18 | 01 | deviation | src/combat/damage.js |  | The source damage helper was grenade-only; added pure online M4 body/head helper preserving authoritative base28 and training head multiplier4 without invented range falloff or ADS spread. | fixed |  | 2026-10-03T19:48:37.766Z | 2026-10-03T19:49:22.910Z |
+| 19 | 01 | deviation | server/tdmRoom.js |  | Combat also required explicit float64 health, validated operator-only seeded room RNG, and coordinated hit-confirmed listener to retain fractional outcomes and deterministic production browser proof. | fixed |  | 2026-10-03T19:48:38.176Z | 2026-10-03T19:49:23.359Z |
+| 20 | 01 | deviation | tests/multiplayer.spec.js |  | Test-only bundled offline-emitter instrumentation proves actual legacy outcome events cannot award server state; real pointer aim reset and negative damage-text expectation corrected fixture errors. | fixed |  | 2026-10-03T19:48:38.573Z | 2026-10-03T19:49:23.780Z |
 
 ````json
 [
@@ -254,6 +257,45 @@ last_updated: 2026-10-03T17:01:39.601Z
     "reason": "",
     "recorded_at": "2026-10-03T17:01:39.601Z",
     "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 18,
+    "kind": "deviation",
+    "phase": "01",
+    "file": "src/combat/damage.js",
+    "line": null,
+    "description": "The source damage helper was grenade-only; added pure online M4 body/head helper preserving authoritative base28 and training head multiplier4 without invented range falloff or ADS spread.",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-10-03T19:48:37.766Z",
+    "resolved_at": "2026-10-03T19:49:22.910Z",
+    "milestone": null
+  },
+  {
+    "id": 19,
+    "kind": "deviation",
+    "phase": "01",
+    "file": "server/tdmRoom.js",
+    "line": null,
+    "description": "Combat also required explicit float64 health, validated operator-only seeded room RNG, and coordinated hit-confirmed listener to retain fractional outcomes and deterministic production browser proof.",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-10-03T19:48:38.176Z",
+    "resolved_at": "2026-10-03T19:49:23.359Z",
+    "milestone": null
+  },
+  {
+    "id": 20,
+    "kind": "deviation",
+    "phase": "01",
+    "file": "tests/multiplayer.spec.js",
+    "line": null,
+    "description": "Test-only bundled offline-emitter instrumentation proves actual legacy outcome events cannot award server state; real pointer aim reset and negative damage-text expectation corrected fixture errors.",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-10-03T19:48:38.573Z",
+    "resolved_at": "2026-10-03T19:49:23.780Z",
     "milestone": null
   }
 ]

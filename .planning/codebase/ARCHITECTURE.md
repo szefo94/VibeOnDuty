@@ -1,5 +1,5 @@
 ---
-last_mapped_commit: 748d8199047ad3344e6356a82371757d90413145
+last_mapped_commit: 6ec59feb26327c8f9090cacdfedfd95e5d06bd61
 last_mapped_at: 2026-10-03
 ---
 <!-- refreshed: 2026-10-03 -->
@@ -32,6 +32,13 @@ index.html + style.css -> src/main.js
 The application is a browser FPS built from JavaScript ES modules. Offline modes retain browser singletons. Online authority uses `server/index.js` (one built-game HTTP/HTTPS/Colyseus link), `server/tdmRoom.js` (replicated state and fixed server tick), `src/shared/tdmSimulation.js` and `world.js` (owned headless state/queries), `movement.js` (numeric walk/sprint/jump/crouch), `protocol.js` (exact untrusted intent rejection and bounded session queues), and `src/network/onlineSession.js` (intentions, remote rigs and private feedback). `server/cli.js` validates operator configuration; `server/tls.js` manages ignored restricted atomic certificate pairs. `main.js` owns online entry/leave; `loop.js` skips offline simulation online and processes snapshots before life/play gates. Greek Columns gameplay data is canonical under `src/shared/maps/bunker.js`, while visual materials/extras remain under `src/maps/bunker.js`. Bodies replicate stance, aim, vertical velocity, server tick and consumed sequence; unlocked clients send explicit neutral intentions. Full combat/lifecycle expands in subsequent Phase 1 plans; prediction and cross-device responsiveness belong to Phase 2. No database or account layer is implemented.
 
 ## Component Responsibilities
+
+Online combat now lives in `src/shared/combat.js`: room-owned millisecond weapon
+eligibility and seeded heat/spread, second-based travelling projectiles, earliest
+terrain/actor sweeps, target-life rechecks and one lethal transition. The room
+replicates health as float64 and delivers `hit-confirmed` once only to the shooter.
+Unsupported combat messages share the input rate budget and are explicitly
+rejected. Full respawn/results/rematch lifecycle remains plan01-05.
 
 | Component | Responsibility | File |
 |-----------|----------------|------|
