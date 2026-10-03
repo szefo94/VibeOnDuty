@@ -84,6 +84,13 @@ VibeOnDuty/
 
 ## Key File Locations
 
+**Online TDM lifecycle (01-05):**
+- `src/shared/tdmRules.js`: Immutable bounded operator settings, blue/red balance, stable guest ordinals, solo start, score/time ordering and waiting/active/results/rematch transitions.
+- `src/shared/tdmRules.test.js`: Default50/600/3/0.25, results15, generation resets, spawn exhaustion and empty-room boundaries.
+- `server/tdmRoom.js`: Replicated settings/results/stats, bounded exact team-switch requests and queue/cursor retirement across life/match changes.
+- `src/network/onlineSession.js`: Authoritative team/respawn/results presentation, generation-aware intentions/confirmations and gesture Resume/Leave.
+- `tests/multiplayer.spec.js`: Real two-browser smaller-team assignment, death/respawn, score/time endings, fixed15-second results and automatic rematch.
+
 **Online combat and outcome authority (01-04):**
 - `src/shared/combat.js`: Eligible M4 fire/reload, room RNG spread, projectile lifetime, actor regions, swept first impacts and current-life damage.
 - `src/combat/damage.js`: Pure body/head bullet damage and existing grenade formulas.

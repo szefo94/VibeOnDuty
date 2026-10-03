@@ -10,7 +10,7 @@ notes or roadmap proposals. Update relevant context when the architecture change
 - Browser FPS: Three.js r160, Vite 8, plain JavaScript ES modules. Node 24 and
   Colyseus provide an initial dedicated-server online TDM slice alongside offline play.
   Walking/sprinting/jumping/crouching/ADS, M4 fire/reload, server health and score
-  replication are implemented; complete match lifecycle remains later Phase 1 plans.
+  replication and authoritative TDM teams/death/respawn/results/rematch are implemented.
 - Entry/UI: `index.html`, `style.css`, `src/main.js`. Rendering and DOM access happen
   at module initialization in several modules; importing gameplay code in Node often
   requires mocks. Pure helpers are easier to unit test independently.
@@ -93,6 +93,17 @@ Room-owned shot/event/life IDs deduplicate private `hit-confirmed` delivery.
 Only exact input intentions are accepted; unsupported messages receive bounded
 rejections. `VOD_COMBAT_SEED` is an optional validated operator-only room RNG seed,
 used by production fixtures; clients cannot choose spread or combat outcomes.
+
+`shared/tdmRules.js` owns blue/red teams, stable join ordinals, solo start, scores and
+waiting/active/results transitions. Operator defaults are 50 kills / 600 seconds /
+3-second respawn / 0.25 friendly damage; results always last 15 seconds. Switches
+require current membership/match/life, a dead player or results, and a post-switch
+team difference at most one. Two balanced players cannot switch until someone leaves.
+The current-step impact batch scores before time expiry. Rematch preserves settings
+and teams, increments match/life generations, resets inventory and clears bullets,
+queues, acknowledgements and private event cursors. Zero humans suspends matches.
+The online adapter releases pointer lock on death/results, shows authoritative
+respawn/results timers, and exposes a gesture-driven Resume without delaying rematch.
 
 Important dependencies and lifecycle constraints:
 

@@ -95,9 +95,20 @@ Launch with `--rules rules.json`. Kill limit is integer 1–1000; match seconds 
 respawn seconds 0–30; friendly fire is a damage multiplier 0–1. Omitted values use
 50/600/3/0.25. Results duration is fixed at 15 seconds and cannot appear in the file.
 Unknown keys, nonnumeric values and out-of-bounds values fail startup. The server
-owns these settings. Current room integration applies match time and friendly
-damage; complete score-limit, respawn, results and rematch behavior is delivered by
-the remaining Phase 1 lifecycle plan. This is operational configuration, not saved
+owns these settings. The first player starts immediately on blue; later players join
+the smaller team, choosing blue on a tie. A dead player or anyone in results can
+request a switch if the resulting team-size difference is at most one. With two
+balanced players, a switch is rejected until someone leaves.
+
+Enemy kills award team score once per life; friendly kills award none. The score
+limit or time limit ends combat, with equal scores producing a draw. Both players
+see results for 15 seconds, then the server automatically starts a fresh match with
+the same settings and teams. Death resets health and M4 inventory at the configured
+respawn deadline; an occupied spawn waits safely. Results and death release pointer
+lock, and Resume obtains the next browser gesture. Leave online remains available
+during either state. Empty rooms suspend matches; a later join starts fresh.
+
+This is operational configuration, not saved
 gameplay/account persistence or a player-facing lobby editor.
 
 ## Trusted TLS reverse proxy

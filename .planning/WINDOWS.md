@@ -2,9 +2,9 @@
 schema_version: 1
 open_count: 2
 waived_count: 0
-fixed_count: 18
-total_count: 20
-last_updated: 2026-10-03T19:49:23.780Z
+fixed_count: 22
+total_count: 24
+last_updated: 2026-10-03T20:41:04.598Z
 ---
 
 # Broken Windows Ledger
@@ -35,6 +35,10 @@ last_updated: 2026-10-03T19:49:23.780Z
 | 18 | 01 | deviation | src/combat/damage.js |  | The source damage helper was grenade-only; added pure online M4 body/head helper preserving authoritative base28 and training head multiplier4 without invented range falloff or ADS spread. | fixed |  | 2026-10-03T19:48:37.766Z | 2026-10-03T19:49:22.910Z |
 | 19 | 01 | deviation | server/tdmRoom.js |  | Combat also required explicit float64 health, validated operator-only seeded room RNG, and coordinated hit-confirmed listener to retain fractional outcomes and deterministic production browser proof. | fixed |  | 2026-10-03T19:48:38.176Z | 2026-10-03T19:49:23.359Z |
 | 20 | 01 | deviation | tests/multiplayer.spec.js |  | Test-only bundled offline-emitter instrumentation proves actual legacy outcome events cannot award server state; real pointer aim reset and negative damage-text expectation corrected fixture errors. | fixed |  | 2026-10-03T19:48:38.573Z | 2026-10-03T19:49:23.780Z |
+| 21 | 01 | deviation | src/shared/protocol.js |  | Lifecycle requires receipt sequence reset preserving flood budget and generation-aware browser controls/confirmation retirement. | fixed |  | 2026-10-03T20:31:52.336Z | 2026-10-03T20:41:02.470Z |
+| 22 | 01 | deviation | src/shared/movement.test.js |  | New operator time minimum excludes the old zero-second fixture; advance the approved one-second match to results and verify frozen movement. | fixed |  | 2026-10-03T20:33:30.338Z | 2026-10-03T20:41:04.598Z |
+| 23 | 01 | deviation | tests/multiplayer.spec.js |  | Real lifecycle acceptance uses an approved five-second UI respawn window, waits replacement snapshots, tolerates 1e-7ms clocks, and always cleans owned fixtures; SDK movement waits neutral acknowledgements. | fixed |  | 2026-10-03T20:33:31.433Z | 2026-10-03T20:39:34.363Z |
+| 24 | 01 | deviation | .planning/phases/01-two-client-authoritative-tdm/01-05-01-RED.json |  | Initial behavioral RED record used unescaped XML greater-than; corrected checker evidence passed before any production implementation. | fixed |  | 2026-10-03T20:33:32.309Z | 2026-10-03T20:39:34.787Z |
 
 ````json
 [
@@ -296,6 +300,58 @@ last_updated: 2026-10-03T19:49:23.780Z
     "reason": "",
     "recorded_at": "2026-10-03T19:48:38.573Z",
     "resolved_at": "2026-10-03T19:49:23.780Z",
+    "milestone": null
+  },
+  {
+    "id": 21,
+    "kind": "deviation",
+    "phase": "01",
+    "file": "src/shared/protocol.js",
+    "line": null,
+    "description": "Lifecycle requires receipt sequence reset preserving flood budget and generation-aware browser controls/confirmation retirement.",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-10-03T20:31:52.336Z",
+    "resolved_at": "2026-10-03T20:41:02.470Z",
+    "milestone": null
+  },
+  {
+    "id": 22,
+    "kind": "deviation",
+    "phase": "01",
+    "file": "src/shared/movement.test.js",
+    "line": null,
+    "description": "New operator time minimum excludes the old zero-second fixture; advance the approved one-second match to results and verify frozen movement.",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-10-03T20:33:30.338Z",
+    "resolved_at": "2026-10-03T20:41:04.598Z",
+    "milestone": null
+  },
+  {
+    "id": 23,
+    "kind": "deviation",
+    "phase": "01",
+    "file": "tests/multiplayer.spec.js",
+    "line": null,
+    "description": "Real lifecycle acceptance uses an approved five-second UI respawn window, waits replacement snapshots, tolerates 1e-7ms clocks, and always cleans owned fixtures; SDK movement waits neutral acknowledgements.",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-10-03T20:33:31.433Z",
+    "resolved_at": "2026-10-03T20:39:34.363Z",
+    "milestone": null
+  },
+  {
+    "id": 24,
+    "kind": "deviation",
+    "phase": "01",
+    "file": ".planning/phases/01-two-client-authoritative-tdm/01-05-01-RED.json",
+    "line": null,
+    "description": "Initial behavioral RED record used unescaped XML greater-than; corrected checker evidence passed before any production implementation.",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-10-03T20:33:32.309Z",
+    "resolved_at": "2026-10-03T20:39:34.787Z",
     "milestone": null
   }
 ]
