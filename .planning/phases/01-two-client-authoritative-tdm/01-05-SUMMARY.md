@@ -101,7 +101,7 @@ status: complete
 
 ## Performance
 
-- Started: 2026-10-03T19:59:47.170Z; completed: 2026-10-03T20:42Z; uninterrupted execution,42min.
+- Started: 2026-10-03T19:59:47.170Z; task checks and measured context HEAD completed: 2026-10-03T20:42Z; uninterrupted execution,42min through that boundary. SUMMARY/state closure followed separately.
 - Tasks:2/2;21 realized files before SUMMARY/STATE closure.
 - Actuals:ceil(106030 realized Git diff characters/4)=26508. Persisted ledger measures5 commits through `bc1e8b5`; subsequent SUMMARY/state metadata commits are outside the frozen measurement.
 
@@ -125,7 +125,7 @@ status: complete
 
 Both REDs were actual named assertion failures against existing runtime behavior, with nonzero exits and checker verdict RED_EVIDENCE_OK before production implementation. Task1's initial evidence XML used an unescaped greater-than: its RED commit already existed when the checker rejected that representation; the corrected record passed before any GREEN code was written and is committed in `82845f4`. Task2 evidence passed before its RED commit/implementation. Both RED→GREEN commit pairs exist; no separate refactor was necessary. Phase TDD_MODE runtime gate was inactive by configuration; task behavioral TDD was followed.
 
-## Verification Results
+## Checks Run
 
 - `npm run test:unit -- src/shared/tdmRules.test.js`:14 passed; rules/room targeted suite32 passed in55.18s. Final full source run `npm run test:unit`:231 passed in19 files,54.58s, including the extended actual SDK empty-room/rejoin case and corrected bounded movement fixture.
 - Final `npm run test:mp -- --grep 'teams:|lifecycle:'`:3 passed,1.7m. Score path uses ordinary controls and real lethal shots, shows dead input/team rejection and fresh inventory, then common BLUE2–0 results. Time path shows DRAW0–0, legal solo results switch, replacement connection assignment and the same15-second automatic generation2 reset. Resume obtains actual headless pointer lock after rematch.
