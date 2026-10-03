@@ -43,7 +43,7 @@ Integer phases are the planned work. Decimal phases are reserved for later urgen
 4. Modified client messages cannot grant firing eligibility, create trusted hit outcomes, award damage or kills, or overwrite server score.
 5. An operator starts the server with `npm run mp-server -- --port <port> --host <bind-address> --tls --public <advertised-address>`; port/binding/TLS/advertised-address configuration takes effect, certificate setup is documented, and invalid configuration produces actionable errors.
 
-**Plans:** 4/7 plans executed
+**Plans:** 5/7 plans executed
 **UI hint:** yes
 
 Plans:
@@ -58,7 +58,7 @@ Plans:
 - [x] 01-06-PLAN.md — Launch one CLI-configured HTTP/TLS game link with protected certificate reuse (Wave 3).
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 01-04-PLAN.md — Enforce firing/reload, swept impacts and server combat outcomes (Wave 4).
+- [x] 01-04-PLAN.md — Enforce firing/reload, swept impacts and server combat outcomes (Wave 4).
 
 **Wave 5** *(blocked on Wave 4 completion)*
 - [ ] 01-05-PLAN.md — Finish teams, death/respawn, results and same-settings rematch (Wave 5).
@@ -299,7 +299,7 @@ Armor plates remain future longer-mode scope. Monetization and generic authentic
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Two-Client Authoritative TDM | 4/7 | In Progress|  |
+| 1. Two-Client Authoritative TDM | 5/7 | In Progress|  |
 | 2. Responsive Cross-Device Lobbies and Deathmatch | 0/TBD | Not started | - |
 | 3. Bomb, Flag, and Hardpoint Matches | 0/TBD | Not started | - |
 | 4. Bot-Filled Matches on Measured Pi Hosting | 0/TBD | Not started | - |

@@ -2,17 +2,17 @@
 gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Two-Client Authoritative TDM
-status: Ready to execute Wave4 plan 01-04
-stopped_at: Completed 01-06-PLAN.md via artifact reconciliation; next dependency-ready plan 01-04
-last_updated: "2026-10-03T19:17:19.965Z"
+status: Ready to execute Wave5 plan 01-05
+stopped_at: Completed 01-04-PLAN.md; next dependency-ready plan 01-05 Wave5
+last_updated: "2026-10-03T19:53:49.940Z"
 last_activity: 2026-10-03
-last_activity_desc: "Completed 01-06: console TLS hosting; 176 unit, 5 multiplayer and 17 offline browser tests pass"
-state_head: bccdeeb5fd2517ca4da8280b03fe92d0222d9235
+last_activity_desc: "Completed 01-04: authoritative M4 combat; 214 unit, 2 combat/authority and 17 offline browser tests pass"
+state_head: 59dc2152bfefcc47c80a60b8c29095a1d1c3fdd6
 progress:
   total_phases: 12
   completed_phases: 0
   total_plans: 7
-  completed_plans: 4
+  completed_plans: 5
   percent: 0
 ---
 
@@ -28,29 +28,29 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 ## Current Position
 
 Phase: 01 (Two-Client Authoritative TDM) — EXECUTING
-Plan: 5 of 7
-Status: Ready to execute Wave4 plan 01-04
-Next dependency-ready plan: 01-04 (Wave4); Wave3 is complete.
+Plan: 6 of 7
+Status: Ready to execute Wave5 plan 01-05
+Next dependency-ready plan: 01-05 (Wave5); Wave4 combat and prior Wave3 hosting are complete.
 Roadmap review: Accepted; Phase 1 execution resumed after package approval
-Last activity: 2026-10-03 — Completed 01-06: console TLS hosting; 176 unit, 5 multiplayer and 17 offline browser tests pass
+Last activity: 2026-10-03 — Completed 01-04: authoritative M4 combat; 214 unit, 2 combat/authority and 17 offline browser tests pass
 
 Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: Approximately 87 min of wall time
-- Total execution time: Approximately 5.8 hours of wall time, including the 01-02 interruption
+- Total plans completed: 5
+- Average duration: Approximately 76 min of wall time
+- Total execution time: Approximately 6.3 hours of wall time, including the 01-02 interruption
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 4 | 349 min | 87 min |
+| 01 | 5 | 378 min | 76 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (18 min), 01-02 (214 min including interruption), 01-03 (86 min including browser-load investigation), 01-06 (31 min)
+- Last 5 plans: 01-01 (18 min), 01-02 (214 min including interruption), 01-03 (86 min including browser-load investigation), 01-06 (31 min), 01-04 (29 min)
 - Trend: Interrupted wall time is not comparable to uninterrupted execution effort
 
 **Per-Plan Metrics:**
@@ -61,6 +61,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P02 | 214min | 3 tasks | 17 files |
 | Phase 01 P03 | 86min | 2 tasks | 17 files |
 | Phase 01 P06 | 31min | 3 tasks | 14 files |
+| Phase 01 P04 | 29min | 2 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,9 @@ Full decisions are recorded in PROJECT.md.
 - [Phase 01]: Crouched speed remains 6 * 0.72 = 4.32m/s; authority stores eye Y with standing-equivalent terrain reference.
 - [Phase 01]: Transport session identity, exact schema, server tick age and monotonic receipt determine input acceptance; reject client clocks/outcomes.
 - [Phase 01]: Explicit neutral retires queued actions immediately on blur/unlock; this phase renders authoritative snapshots, prediction remains Phase 2.
+- [Phase 01]: Server-time M4 uses current-step swept impacts and half-open lifetime; float64 health and private deduplicated hit-confirmed events preserve trusted outcomes.
+- [Phase 01]: The grenade-only source helper had no shared bullet formula; online M4 keeps configured base28 body damage, training4x head pattern, and no invented range falloff or ADS spread multiplier.
+- [Phase 01]: Validated operator-only VOD_COMBAT_SEED drives the same production combat algorithm; actual offline-bus authority attacks are instrumented only in Playwright responses.
 
 ### Pending Todos
 
@@ -89,7 +93,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- Phase 1-2: Exact dependencies, isolated fixtures, the two-browser M4 tracer, minimum movement and protected console TLS hosting are verified. Canonical stance-aware terrain and bounded raw-input rejection are implemented; Rapier is deferred. Reliable combat, full match lifecycle and final presentation remain in Phase1. Real LAN trust/pointer-lock acceptance is pending. Prediction/latency/reconnect, cross-device responsiveness and capacity remain for later phases.
+- Phase 1-2: Exact dependencies, isolated fixtures, minimum movement, protected console TLS hosting and reliable authoritative M4 combat are verified. Canonical stance-aware terrain, bounded raw-input rejection, precise first-impact damage and private deduplicated feedback are implemented; Rapier is deferred. Full match lifecycle and final presentation remain in Phase1. Real LAN trust/pointer-lock acceptance is pending. Prediction/latency/reconnect, cross-device responsiveness and capacity remain for later phases.
 - Phase 2-4: Confirm representative devices/network limits and actual ARM64 Pi model, 4 GB/16 GB configuration, cooling/storage/access; no capacity/FPS benchmarks are complete.
 - Phase 5-7: Movement/input rules, human rig/motion terms, installed Blender automation, and in-game visual acceptance remain open; no Blender connector is assumed.
 - Phase 8-10: Choose catalogs, balance/penetration, minimal identity/recovery/save lifetime, durable reward storage, and equipment/streak/UAV rules.
@@ -103,6 +107,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-10-03T19:17:19.932Z
-Stopped at: Completed 01-06-PLAN.md via artifact reconciliation; next dependency-ready plan 01-04
+Last session: 2026-10-03T19:52:58.047Z
+Stopped at: Completed 01-04-PLAN.md; next dependency-ready plan 01-05 Wave5
 Resume file: None
