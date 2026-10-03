@@ -62,7 +62,7 @@ test('teams: solo start and smaller-team assignments are visible in both browser
 });
 
 for (const path of ['score', 'time'])
-  test(`lifecycle: two browsers complete ${path}-limit results and automatic same-settings rematch`, async ({
+  test(`${path === 'score' ? 'resources: ' : ''}lifecycle: two browsers complete ${path}-limit results and automatic same-settings rematch`, async ({
     browser,
   }) => {
     test.setTimeout(240000);
@@ -229,6 +229,10 @@ for (const path of ['score', 'time'])
           )
         ).toBe(true);
         expect(s.lastConfirmedHit).toBeNull();
+        if (path === 'score') {
+          expect(s.remoteActors).toHaveLength(1);
+          expect(s.remoteActors[0]).toMatchObject({ lifeGeneration: 3, skinned: true, armed: true });
+        }
         await expect(page.locator('#mp-results')).toBeHidden();
       }
       expect((await snapshot(a)).startedAtMs + 1e-7).toBeGreaterThanOrEqual(result.resultsEndsAtMs);
@@ -366,7 +370,8 @@ async function bindOfflineAttackProbe(page) {
   });
 }
 
-for (const authority of [false, true]) test(`${authority ? 'authority' : 'combat'}: real M4 cover, ammo, reload and private hit outcomes agree${authority ? ' after forged offline outcomes' : ''}`, async ({ browser }) => {
+for (const kind of ['combat', 'authority', 'feedback']) test(`${kind}: real M4 cover, ammo, reload and private hit outcomes agree${kind === 'authority' ? ' after forged offline outcomes' : ''}`, async ({ browser }) => {
+  const authority = kind === 'authority';
   test.setTimeout(240000);
   const fixture = await startMpFixture({ env: { VOD_COMBAT_SEED: '7' } });
   const contexts = [];
@@ -374,6 +379,11 @@ for (const authority of [false, true]) test(`${authority ? 'authority' : 'combat
     for (let i = 0; i < 2; i++) contexts.push(await browser.newContext({ viewport: { width: 800, height: 600 }, deviceScaleFactor: 0.25 }));
     const [shooter, victim] = await Promise.all(contexts.map((c) => c.newPage()));
     if (authority) await bindOfflineAttackProbe(shooter);
+    if (kind === 'feedback') for (const page of [shooter, victim]) await page.route('**/assets/index-*.js', async route => {
+      const response = await route.fetch(), source = await response.text();
+      expect(source.match(/\.onMessage\("hit-confirmed",/g)).toHaveLength(1);
+      await route.fulfill({ response, body: source.replace('.onMessage("hit-confirmed",', '.onMessage("hit-confirmed",window.__receiveHitForTest=') });
+    });
     for (const page of [shooter, victim]) {
       await page.goto(fixture.url);
       await expect(page.locator('#mp-join-btn')).toBeEnabled({ timeout: 60000 });
@@ -385,6 +395,13 @@ for (const authority of [false, true]) test(`${authority ? 'authority' : 'combat
     const initial = await snapshot(shooter), targetId = (await snapshot(victim)).sessionId;
     const me = (state) => state.players.find((p) => p.sessionId === initial.sessionId);
     const target = (state) => state.players.find((p) => p.sessionId === targetId);
+    if (kind === 'feedback') {
+      await shooter.evaluate(() => {
+        const s = window.__mpDebug(), me = s.players.find(p => p.sessionId === s.sessionId), target = s.players.find(p => p.sessionId !== s.sessionId);
+        window.__receiveHitForTest({shooterSessionId:s.sessionId,targetSessionId:target.sessionId,matchGeneration:s.matchGeneration,lifeGeneration:me.lifeGeneration,targetLifeGeneration:target.lifeGeneration,eventId:900,shotId:900,damage:999,impact:{x:NaN,y:0,z:0}});
+      });
+      expect(await shooter.evaluate(() => window.__observedFeedback())).toEqual({marker:false,numbers:[]});
+    }
     if (authority) {
       await shooter.evaluate((targetSessionId) => {
         for (const name of ['enemy:killed', 'friendly:killed', 'player:died', 'damage', 'hit', 'kill', 'score'])
@@ -430,11 +447,85 @@ for (const authority of [false, true]) test(`${authority ? 'authority' : 'combat
     expect((await snapshot(shooter)).score).toEqual((await snapshot(victim)).score);
     expect(await shooter.evaluate(() => window.__observedFeedback().numbers)).toEqual(['-28']);
     expect(await victim.evaluate(() => window.__observedFeedback())).toEqual({ marker: false, numbers: [] });
+    if (kind === 'feedback') {
+      const confirmed = (await snapshot(shooter)).lastConfirmedHit;
+      await shooter.evaluate(event => {
+        window.__receiveHitForTest(event);
+        window.__receiveHitForTest({...event,eventId:event.eventId+1,matchGeneration:event.matchGeneration-1});
+      }, confirmed);
+      await victim.evaluate(event => window.__receiveHitForTest(event), confirmed);
+      expect(await shooter.evaluate(() => window.__observedFeedback().numbers)).toEqual(['-28']);
+      expect(await victim.evaluate(() => window.__observedFeedback())).toEqual({marker:false,numbers:[]});
+      await shooter.evaluate(() => document.exitPointerLock());
+      await expect(shooter.locator('.dmg-num')).toHaveCount(0);
+      await expect(shooter.locator('#xhair-dot')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+    }
     await shooter.screenshot({ path: test.info().outputPath(`${authority ? 'authority' : 'combat'}-confirmed.png`) });
   } finally {
     await Promise.all(contexts.map((c) => c.close()));
     await fixture.stop();
   }
+});
+
+test('errors: unavailable join and disconnected session offer visible top Retry and Return', async ({ browser }) => {
+  test.setTimeout(120000);
+  const fixture = await startMpFixture();
+  const context = await browser.newContext({viewport:{width:800,height:600},deviceScaleFactor:0.25});
+  try {
+    const page = await context.newPage();
+    await page.goto(fixture.url);
+    await expect(page.locator('#mp-join-btn')).toBeEnabled({timeout:60000});
+    const unavailable = route => route.abort('connectionrefused');
+    await page.route('**/matchmake/**', unavailable);
+    await page.locator('#mp-join-btn').click();
+    await expect(page.locator('#mp-error-banner')).toBeVisible();
+    await expect(page.locator('#mp-error-banner')).toHaveAttribute('role','alert');
+    await expect(page.locator('#mp-error-message')).toContainText('server');
+    const rect = await page.locator('#mp-error-banner').boundingBox();
+    expect(rect.y).toBeLessThanOrEqual(24);
+    await page.unroute('**/matchmake/**', unavailable);
+    await page.locator('#mp-retry-btn').click();
+    await expect.poll(async()=> (await snapshot(page)).sessionId).toBeTruthy();
+    await expect(page.locator('#mp-error-banner')).toBeHidden();
+    await fixture.restart();
+    await expect(page.locator('#mp-error-banner')).toBeVisible();
+    expect(await snapshot(page)).toMatchObject({sessionId:null,remoteActorCount:0,inputHandlerCount:0});
+    await page.screenshot({path:test.info().outputPath('connection-error.png')});
+    await page.locator('#mp-retry-btn').click();
+    await expect.poll(async()=> (await snapshot(page)).sessionId).toBeTruthy();
+    await fixture.restart();
+    await expect(page.locator('#mp-error-banner')).toBeVisible();
+    await page.locator('#mp-error-return-btn').click();
+    await expect(page.locator('#overlay')).toBeVisible();
+    await expect(page.locator('#mp-error-banner')).toBeHidden();
+    expect(await snapshot(page)).toMatchObject({sessionId:null,remoteActorCount:0,inputHandlerCount:0});
+  } finally { await context.close(); await fixture.stop(); }
+});
+
+test('resources: repeated leave and rejoin preserve real template clones and stabilize allocations', async ({ browser }) => {
+  test.setTimeout(120000);
+  const fixture = await startMpFixture(), contexts=[];
+  try {
+    for(let i=0;i<2;i++) contexts.push(await browser.newContext({viewport:{width:800,height:600},deviceScaleFactor:0.25}));
+    const [a,b]=await Promise.all(contexts.map(c=>c.newPage()));
+    for(const page of [a,b]) { await page.goto(fixture.url); await expect(page.locator('#mp-join-btn')).toBeEnabled({timeout:60000}); await page.locator('#mp-join-btn').click(); }
+    const counts=[];
+    for(let cycle=0;cycle<3;cycle++) {
+      await expect.poll(async()=> (await snapshot(a)).remoteActorCount).toBe(1);
+      const s=await snapshot(a);
+      expect(s.usingGLTF).toBe(true);
+      expect(s.remoteActors[0]).toMatchObject({skinned:true,armed:true});
+      counts.push(s.renderMemory);
+      await a.evaluate(()=>document.exitPointerLock());
+      await a.locator('#mp-match-leave').click();
+      await expect.poll(async()=> (await snapshot(b)).remoteActorCount).toBe(0);
+      expect(await snapshot(a)).toMatchObject({remoteActorCount:0,inputHandlerCount:0});
+      await a.locator('#mp-join-btn').click();
+      await expect.poll(async()=> (await snapshot(a)).sessionId).toBeTruthy();
+    }
+    expect(counts[2]).toEqual(counts[1]);
+    await a.screenshot({path:test.info().outputPath('resource-rejoin.png')});
+  } finally { await Promise.all(contexts.map(c=>c.close())); await fixture.stop(); }
 });
 
 test('tracer: two browsers join and move', async ({ browser }) => {
