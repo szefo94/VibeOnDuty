@@ -6,9 +6,9 @@ Deliver the full selected v1 scope in the user's order: multiplayer first, then 
 
 **Granularity:** fine
 **Project mode:** mvp
-**Roadmap status:** Accepted on 2026-10-03; Phase 1 execution is in progress (01-01 prerequisites complete; gameplay begins in 01-02).
+**Roadmap status:** Accepted on 2026-10-03; Phase 1 execution is in progress (01-01 prerequisites and 01-02 authoritative gameplay slice complete; wave3 is ready).
 
-Node 24 and exact approved Colyseus dependencies are installed and fixture tooling is verified; shared grid simulation is planned for 01-02 and Rapier adoption is deferred. Multiplayer gameplay is not yet integration-verified. Early multiplayer work includes only necessary shared movement/collision/map-schema and lifecycle foundations. Full movement, art, editor, and final-map overhauls retain their selected position.
+Node 24 and exact approved Colyseus dependencies are installed and fixture tooling is verified. Two production browsers now share authoritative movement and a travelling M4 hit on canonical Greek Columns terrain; asset-gated entry and clean offline return are verified. Expanded movement, full match lifecycle and TLS/public hosting remain in later Phase1 plans; Rapier adoption is deferred. Full movement, art, editor, and final-map overhauls retain their selected position.
 
 ## Phases
 
@@ -43,17 +43,17 @@ Integer phases are the planned work. Decimal phases are reserved for later urgen
 4. Modified client messages cannot grant firing eligibility, create trusted hit outcomes, award damage or kills, or overwrite server score.
 5. An operator starts the server with `npm run mp-server -- --port <port> --host <bind-address> --tls --public <advertised-address>`; port/binding/TLS/advertised-address configuration takes effect, certificate setup is documented, and invalid configuration produces actionable errors.
 
-**Plans:** 1/7 plans executed
+**Plans:** 2/7 plans executed
 **UI hint:** yes
 
 Plans:
 **Wave 1**
 - [x] 01-01-PLAN.md — Approve exact packages and create the production-server verification harness (Wave 1).
 
-**Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 01-02-PLAN.md — Prove two-browser movement and confirmed M4 hit, canonical map and online entry (Wave 2).
+**Wave 2** *(complete)*
+- [x] 01-02-PLAN.md — Prove two-browser movement and confirmed M4 hit, canonical map and online entry (Wave 2).
 
-**Wave 3** *(blocked on Wave 2 completion)*
+**Wave 3** *(ready after Wave 2 completion)*
 - [ ] 01-03-PLAN.md — Deliver minimum movement and reject hostile/replayed input commands (Wave 3).
 - [ ] 01-06-PLAN.md — Launch one CLI-configured HTTP/TLS game link with protected certificate reuse (Wave 3).
 
@@ -299,7 +299,7 @@ Armor plates remain future longer-mode scope. Monetization and generic authentic
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Two-Client Authoritative TDM | 1/7 | In Progress|  |
+| 1. Two-Client Authoritative TDM | 2/7 | In Progress|  |
 | 2. Responsive Cross-Device Lobbies and Deathmatch | 0/TBD | Not started | - |
 | 3. Bomb, Flag, and Hardpoint Matches | 0/TBD | Not started | - |
 | 4. Bot-Filled Matches on Measured Pi Hosting | 0/TBD | Not started | - |

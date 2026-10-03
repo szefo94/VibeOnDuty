@@ -2,17 +2,17 @@
 gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Two-Client Authoritative TDM
-status: executing
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-10-03T10:55:38.304Z"
+status: "Ready to execute wave3: 01-03 and 01-06"
+stopped_at: Completed 01-02-PLAN.md; ready for wave3 plans 01-03 and 01-06
+last_updated: "2026-10-03T14:45:05.103Z"
 last_activity: 2026-10-03
-last_activity_desc: Completed 01-01 runtime and production fixture setup; ready for 01-02
-state_head: 714b66789ea6d5f3fd09748722069c12441ddb3a
+last_activity_desc: "Completed 01-02: 97 unit tests, 17 offline browser tests and 2 production multiplayer scenarios pass"
+state_head: ce38dc4cd0f33b3bea9473dc0d337154b9d01967
 progress:
   total_phases: 12
   completed_phases: 0
   total_plans: 7
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -28,35 +28,36 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 ## Current Position
 
 Phase: 01 (Two-Client Authoritative TDM) — EXECUTING
-Plan: 2 of 7
-Status: Ready to execute
+Plan: 3 of 7
+Status: Ready to execute wave3: 01-03 and 01-06
 Roadmap review: Accepted; Phase 1 execution resumed after package approval
-Last activity: 2026-10-03 — Completed 01-01; exact runtime pins and isolated production fixture verified, intentional missing-server RED recorded. Ready for 01-02.
+Last activity: 2026-10-03 — Completed 01-02: 97 unit tests, 17 offline browser tests and 2 production multiplayer scenarios pass
 
 Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: Approximately 18 min (approval-to-close-out interval)
-- Total execution time: Approximately 0.3 hours
+- Total plans completed: 2
+- Average duration: Approximately 116 min of wall time
+- Total execution time: Approximately 3.9 hours of wall time, including the 01-02 interruption
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 1 | 18 min | 18 min |
+| 01 | 2 | 232 min | 116 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (18 min)
-- Trend: Not established from one plan
+- Last 5 plans: 01-01 (18 min), 01-02 (214 min including interruption)
+- Trend: Interrupted wall time is not comparable to uninterrupted execution effort
 
 **Per-Plan Metrics:**
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 01 P01 | 18 min | 3 tasks | 10 files |
+| Phase 01 P02 | 214min | 3 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -72,7 +73,9 @@ Full decisions are recorded in PROJECT.md.
 - Armor plates are deferred to future longer modes.
 - [Phase 01]: The direct approve response satisfies the four exact Colyseus release gate; no substitute versions were installed.
 - [Phase 01]: Newly production-reachable nanoid updated within supported range to 3.3.19; runtime audit clean and primary tooling retained.
-- [Phase 01]: Production fixture and real-browser tracer authored; deliberate missing-server RED remains for 01-02 GREEN.
+- [Phase 01]: Production fixture and real-browser tracer authored in 01-01; corrected behavioral RED and production GREEN completed in 01-02.
+- [Phase 01]: Online authority owns bodies, ammunition, projectiles and confirmed outcomes; the existing renderer consumes snapshots.
+- [Phase 01]: The two-client keyboard/mouse M4 slice uses one same-origin room and canonical Greek Columns data; later plans expand movement, lifecycle and hosting.
 
 ### Pending Todos
 
@@ -80,7 +83,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- Phase 1-2: Exact Node 24/Colyseus dependencies and isolated fixture tooling are installed/verified; browser multiplayer remains intentional RED for 01-02. Shared grid simulation is planned; Rapier is deferred. Later prediction/latency/reconnect policies and capacity remain unverified.
+- Phase 1-2: Exact Node 24/Colyseus dependencies, isolated fixtures and the authoritative two-browser M4 path are verified. Canonical shared-world queries are implemented; Rapier is deferred. Expanded movement, full match lifecycle, TLS/public hosting, prediction/latency/reconnect and capacity remain for later plans.
 - Phase 2-4: Confirm representative devices/network limits and actual ARM64 Pi model, 4 GB/16 GB configuration, cooling/storage/access; no capacity/FPS benchmarks are complete.
 - Phase 5-7: Movement/input rules, human rig/motion terms, installed Blender automation, and in-game visual acceptance remain open; no Blender connector is assumed.
 - Phase 8-10: Choose catalogs, balance/penetration, minimal identity/recovery/save lifetime, durable reward storage, and equipment/streak/UAV rules.
@@ -94,6 +97,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-10-03T10:55:38.281Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-10-03T14:43:51.192Z
+Stopped at: Completed 01-02-PLAN.md; ready for wave3 plans 01-03 and 01-06
 Resume file: None
