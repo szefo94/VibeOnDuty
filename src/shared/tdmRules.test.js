@@ -122,3 +122,16 @@ describe('authoritative TDM teams', () => {
     }
   });
 });
+
+describe('authoritative TDM lifecycle', () => {
+  it('ends a real score-limit kill and publishes the fixed15-second result deadline', () => {
+    const sim = createSimulation(bunkerData, { killLimit: 1 }, { randomSeed: 7 });
+    const a = sim.addPlayer('a'), b = sim.addPlayer('b');
+    Object.assign(a, { x: 30, z: 22 }); Object.assign(b, { x: 34, z: 22, health: 20 });
+    sim.queueInput('a', { protocolVersion: 1, seq: 1, ackTick: 0, matchGeneration: 1, lifeGeneration: 1, moveX: 0, moveZ: 0, yaw: -Math.PI / 2, pitch: 0, fire: true, reload: false, sprint: false, jump: false, crouch: false, aiming: false, neutral: false });
+    sim.stepSimulation(0.1);
+    expect(b.alive).toBe(false);
+    expect(sim.snapshot().phase).toBe('results');
+    expect(sim.snapshot()).toMatchObject({ scoreBlue: 1, scoreRed: 0, winner: 'blue', resultsEndsAtMs: 15100 });
+  });
+});
