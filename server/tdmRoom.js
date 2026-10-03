@@ -1,7 +1,7 @@
 // @ts-check
 import { Room } from '@colyseus/core';
 import { schema, t, MapSchema } from '@colyseus/schema';
-import { bunkerMapDef } from '../src/maps/bunker.js';
+import { bunkerData } from '../src/shared/maps/bunker.js';
 import { createSimulation } from '../src/shared/tdmSimulation.js';
 
 export const PlayerState = schema(
@@ -50,7 +50,7 @@ export class TdmRoom extends Room {
     scoreBravo: 0,
     timeRemaining: 600,
   });
-  simulation = createSimulation(bunkerMapDef);
+  simulation = createSimulation(bunkerData);
   onCreate() {
     this.maxClients = 2;
     this.patchRate = 50;

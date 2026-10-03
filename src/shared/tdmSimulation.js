@@ -1,6 +1,5 @@
 // @ts-check
 import {
-  CELL,
   PLAYER_H,
   PLAYER_R,
   MOVE_SPEED,
@@ -9,120 +8,17 @@ import {
   BULLET_GRAV,
   BULLET_MAX_LIFE,
 } from '../config.js';
-import { rampSurface } from '../tiles.js';
+import { createWorld, segmentBox, bodiesOverlap } from './world.js';
+export { segmentBox } from './world.js';
 
 /** @typedef {{x:number,y:number,z:number}} Point */
-/** @typedef {{width:number,height:number,tiles:number[][],heightmap:number[][],H2:number,spawnAttacker:{x:number,z:number},spawnDefender:{x:number,z:number},wallHeight?:number}} MapData */
+/** @typedef {import('./world.js').MapData} MapData */
 /** @typedef {{protocolVersion:number,seq:number,matchGeneration:number,lifeGeneration:number,moveX:number,moveZ:number,yaw:number,pitch:number,fire:boolean,reload:boolean}} Command */
 /** @typedef {{sessionId:string,team:string,x:number,y:number,z:number,yaw:number,pitch:number,health:number,alive:boolean,lifeGeneration:number,ammo:number,reserve:number,lastSeq:number,reloadRemaining:number,shootRemaining:number,moving:boolean,input:Command|null,inputAge:number}} Body */
 
-/** Earliest closed segment / axis-aligned box contact. @param {Point} start @param {Point} end @param {Point} lo @param {Point} hi */
-export function segmentBox(start, end, lo, hi) {
-  let near = 0,
-    far = 1;
-  for (const axis of /** @type {const} */ (['x', 'y', 'z'])) {
-    const d = end[axis] - start[axis];
-    if (Math.abs(d) < 1e-10) {
-      if (start[axis] < lo[axis] || start[axis] > hi[axis]) return null;
-    } else {
-      const a = (lo[axis] - start[axis]) / d,
-        b = (hi[axis] - start[axis]) / d;
-      near = Math.max(near, Math.min(a, b));
-      far = Math.min(far, Math.max(a, b));
-      if (near > far) return null;
-    }
-  }
-  return near;
-}
-
-/** Temporary owned tracer world; canonical geometry replaces this in the next task. @param {MapData} data */
-function tracerWorld(data) {
-  const map = structuredClone({
-    width: data.width,
-    height: data.height,
-    tiles: data.tiles,
-    heightmap: data.heightmap,
-    H2: data.H2,
-    spawnAttacker: data.spawnAttacker,
-    spawnDefender: data.spawnDefender,
-    wallHeight: data.wallHeight,
-  });
-  /** @param {number} x @param {number} z */
-  const groundElevation = (x, z) => {
-    const c = Math.floor(x / CELL),
-      r = Math.floor(z / CELL);
-    return (
-      rampSurface(map.tiles[r]?.[c] ?? 1, x / CELL - c, z / CELL - r, map.H2) ??
-      map.heightmap[r]?.[c] ??
-      0
-    );
-  };
-  /** @param {Point} body */
-  const canOccupy = (body) => {
-    const feet = body.y - PLAYER_H;
-    if (groundElevation(body.x, body.z) - feet > 0.8) return false;
-    for (
-      let r = Math.floor((body.z - PLAYER_R) / CELL);
-      r <= Math.floor((body.z + PLAYER_R) / CELL);
-      r++
-    ) {
-      for (
-        let c = Math.floor((body.x - PLAYER_R) / CELL);
-        c <= Math.floor((body.x + PLAYER_R) / CELL);
-        c++
-      ) {
-        const tile = map.tiles[r]?.[c] ?? 1;
-        if (tile === 1) return false;
-        if (tile === 2 && Math.abs(body.z - (r + 0.5) * CELL) < PLAYER_R + 0.175) return false;
-        if (tile === 3 && Math.abs(body.x - (c + 0.5) * CELL) < PLAYER_R + 0.175) return false;
-      }
-    }
-    return true;
-  };
-  /** @param {Point} start @param {Point} end */
-  const sweepObstruction = (start, end) => {
-    let best = null;
-    for (let r = 0; r < map.height; r++)
-      for (let c = 0; c < map.width; c++) {
-        const tile = map.tiles[r][c];
-        if (tile !== 1 && tile !== 2 && tile !== 3) continue;
-        const x = (c + 0.5) * CELL,
-          z = (r + 0.5) * CELL;
-        const rx = tile === 3 ? 0.175 : CELL / 2,
-          rz = tile === 2 ? 0.175 : CELL / 2;
-        const spans =
-          tile === 1
-            ? [[0, 3]]
-            : [
-                [0, PLAYER_H - 0.28],
-                [PLAYER_H + 0.28, PLAYER_H + 0.83],
-              ];
-        for (const [loY, hiY] of spans) {
-          const t = segmentBox(
-            start,
-            end,
-            { x: x - rx, y: loY, z: z - rz },
-            { x: x + rx, y: hiY, z: z + rz }
-          );
-          if (t !== null && (best === null || t < best)) best = t;
-        }
-      }
-    return best;
-  };
-  /** @param {string} team @param {Point[]} occupied */
-  const chooseSpawn = (team, occupied) => {
-    const s = team === 'alpha' ? map.spawnAttacker : map.spawnDefender;
-    const p = { ...s, y: groundElevation(s.x, s.z) + PLAYER_H };
-    return canOccupy(p) && occupied.every((b) => Math.hypot(b.x - p.x, b.z - p.z) >= 2 * PLAYER_R)
-      ? p
-      : null;
-  };
-  return { groundElevation, canOccupy, sweepObstruction, chooseSpawn };
-}
-
 /** @param {MapData} mapData @param {{killLimit?:number,matchSeconds?:number,respawnSeconds?:number,friendlyDamage?:number,resultsSeconds?:number}} [settings] */
 export function createSimulation(mapData, settings = {}) {
-  const world = tracerWorld(mapData);
+  const world = createWorld(mapData);
   const rules = {
     killLimit: 50,
     matchSeconds: 600,
@@ -261,15 +157,13 @@ export function createSimulation(mapData, settings = {}) {
         const next = { x, y: p.y, z };
         if (
           world.canOccupy(next) &&
-          [...players.values()].every(
-            (b) => b === p || !b.alive || Math.hypot(x - b.x, z - b.z) >= PLAYER_R * 2 - 1e-9
-          )
+          [...players.values()].every((b) => b === p || !b.alive || !bodiesOverlap(next, b))
         ) {
           p.x = x;
           p.z = z;
         }
       }
-      p.y = world.groundElevation(p.x, p.z) + PLAYER_H;
+      p.y = world.groundElevation(p.x, p.z, p.y) + PLAYER_H;
       p.moving = Math.hypot(p.x - oldX, p.z - oldZ) > 1e-6;
       if (c.reload && p.ammo < WEAPONS.m4.maxAmmo && p.reserve > 0 && !p.reloadRemaining)
         p.reloadRemaining = WEAPONS.m4.reload / 1000;
