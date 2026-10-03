@@ -22,6 +22,7 @@ import { playerMesh, playerMixer, playerActions } from './builders/enemyGLTF.js'
 import { crossfade, tickInertia, setLocoWeights, enterLocoMode, exitLocoMode, tickBoneFlipMonitor, fitActionDuration } from './builders/enemyAnimations.js';
 import { tickKillcam, isKillcamActive } from './replay/killcam.js';
 import { adaptTick } from './ai/difficultyAdapter.js';
+import { initOnlineEntry, isOnline, tickOnline } from './network/onlineSession.js';
 
 // Shared animation state object for the player — same shape crossfade() expects
 const playerAnim = { actions: null, currentClip: 'idle', _dbgName: 'player', _dbgTransitions: false, _dbgFlipMonitor: false };
@@ -75,6 +76,7 @@ let last = 0;
 export function loop(ts) {
   const dt = Math.min(0.05, (ts - last) / 1000);
   last = ts;
+  tickOnline(dt);
 
   // ── Touch look (consumed once per frame) ─────────────────────────
   if ((touchLook.dx || touchLook.dy) && gameRunning && !player.dead) {
@@ -89,7 +91,7 @@ export function loop(ts) {
 
   const _t0 = performance.now();
   if (gameRunning) {
-    updatePlayer(dt);
+    if (!isOnline()) updatePlayer(dt);
 
     // ── Player body: GLTF mannequin if loaded, else procedural ───────
     // Always track eye position so first-frame 3rd-person switch shows body at the right spot.
@@ -238,6 +240,7 @@ export function loop(ts) {
       }
     }
 
+    if (!isOnline()) {
     updateEnemies(ts, dt);
     if (activeDrone && (!activeDrone.dead || activeDrone.dying)) updateDrone(activeDrone, dt);
     for (const d of sndDrones) updateSndDrone(d, dt);
@@ -246,6 +249,7 @@ export function loop(ts) {
     adaptTick(dt);
     tickMeleeRing(dt, camera.position.x, camera.position.z);
     getMode()?.tick(dt, keys);
+    }
   }
 
   // ── Player mixer ticks even when dead so death animation plays ───
@@ -408,6 +412,7 @@ window.__debug3p = () => {
 };
 
 export function startLoop() {
+  initOnlineEntry();
   last = performance.now();
   requestAnimationFrame(loop);
 }

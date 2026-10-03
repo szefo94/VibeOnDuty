@@ -2,9 +2,40 @@ import { test, expect } from '@playwright/test';
 import { startMpFixture } from './helpers/mpServer.js';
 import { MOUSE_SENS } from '../src/config.js';
 
+// Continuous WebGL screenshots delay keyboard release on software-rendered runners.
+// Keep the action/network trace; capture explicit gameplay evidence below.
+test.use({ trace: { mode: 'retain-on-failure', screenshots: false, snapshots: false } });
+
 /** @param {import('@playwright/test').Page} page */
 async function snapshot(page) {
   return page.evaluate(() => window.__mpDebug());
+}
+
+/** Observe transient presentation without awarding outcomes or changing game state.
+ * @param {import('@playwright/test').Page} page
+ */
+async function observeFeedback(page) {
+  await page.evaluate(() => {
+    const seen = { marker: false, numbers: [] };
+    window.__observedFeedback = () => structuredClone(seen);
+    new MutationObserver((records) => {
+      for (const record of records) {
+        if (
+          record.target.id === 'xhair-dot' &&
+          record.target.style.background === 'rgb(231, 76, 60)'
+        )
+          seen.marker = true;
+        for (const node of record.addedNodes)
+          if (node.nodeType === 1 && node.classList.contains('dmg-num'))
+            seen.numbers.push(node.textContent);
+      }
+    }).observe(document.body, {
+      attributes: true,
+      childList: true,
+      subtree: true,
+      attributeFilter: ['style'],
+    });
+  });
 }
 
 /** Walk using ordinary keys and observed state; no teleport/test mutation API.
@@ -14,6 +45,7 @@ async function snapshot(page) {
  * @param {number} z
  */
 async function walkTo(page, sessionId, x, z) {
+  await page.bringToFront();
   const deadline = Date.now() + 15000;
   while (Date.now() < deadline) {
     const state = await snapshot(page);
@@ -24,13 +56,26 @@ async function walkTo(page, sessionId, x, z) {
     if (distance < 0.35) return;
     const forward = -dx * Math.sin(me.yaw) - dz * Math.cos(me.yaw);
     const right = dx * Math.cos(me.yaw) - dz * Math.sin(me.yaw);
-    const key = Math.abs(forward) > Math.abs(right)
-      ? (forward > 0 ? 'KeyW' : 'KeyS') : (right > 0 ? 'KeyD' : 'KeyA');
+    const key =
+      Math.abs(forward) > Math.abs(right)
+        ? forward > 0
+          ? 'KeyW'
+          : 'KeyS'
+        : right > 0
+          ? 'KeyD'
+          : 'KeyA';
     await page.keyboard.down(key);
-    try { await page.waitForTimeout(Math.min(150, Math.max(40, distance * 40))); }
-    finally { await page.keyboard.up(key); }
+    try {
+      await page.waitForTimeout(Math.min(150, Math.max(40, distance * 40)));
+    } finally {
+      await page.keyboard.up(key);
+    }
+    // Wait for the neutral command's replicated body before choosing another pulse.
+    await page.waitForTimeout(100);
   }
-  throw new Error(`Keyboard route did not reach (${x}, ${z}) within 15s`);
+  throw new Error(
+    `Keyboard route did not reach (${x}, ${z}) within 15s: ${JSON.stringify(await snapshot(page))}`
+  );
 }
 
 test('tracer: two browsers join and move', async ({ browser }) => {
@@ -40,7 +85,9 @@ test('tracer: two browsers join and move', async ({ browser }) => {
   const contexts = [];
   try {
     for (let i = 0; i < 2; i++) {
-      contexts.push(await browser.newContext({ viewport: { width: 800, height: 600 } }));
+      contexts.push(
+        await browser.newContext({ viewport: { width: 800, height: 600 }, deviceScaleFactor: 0.5 })
+      );
     }
     const [shooter, target] = await Promise.all(contexts.map((context) => context.newPage()));
     for (const page of [shooter, target]) {
@@ -64,13 +111,16 @@ test('tracer: two browsers join and move', async ({ browser }) => {
     await expect.poll(async () => (await snapshot(target)).remoteActorCount).toBe(1);
 
     const before = second.players.find((player) => player.sessionId === initial.sessionId);
+    await shooter.bringToFront();
     await shooter.keyboard.down('KeyW');
     try {
-      await expect.poll(async () => {
-        const state = await snapshot(target);
-        const moved = state.players.find((player) => player.sessionId === initial.sessionId);
-        return Math.hypot(moved.x - before.x, moved.z - before.z);
-      }).toBeGreaterThan(0.25);
+      await expect
+        .poll(async () => {
+          const state = await snapshot(target);
+          const moved = state.players.find((player) => player.sessionId === initial.sessionId);
+          return Math.hypot(moved.x - before.x, moved.z - before.z);
+        })
+        .toBeGreaterThan(0.25);
     } finally {
       await shooter.keyboard.up('KeyW');
     }
@@ -86,6 +136,8 @@ test('tracer: two browsers join and move', async ({ browser }) => {
     await walkTo(shooter, initial.sessionId, startLane, 22);
     await walkTo(shooter, initial.sessionId, targetLane, 22);
     await walkTo(shooter, initial.sessionId, targetLane, targetBody.z);
+    await shooter.mouse.move(400, 300);
+    await shooter.waitForTimeout(150);
     const aiming = await snapshot(shooter);
     const body = aiming.players.find((player) => player.sessionId === initial.sessionId);
     const victim = aiming.players.find((player) => player.sessionId === second.sessionId);
@@ -95,31 +147,43 @@ test('tracer: two browsers join and move', async ({ browser }) => {
     const desiredPitch = Math.atan2(victim.y - body.y, Math.hypot(dx, dz));
     const yawDelta = Math.atan2(Math.sin(desiredYaw - body.yaw), Math.cos(desiredYaw - body.yaw));
     // Aim and fire through ordinary mouse input, never mutate trusted state.
-    await shooter.mouse.move(400 - yawDelta / MOUSE_SENS, 300 - (desiredPitch - body.pitch) / MOUSE_SENS);
-    await expect.poll(async () => {
-      const state = await snapshot(shooter);
-      const me = state.players.find((player) => player.sessionId === initial.sessionId);
-      return Math.abs(Math.atan2(Math.sin(me.yaw - desiredYaw), Math.cos(me.yaw - desiredYaw)));
-    }).toBeLessThan(0.05);
+    await shooter.mouse.move(
+      400 - yawDelta / MOUSE_SENS,
+      300 - (desiredPitch - body.pitch) / MOUSE_SENS
+    );
+    await expect
+      .poll(async () => {
+        const state = await snapshot(shooter);
+        const me = state.players.find((player) => player.sessionId === initial.sessionId);
+        return Math.abs(Math.atan2(Math.sin(me.yaw - desiredYaw), Math.cos(me.yaw - desiredYaw)));
+      })
+      .toBeLessThan(0.05);
+    await shooter.screenshot({ path: test.info().outputPath('current-rig.png') });
     const ammo = body.ammo;
-    const marker = expect(shooter.locator('#xhair-dot'))
-      .toHaveCSS('background-color', 'rgb(231, 76, 60)');
+    await observeFeedback(shooter);
+    await observeFeedback(target);
     await shooter.mouse.down({ button: 'left' });
     await shooter.mouse.up({ button: 'left' });
-    await marker;
-    await expect(shooter.locator('.dmg-num')).toHaveCount(1);
-    await expect(target.locator('.dmg-num')).toHaveCount(0);
-    await expect.poll(async () => {
-      const state = await snapshot(target);
-      return state.players.find((player) => player.sessionId === second.sessionId).health;
-    }).toBeLessThan(victim.health);
+    await expect.poll(() => shooter.evaluate(() => window.__observedFeedback().marker)).toBe(true);
+    expect(await shooter.evaluate(() => window.__observedFeedback().numbers)).toHaveLength(1);
+    expect(await target.evaluate(() => window.__observedFeedback().numbers)).toHaveLength(0);
+    await expect
+      .poll(async () => {
+        const state = await snapshot(target);
+        return state.players.find((player) => player.sessionId === second.sessionId).health;
+      })
+      .toBeLessThan(victim.health);
     const confirmed = await snapshot(shooter);
-    expect(confirmed.players.find((player) => player.sessionId === initial.sessionId).ammo).toBe(ammo - 1);
+    expect(confirmed.players.find((player) => player.sessionId === initial.sessionId).ammo).toBe(
+      ammo - 1
+    );
     expect(confirmed.lastConfirmedHit).toMatchObject({ targetSessionId: second.sessionId });
     expect((await snapshot(target)).lastConfirmedHit).toBeNull();
     expect(confirmed.lastConfirmedHit.damage).toBeGreaterThan(0);
     expect(confirmed.lastConfirmedHit.impact).toEqual({
-      x: expect.any(Number), y: expect.any(Number), z: expect.any(Number),
+      x: expect.any(Number),
+      y: expect.any(Number),
+      z: expect.any(Number),
     });
   } finally {
     try {
