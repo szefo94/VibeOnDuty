@@ -14,7 +14,7 @@ export const PlayerState = schema(
     z: t.number(),
     yaw: t.number(),
     pitch: t.number(),
-    health: t.number(),
+    health: t.float64(),
     alive: t.boolean(),
     lifeGeneration: t.number(),
     ammo: t.number(),
@@ -66,11 +66,11 @@ export class TdmRoom extends Room {
   inputGenerations = new Map();
   // Keep this numeric contract self-contained: browser state type imports must
   // not pull the filesystem CLI into the legacy browser-only type graph.
-  /** @param {{settings?:{killLimit:number,matchSeconds:number,respawnSeconds:number,friendlyFire:number,resultsSeconds:number}}} [options] */
+  /** @param {{settings?:{killLimit:number,matchSeconds:number,respawnSeconds:number,friendlyFire:number,resultsSeconds:number},combatSeed?:number}} [options] */
   onCreate(options = {}) {
     if (options.settings) {
       const { friendlyFire, ...settings } = options.settings;
-      this.simulation = createSimulation(bunkerData, { ...settings, friendlyDamage: friendlyFire });
+      this.simulation = createSimulation(bunkerData, { ...settings, friendlyDamage: friendlyFire }, { randomSeed: options.combatSeed });
       this.state.timeRemaining = settings.matchSeconds;
     }
     this.maxClients = 2;

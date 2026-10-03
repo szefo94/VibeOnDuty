@@ -90,6 +90,83 @@ async function walkTo(page, sessionId, x, z) {
   );
 }
 
+async function aimAt(page, targetId) {
+  await focusControls(page);
+  await page.mouse.move(400, 300);
+  await page.waitForTimeout(200);
+  let mouseX = 400, mouseY = 300;
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const state = await snapshot(page);
+    const me = state.players.find((p) => p.sessionId === state.sessionId);
+    const target = state.players.find((p) => p.sessionId === targetId);
+    const dx = target ? target.x - me.x : 0, dz = target ? target.z - me.z : 0;
+    const yaw = target ? Math.atan2(-dx, -dz) : 0;
+    const pitch = target ? Math.atan2(target.y - me.y - 0.1, Math.hypot(dx, dz)) : 0;
+    const yawError = Math.atan2(Math.sin(yaw - me.yaw), Math.cos(yaw - me.yaw));
+    const pitchError = pitch - me.pitch;
+    if (Math.abs(yawError) < 0.02 && Math.abs(pitchError) < 0.02) return;
+    mouseX -= yawError / MOUSE_SENS; mouseY -= pitchError / MOUSE_SENS;
+    await page.mouse.move(mouseX, mouseY);
+    await page.waitForTimeout(250);
+  }
+  throw new Error(`Real control aiming did not converge: ${JSON.stringify(await snapshot(page))}`);
+}
+
+test('combat: real M4 cover, ammo, reload and private hit outcomes agree', async ({ browser }) => {
+  test.setTimeout(240000);
+  const fixture = await startMpFixture({ env: { VOD_COMBAT_SEED: '7' } });
+  const contexts = [];
+  try {
+    for (let i = 0; i < 2; i++) contexts.push(await browser.newContext({ viewport: { width: 800, height: 600 }, deviceScaleFactor: 0.25 }));
+    const [shooter, victim] = await Promise.all(contexts.map((c) => c.newPage()));
+    for (const page of [shooter, victim]) {
+      await page.goto(fixture.url);
+      await expect(page.locator('#mp-join-btn')).toBeEnabled({ timeout: 60000 });
+      await page.locator('#mp-join-btn').click();
+      await expect.poll(async () => (await snapshot(page)).sessionId, { timeout: 30000 }).toBeTruthy();
+      await observeFeedback(page);
+    }
+    await expect.poll(async () => (await snapshot(shooter)).players.length).toBe(2);
+    const initial = await snapshot(shooter), targetId = (await snapshot(victim)).sessionId;
+    const me = (state) => state.players.find((p) => p.sessionId === initial.sessionId);
+    const target = (state) => state.players.find((p) => p.sessionId === targetId);
+    // Existing central cover separates the two spawn positions.
+    await aimAt(shooter, targetId);
+    await shooter.mouse.down(); await shooter.mouse.up();
+    await expect.poll(async () => me(await snapshot(shooter)).ammo).toBe(29);
+    const tick = (await snapshot(shooter)).currentTick;
+    await expect.poll(async () => (await snapshot(victim)).currentTick).toBeGreaterThan(tick + 35);
+    expect(target(await snapshot(victim)).health).toBe(100);
+    expect((await snapshot(shooter)).lastConfirmedHit).toBeNull();
+    await expect(shooter.locator('#ammo-cur')).toHaveText('29');
+    await shooter.keyboard.press('KeyR');
+    await expect(shooter.locator('#reloadwrap')).toBeVisible();
+    await shooter.mouse.click(400, 300);
+    expect(me(await snapshot(shooter)).ammo).toBe(29);
+    await expect.poll(async () => me(await snapshot(victim)).ammo).toBe(30);
+    await expect(shooter.locator('#ammo-rsv')).toHaveText('89');
+    // Reach the target through normal keys around the existing central cover.
+    await aimAt(shooter, null);
+    await walkTo(shooter, initial.sessionId, 62, 46);
+    await walkTo(shooter, initial.sessionId, 62, 22);
+    await walkTo(shooter, initial.sessionId, 34, 22);
+    await walkTo(shooter, initial.sessionId, 34, 46);
+    await aimAt(shooter, targetId);
+    await shooter.mouse.down(); await shooter.mouse.up();
+    await expect.poll(async () => target(await snapshot(victim)).health).toBe(72);
+    await expect.poll(async () => (await snapshot(shooter)).lastConfirmedHit?.damage).toBe(28);
+    expect(me(await snapshot(shooter)).ammo).toBe(29);
+    expect(me(await snapshot(victim)).ammo).toBe(29);
+    expect((await snapshot(shooter)).score).toEqual((await snapshot(victim)).score);
+    expect(await shooter.evaluate(() => window.__observedFeedback().numbers)).toEqual(['-28']);
+    expect(await victim.evaluate(() => window.__observedFeedback())).toEqual({ marker: false, numbers: [] });
+    await shooter.screenshot({ path: test.info().outputPath('combat-confirmed.png') });
+  } finally {
+    await Promise.all(contexts.map((c) => c.close()));
+    await fixture.stop();
+  }
+});
+
 test('tracer: two browsers join and move', async ({ browser }) => {
   test.setTimeout(240000);
   const fixture = await startMpFixture();

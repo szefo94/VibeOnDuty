@@ -1,25 +1,18 @@
 // @ts-check
-import {
-  PLAYER_H,
-  PLAYER_H_CROUCH,
-  PLAYER_R,
-  WEAPONS,
-  BULLET_SPEED,
-  BULLET_GRAV,
-  BULLET_MAX_LIFE,
-} from '../config.js';
-import { createWorld, segmentBox, bodiesOverlap } from './world.js';
+import { PLAYER_H, PLAYER_H_CROUCH, WEAPONS } from '../config.js';
+import { createWorld, bodiesOverlap } from './world.js';
 import { stepMovement } from './movement.js';
 import { validateInput } from './protocol.js';
+import { requestFire, requestReload, updateWeaponState, stepProjectiles } from './combat.js';
 export { segmentBox } from './world.js';
 
 /** @typedef {{x:number,y:number,z:number}} Point */
 /** @typedef {import('./world.js').MapData} MapData */
 /** @typedef {import('./protocol.js').Command} Command */
-/** @typedef {import('./movement.js').MovementBody & {sessionId:string,team:string,health:number,lifeGeneration:number,ammo:number,reserve:number,lastSeq:number,lastConsumedSeq:number,reloadRemaining:number,shootRemaining:number,input:Command|null,inputAge:number}} Body */
+/** @typedef {import('./movement.js').MovementBody & import('./combat.js').WeaponBody & {sessionId:string,team:string,health:number,lifeGeneration:number,ammo:number,reserve:number,lastSeq:number,lastConsumedSeq:number,reloadRemaining:number,shootRemaining:number,input:Command|null,inputAge:number}} Body */
 
-/** @param {MapData} mapData @param {{killLimit?:number,matchSeconds?:number,respawnSeconds?:number,friendlyDamage?:number,resultsSeconds?:number}} [settings] */
-export function createSimulation(mapData, settings = {}) {
+/** @param {MapData} mapData @param {{killLimit?:number,matchSeconds?:number,respawnSeconds?:number,friendlyDamage?:number,resultsSeconds?:number}} [settings] @param {{randomSeed?:number}} [options] */
+export function createSimulation(mapData, settings = {}, options = {}) {
   const world = createWorld(mapData);
   const rules = {
     killLimit: 50,
@@ -31,15 +24,21 @@ export function createSimulation(mapData, settings = {}) {
   };
   /** @type {Map<string,Body>} */
   const players = new Map();
-  /** @type {Array<{sessionId:string,lifeGeneration:number,shotId:number,pos:Point,vel:Point,life:number}>} */
+  /** @type {import('./combat.js').Projectile[]} */
   const projectiles = [];
-  /** @type {Array<{shooterSessionId:string,targetSessionId:string,matchGeneration:number,lifeGeneration:number,targetLifeGeneration:number,shotId:number,eventId:number,damage:number,impact:Point}>} */
+  /** @type {import('./combat.js').Hit[]} */
   const events = [];
   let timeRemaining = rules.matchSeconds,
     matchGeneration = 1,
     shotId = 0,
     eventId = 0,
-    currentTick = 0;
+    currentTick = 0,
+    nowMs = 0;
+  let randomState = (options.randomSeed ?? Math.floor(Math.random() * 4294967296)) >>> 0;
+  const random = () => {
+    randomState = (Math.imul(randomState, 1664525) + 1013904223) >>> 0;
+    return randomState / 4294967296;
+  };
   const score = { alpha: 0, bravo: 0 };
   /** @param {string} sessionId */
   function addPlayer(sessionId) {
@@ -60,6 +59,11 @@ export function createSimulation(mapData, settings = {}) {
       yaw: 0,
       pitch: 0,
       health: 100,
+      weapon: 'm4',
+      nextFireAtMs: 0,
+      reloadEndsAtMs: 0,
+      spread: 0,
+      spreadUpdatedAtMs: nowMs,
       alive: !!spawn,
       lifeGeneration: 1,
       ammo: WEAPONS.m4.maxAmmo,
@@ -112,6 +116,7 @@ export function createSimulation(mapData, settings = {}) {
   function stepSimulation(dt) {
     if (!Number.isFinite(dt) || dt <= 0 || dt > 0.1) return;
     currentTick++;
+    nowMs += dt * 1000;
     events.length = 0;
     if (players.size) timeRemaining = Math.max(0, timeRemaining - dt);
     for (const p of players.values()) {
@@ -130,15 +135,7 @@ export function createSimulation(mapData, settings = {}) {
         }
         continue;
       }
-      p.shootRemaining = Math.max(0, p.shootRemaining - dt);
-      if (p.reloadRemaining > 0) {
-        p.reloadRemaining = Math.max(0, p.reloadRemaining - dt);
-        if (!p.reloadRemaining) {
-          const take = Math.min(WEAPONS.m4.maxAmmo - p.ammo, p.reserve);
-          p.ammo += take;
-          p.reserve -= take;
-        }
-      }
+      updateWeaponState(p, nowMs);
       const c = p.input;
       p.inputAge += dt;
       p.moving = false;
@@ -161,88 +158,45 @@ export function createSimulation(mapData, settings = {}) {
       );
       if (!activeInput || !c) continue;
       p.lastConsumedSeq = c.seq;
-      if (c.reload && p.ammo < WEAPONS.m4.maxAmmo && p.reserve > 0 && !p.reloadRemaining)
-        p.reloadRemaining = WEAPONS.m4.reload / 1000;
-      if (c.fire && p.ammo > 0 && !p.reloadRemaining && !p.shootRemaining) {
-        p.ammo--;
-        p.shootRemaining = WEAPONS.m4.fireRate / 1000;
-        const cp = Math.cos(p.pitch);
-        projectiles.push({
-          sessionId: p.sessionId,
-          lifeGeneration: p.lifeGeneration,
-          shotId: ++shotId,
-          pos: { x: p.x, y: p.y, z: p.z },
-          vel: {
-            x: -Math.sin(p.yaw) * cp * BULLET_SPEED,
-            y: Math.sin(p.pitch) * BULLET_SPEED,
-            z: -Math.cos(p.yaw) * cp * BULLET_SPEED,
-          },
-          life: BULLET_MAX_LIFE,
+      if (c.reload) requestReload(p, nowMs);
+      if (c.fire) {
+        const projectile = requestFire(p, nowMs, world, {
+          active: true,
+          matchGeneration,
+          nextShotId: () => ++shotId,
+          random,
         });
+        if (projectile) projectiles.push(projectile);
       }
       c.fire = false;
       c.reload = false;
       c.jump = false;
     }
-    for (let i = projectiles.length - 1; i >= 0; i--) {
-      const b = projectiles[i],
-        start = { ...b.pos };
-      b.vel.y -= BULLET_GRAV * dt;
-      const end = {
-        x: start.x + b.vel.x * dt,
-        y: start.y + b.vel.y * dt,
-        z: start.z + b.vel.z * dt,
-      };
-      let best = world.sweepObstruction(start, end);
-      /** @type {Body|null} */ let target = null;
-      for (const p of players.values()) {
-        if (!p.alive || p.sessionId === b.sessionId) continue;
-        const t = segmentBox(
-          start,
-          end,
-          {
-            x: p.x - PLAYER_R,
-            y: p.y - (p.crouching ? PLAYER_H_CROUCH : PLAYER_H),
-            z: p.z - PLAYER_R,
-          },
-          { x: p.x + PLAYER_R, y: p.y + 0.1, z: p.z + PLAYER_R }
-        );
-        if (t !== null && (best === null || t < best)) {
-          best = t;
-          target = p;
-        }
-      }
-      if (target && best !== null) {
-        const shooter = players.get(b.sessionId);
-        const damage =
-          WEAPONS.m4.damage * (shooter?.team === target.team ? rules.friendlyDamage : 1);
-        target.health = Math.max(0, target.health - damage);
-        if (!target.health) {
-          target.alive = false;
-          if (shooter && shooter.team !== target.team)
+    // Every actor moves before testing server current-step hit regions.
+    stepProjectiles(
+      {
+        players,
+        projectiles,
+        events,
+        world,
+        matchGeneration,
+        phase: timeRemaining > 0 && players.size ? 'playing' : 'waiting',
+        rules,
+        nextEventId: () => ++eventId,
+        onDeath: (target, projectile) => {
+          clearInput(target.sessionId);
+          const shooter = players.get(projectile.shooterSessionId);
+          if (
+            shooter &&
+            shooter.lifeGeneration === projectile.lifeGeneration &&
+            shooter.team === projectile.shooterTeam &&
+            shooter.team !== target.team
+          )
             score[/** @type {'alpha'|'bravo'} */ (shooter.team)]++;
-        }
-        const impact = {
-          x: start.x + (end.x - start.x) * best,
-          y: start.y + (end.y - start.y) * best,
-          z: start.z + (end.z - start.z) * best,
-        };
-        events.push({
-          shooterSessionId: b.sessionId,
-          targetSessionId: target.sessionId,
-          matchGeneration,
-          lifeGeneration: b.lifeGeneration,
-          targetLifeGeneration: target.lifeGeneration,
-          shotId: b.shotId,
-          eventId: ++eventId,
-          damage,
-          impact,
-        });
-      }
-      b.pos = end;
-      b.life -= dt;
-      if (best !== null || b.life <= 0) projectiles.splice(i, 1);
-    }
+        },
+      },
+      dt
+    );
   }
   function snapshot() {
     return {

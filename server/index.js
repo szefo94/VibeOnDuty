@@ -58,6 +58,10 @@ export async function startServer(options = {}) {
   const advertised = validateAdvertisedAddress(options.publicAddress, { host, port, tls: options.tls });
   const certificateDir = resolve(options.certificateDir ?? process.env.VOD_TLS_DIR ?? defaultCertificateDir);
   const settings = await loadRoomSettings(options.rulesFile);
+  // Reproducible server-owned combat for fixtures; clients cannot select seeds.
+  const combatSeed = process.env.VOD_COMBAT_SEED === undefined ? undefined : Number(process.env.VOD_COMBAT_SEED);
+  if (combatSeed !== undefined && (!Number.isSafeInteger(combatSeed) || combatSeed < 0 || combatSeed > 4294967295))
+    throw new Error('VOD_COMBAT_SEED must be an integer 0..4294967295');
   const buildDir = await validateBuildDir(options.buildDir ?? defaultBuildDir, certificateDir);
   const localHost = isWildcard(host) ? 'localhost' : host;
   const listenUrl = `${options.tls ? 'https' : 'http'}://${urlHost(localHost)}:${port}`;
@@ -83,7 +87,7 @@ export async function startServer(options = {}) {
     greet: false,
     gracefullyShutdown: false,
   });
-  server.define('tdm', TdmRoom, { settings });
+  server.define('tdm', TdmRoom, { settings, combatSeed });
   /** @type {(error:Error)=>void} */
   let onError = () => {};
   const failure = new Promise((_, reject) => { onError = reject; http.once('error', onError); });
