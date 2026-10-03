@@ -41,6 +41,7 @@ export function validateAdvertisedAddress(value, options) {
     let url;
     if (!value) url = new URL(`${scheme}://${urlHost(host)}:${options.port}`);
     else if (/^https?:\/\//i.test(value)) {
+      if (/[\s\\?#]/.test(value) || !/^https?:\/\/[^/]+\/?$/i.test(value)) throw new Error();
       url = new URL(value);
       if (options.tls && url.protocol !== 'https:') throw new Error();
     } else {

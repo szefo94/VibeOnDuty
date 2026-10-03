@@ -64,7 +64,9 @@ export class TdmRoom extends Room {
   inputGates = new Map();
   /** @type {Map<string,string>} */
   inputGenerations = new Map();
-  /** @param {{settings?:import('./cli.js').RoomSettings}} [options] */
+  // Keep this numeric contract self-contained: browser state type imports must
+  // not pull the filesystem CLI into the legacy browser-only type graph.
+  /** @param {{settings?:{killLimit:number,matchSeconds:number,respawnSeconds:number,friendlyFire:number,resultsSeconds:number}}} [options] */
   onCreate(options = {}) {
     if (options.settings) {
       const { friendlyFire, ...settings } = options.settings;
