@@ -31,23 +31,41 @@ coverage:
   - id: D1
     description: "Approved exact runtime dependency pins and reproducible installation"
     verification:
-      - {kind: other, ref: "01-PACKAGE-REVIEW.md#Human approval received", status: pass}
-      - {kind: other, ref: "npm ci; exact package/lock pin assertions; npm audit --omit=dev", status: pass}
-      - {kind: unit, ref: "npm run test:unit: 86 tests in 10 files", status: pass}
+      - kind: other
+        ref: "01-PACKAGE-REVIEW.md#Human approval received"
+        status: pass
+      - kind: other
+        ref: "npm ci; exact package/lock pin assertions; npm audit --omit=dev"
+        status: pass
+      - kind: unit
+        ref: "npm run test:unit: 86 tests in 10 files"
+        status: pass
     human_judgment: false
   - id: D2
     description: "Multiplayer build/check scripts and separate nonempty test discovery"
     verification:
-      - {kind: other, ref: "npm run build; npm run build:mp; npm run typecheck; npm run typecheck:mp; npm run lint", status: pass}
-      - {kind: other, ref: "tsc --listFilesOnly includes tests/helpers/mpServer.js", status: pass}
-      - {kind: other, ref: "npm run test:mp -- --list: one tracer; offline --list: 17 tests", status: pass}
-      - {kind: e2e, ref: "npm run test:e2e -- tests/smoke.spec.js --workers=1: 8 passed", status: pass}
+      - kind: other
+        ref: "npm run build; npm run build:mp; npm run typecheck; npm run typecheck:mp; npm run lint"
+        status: pass
+      - kind: other
+        ref: "tsc --listFilesOnly includes tests/helpers/mpServer.js"
+        status: pass
+      - kind: other
+        ref: "npm run test:mp -- --list: one tracer; offline --list: 17 tests"
+        status: pass
+      - kind: e2e
+        ref: "npm run test:e2e -- tests/smoke.spec.js --workers=1: 8 passed"
+        status: pass
     human_judgment: false
   - id: D3
     description: "Concurrent production fixture isolation and recorded missing-implementation RED"
     verification:
-      - {kind: integration, ref: "--list isolation: two simultaneous builds, unchanged dist hash, sibling survival, both roots removed", status: pass}
-      - {kind: other, ref: "Expected RED: tracer exits 1 with MODULE_NOT_FOUND server/index.js; owned PID/temp cleanup verified", status: pass}
+      - kind: integration
+        ref: "--list isolation: two simultaneous builds, unchanged dist hash, sibling survival, both roots removed"
+        status: pass
+      - kind: other
+        ref: "Expected RED: tracer exits 1 with MODULE_NOT_FOUND server/index.js; owned PID/temp cleanup verified"
+        status: pass
     human_judgment: false
 duration: 18min
 completed: 2026-10-03

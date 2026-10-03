@@ -2,17 +2,17 @@
 gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Two-Client Authoritative TDM
-status: Awaiting human package approval at 01-01-01; 0 of 7 plans complete
-stopped_at: "Phase 01 plan 01-01 task 01-01-01 blocking-human: four exact Colyseus versions reviewed; explicit approval pending. 0 tasks/plans completed; resume with fresh executor and recorded response."
-last_updated: "2026-10-03T10:30:14.568Z"
+status: executing
+stopped_at: Completed 01-01-PLAN.md
+last_updated: "2026-10-03T10:55:38.304Z"
 last_activity: 2026-10-03
-last_activity_desc: Exact package review refreshed; no application installation started
-state_head: 2cf8571965090d8c2f39934de8a56a8b175687f1
+last_activity_desc: Completed 01-01 runtime and production fixture setup; ready for 01-02
+state_head: 714b66789ea6d5f3fd09748722069c12441ddb3a
 progress:
   total_phases: 12
   completed_phases: 0
   total_plans: 7
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -28,29 +28,35 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 ## Current Position
 
 Phase: 01 (Two-Client Authoritative TDM) — EXECUTING
-Plan: 1 of 7
-Status: Awaiting human package approval at 01-01-01; 0 of 7 plans complete
-Roadmap review: Accepted; Phase 1 execution awaits exact package approval before resuming 01-01.
-Last activity: 2026-10-03 — Exact package review refreshed; no application installation started
+Plan: 2 of 7
+Status: Ready to execute
+Roadmap review: Accepted; Phase 1 execution resumed after package approval
+Last activity: 2026-10-03 — Completed 01-01; exact runtime pins and isolated production fixture verified, intentional missing-server RED recorded. Ready for 01-02.
 
 Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: Not measured
-- Total execution time: 0 hours
+- Total plans completed: 1
+- Average duration: Approximately 18 min (approval-to-close-out interval)
+- Total execution time: Approximately 0.3 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | 0 | - | - |
+| 01 | 1 | 18 min | 18 min |
 
 **Recent Trend:**
-- Last 5 plans: None
-- Trend: Not established
+- Last 5 plans: 01-01 (18 min)
+- Trend: Not established from one plan
+
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 01 P01 | 18 min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -64,6 +70,9 @@ Full decisions are recorded in PROJECT.md.
 - Phase 1 includes `npm run mp-server -- --port <port> --host <bind-address> --tls --public <advertised-address>` with documented TLS setup and client-facing address semantics.
 - 8/12/16/24 slots are gated by measured human/bot hosting profiles; 60 FPS remains a target across the three agreed device classes.
 - Armor plates are deferred to future longer modes.
+- [Phase 01]: The direct approve response satisfies the four exact Colyseus release gate; no substitute versions were installed.
+- [Phase 01]: Newly production-reachable nanoid updated within supported range to 3.3.19; runtime audit clean and primary tooling retained.
+- [Phase 01]: Production fixture and real-browser tracer authored; deliberate missing-server RED remains for 01-02 GREEN.
 
 ### Pending Todos
 
@@ -71,7 +80,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- Phase 1-2: Proposed Node/Colyseus/WSS/Rapier stack is not frozen or integration-tested; decide replay, tick/snapshot, bounded projectile latency, reconnect, and topology policies.
+- Phase 1-2: Exact Node 24/Colyseus dependencies and isolated fixture tooling are installed/verified; browser multiplayer remains intentional RED for 01-02. Shared grid simulation is planned; Rapier is deferred. Later prediction/latency/reconnect policies and capacity remain unverified.
 - Phase 2-4: Confirm representative devices/network limits and actual ARM64 Pi model, 4 GB/16 GB configuration, cooling/storage/access; no capacity/FPS benchmarks are complete.
 - Phase 5-7: Movement/input rules, human rig/motion terms, installed Blender automation, and in-game visual acceptance remain open; no Blender connector is assumed.
 - Phase 8-10: Choose catalogs, balance/penetration, minimal identity/recovery/save lifetime, durable reward storage, and equipment/streak/UAV rules.
@@ -85,6 +94,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-10-03T10:30:14.541Z
-Stopped at: Phase 01 plan 01-01 task 01-01-01 blocking-human: four exact Colyseus versions reviewed; explicit approval pending. 0 tasks/plans completed; resume with fresh executor and recorded response.
-Resume file: .planning/phases/01-two-client-authoritative-tdm/01-PACKAGE-REVIEW.md
+Last session: 2026-10-03T10:55:38.281Z
+Stopped at: Completed 01-01-PLAN.md
+Resume file: None
