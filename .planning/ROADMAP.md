@@ -43,8 +43,28 @@ Integer phases are the planned work. Decimal phases are reserved for later urgen
 4. Modified client messages cannot grant firing eligibility, create trusted hit outcomes, award damage or kills, or overwrite server score.
 5. An operator starts the server with `npm run mp-server -- --port <port> --host <bind-address> --tls --public <advertised-address>`; port/binding/TLS/advertised-address configuration takes effect, certificate setup is documented, and invalid configuration produces actionable errors.
 
-**Plans:** TBD
+**Plans:** 7 plans
 **UI hint:** yes
+
+Plans:
+**Wave 1**
+- [ ] 01-01-PLAN.md — Approve exact packages and create the production-server verification harness (Wave 1).
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 01-02-PLAN.md — Prove two-browser movement and confirmed M4 hit, canonical map and online entry (Wave 2).
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 01-03-PLAN.md — Deliver minimum movement and reject hostile/replayed input commands (Wave 3).
+- [ ] 01-06-PLAN.md — Launch one CLI-configured HTTP/TLS game link with protected certificate reuse (Wave 3).
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 01-04-PLAN.md — Enforce firing/reload, swept impacts and server combat outcomes (Wave 4).
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 01-05-PLAN.md — Finish teams, death/respawn, results and same-settings rematch (Wave 5).
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 01-07-PLAN.md — Verify current rigs, confirmed feedback, top errors, offline and security acceptance (Wave 6).
 
 **Research/discussion focus:** Validate the proposed runtime/transport/physics combination, shared headless simulation boundaries, fixed-step input contract, and minimum authoritative collision/projectile behavior. Define CLI defaults, `--help`, port/bind validation, TLS certificate configuration, and the client-facing hostname/URL semantics of `--public`, including direct TLS and proxy hosting. Keep existing art and maps; extract only the collision/map/lifecycle foundations needed for this playable slice.
 
@@ -252,7 +272,6 @@ Integer phases are the planned work. Decimal phases are reserved for later urgen
 **UI hint:** yes
 
 **Research/discussion focus:** Qualify actual reusable source/component terms and import files; no complete reusable source map is currently qualified. Choose two settings and the mode/capacity matrix, iterate blockouts before art, and benchmark final sustained loads against the established 60 FPS device target and Pi envelopes.
-
 
 ## Recurring Acceptance Gates
 

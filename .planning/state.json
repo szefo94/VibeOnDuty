@@ -1,0 +1,73 @@
+{
+  "contract": "1.0.0",
+  "flavor": "core",
+  "milestone": null,
+  "phases": [
+    {
+      "number": "1",
+      "name": "Two-Client Authoritative TDM",
+      "status": "pending"
+    },
+    {
+      "number": "2",
+      "name": "Responsive Cross-Device Lobbies and Deathmatch",
+      "status": "pending"
+    },
+    {
+      "number": "3",
+      "name": "Bomb, Flag, and Hardpoint Matches",
+      "status": "pending"
+    },
+    {
+      "number": "4",
+      "name": "Bot-Filled Matches on Measured Pi Hosting",
+      "status": "pending"
+    },
+    {
+      "number": "5",
+      "name": "Omnimovement with Reliable Body and Camera Collision",
+      "status": "pending"
+    },
+    {
+      "number": "6",
+      "name": "Human Characters and Comic-Book Blender Iteration",
+      "status": "pending"
+    },
+    {
+      "number": "7",
+      "name": "Movement-Matched and Action-Safe Animation",
+      "status": "pending"
+    },
+    {
+      "number": "8",
+      "name": "Distinct Weapons and Authoritative Fast Combat",
+      "status": "pending"
+    },
+    {
+      "number": "9",
+      "name": "Live Loadouts, Attachments, and Durable Unlocks",
+      "status": "pending"
+    },
+    {
+      "number": "10",
+      "name": "Useful Equipment, Score Streaks, and Reconnaissance",
+      "status": "pending"
+    },
+    {
+      "number": "11",
+      "name": "Combined Second Editor with Inspectable Prompt Edits",
+      "status": "pending"
+    },
+    {
+      "number": "12",
+      "name": "Qualified Adaptations and Two Playable Final Maps",
+      "status": "pending"
+    }
+  ],
+  "next": {
+    "command": "/gsd:progress --next",
+    "label": "Advance to the next step",
+    "reason": "Phase 01 of 12 · 0% · executing"
+  },
+  "updated_at": "2026-10-03T09:56:25.486Z"
+}
