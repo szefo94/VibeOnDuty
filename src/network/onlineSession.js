@@ -45,6 +45,7 @@ let sessionEpoch = 0;
 let lastSentTime = 0;
 /** @type {Hit|null} */ let lastConfirmedHit = null;
 let lastEventId = 0;
+/** @type {string|null} */ let lastInputRejection = null;
 /** @type {ReturnType<typeof setInterval>|null} */ let heartbeat = null;
 const euler = new THREE.Euler(0, 0, 0, 'YXZ');
 const onlineKeys = /** @type {Record<string,boolean>} */ (keys);
@@ -136,7 +137,9 @@ function onBlur() {
   jump = false;
   aiming = false;
   for (const key of Object.keys(onlineKeys)) onlineKeys[key] = false;
-  sendIntent();
+  // Capture can run before the legacy locked binding updates. Retire queued
+  // action edges immediately rather than waiting for the next heartbeat.
+  sendIntent(true);
 }
 function onLockChange() { if (!document.pointerLockElement) onBlur(); }
 function onVisibilityChange() { if (document.hidden) onBlur(); }
@@ -202,6 +205,10 @@ export async function joinOnline() {
     pitch = 0;
     lastConfirmedHit = null;
     lastEventId = 0;
+    lastInputRejection = null;
+    room.onMessage('inputRejected', (/** @type {{reason:string}} */ rejection) => {
+      lastInputRejection = rejection.reason;
+    });
     heartbeat = setInterval(sendHeartbeat, 1000 / 30);
     room.onMessage(
       'hit',
@@ -288,7 +295,8 @@ export async function leaveOnline() {
   if (previous) await previous.leave().catch(() => {});
 }
 
-function sendIntent() {
+/** @param {boolean} [forceNeutral] */
+function sendIntent(forceNeutral = false) {
   if (!room?.state?.players) return;
   const me = room.state.players.get(room.sessionId);
   if (!me) return;
@@ -298,7 +306,7 @@ function sendIntent() {
     void leaveOnline();
     return;
   }
-  const active = locked && !document.hidden && me.alive && room.state.phase === 'playing';
+  const active = !forceNeutral && locked && !document.hidden && me.alive && room.state.phase === 'playing';
   room.send('input', {
     protocolVersion: 1,
     seq: ++seq,
@@ -417,6 +425,8 @@ export function getOnlineSnapshot() {
     matchGeneration: s?.matchGeneration ?? 0,
     currentTick: s?.currentTick ?? 0,
     inputSeq: seq,
+    inputLocked: locked,
+    lastInputRejection,
     simulationEye: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
     cameraFov: camera.fov,
     aimT: aimView.aimT,

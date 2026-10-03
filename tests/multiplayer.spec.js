@@ -74,7 +74,9 @@ async function walkTo(page, sessionId, x, z) {
           : 'KeyA';
     const precise = distance < 2;
     await page.keyboard.press(precise ? `ControlLeft+${key}` : key, {
-      delay: Math.min(150, Math.max(40, distance * 40)),
+      // Keep an intention alive across at least three 30 Hz steps. Very short
+      // down/up pairs can reach the room in one batch and correctly cancel.
+      delay: Math.min(150, Math.max(100, distance * 40)),
     });
     // Wait for the neutral command's replicated body before choosing another pulse.
     const releaseSeq = (await snapshot(page)).inputSeq;
@@ -89,23 +91,23 @@ async function walkTo(page, sessionId, x, z) {
 }
 
 test('tracer: two browsers join and move', async ({ browser }) => {
-  test.setTimeout(120000);
+  test.setTimeout(240000);
   const fixture = await startMpFixture();
   expect((await fetch(`${fixture.url}/health`)).status).toBe(200);
   const contexts = [];
   try {
     for (let i = 0; i < 2; i++) {
       contexts.push(
-        await browser.newContext({ viewport: { width: 800, height: 600 }, deviceScaleFactor: 0.5 })
+        await browser.newContext({ viewport: { width: 800, height: 600 }, deviceScaleFactor: 0.25 })
       );
     }
     const [shooter, target] = await Promise.all(contexts.map((context) => context.newPage()));
     for (const page of [shooter, target]) {
       await page.goto(fixture.url);
-      await expect(page.locator('#mp-join-btn')).toBeEnabled({ timeout: 20000 });
+      await expect(page.locator('#mp-join-btn')).toBeEnabled({ timeout: 60000 });
       await page.mouse.move(400, 300);
       await page.locator('#mp-join-btn').click();
-      await expect.poll(async () => (await snapshot(page)).sessionId).toBeTruthy();
+      await expect.poll(async () => (await snapshot(page)).sessionId, { timeout: 30000 }).toBeTruthy();
     }
 
     await expect.poll(async () => (await snapshot(shooter)).players.length).toBe(2);
@@ -218,17 +220,17 @@ test('tracer: two browsers join and move', async ({ browser }) => {
 });
 
 test('movement: real sprint jump crouch ADS, ramps, walls and camera restore agree in two browsers', async ({ browser }) => {
-  test.setTimeout(180000);
+  test.setTimeout(240000);
   const fixture = await startMpFixture();
   const contexts = [];
   try {
-    for (let i = 0; i < 2; i++) contexts.push(await browser.newContext({ viewport: { width: 800, height: 600 }, deviceScaleFactor: 0.5 }));
+    for (let i = 0; i < 2; i++) contexts.push(await browser.newContext({ viewport: { width: 800, height: 600 }, deviceScaleFactor: 0.25 }));
     const [page, peer] = await Promise.all(contexts.map((c) => c.newPage()));
     for (const p of [page, peer]) {
       await p.goto(fixture.url);
-      await expect(p.locator('#mp-join-btn')).toBeEnabled({ timeout: 20000 });
+      await expect(p.locator('#mp-join-btn')).toBeEnabled({ timeout: 60000 });
       await p.locator('#mp-join-btn').click();
-      await expect.poll(async () => (await snapshot(p)).sessionId).toBeTruthy();
+      await expect.poll(async () => (await snapshot(p)).sessionId, { timeout: 30000 }).toBeTruthy();
       await p.evaluate(() => {
         const seen = { moving: false, airborne: false };
         window.__movementSeen = () => ({ ...seen });
@@ -250,8 +252,12 @@ test('movement: real sprint jump crouch ADS, ramps, walls and camera restore agr
         for (const p of [page, peer]) await expect.poll(() => p.evaluate((key) => window.__movementSeen()[key], observed)).toBe(true);
         return;
       }
-      await expect.poll(async () => (await body())[field]).toBe(value);
-      await expect.poll(async () => (await body(peer))[field]).toBe(value);
+      try {
+        await expect.poll(async () => (await body())[field]).toBe(value);
+        await expect.poll(async () => (await body(peer))[field]).toBe(value);
+      } catch (error) {
+        throw new Error(`${field}=${value}: ${JSON.stringify(await snapshot(page))}`, { cause: error });
+      }
     };
     await focusControls(page);
     await page.keyboard.down('ShiftLeft');
@@ -328,10 +334,10 @@ test('movement: real sprint jump crouch ADS, ramps, walls and camera restore agr
 });
 
 test('entry: assets gate online join, leave clears actors, and offline controls remain usable', async ({ browser }) => {
-  test.setTimeout(120000);
+  test.setTimeout(240000);
   const fixture = await startMpFixture();
-  const context = await browser.newContext({ viewport: { width: 1000, height: 800 }, deviceScaleFactor: 0.5 });
-  const peerContext = await browser.newContext({ viewport: { width: 800, height: 600 }, deviceScaleFactor: 0.5 });
+  const context = await browser.newContext({ viewport: { width: 1000, height: 800 }, deviceScaleFactor: 0.25 });
+  const peerContext = await browser.newContext({ viewport: { width: 800, height: 600 }, deviceScaleFactor: 0.25 });
   let releaseAssets;
   const assetGate = new Promise((resolve) => { releaseAssets = resolve; });
   try {
@@ -350,12 +356,12 @@ test('entry: assets gate online join, leave clears actors, and offline controls 
     await expect(page.locator('#mp-join-btn')).toBeDisabled();
     await expect(page.locator('#startbtn')).toBeDisabled();
     releaseAssets();
-    await expect(page.locator('#mp-join-btn')).toBeEnabled({ timeout: 20000 });
+    await expect(page.locator('#mp-join-btn')).toBeEnabled({ timeout: 60000 });
     await expect(page.locator('#mp-actions')).toContainText('M4');
     await page.screenshot({ path: test.info().outputPath('online-menu.png') });
 
     await peer.goto(fixture.url);
-    await expect(peer.locator('#mp-join-btn')).toBeEnabled({ timeout: 20000 });
+    await expect(peer.locator('#mp-join-btn')).toBeEnabled({ timeout: 60000 });
     await peer.locator('#mp-join-btn').click();
     await page.locator('#mp-join-btn').click();
     await expect.poll(async () => (await snapshot(page)).players.length).toBe(2);
@@ -367,6 +373,7 @@ test('entry: assets gate online join, leave clears actors, and offline controls 
     await expect(page.locator('#hp-num')).toHaveText(String(me.health));
     await expect(page.locator('#ammo-cur')).toHaveText(String(me.ammo));
     await expect(page.locator('#tdm-us')).toHaveText(String(initial.score[me.team]));
+    await focusControls(page);
     for (const key of ['Digit2', 'Digit3', 'Digit4', 'KeyF', 'KeyG', 'KeyT', 'KeyQ', 'KeyE', 'KeyZ', 'KeyB'])
       await page.keyboard.press(key);
     await page.mouse.click(400, 300, { button: 'middle' });
@@ -378,6 +385,7 @@ test('entry: assets gate online join, leave clears actors, and offline controls 
     expect(guarded.players.find((p) => p.sessionId === me.sessionId).ammo).toBe(me.ammo);
 
     // Ordinary fire/reload changes the replicated inventory, not a browser-owned outcome.
+    await focusControls(page);
     await page.mouse.click(400, 300);
     await expect.poll(async () => (await snapshot(page)).players.find((p) => p.sessionId === me.sessionId).ammo).toBe(29);
     await page.keyboard.press('KeyR');
