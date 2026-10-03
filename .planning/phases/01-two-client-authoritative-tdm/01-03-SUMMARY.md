@@ -124,12 +124,27 @@ status: complete
 
 All five task commits retain normal hooks, the project root guard and the temporary orchestrator-authorized default-branch override. No files were deleted and no packages were installed.
 
-## Verification
+## Files Created/Modified
+
+- `src/shared/movement.js` — Numeric authoritative movement and stance clearance.
+- `src/shared/movement.test.js` — Speed, jump, timestep and terrain boundaries.
+- `src/shared/protocol.js` — Exact rejection and bounded session receipt queue.
+- `src/shared/protocol.test.js` — Valid endpoints and immediately invalid bounds.
+- `server/tdmRoom.test.js` — Real transport and controlled-room acceptance evidence.
+- `server/testHelpers/hostileClient.js` — Raw SDK messages with explicit Origin.
+- `src/shared/world.js` — Radius-aware support and stance-aware occupancy.
+- `src/shared/tdmSimulation.js` — Shared protocol validation and held-input cleanup.
+- `server/tdmRoom.js` — Replicated flags/tick, session queues and reject/disconnect policy.
+- `src/network/onlineSession.js` — Supported intent, neutral retirement and authoritative presentation.
+- `tests/multiplayer.spec.js` — Real controls, terrain/camera checks and existing flow regression.
+- `index.html`, `AGENTS.md`, `.gitignore` — Supported-control notice, current context and generated-output exclusion.
+
+## Validation Results
 
 | Command | Terminal evidence |
 | --- | --- |
-| `npm run test:unit -- src/shared/movement.test.js` | 8 passed; task1 GREEN |
-| `npm run test:unit -- src/shared/protocol.test.js server/tdmRoom.test.js` | 27 passed in 6.87s |
+| npm run test:unit -- src/shared/movement.test.js | 8 passed; task1 GREEN |
+| npm run test:unit -- src/shared/protocol.test.js server/tdmRoom.test.js | 27 passed in 6.87s |
 | `npm run test:unit` | 132 passed in 14 files, 25.73s |
 | `npm run test:mp -- --grep "tracer:|movement:"` | Task1 2 passed in 2.1m; final full production set also covers both |
 | `npm run test:mp -- --grep "movement:"` | Hardened final standalone scenario passed in 28.7s, total 29.7s |
