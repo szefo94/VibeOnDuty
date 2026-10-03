@@ -64,7 +64,13 @@ export class TdmRoom extends Room {
   inputGates = new Map();
   /** @type {Map<string,string>} */
   inputGenerations = new Map();
-  onCreate() {
+  /** @param {{settings?:import('./cli.js').RoomSettings}} [options] */
+  onCreate(options = {}) {
+    if (options.settings) {
+      const { friendlyFire, ...settings } = options.settings;
+      this.simulation = createSimulation(bunkerData, { ...settings, friendlyDamage: friendlyFire });
+      this.state.timeRemaining = settings.matchSeconds;
+    }
     this.maxClients = 2;
     this.patchRate = 50;
     this.autoDispose = false;

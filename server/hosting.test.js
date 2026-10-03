@@ -8,6 +8,8 @@ import { defaultCertificateDir } from './cli.js';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { createServer } from 'node:net';
+import { request } from 'node:https';
+import { TdmRoom } from './tdmRoom.js';
 import { createHostileClient } from './testHelpers/hostileClient.js';
 
 let fixture;
@@ -29,6 +31,52 @@ function rejectedSocket(url, origin) {
 }
 
 describe('built-game host boundary', () => {
+  it('bridges validated operator settings into the current room without trusting join options', async () => {
+    const room = new TdmRoom();
+    room.onCreate({ settings: { killLimit: 5, matchSeconds: 7, respawnSeconds: 1, friendlyFire: 0.5, resultsSeconds: 15 } });
+    try {
+      expect(room.state.timeRemaining).toBe(7);
+      expect(room.simulation.snapshot().timeRemaining).toBe(7);
+    } finally { room.clock.clear(); }
+    const short = await startMpFixture({ testSettings: { matchSeconds: 7, killLimit: 2 } });
+    try {
+      const { Client } = await import('@colyseus/sdk');
+      const client = new Client(short.url, { headers: { Origin: short.url } });
+      const joined = await client.create('tdm', { protocolVersion: 1, settings: { matchSeconds: 9999 } });
+      try {
+        await expect.poll(() => joined.state?.players?.size ?? 0).toBe(1);
+        expect(joined.state.timeRemaining).toBeLessThanOrEqual(7);
+      } finally { await joined.leave(); }
+    } finally { await short.stop(); }
+  }, 30000);
+  it('uses a trusted matching certificate for HTTPS assets and reuses the pair across restart', async () => {
+    const secure = await startMpFixture({ tls: true });
+    try {
+      const path = join(secure.certificateDir, 'pair.json');
+      const bytes = await readFile(path, 'utf8');
+      const pair = JSON.parse(bytes);
+      const get = (route) => new Promise((ok, fail) => {
+        const req = request(secure.url + route, { ca: pair.cert, timeout: 2000 }, (res) => {
+          const chunks = [];
+          res.on('data', (chunk) => chunks.push(chunk));
+          res.on('end', () => ok({ status: res.statusCode, body: Buffer.concat(chunks) }));
+        });
+        req.on('timeout', () => req.destroy(new Error('HTTPS deadline')));
+        req.on('error', fail); req.end();
+      });
+      expect((await get('/')).status).toBe(200);
+      expect((await get('/models/enemy.glb')).body.subarray(0, 4).toString()).toBe('glTF');
+      for (const route of ['/.vod-server/tls/pair.json', '/tls/pair.json', '/server/tls.js']) {
+        const response = await get(route);
+        expect(response.status).toBe(404);
+        expect(response.body.toString()).not.toContain('PRIVATE KEY');
+      }
+      await secure.restart();
+      expect(await readFile(path, 'utf8')).toBe(bytes);
+      expect((await get('/health')).status).toBe(200);
+      expect(secure.output()).not.toContain('PRIVATE KEY');
+    } finally { await secure.stop(); }
+  }, 30000);
   it('rejects source/secret/non-root-base builds', async () => {
     for (const dir of [resolve('.'), resolve('src'), defaultCertificateDir])
       await expect(validateBuildDir(dir, defaultCertificateDir)).rejects.toThrow('npm run build:mp');
@@ -36,9 +84,14 @@ describe('built-game host boundary', () => {
     const owned = await allocateMpBuild();
     try {
       await buildMpClient({ outDir: owned.buildDir });
+      await writeFile(join(owned.buildDir, 'only-sibling.txt'), 'independent sibling');
+      expect((await fetch(fixture.url + '/only-sibling.txt')).status).toBe(404);
       const html = await readFile(join(owned.buildDir, 'index.html'), 'utf8');
       await writeFile(join(owned.buildDir, 'index.html'), html.replaceAll('/assets/', '/other/assets/'));
       await expect(validateBuildDir(owned.buildDir, defaultCertificateDir)).rejects.toThrow('root-base');
+      await writeFile(join(owned.buildDir, 'index.html'), html);
+      await writeFile(join(owned.buildDir, 'secret.pem'), 'private material');
+      await expect(validateBuildDir(owned.buildDir, defaultCertificateDir)).rejects.toThrow('built game');
       expect((await fetch(fixture.url)).status).toBe(200);
     } finally { await owned.cleanup(); }
   }, 30000);

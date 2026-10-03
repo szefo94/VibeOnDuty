@@ -2,7 +2,9 @@
 // @ts-expect-error Express runtime is pinned; this repository has no vendor declaration package.
 import express from 'express';
 import { createServer } from 'node:http';
-import { readFile, realpath, stat } from 'node:fs/promises';
+import { createServer as createHttpsServer } from 'node:https';
+import { loadOrCreateCertificate } from './tls.js';
+import { lstat, readFile, readdir, realpath, stat } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Server, matchMaker } from '@colyseus/core';
@@ -32,6 +34,15 @@ export async function validateBuildDir(selected, certificateDir) {
     for (const asset of assets) if (!(await stat(join(root, asset.slice(1)))).isFile()) throw new Error();
     for (const dir of ['src', 'server', '.git', '.vod-server', 'tls'])
       if (await stat(join(root, dir)).then(() => true, () => false)) throw new Error();
+    /** @param {string} directory */
+    async function checkContents(directory) {
+      for (const entry of await readdir(directory, { withFileTypes: true })) {
+        const path = join(directory, entry.name);
+        if ((await lstat(path)).isSymbolicLink() || /\.(pem|key|pfx|p12)$/i.test(entry.name)) throw new Error();
+        if (entry.isDirectory()) await checkContents(path);
+      }
+    }
+    await checkContents(root);
     return root;
   } catch {
     throw new Error('--build-dir must contain only root-base built game/assets, outside source and TLS storage. Build the multiplayer client with npm run build:mp');
@@ -62,7 +73,8 @@ export async function startServer(options = {}) {
   app.use((/** @type {unknown} */ _err, /** @type {unknown} */ _req,
     /** @type {{status:(n:number)=>{send:(s:string)=>void}}} */ res,
     /** @type {unknown} */ _next) => { res.status(404).send('Not found'); });
-  const http = createServer(app);
+  const pair = options.tls ? await loadOrCreateCertificate(advertised.advertisedHostname, certificateDir) : undefined;
+  const http = pair ? createHttpsServer({ key: pair.key, cert: pair.cert }, app) : createServer(app);
   const server = new Server({
     transport: new WebSocketTransport({ server: http, maxPayload: 2048,
       beforeUpgrade: (context) => origins.has(context.headers.get('origin') ?? '')
@@ -71,8 +83,6 @@ export async function startServer(options = {}) {
     greet: false,
     gracefullyShutdown: false,
   });
-  // Room lifecycle in 01-05 consumes this existing operator-owned definition seam.
-  // @ts-expect-error Current room has a zero-argument onCreate until that lifecycle task.
   server.define('tdm', TdmRoom, { settings });
   /** @type {(error:Error)=>void} */
   let onError = () => {};

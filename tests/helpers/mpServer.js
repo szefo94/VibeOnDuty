@@ -170,28 +170,40 @@ export async function startMpFixture(options = {}) {
       args.push('--rules', rulesFile);
     }
     const env = { ...options.env };
-    if (options.certDir) env.VOD_TLS_DIR = resolve(options.certDir);
-    const server = runNode(args, env);
-    child = server.child;
-    const deadline = Date.now() + (options.readyTimeoutMs ?? 10000);
-    while (Date.now() < deadline) {
-      if (server.error() || child.exitCode !== null || child.signalCode !== null) {
-        throw new Error(`MP server exited before /health readiness (${child.exitCode}): ${server.error() ?? ''}\n${server.output()}`);
+    const certificateDir = resolve(options.certDir ?? join(owned.tempRoot, 'tls'));
+    if (options.tls || options.certDir) env.VOD_TLS_DIR = certificateDir;
+    let server = runNode(args, env);
+    /** @param {ReturnType<typeof runNode>} run */
+    async function waitReady(run) {
+      child = run.child;
+      const deadline = Date.now() + (options.readyTimeoutMs ?? 10000);
+      while (Date.now() < deadline) {
+        if (run.error() || run.child.exitCode !== null || run.child.signalCode !== null) {
+          throw new Error(`MP server exited before /health readiness (${run.child.exitCode}): ${run.error() ?? ''}\n${run.output()}`);
+        }
+        if (await isHealthy(url)) {
+          console.log(`[mp fixture] ready ${url}; pid=${run.child.pid}; buildDir=${owned.buildDir}`);
+          return;
+        }
+        await delay(100);
       }
-      if (await isHealthy(url)) {
-        console.log(`[mp fixture] ready ${url}; pid=${child.pid}; buildDir=${owned.buildDir}`);
-        return {
-          tempRoot: owned.tempRoot, buildDir: owned.buildDir,
-          url, port, child, output: server.output,
-          async stop() {
-            await stopChild(server.child);
-            await owned.cleanup();
-          },
-        };
-      }
-      await delay(100);
+      throw new Error(`MP server /health readiness exceeded ${options.readyTimeoutMs ?? 10000}ms\n${run.output()}`);
     }
-    throw new Error(`MP server /health readiness exceeded ${options.readyTimeoutMs ?? 10000}ms\n${server.output()}`);
+    await waitReady(server);
+    return {
+      tempRoot: owned.tempRoot, buildDir: owned.buildDir, certificateDir,
+      url, port, get child() { return server.child; }, output: () => server.output(),
+      async restart() {
+        await stopChild(server.child);
+        server = runNode(args, env);
+        try { await waitReady(server); }
+        catch (error) { await stopChild(server.child); throw error; }
+      },
+      async stop() {
+        await stopChild(server.child);
+        await owned.cleanup();
+      },
+    };
   } catch (error) {
     if (child) await stopChild(child);
     await owned.cleanup();
