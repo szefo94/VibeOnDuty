@@ -36,6 +36,7 @@ async function walkTo(page, sessionId, x, z) {
 test('tracer: two browsers join and move', async ({ browser }) => {
   test.setTimeout(120000);
   const fixture = await startMpFixture();
+  expect((await fetch(`${fixture.url}/health`)).status).toBe(200);
   const contexts = [];
   try {
     for (let i = 0; i < 2; i++) {

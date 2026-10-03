@@ -1,0 +1,9 @@
+{
+  "command": "npm run test:mp -- --grep 'tracer:' --reporter=junit",
+  "exitCode": 1,
+  "targetTest": "tracer: two browsers join and move",
+  "targetFile": "tests/multiplayer.spec.js",
+  "expected": "Production game has an enabled Online TDM control after assets load and joins two live sessions",
+  "actual": "HTTP /health readiness passed on port 51656 using fixture build vod-mp-dIBp06; Online TDM readiness assertion failed because #mp-join-btn was absent",
+  "output": "<testsuites tests=\"1\" failures=\"1\"><testsuite name=\"multiplayer.spec.js\" tests=\"1\" failures=\"1\"><testcase name=\"tracer: two browsers join and move\" classname=\"multiplayer.spec.js\" time=\"21.763\"><failure message=\"expect(locator).toBeEnabled() failed\" type=\"expect.toBeEnabled\"><![CDATA[Locator: locator('#mp-join-btn'); Expected: enabled; Timeout: 20000ms; Error: element(s) not found; tests/multiplayer.spec.js:48:50]]></failure></testcase></testsuite></testsuites>"
+}
