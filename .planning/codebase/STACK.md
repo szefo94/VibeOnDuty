@@ -37,7 +37,7 @@ last_mapped_at: 2026-10-03
 - Vitest 4.1.3: `src/**/*.test.js` and `server/**/*.test.js`, configured by `vitest.config.js`; `npm test` and `npm run test:unit` run once, `npm run test:watch` watches (`package.json`).
 - Playwright Test 1.59.1, declared `^1.40.0`: browser tests in `tests/`, configured by `playwright.config.js`; `npm run test:e2e` (`package.json`).
 - Playwright runs headless with SwiftShader, starts Vite on port 5173, and uses one CI worker in `playwright.config.js`.
-- `playwright.multiplayer.config.js` selects multiplayer/hosting specs independently of the Vite suite. `tests/helpers/mpServer.js` owns isolated OS-temp production builds and dedicated server child processes; discovery verifies concurrent build/cleanup isolation. The first browser tracer is intentionally RED until plan 01-02 implements `server/index.js` and online entry.
+- `playwright.multiplayer.config.js` selects multiplayer/hosting specs independently of the Vite suite. `tests/helpers/mpServer.js` owns isolated OS-temp production builds/TLS storage and dedicated server processes; discovery verifies concurrent build/cleanup isolation. Production HTTP movement/M4 and HTTPS/WSS same-origin scenarios pass; manual TLS trust remains phase-end UAT.
 
 **Build/Dev:**
 - Vite 8.0.8: development server, production bundling, and preview via `package.json` scripts and `vite.config.js`.

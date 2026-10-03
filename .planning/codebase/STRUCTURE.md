@@ -88,6 +88,8 @@ VibeOnDuty/
 - `src/shared/movement.js`: Numeric movement with stance clearance, jump/gravity and radius-aware terrain.
 - `src/shared/protocol.js`: Exact versioned intentions, acknowledged-tick and receipt age, sequence/generation gates, bounded session queues and token rate.
 - `server/tdmRoom.js`: Framework session ownership, one consumption per fixed tick, replicated body flags/ticks and rejection/disconnect signals.
+- `server/cli.js`, `server/index.js`: Validated operator configuration, root-base build confinement, same-listener HTTP/HTTPS and Origin-gated transport.
+- `server/tls.js`: Atomic ignored operational cert/key storage, identity/date/key checks, serialized reuse and verified Windows ACL/POSIX permissions.
 - `server/testHelpers/hostileClient.js`: Existing pinned SDK plus existing Node WebSocket transport for raw malformed inputs; Origin derives from the ephemeral server URL.
 - `tests/multiplayer.spec.js`: Real controls and snapshots through built production assets; observers never mutate trusted state.
 

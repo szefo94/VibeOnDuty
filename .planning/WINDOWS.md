@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 1
+open_count: 2
 waived_count: 0
-fixed_count: 12
-total_count: 13
-last_updated: 2026-10-03T16:13:17.964Z
+fixed_count: 15
+total_count: 17
+last_updated: 2026-10-03T17:01:39.601Z
 ---
 
 # Broken Windows Ledger
@@ -28,6 +28,10 @@ last_updated: 2026-10-03T16:13:17.964Z
 | 11 | 01 | deviation | src/network/onlineSession.js |  | Read-only rejected-input and pointer-lock diagnostics expose hardened transport decisions; production tracer passes without weakening the strict movement route. | fixed |  | 2026-10-03T15:46:24.565Z | 2026-10-03T15:46:32.181Z |
 | 12 | 01 | deviation | src/network/onlineSession.js |  | Blur and pointer-unlock capture send explicit forced neutral before the legacy locked binding changes, cancelling retained action edges immediately. | fixed |  | 2026-10-03T16:09:42.226Z | 2026-10-03T16:09:43.616Z |
 | 13 | 01 | deviation | tests/multiplayer.spec.js |  | Under concurrent external software-WebGL load, keep enabled-asset/session waits bounded at60/30s and use test-only DPR0.25 with unchanged CSS viewport/gameplay assertions; hardened movement passes28.7s. | fixed |  | 2026-10-03T16:13:17.104Z | 2026-10-03T16:13:17.964Z |
+| 14 | 01 | deviation | server/tls.js |  | Atomic cert-key manifest and actual Windows ACL verification protect TLS storage; remove inherited PowerShell7 module-path case aliases before the 5.1 ACL query. | fixed |  | 2026-10-03T16:58:27.808Z | 2026-10-03T17:01:37.455Z |
+| 15 | 01 | deviation | server/tdmRoom.js |  | Typed onCreate bridge applies validated operator match time and friendly damage without importing Node CLI types into the browser graph; complete lifecycle remains 01-05. | fixed |  | 2026-10-03T17:01:37.869Z | 2026-10-03T17:01:38.289Z |
+| 16 | 01 | deviation | server/index.js |  | Validate static tree for symlinks and copied secret files; sanitize TLS error causes and give TLS fixtures private owned storage before browser acceptance. | fixed |  | 2026-10-03T17:01:38.724Z | 2026-10-03T17:01:39.145Z |
+| 17 | 01 | unrun-verify | docs/MULTIPLAYER.md |  | Phase-end human check of actual self-signed LAN trust in two browser windows and gesture-driven pointer lock remains pending; automated HTTPS bypass proves transport only. | open |  | 2026-10-03T17:01:39.601Z |  |
 
 ````json
 [
@@ -198,6 +202,58 @@ last_updated: 2026-10-03T16:13:17.964Z
     "reason": "",
     "recorded_at": "2026-10-03T16:13:17.104Z",
     "resolved_at": "2026-10-03T16:13:17.964Z",
+    "milestone": null
+  },
+  {
+    "id": 14,
+    "kind": "deviation",
+    "phase": "01",
+    "file": "server/tls.js",
+    "line": null,
+    "description": "Atomic cert-key manifest and actual Windows ACL verification protect TLS storage; remove inherited PowerShell7 module-path case aliases before the 5.1 ACL query.",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-10-03T16:58:27.808Z",
+    "resolved_at": "2026-10-03T17:01:37.455Z",
+    "milestone": null
+  },
+  {
+    "id": 15,
+    "kind": "deviation",
+    "phase": "01",
+    "file": "server/tdmRoom.js",
+    "line": null,
+    "description": "Typed onCreate bridge applies validated operator match time and friendly damage without importing Node CLI types into the browser graph; complete lifecycle remains 01-05.",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-10-03T17:01:37.869Z",
+    "resolved_at": "2026-10-03T17:01:38.289Z",
+    "milestone": null
+  },
+  {
+    "id": 16,
+    "kind": "deviation",
+    "phase": "01",
+    "file": "server/index.js",
+    "line": null,
+    "description": "Validate static tree for symlinks and copied secret files; sanitize TLS error causes and give TLS fixtures private owned storage before browser acceptance.",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-10-03T17:01:38.724Z",
+    "resolved_at": "2026-10-03T17:01:39.145Z",
+    "milestone": null
+  },
+  {
+    "id": 17,
+    "kind": "unrun-verify",
+    "phase": "01",
+    "file": "docs/MULTIPLAYER.md",
+    "line": null,
+    "description": "Phase-end human check of actual self-signed LAN trust in two browser windows and gesture-driven pointer lock remains pending; automated HTTPS bypass proves transport only.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-03T17:01:39.601Z",
+    "resolved_at": null,
     "milestone": null
   }
 ]

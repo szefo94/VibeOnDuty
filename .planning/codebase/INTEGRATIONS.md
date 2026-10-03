@@ -9,7 +9,7 @@ last_mapped_at: 2026-10-03
 ## APIs & External Services
 
 **Gameplay services:**
-- `server/index.js` serves the validated root-base production build, `/health`, and Colyseus transport on one HTTP origin. `--host`, `--port`, and `--build-dir` are implemented; omitted build directory defaults to repository `dist`. TLS/operator expansion belongs to 01-06.
+- `server/index.js` serves the validated root-base production build, `/health`, and Colyseus transport on one HTTP or HTTPS origin. `server/cli.js` owns bind/port/public/build/rules validation; omitted build directory defaults to repository `dist` independently of cwd. WebSocket upgrade requires the actual listen or advertised Origin. `server/tls.js` atomically stores/reuses the self-signed SAN/key pair under ignored restricted `.vod-server/tls/`; manual trust remains phase-end UAT. See `docs/MULTIPLAYER.md` for exact command and reverse-proxy semantics.
   - SDK/Client: pinned `@colyseus/sdk` in `src/network/onlineSession.js`, connecting through `location.origin` to the server-local `tdm` room.
   - Authority: room-bound session intentions drive isolated shared simulation; state replicates to participants and hit confirmations go only to the shooter. No account credentials or persistence.
 
