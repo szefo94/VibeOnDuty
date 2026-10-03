@@ -2,17 +2,17 @@
 gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Two-Client Authoritative TDM
-status: "Ready to execute remaining Wave3 plan 01-06"
-stopped_at: Completed 01-03-PLAN.md; remaining Wave3 plan01-06 is dependency-ready
-last_updated: "2026-10-03T16:21:29.236Z"
+status: Ready to execute Wave4 plan 01-04
+stopped_at: Completed 01-06-PLAN.md via artifact reconciliation; next dependency-ready plan 01-04
+last_updated: "2026-10-03T19:17:19.965Z"
 last_activity: 2026-10-03
-last_activity_desc: "Completed 01-03: 132 unit tests, 17 offline browser tests and 3 production multiplayer scenarios pass"
-state_head: 6a9cb6175772eb03f5692a933df9e4764a3b0a95
+last_activity_desc: "Completed 01-06: console TLS hosting; 176 unit, 5 multiplayer and 17 offline browser tests pass"
+state_head: bccdeeb5fd2517ca4da8280b03fe92d0222d9235
 progress:
   total_phases: 12
   completed_phases: 0
   total_plans: 7
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
 ---
 
@@ -28,29 +28,29 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 ## Current Position
 
 Phase: 01 (Two-Client Authoritative TDM) — EXECUTING
-Plan: 4 of 7
-Status: Ready to execute remaining Wave3 plan 01-06
-Next dependency-ready plan: 01-06; Wave4 plans wait for the remaining Wave3 completion.
+Plan: 5 of 7
+Status: Ready to execute Wave4 plan 01-04
+Next dependency-ready plan: 01-04 (Wave4); Wave3 is complete.
 Roadmap review: Accepted; Phase 1 execution resumed after package approval
-Last activity: 2026-10-03 — Completed 01-03: 132 unit tests, 17 offline browser tests and 3 production multiplayer scenarios pass
+Last activity: 2026-10-03 — Completed 01-06: console TLS hosting; 176 unit, 5 multiplayer and 17 offline browser tests pass
 
 Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: Approximately 106 min of wall time
-- Total execution time: Approximately 5.3 hours of wall time, including the 01-02 interruption
+- Total plans completed: 4
+- Average duration: Approximately 87 min of wall time
+- Total execution time: Approximately 5.8 hours of wall time, including the 01-02 interruption
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 3 | 318 min | 106 min |
+| 01 | 4 | 349 min | 87 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (18 min), 01-02 (214 min including interruption), 01-03 (86 min including browser-load investigation)
+- Last 5 plans: 01-01 (18 min), 01-02 (214 min including interruption), 01-03 (86 min including browser-load investigation), 01-06 (31 min)
 - Trend: Interrupted wall time is not comparable to uninterrupted execution effort
 
 **Per-Plan Metrics:**
@@ -60,6 +60,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P01 | 18 min | 3 tasks | 10 files |
 | Phase 01 P02 | 214min | 3 tasks | 17 files |
 | Phase 01 P03 | 86min | 2 tasks | 17 files |
+| Phase 01 P06 | 31min | 3 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -88,7 +89,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- Phase 1-2: Exact Node 24/Colyseus dependencies, isolated fixtures, the authoritative two-browser M4 path and minimum walk/sprint/jump/crouch/ADS are verified. Canonical stance-aware terrain and bounded raw-input rejection are implemented; Rapier is deferred. Full match lifecycle, TLS/public hosting, prediction/latency/reconnect, cross-device responsiveness and capacity remain for later plans.
+- Phase 1-2: Exact dependencies, isolated fixtures, the two-browser M4 tracer, minimum movement and protected console TLS hosting are verified. Canonical stance-aware terrain and bounded raw-input rejection are implemented; Rapier is deferred. Reliable combat, full match lifecycle and final presentation remain in Phase1. Real LAN trust/pointer-lock acceptance is pending. Prediction/latency/reconnect, cross-device responsiveness and capacity remain for later phases.
 - Phase 2-4: Confirm representative devices/network limits and actual ARM64 Pi model, 4 GB/16 GB configuration, cooling/storage/access; no capacity/FPS benchmarks are complete.
 - Phase 5-7: Movement/input rules, human rig/motion terms, installed Blender automation, and in-game visual acceptance remain open; no Blender connector is assumed.
 - Phase 8-10: Choose catalogs, balance/penetration, minimal identity/recovery/save lifetime, durable reward storage, and equipment/streak/UAV rules.
@@ -102,6 +103,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-10-03T16:21:29.212Z
-Stopped at: Completed 01-03-PLAN.md; remaining Wave3 plan01-06 is dependency-ready
+Last session: 2026-10-03T19:17:19.932Z
+Stopped at: Completed 01-06-PLAN.md via artifact reconciliation; next dependency-ready plan 01-04
 Resume file: None

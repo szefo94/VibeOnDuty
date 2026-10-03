@@ -86,6 +86,8 @@ status: complete
 
 ## Accomplishments
 
+Created implementation artifacts include `server/cli.js` and `server/tls.js`.
+
 - `parseArgs`, `validateAdvertisedAddress` and `loadRoomSettings` implement the exact command, help, port/bind/public/build/rules defaults and corrective errors. Public URL rejects credentials, wildcard destinations, whitespace/backslashes, raw query/fragment delimiters and normalized non-root paths. IPv6 links are bracketed. Explicit external HTTPS without direct TLS describes proxy termination; it never redirects the browser.
 - Default build serving resolves repository `dist` independently of caller cwd. Explicit fixture builds remain isolated OS-temp outputs. Static validation checks root-base asset references and actual asset files, rejects source/secret roots, symlinks and copied key/certificate files, and serves no repository fallback. Health is minimal; absent/foreign WebSocket Origins are rejected before framework preflight/handshake, while actual listen and configured advertised Origins work.
 - `loadOrCreateCertificate` generates async SHA-256 certificates with 30-day validity and explicit DNS/IPv4/IPv6 SAN, verifies identity/date/private-key matching and self-signature, and reuses valid bytes/mtime. Changed identity, corrupt JSON, mismatched key and expiry within24h regenerate. A locked, validated temp manifest is atomically renamed, publishing key/cert together. A failed rename leaves the old active manifest unchanged.
@@ -103,7 +105,7 @@ status: complete
 
 Normal hooks and supplied-root/HEAD guards ran before every commit under the parent-authorized temporary default-branch override. No packages were installed, no push occurred and no tracked files were deleted. Completion metadata is committed separately.
 
-## Verification Results
+## Automated Check Results
 
 | Command/check | Latest actual result |
 | --- | --- |
