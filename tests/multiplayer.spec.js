@@ -6,33 +6,243 @@ import { MOUSE_SENS } from '../src/config.js';
 // Keep the action/network trace; capture explicit gameplay evidence below.
 test.use({ trace: { mode: 'retain-on-failure', screenshots: false, snapshots: false } });
 
-test('teams: solo start and smaller-team assignments are visible in both browsers', async ({ browser }) => {
+test('teams: solo start and smaller-team assignments are visible in both browsers', async ({
+  browser,
+}) => {
   test.setTimeout(120000);
-  const fixture = await startMpFixture({ testSettings: { killLimit: 7, matchSeconds: 120, respawnSeconds: 2, friendlyFire: 0.5 } });
+  const fixture = await startMpFixture({
+    testSettings: { killLimit: 7, matchSeconds: 120, respawnSeconds: 2, friendlyFire: 0.5 },
+  });
   const contexts = [];
   try {
-    for (let i = 0; i < 2; i++) contexts.push(await browser.newContext({ viewport: { width: 800, height: 600 }, deviceScaleFactor: 0.25 }));
+    for (let i = 0; i < 2; i++)
+      contexts.push(
+        await browser.newContext({ viewport: { width: 800, height: 600 }, deviceScaleFactor: 0.25 })
+      );
     const [a, b] = await Promise.all(contexts.map((c) => c.newPage()));
-    await a.goto(fixture.url); await expect(a.locator('#mp-join-btn')).toBeEnabled({ timeout: 60000 }); await a.locator('#mp-join-btn').click();
+    await a.goto(fixture.url);
+    await expect(a.locator('#mp-join-btn')).toBeEnabled({ timeout: 60000 });
+    await a.locator('#mp-join-btn').click();
     await expect.poll(async () => (await snapshot(a)).phase).toBe('active');
     const solo = await snapshot(a);
     expect(solo.players).toHaveLength(1);
     expect(solo.players[0]).toMatchObject({ team: 'blue', joinOrdinal: 1, nickname: 'Guest-1' });
-    expect(solo.settings).toEqual({ killLimit: 7, matchSeconds: 120, respawnSeconds: 2, friendlyFire: 0.5, resultsSeconds: 15 });
+    expect(solo.settings).toEqual({
+      killLimit: 7,
+      matchSeconds: 120,
+      respawnSeconds: 2,
+      friendlyFire: 0.5,
+      resultsSeconds: 15,
+    });
     await expect(a.locator('#tdm-label')).toHaveText('ONLINE · BLUE');
     await expect(a.locator('#mp-switch-team')).toBeDisabled();
-    await b.goto(fixture.url); await expect(b.locator('#mp-join-btn')).toBeEnabled({ timeout: 60000 }); await b.locator('#mp-join-btn').click();
+    await b.goto(fixture.url);
+    await expect(b.locator('#mp-join-btn')).toBeEnabled({ timeout: 60000 });
+    await b.locator('#mp-join-btn').click();
     for (const page of [a, b]) {
       await expect.poll(async () => (await snapshot(page)).players.length).toBe(2);
-      expect((await snapshot(page)).players.map((p) => [p.team, p.joinOrdinal])).toEqual([['blue', 1], ['red', 2]]);
+      expect((await snapshot(page)).players.map((p) => [p.team, p.joinOrdinal])).toEqual([
+        ['blue', 1],
+        ['red', 2],
+      ]);
       await expect(page.locator('#mp-switch-team')).toBeDisabled();
-      await expect(page.locator('#tdm-us')).toHaveText('0'); await expect(page.locator('#tdm-them')).toHaveText('0');
+      await expect(page.locator('#tdm-us')).toHaveText('0');
+      await expect(page.locator('#tdm-them')).toHaveText('0');
     }
     await expect(b.locator('#tdm-label')).toHaveText('ONLINE · RED');
     expect((await snapshot(a)).timeRemaining).toBeLessThan(solo.timeRemaining);
     await a.screenshot({ path: test.info().outputPath('teams.png') });
-  } finally { await Promise.all(contexts.map((c) => c.close())); await fixture.stop(); }
+  } finally {
+    try {
+      await Promise.all(contexts.map((c) => c.close()));
+    } finally {
+      await fixture.stop();
+    }
+  }
 });
+
+for (const path of ['score', 'time'])
+  test(`lifecycle: two browsers complete ${path}-limit results and automatic same-settings rematch`, async ({
+    browser,
+  }) => {
+    test.setTimeout(240000);
+    const fixture = await startMpFixture({
+      testSettings: {
+        killLimit: path === 'score' ? 2 : 50,
+        matchSeconds: path === 'score' ? 180 : 6,
+        respawnSeconds: 5,
+        friendlyFire: 0.25,
+      },
+      env: { VOD_COMBAT_SEED: '7' },
+    });
+    const contexts = [];
+    try {
+      for (let i = 0; i < 2; i++)
+        contexts.push(
+          await browser.newContext({
+            viewport: { width: 800, height: 600 },
+            deviceScaleFactor: 0.25,
+          })
+        );
+      const [a, b] = await Promise.all(contexts.map((c) => c.newPage()));
+      for (const page of [a, b]) {
+        await page.goto(fixture.url);
+        await expect(page.locator('#mp-join-btn')).toBeEnabled({ timeout: 60000 });
+        await page.locator('#mp-join-btn').click();
+        await expect.poll(async () => (await snapshot(page)).sessionId).toBeTruthy();
+      }
+      await expect.poll(async () => (await snapshot(a)).players.length).toBe(2);
+      const first = await snapshot(a),
+        targetId = (await snapshot(b)).sessionId;
+      const own = (s, id) => s.players.find((p) => p.sessionId === id);
+      if (path === 'score') {
+        await aimAt(a, null);
+        await walkTo(a, first.sessionId, 62, 46);
+        await walkTo(a, first.sessionId, 62, 22);
+        await walkTo(a, first.sessionId, 34, 22);
+        await walkTo(a, first.sessionId, 34, 46);
+        await aimAt(a, targetId);
+        // Observe every server snapshot, so short death/respawn transitions survive runner scheduling.
+        await b.evaluate(() => {
+          const seen = { dead: false, life: 0, freshInventory: false };
+          window.__lifecycleSeen = () => ({ ...seen });
+          setInterval(() => {
+            const s = window.__mpDebug(),
+              me = s.players.find((p) => p.sessionId === s.sessionId);
+            if (!me) return;
+            if (!me.alive) seen.dead = true;
+            seen.life = Math.max(seen.life, me.lifeGeneration);
+            if (
+              me.lifeGeneration === 2 &&
+              me.alive &&
+              me.ammo === 30 &&
+              me.reserve === 90 &&
+              me.health === 100
+            )
+              seen.freshInventory = true;
+          }, 10);
+        });
+        await a.mouse.down();
+        try {
+          await expect
+            .poll(async () => own(await snapshot(b), targetId).alive, { timeout: 8000 })
+            .toBe(false);
+        } finally {
+          await a.mouse.up();
+        }
+        await expect(b.locator('#mp-switch-team')).toBeEnabled();
+        await expect(b.locator('#mp-respawn')).toContainText('Respawn in');
+        // Two balanced members cannot become0v2, including at death.
+        await b.locator('#mp-switch-team').click();
+        await expect(b.locator('#mp-team-rejection')).toContainText('team balance');
+        for (const page of [a, b]) expect(own(await snapshot(page), targetId).team).toBe('red');
+        await expect.poll(async () => own(await snapshot(b), targetId).lifeGeneration).toBe(2);
+        await expect
+          .poll(() => b.evaluate(() => window.__lifecycleSeen().freshInventory))
+          .toBe(true);
+        expect((await snapshot(a)).scoreBlue).toBe(1);
+        await aimAt(a, targetId);
+        await a.mouse.down();
+        try {
+          await expect
+            .poll(async () => (await snapshot(a)).phase, { timeout: 8000 })
+            .toBe('results');
+        } finally {
+          await a.mouse.up();
+        }
+      }
+      for (const page of [a, b])
+        await expect
+          .poll(async () => (await snapshot(page)).phase, { timeout: 12000 })
+          .toBe('results');
+      const result = await snapshot(a);
+      expect(result).toMatchObject({
+        winner: path === 'score' ? 'blue' : 'draw',
+        scoreBlue: path === 'score' ? 2 : 0,
+        scoreRed: 0,
+        matchGeneration: 1,
+      });
+      expect(result.resultsEndsAtMs - result.nowMs).toBeLessThanOrEqual(15000);
+      expect(result.resultsRemaining).toBeGreaterThan(13);
+      for (const page of [a, b]) {
+        const s = await snapshot(page);
+        expect([s.winner, s.scoreBlue, s.scoreRed, s.resultsEndsAtMs]).toEqual([
+          result.winner,
+          result.scoreBlue,
+          result.scoreRed,
+          result.resultsEndsAtMs,
+        ]);
+        await expect(page.locator('#mp-results')).toBeVisible();
+        await expect(page.locator('#mp-result-title')).toHaveText(
+          path === 'score' ? 'BLUE WINS' : 'DRAW'
+        );
+        await expect(page.locator('#mp-result-countdown')).toContainText('Rematch in');
+        await expect(page.locator('#mp-switch-team')).toBeEnabled();
+      }
+      await a.screenshot({ path: test.info().outputPath(`results-${path}.png`) });
+      if (path === 'time') {
+        // A valid solo results switch persists, then a fresh connection joins the smaller team.
+        await b.locator('#mp-match-leave').click();
+        await expect.poll(async () => (await snapshot(a)).players.length).toBe(1);
+        await a.locator('#mp-switch-team').click();
+        await expect(a.locator('#tdm-label')).toHaveText('ONLINE · RED');
+        await b.locator('#mp-join-btn').click();
+        await expect.poll(async () => (await snapshot(a)).players.length).toBe(2);
+        await expect.poll(async () => (await snapshot(b)).sessionId).toBeTruthy();
+        const replacement = (await snapshot(b)).sessionId;
+        await expect
+          .poll(async () => {
+            const s = await snapshot(b);
+            return (
+              s.players.some((p) => p.sessionId === replacement) &&
+              s.players.some((p) => p.sessionId === first.sessionId)
+            );
+          })
+          .toBe(true);
+        expect(replacement).not.toBe(targetId);
+        for (const page of [a, b]) {
+          const s = await snapshot(page);
+          expect(own(s, first.sessionId).team).toBe('red');
+          expect(own(s, replacement).team).toBe('blue');
+        }
+      }
+      // Wait using authority milliseconds; never click to begin the rematch.
+      await expect
+        .poll(async () => (await snapshot(a)).nowMs, { timeout: 16000 })
+        .toBeGreaterThanOrEqual(result.resultsEndsAtMs - 1000);
+      expect((await snapshot(a)).phase).toBe('results');
+      await expect.poll(async () => (await snapshot(a)).matchGeneration, { timeout: 3000 }).toBe(2);
+      for (const page of [a, b]) {
+        await expect.poll(async () => (await snapshot(page)).phase).toBe('active');
+        const s = await snapshot(page);
+        expect(s.settings).toEqual(first.settings);
+        expect([s.scoreBlue, s.scoreRed, s.winner]).toEqual([0, 0, '']);
+        expect(
+          s.players.every(
+            (p) =>
+              p.alive &&
+              p.health === 100 &&
+              p.ammo === 30 &&
+              p.reserve === 90 &&
+              p.kills === 0 &&
+              p.deaths === 0
+          )
+        ).toBe(true);
+        expect(s.lastConfirmedHit).toBeNull();
+        await expect(page.locator('#mp-results')).toBeHidden();
+      }
+      expect((await snapshot(a)).startedAtMs + 1e-7).toBeGreaterThanOrEqual(result.resultsEndsAtMs);
+      await expect(a.locator('#mp-resume')).toBeVisible();
+      await a.locator('#mp-resume').click();
+      await expect.poll(() => a.evaluate(() => !!document.pointerLockElement)).toBe(true);
+    } finally {
+      try {
+        await Promise.all(contexts.map((c) => c.close()));
+      } finally {
+        await fixture.stop();
+      }
+    }
+  });
 
 /** @param {import('@playwright/test').Page} page */
 async function snapshot(page) {
@@ -42,7 +252,10 @@ async function snapshot(page) {
 async function focusControls(page) {
   await page.bringToFront();
   if (!(await page.evaluate(() => !!document.pointerLockElement))) {
-    await page.locator('#pause-resume-btn').click();
+    const resume = (await page.locator('#mp-resume').isVisible())
+      ? '#mp-resume'
+      : '#pause-resume-btn';
+    await page.locator(resume).click({ timeout: 10000 });
     await expect.poll(() => page.evaluate(() => !!document.pointerLockElement)).toBe(true);
   }
 }

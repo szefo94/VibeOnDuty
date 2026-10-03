@@ -15,6 +15,132 @@ afterAll(async () => {
 }, 15000);
 
 describe('real room input boundary', () => {
+  it('real SDK old-life and old-match replay cannot survive respawn, results, rematch or disconnect', async () => {
+    const fixture = await startMpFixture({
+      testSettings: { killLimit: 2, matchSeconds: 120, respawnSeconds: 0.5 },
+      env: { VOD_COMBAT_SEED: '7' },
+    });
+    let a, b, replacement;
+    try {
+      a = await createHostileClient(fixture.url, { create: true });
+      b = await createHostileClient(fixture.url, { roomId: a.roomId });
+      await waitFor(() => Object.keys(a.snapshot().players).length === 2);
+      async function route(x, z) {
+        const until = Date.now() + 8000;
+        while (Date.now() < until) {
+          const p = a.snapshot().players[a.sessionId],
+            dx = x - p.x,
+            dz = z - p.z;
+          if (Math.hypot(dx, dz) < 0.3) {
+            const stop = a.command({ neutral: true });
+            a.send(stop);
+            await waitFor(
+              () =>
+                a.snapshot().players[a.sessionId].lastConsumedSeq >= stop.seq &&
+                !a.snapshot().players[a.sessionId].moving
+            );
+            return;
+          }
+          a.send(
+            a.command({
+              moveX: Math.abs(dx) > 0.2 ? Math.sign(dx) : 0,
+              moveZ: Math.abs(dz) > 0.2 ? -Math.sign(dz) : 0,
+            })
+          );
+          await new Promise((ok) => setTimeout(ok, 40));
+        }
+        throw new Error('SDK lifecycle route failed');
+      }
+      await route(62, 46);
+      await route(62, 22);
+      await route(34, 22);
+      await route(34, 46);
+      const oldLife = b.command({ fire: true, moveX: 1 });
+      async function kill() {
+        const until = Date.now() + 4000;
+        while (Date.now() < until && b.snapshot().players[b.sessionId].alive) {
+          const p = a.snapshot().players[a.sessionId],
+            t = b.snapshot().players[b.sessionId];
+          a.send(
+            a.command({
+              fire: true,
+              yaw: Math.atan2(p.x - t.x, p.z - t.z),
+              pitch: Math.atan2(t.y - p.y - 0.1, Math.hypot(t.x - p.x, t.z - p.z)),
+            })
+          );
+          await new Promise((ok) => setTimeout(ok, 100));
+        }
+        expect(b.snapshot().players[b.sessionId].alive).toBe(false);
+      }
+      await kill();
+      b.send(oldLife);
+      expect(a.snapshot().scoreBlue).toBe(1);
+      await waitFor(() => b.snapshot().players[b.sessionId].lifeGeneration === 2);
+      expect(b.snapshot().players[b.sessionId]).toMatchObject({
+        alive: true,
+        health: 100,
+        ammo: 30,
+        reserve: 90,
+        lifeGeneration: 2,
+      });
+      const count = b.rejections.length;
+      b.send({ ...oldLife, ackTick: b.snapshot().currentTick });
+      await waitFor(() => b.rejections.length > count);
+      expect(b.rejections.at(-1)).toBe('wrong_generation');
+      expect(b.snapshot().players[b.sessionId].ammo).toBe(30);
+      await kill();
+      await waitFor(() => a.snapshot().phase === 'results');
+      expect(a.snapshot()).toMatchObject({ winner: 'blue', scoreBlue: 2, scoreRed: 0 });
+      const ending = a.snapshot(),
+        oldMatch = a.command({ fire: true, moveX: 1 });
+      a.send(oldMatch);
+      await waitFor(() => a.snapshot().matchGeneration === 2, 17000);
+      expect(a.snapshot()).toMatchObject({
+        phase: 'active',
+        matchGeneration: 2,
+        scoreBlue: 0,
+        scoreRed: 0,
+      });
+      expect(a.snapshot().startedAtMs - ending.resultsEndsAtMs).toBeLessThan(34);
+      expect(a.snapshot().startedAtMs).toBeGreaterThanOrEqual(ending.resultsEndsAtMs - 0.00001);
+      const matchCount = a.rejections.length;
+      a.send({ ...oldMatch, ackTick: a.snapshot().currentTick });
+      await waitFor(() => a.rejections.length > matchCount);
+      expect(a.rejections.at(-1)).toBe('wrong_generation');
+      expect(a.snapshot().players[a.sessionId].ammo).toBe(30);
+      const departingId = b.sessionId;
+      b.send(b.command({ fire: true, moveX: 1 }));
+      await b.close();
+      await waitFor(() => !a.snapshot().players[departingId]);
+      expect(a.snapshot().players[departingId]).toBeUndefined();
+      replacement = await createHostileClient(fixture.url, { roomId: a.roomId });
+      expect(replacement.sessionId).not.toBe(departingId);
+      expect(replacement.snapshot().players[replacement.sessionId]).toMatchObject({
+        lifeGeneration: 1,
+        health: 100,
+        ammo: 30,
+      });
+      a.send({ ...a.command({ fire: true }), sessionId: departingId });
+      await waitFor(() => a.rejections.at(-1) === 'invalid_shape');
+      expect(a.rejections.at(-1)).toBe('invalid_shape');
+      expect(replacement.snapshot().players[replacement.sessionId].health).toBe(100);
+      const roomId = a.roomId;
+      await Promise.all([a.close(), replacement.close()]);
+      await new Promise((ok) => setTimeout(ok, 1100));
+      replacement = await createHostileClient(fixture.url, { roomId });
+      expect(replacement.snapshot()).toMatchObject({
+        phase: 'active',
+        matchGeneration: 3,
+        scoreBlue: 0,
+        scoreRed: 0,
+      });
+      expect(Object.keys(replacement.snapshot().players)).toEqual([replacement.sessionId]);
+      expect(replacement.snapshot().timeRemaining).toBeGreaterThan(119);
+    } finally {
+      await Promise.all([a?.close(), b?.close(), replacement?.close()]);
+      await fixture.stop();
+    }
+  }, 60000);
   it('binds guest identity and team requests to membership, life and operator rules', async () => {
     const a = await createHostileClient(url, { create: true, joinOptions: { protocolVersion: 1, nickname: '\u0000<script>guest</script>', team: 'red', settings: { killLimit: 999, matchSeconds: 9999 } } });
     const b = await createHostileClient(url, { roomId: a.roomId });
@@ -75,23 +201,65 @@ describe('real room input boundary', () => {
         const deadline = Date.now() + 6000;
         while (Date.now() < deadline) {
           const me = a.snapshot().players[a.sessionId];
-          const dx = x - me.x, dz = z - me.z;
-          if (Math.hypot(dx, dz) < 0.3) { a.send(a.command({ neutral: true })); return; }
-          a.send(a.command({ moveX: Math.abs(dx) > 0.2 ? Math.sign(dx) : 0, moveZ: Math.abs(dz) > 0.2 ? -Math.sign(dz) : 0 }));
+          const dx = x - me.x,
+            dz = z - me.z;
+          if (Math.hypot(dx, dz) < 0.3) {
+            const stop = a.command({ neutral: true });
+            a.send(stop);
+            await waitFor(
+              () =>
+                !a.snapshot().players[a.sessionId].moving &&
+                a.snapshot().players[a.sessionId].lastConsumedSeq >= stop.seq
+            );
+            expect(a.snapshot().players[a.sessionId].lastConsumedSeq).toBeGreaterThanOrEqual(
+              stop.seq
+            );
+            return;
+          }
+          a.send(
+            a.command({
+              moveX: Math.abs(dx) > 0.2 ? Math.sign(dx) : 0,
+              moveZ: Math.abs(dz) > 0.2 ? -Math.sign(dz) : 0,
+            })
+          );
           await new Promise((resolve) => setTimeout(resolve, 40));
         }
         throw new Error(`SDK route did not reach (${x},${z})`);
       }
-      await route(62, 46); await route(62, 22); await route(34, 22); await route(34, 46);
-      const me = a.snapshot().players[a.sessionId], target = b.snapshot().players[b.sessionId];
-      a.send(a.command({ fire: true, yaw: Math.atan2(me.x - target.x, me.z - target.z), pitch: Math.atan2(target.y - me.y - 0.1, Math.hypot(target.x - me.x, target.z - me.z)) }));
-      await waitFor(() => a.confirmations.length === 1 && b.snapshot().players[b.sessionId].health === 72);
-      expect(a.confirmations, JSON.stringify({ state: a.snapshot(), rejections: a.rejections })).toHaveLength(1);
-      expect(a.confirmations[0]).toMatchObject({ shooterSessionId: a.sessionId, targetSessionId: b.sessionId, damage: 28, shotId: 1, eventId: 1, targetLifeGeneration: 1 });
+      await route(62, 46);
+      await route(62, 22);
+      await route(34, 22);
+      await route(34, 46);
+      const me = a.snapshot().players[a.sessionId],
+        target = b.snapshot().players[b.sessionId];
+      a.send(
+        a.command({
+          fire: true,
+          yaw: Math.atan2(me.x - target.x, me.z - target.z),
+          pitch: Math.atan2(target.y - me.y - 0.1, Math.hypot(target.x - me.x, target.z - me.z)),
+        })
+      );
+      await waitFor(
+        () => a.confirmations.length === 1 && b.snapshot().players[b.sessionId].health === 72
+      );
+      expect(
+        a.confirmations,
+        JSON.stringify({ state: a.snapshot(), rejections: a.rejections })
+      ).toHaveLength(1);
+      expect(a.confirmations[0]).toMatchObject({
+        shooterSessionId: a.sessionId,
+        targetSessionId: b.sessionId,
+        damage: 28,
+        shotId: 1,
+        eventId: 1,
+        targetLifeGeneration: 1,
+      });
       expect(a.snapshot().players[b.sessionId].health).toBe(72);
       expect(b.snapshot().players[b.sessionId].health).toBe(72);
       expect(b.confirmations).toEqual([]);
-    } finally { await Promise.all([a.close(), b.close()]); }
+    } finally {
+      await Promise.all([a.close(), b.close()]);
+    }
   }, 30000);
   it('reports raw nonfinite rejection without mutation over the real SDK transport', async () => {
     const client = await createHostileClient(url, { create: true });
@@ -234,6 +402,130 @@ describe('real room input boundary', () => {
 });
 
 describe('room boundary with controlled server clock', () => {
+  it('life and match resets retire queued commands, sequence cursors and delayed confirmations', () => {
+    const room = new TdmRoom();
+    room.simulation = createSimulation(
+      {
+        width: 12,
+        height: 8,
+        H2: 1.4,
+        style: 'rooftop',
+        tiles: Array.from({ length: 8 }, () => Array(12).fill(0)),
+        heightmap: Array.from({ length: 8 }, () => Array(12).fill(0)),
+        spawnAttacker: { x: 10, z: 10 },
+        spawnDefender: { x: 14, z: 10 },
+      },
+      { killLimit: 2, respawnSeconds: 0.1 },
+      { randomSeed: 7 }
+    );
+    const a = room.simulation.addPlayer('a'),
+      b = room.simulation.addPlayer('b');
+    b.health = 20;
+    room.inputGates.set('a', createInputGate());
+    room.inputGates.set('b', createInputGate());
+    room.syncState();
+    const command = (id, seq, changes = {}) => ({
+      protocolVersion: 1,
+      seq,
+      ackTick: room.state.currentTick,
+      matchGeneration: room.state.matchGeneration,
+      lifeGeneration: room.state.players.get(id).lifeGeneration,
+      moveX: 0,
+      moveZ: 0,
+      yaw: -Math.PI / 2,
+      pitch: 0,
+      fire: false,
+      reload: false,
+      sprint: false,
+      jump: false,
+      crouch: false,
+      aiming: false,
+      neutral: false,
+      ...changes,
+    });
+    const sent = [];
+    room.clients.push({ sessionId: 'a', send: (type, event) => sent.push({ type, event }) });
+    const oldLife = command('b', 5, { fire: true, moveX: 1 });
+    room.inputGates
+      .get('a')
+      .receive(
+        command('a', 4, { fire: true }),
+        room.inputContext(room.state.players.get('a'), -1),
+        0
+      );
+    room.consumeInputs(0);
+    room.simulation.stepSimulation(0.1);
+    room.syncState();
+    expect(b.alive).toBe(false);
+    const delayed = room.simulation.events.map((e) => ({ ...e }));
+    room.inputGates
+      .get('b')
+      .receive(oldLife, room.inputContext(room.state.players.get('b'), -1), 100);
+    room.consumeInputs(100);
+    room.simulation.stepSimulation(0.1);
+    room.syncState();
+    expect(b.lifeGeneration).toBe(2);
+    expect(room.inputGates.get('b').lastSeq).toBe(-1);
+    expect(room.inputGates.get('b').pendingCount).toBe(0);
+    room.simulation.events.push(...delayed);
+    room.deliverCombatEvents();
+    expect(sent).toEqual([]);
+    expect(
+      room.inputGates
+        .get('b')
+        .receive(
+          { ...oldLife, ackTick: room.state.currentTick },
+          room.inputContext(room.state.players.get('b'), -1),
+          200
+        ).reason
+    ).toBe('wrong_generation');
+    b.health = 20;
+    room.inputGates
+      .get('a')
+      .receive(
+        command('a', 8, { fire: true }),
+        room.inputContext(room.state.players.get('a'), 4),
+        200
+      );
+    room.consumeInputs(200);
+    room.simulation.stepSimulation(0.1);
+    room.syncState();
+    expect(room.state.phase).toBe('results');
+    const oldMatch = command('a', 9, { fire: true });
+    room.inputGates
+      .get('a')
+      .receive(oldMatch, room.inputContext(room.state.players.get('a'), 8), 300);
+    for (let i = 0; i < 150; i++) {
+      room.consumeInputs(300 + i * 100);
+      room.simulation.stepSimulation(0.1);
+      room.syncState();
+    }
+    expect(room.state).toMatchObject({
+      phase: 'active',
+      matchGeneration: 2,
+      scoreBlue: 0,
+      scoreRed: 0,
+    });
+    expect(room.inputGates.get('a').lastSeq).toBe(-1);
+    expect(room.inputGates.get('a').pendingCount).toBe(0);
+    expect(room.inputGenerations.size).toBe(0);
+    expect(room.lastDeliveredEventId).toBe(0);
+    expect(a.ammo).toBe(30);
+    expect(b.health).toBe(100);
+    expect(room.simulation.events).toEqual([]);
+    expect(
+      room.inputGates
+        .get('a')
+        .receive(
+          { ...oldMatch, ackTick: 0 },
+          room.inputContext(room.state.players.get('a'), -1),
+          16000
+        ).reason
+    ).toBe('wrong_generation');
+    room.simulation.events.push(...delayed);
+    room.deliverCombatEvents();
+    expect(sent).toEqual([]);
+  });
   function fixture() {
     const room = new TdmRoom();
     room.simulation.addPlayer('a');

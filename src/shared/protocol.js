@@ -145,6 +145,11 @@ export function createInputGate() {
     clear: () => {
       pending = [];
     },
+    // Reset command cursors across authority generations, preserving flood budget.
+    resetSequence: () => {
+      pending = [];
+      lastSeq = -1;
+    },
     get pendingCount() {
       return pending.length;
     },

@@ -74,9 +74,11 @@ describe('authoritative minimum movement', () => {
     const before = { ...body };
     for (const dt of [0, -1, NaN, Infinity, 0.101]) stepMovement(body, command(2, { moveX: 1 }), sim.world, dt);
     expect(body).toEqual(before);
-    const ended = createSimulation(flat, { matchSeconds: 0 });
+    const ended = createSimulation(flat, { matchSeconds: 1 });
     const frozen = ended.addPlayer('a');
-    ended.queueInput('a', command(1, { moveX: 1 }));
+    for (let i = 0; i < 30; i++) ended.stepSimulation(1 / 30);
+    expect(ended.snapshot().phase).toBe('results');
+    expect(ended.queueInput('a', command(1, { ackTick: ended.snapshot().currentTick, moveX: 1 }))).toBe(false);
     ended.stepSimulation(1 / 30);
     expect(frozen.x).toBe(10);
   });

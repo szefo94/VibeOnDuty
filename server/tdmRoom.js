@@ -12,6 +12,8 @@ export const PlayerState = schema(
     nickname: t.string(),
     joinOrdinal: t.number(),
     respawnAtMs: t.float64(),
+    kills: t.number(),
+    deaths: t.number(),
     x: t.number(),
     y: t.number(),
     z: t.number(),
@@ -34,7 +36,16 @@ export const PlayerState = schema(
   },
   'PlayerState'
 );
-export const SettingsState = schema({ killLimit: t.number(), matchSeconds: t.float64(), respawnSeconds: t.float64(), friendlyFire: t.float64(), resultsSeconds: t.number() }, 'SettingsState');
+export const SettingsState = schema(
+  {
+    killLimit: t.number(),
+    matchSeconds: t.float64(),
+    respawnSeconds: t.float64(),
+    friendlyFire: t.float64(),
+    resultsSeconds: t.number(),
+  },
+  'SettingsState'
+);
 export const MatchState = schema(
   {
     players: t.map(PlayerState),
@@ -71,8 +82,21 @@ export class TdmRoom extends Room {
     scoreAlpha: 0,
     scoreBravo: 0,
     timeRemaining: 600,
-    settings: new SettingsState({ killLimit: 50, matchSeconds: 600, respawnSeconds: 3, friendlyFire: 0.25, resultsSeconds: 15 }),
-    scoreBlue: 0, scoreRed: 0, winner: '', nowMs: 0, startedAtMs: 0, endsAtMs: 0, resultsEndsAtMs: 0, resultsRemaining: 0,
+    settings: new SettingsState({
+      killLimit: 50,
+      matchSeconds: 600,
+      respawnSeconds: 3,
+      friendlyFire: 0.25,
+      resultsSeconds: 15,
+    }),
+    scoreBlue: 0,
+    scoreRed: 0,
+    winner: '',
+    nowMs: 0,
+    startedAtMs: 0,
+    endsAtMs: 0,
+    resultsEndsAtMs: 0,
+    resultsRemaining: 0,
   });
   simulation = createSimulation(bunkerData);
   /** @type {Map<string,ReturnType<typeof createInputGate>>} */
@@ -87,7 +111,11 @@ export class TdmRoom extends Room {
   onCreate(options = {}) {
     if (options.settings) {
       const { friendlyFire, ...settings } = options.settings;
-      this.simulation = createSimulation(bunkerData, { ...settings, friendlyDamage: friendlyFire }, { randomSeed: options.combatSeed });
+      this.simulation = createSimulation(
+        bunkerData,
+        { ...settings, friendlyDamage: friendlyFire },
+        { randomSeed: options.combatSeed }
+      );
       this.state.timeRemaining = settings.matchSeconds;
     }
     this.maxClients = 2;
@@ -164,16 +192,21 @@ export class TdmRoom extends Room {
       if (
         event.matchGeneration !== this.state.matchGeneration ||
         event.eventId <= this.lastDeliveredEventId
-      ) continue;
+      )
+        continue;
       this.lastDeliveredEventId = event.eventId;
       const shooter = this.state.players.get(event.shooterSessionId);
       const target = this.state.players.get(event.targetSessionId);
       if (
-        !shooter || !target ||
+        !shooter ||
+        !target ||
         shooter.lifeGeneration !== event.lifeGeneration ||
         target.lifeGeneration !== event.targetLifeGeneration
-      ) continue;
-      this.clients.find((c) => c.sessionId === event.shooterSessionId)?.send('hit-confirmed', event);
+      )
+        continue;
+      this.clients
+        .find((c) => c.sessionId === event.shooterSessionId)
+        ?.send('hit-confirmed', event);
     }
   }
   /** @param {import('@colyseus/core').Client} client @param {unknown} [options] */
@@ -221,11 +254,19 @@ export class TdmRoom extends Room {
   }
   syncState() {
     const s = this.simulation.snapshot();
+    if (this.state.matchGeneration !== s.matchGeneration) {
+      for (const gate of this.inputGates.values()) gate.resetSequence();
+      this.inputGenerations.clear();
+      this.lastDeliveredEventId = 0;
+    }
     for (const p of s.players) {
       let replicated = this.state.players.get(p.sessionId);
       if (!replicated) {
         replicated = new PlayerState();
         this.state.players.set(p.sessionId, replicated);
+      } else if (replicated.lifeGeneration !== p.lifeGeneration) {
+        this.inputGates.get(p.sessionId)?.resetSequence();
+        this.inputGenerations.delete(p.sessionId);
       }
       const { shootRemaining: _shoot, airVelX: _ax, airVelZ: _az, jumpHeld: _jump, ...fields } = p;
       Object.assign(replicated, fields);
@@ -241,6 +282,9 @@ export class TdmRoom extends Room {
     this.state.nowMs = s.nowMs;
     this.state.startedAtMs = s.startedAtMs;
     this.state.endsAtMs = s.endsAtMs;
+    this.state.winner = s.winner;
+    this.state.resultsEndsAtMs = s.resultsEndsAtMs;
+    this.state.resultsRemaining = s.resultsRemaining;
     Object.assign(this.state.settings, s.settings);
   }
 }

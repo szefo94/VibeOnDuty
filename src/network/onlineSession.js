@@ -12,7 +12,12 @@ import { buildLevel } from '../level.js';
 import { deactivateAllEnemies } from '../entities/enemies.js';
 import { clearAllDrones } from '../entities/drone.js';
 import { buildEnemyMesh, disposeEnemyMesh, usingGLTF } from '../builders/enemyGLTF.js';
-import { enterLocoMode, exitLocoMode, setLocoWeights, crossfade } from '../builders/enemyAnimations.js';
+import {
+  enterLocoMode,
+  exitLocoMode,
+  setLocoWeights,
+  crossfade,
+} from '../builders/enemyAnimations.js';
 import { show1pWeapon, show3pWeapon } from '../builders/weapon.js';
 import { spawnHitMarker, tickHitMarker } from '../hud/hitmarker.js';
 import { spawnDamageNumber } from '../fx/damageNumbers.js';
@@ -44,6 +49,9 @@ let joining = false,
 let sessionEpoch = 0;
 let lastSentTime = 0;
 let lastTeamRejection = '';
+let inputGeneration = '';
+let displayedPhase = '';
+let displayedAlive = true;
 /** @type {Hit|null} */ let lastConfirmedHit = null;
 let lastEventId = 0;
 /** @type {string|null} */ let lastInputRejection = null;
@@ -108,7 +116,13 @@ function onMouseDown(event) {
 /** Capture touch actions before the offline dispatcher; cross-device movement expands later.
  * @param {TouchEvent} event */
 function onTouch(event) {
-  if (!isOnline() || /** @type {HTMLElement} */ (event.target)?.closest('#mp-leave-btn, #pause-mainmenu-btn, #pause-resume-btn')) return;
+  if (
+    !isOnline() ||
+    /** @type {HTMLElement} */ (event.target)?.closest(
+      '#mp-leave-btn, #pause-mainmenu-btn, #pause-resume-btn, #mp-match-controls button'
+    )
+  )
+    return;
   event.stopImmediatePropagation();
   event.preventDefault();
   if (event.type === 'touchstart') showStatus('Online: use WASD, mouse and R in this slice');
@@ -142,8 +156,12 @@ function onBlur() {
   // action edges immediately rather than waiting for the next heartbeat.
   sendIntent(true);
 }
-function onLockChange() { if (!document.pointerLockElement) onBlur(); }
-function onVisibilityChange() { if (document.hidden) onBlur(); }
+function onLockChange() {
+  if (!document.pointerLockElement) onBlur();
+}
+function onVisibilityChange() {
+  if (document.hidden) onBlur();
+}
 function installHandlers() {
   document.addEventListener('keydown', onKeyDown, true);
   document.addEventListener('keyup', onKeyUp, true);
@@ -199,7 +217,10 @@ export async function joinOnline() {
   try {
     /** @type {import('@colyseus/sdk').Room<State>} */
     const joined = await new Client(location.origin).joinOrCreate('tdm', { protocolVersion: 1 });
-    if (epoch !== sessionEpoch) { await joined.leave(); return; }
+    if (epoch !== sessionEpoch) {
+      await joined.leave();
+      return;
+    }
     room = joined;
     seq = 0;
     yaw = 0;
@@ -207,22 +228,32 @@ export async function joinOnline() {
     lastConfirmedHit = null;
     lastEventId = 0;
     lastInputRejection = null;
+    inputGeneration = '';
+    displayedPhase = '';
+    displayedAlive = true;
     room.onMessage('inputRejected', (/** @type {{reason:string}} */ rejection) => {
+      if (room !== joined || epoch !== sessionEpoch) return;
       lastInputRejection = rejection.reason;
     });
     room.onMessage('teamRejected', (/** @type {{reason:string}} */ rejection) => {
+      if (room !== joined || epoch !== sessionEpoch) return;
       lastTeamRejection = rejection.reason;
     });
     heartbeat = setInterval(sendHeartbeat, 1000 / 30);
     room.onMessage(
       'hit-confirmed',
       /** @param {Hit} event */ (event) => {
+        if (room !== joined || epoch !== sessionEpoch) return;
+        syncInputGeneration();
         const me = room?.state?.players?.get(room.sessionId);
+        const target = room?.state.players.get(event.targetSessionId);
         if (
           !me ||
           event.shooterSessionId !== room?.sessionId ||
           event.matchGeneration !== room?.state.matchGeneration ||
           event.lifeGeneration !== me.lifeGeneration ||
+          !target ||
+          event.targetLifeGeneration !== target.lifeGeneration ||
           event.eventId <= lastEventId
         )
           return;
@@ -305,6 +336,7 @@ export async function leaveOnline() {
 /** @param {boolean} [forceNeutral] */
 function sendIntent(forceNeutral = false) {
   if (!room?.state?.players) return;
+  syncInputGeneration();
   const me = room.state.players.get(room.sessionId);
   if (!me) return;
   lastSentTime = performance.now();
@@ -313,7 +345,8 @@ function sendIntent(forceNeutral = false) {
     void leaveOnline();
     return;
   }
-  const active = !forceNeutral && locked && !document.hidden && me.alive && room.state.phase === 'active';
+  const active =
+    !forceNeutral && locked && !document.hidden && me.alive && room.state.phase === 'active';
   room.send('input', {
     protocolVersion: 1,
     seq: ++seq,
@@ -376,18 +409,32 @@ export function tickOnline(dt) {
     document.getElementById('tdm-bar')?.style.setProperty('display', 'block');
     const label = document.getElementById('tdm-label');
     if (label) label.textContent = `ONLINE · ${me.team.toUpperCase()}`;
-    const us = document.getElementById('tdm-us'), them = document.getElementById('tdm-them');
-    if (us) us.textContent = String(me.team === 'blue' ? room.state.scoreBlue : room.state.scoreRed);
-    if (them) them.textContent = String(me.team === 'blue' ? room.state.scoreRed : room.state.scoreBlue);
+    const us = document.getElementById('tdm-us'),
+      them = document.getElementById('tdm-them');
+    if (us)
+      us.textContent = String(me.team === 'blue' ? room.state.scoreBlue : room.state.scoreRed);
+    if (them)
+      them.textContent = String(me.team === 'blue' ? room.state.scoreRed : room.state.scoreBlue);
     const seconds = Math.ceil(room.state.timeRemaining);
     const timer = document.getElementById('tdm-timer');
-    if (timer) timer.textContent = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
-    document.getElementById('reloadwrap')?.style.setProperty('display', me.reloadRemaining > 0 ? 'block' : 'none');
+    if (timer)
+      timer.textContent = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+    const limit = document.getElementById('tdm-limit');
+    if (limit) limit.textContent = `FIRST TO ${room.state.settings.killLimit}`;
+    document
+      .getElementById('reloadwrap')
+      ?.style.setProperty('display', me.reloadRemaining > 0 ? 'block' : 'none');
     updateWeapon(dt, me.moving, me.sprinting, me.crouching, false);
-    const switchButton = /** @type {HTMLButtonElement|null} */ (document.getElementById('mp-switch-team'));
+    const switchButton = /** @type {HTMLButtonElement|null} */ (
+      document.getElementById('mp-switch-team')
+    );
     if (switchButton) switchButton.disabled = me.alive && room.state.phase !== 'results';
     const rejection = document.getElementById('mp-team-rejection');
-    if (rejection) rejection.textContent = lastTeamRejection ? `Team switch rejected: ${lastTeamRejection.replace(/_/g, ' ')}` : '';
+    if (rejection)
+      rejection.textContent = lastTeamRejection
+        ? `Team switch rejected: ${lastTeamRejection.replace(/_/g, ' ')}`
+        : '';
+    renderMatchState(me);
   }
   const active = new Set();
   room.state.players.forEach((p) => {
@@ -402,9 +449,12 @@ export function tickOnline(dt) {
     actor.mesh.rotation.y = p.yaw + actor.facingOffset;
     if (!p.alive || p.crouching || !p.onGround) {
       exitLocoMode(actor);
-      crossfade(actor, !p.alive ? 'death' : p.crouching ? (p.moving ? 'crouch_walk' : 'crouch') : 'jump_loop', 0.2);
-    }
-    else {
+      crossfade(
+        actor,
+        !p.alive ? 'death' : p.crouching ? (p.moving ? 'crouch_walk' : 'crouch') : 'jump_loop',
+        0.2
+      );
+    } else {
       enterLocoMode(actor);
       setLocoWeights(actor.actions, p.moving ? (p.sprinting ? 1 : 0.45) : 0, 0);
     }
@@ -428,7 +478,10 @@ function frozen(value) {
 export function getOnlineSnapshot() {
   const s = room?.state;
   // Legacy Player declarations omit these existing presentation fields.
-  const view = /** @type {{weapon:string,punching:boolean,throwingNade:boolean,dancing:boolean,aiming:boolean}} */ (/** @type {unknown} */ (player));
+  const view =
+    /** @type {{weapon:string,punching:boolean,throwingNade:boolean,dancing:boolean,aiming:boolean}} */ (
+      /** @type {unknown} */ (player)
+    );
   return frozen({
     sessionId: room?.sessionId ?? null,
     roomId: room?.roomId ?? null,
@@ -448,7 +501,21 @@ export function getOnlineSnapshot() {
     scoreBlue: s?.scoreBlue ?? 0,
     scoreRed: s?.scoreRed ?? 0,
     lastTeamRejection,
-    presentation: { weapon: view.weapon, punching: view.punching, throwingNade: view.throwingNade, dancing: view.dancing, aiming: view.aiming, mode: getMode()?.name ?? null, gameRunning },
+    winner: s?.winner ?? '',
+    nowMs: s?.nowMs ?? 0,
+    startedAtMs: s?.startedAtMs ?? 0,
+    endsAtMs: s?.endsAtMs ?? 0,
+    resultsEndsAtMs: s?.resultsEndsAtMs ?? 0,
+    resultsRemaining: s?.resultsRemaining ?? 0,
+    presentation: {
+      weapon: view.weapon,
+      punching: view.punching,
+      throwingNade: view.throwingNade,
+      dancing: view.dancing,
+      aiming: view.aiming,
+      mode: getMode()?.name ?? null,
+      gameRunning,
+    },
     players: s?.players ? Array.from(s.players.values(), (p) => ({ ...p.toJSON() })) : [],
     remoteActorCount: actors.size,
     usingGLTF,
@@ -467,7 +534,8 @@ function installMatchControls() {
   lastTeamRejection = '';
   const panel = document.createElement('div');
   panel.id = 'mp-match-controls';
-  panel.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:120;color:white;font:14px monospace;background:#111b;padding:10px;max-width:320px';
+  panel.style.cssText =
+    'position:fixed;left:12px;bottom:12px;z-index:120;color:white;font:14px monospace;background:#111b;padding:10px;max-width:320px';
   const button = document.createElement('button');
   button.id = 'mp-switch-team';
   button.textContent = 'Switch team';
@@ -475,12 +543,121 @@ function installMatchControls() {
     const me = room?.state.players.get(room.sessionId);
     if (!room || !me) return;
     lastTeamRejection = '';
-    room.send('switch-team', { protocolVersion: 1, matchGeneration: room.state.matchGeneration, lifeGeneration: me.lifeGeneration, team: me.team === 'blue' ? 'red' : 'blue' });
+    room.send('switch-team', {
+      protocolVersion: 1,
+      matchGeneration: room.state.matchGeneration,
+      lifeGeneration: me.lifeGeneration,
+      team: me.team === 'blue' ? 'red' : 'blue',
+    });
   });
   const text = document.createElement('div');
   text.id = 'mp-team-rejection';
   panel.append(button, text);
+  const settings = document.createElement('div');
+  settings.id = 'mp-rules-label';
+  const respawn = document.createElement('div');
+  respawn.id = 'mp-respawn';
+  const results = document.createElement('section');
+  results.id = 'mp-results';
+  results.hidden = true;
+  for (const id of [
+    'mp-result-title',
+    'mp-result-score',
+    'mp-result-countdown',
+    'mp-result-stats',
+  ]) {
+    const row = document.createElement('div');
+    row.id = id;
+    results.append(row);
+  }
+  const resume = document.createElement('button');
+  resume.id = 'mp-resume';
+  resume.textContent = 'Resume';
+  resume.hidden = true;
+  resume.addEventListener('click', () => {
+    try {
+      document
+        .getElementById('c')
+        ?.requestPointerLock()
+        ?.catch(() => {});
+    } catch {
+      /* Browser reports failed lock. */
+    }
+  });
+  panel.append(settings, respawn, results, resume);
+  const leave = document.createElement('button');
+  leave.id = 'mp-match-leave';
+  leave.textContent = 'Leave online';
+  leave.addEventListener('click', () => document.getElementById('pause-mainmenu-btn')?.click());
+  panel.append(leave);
   document.body.append(panel);
+}
+
+function syncInputGeneration() {
+  const me = room?.state.players.get(room.sessionId);
+  if (!me || !room) return;
+  const generation = `${sessionEpoch}/${room.state.matchGeneration}/${me.lifeGeneration}`;
+  if (generation === inputGeneration) return;
+  inputGeneration = generation;
+  seq = 0;
+  lastEventId = 0;
+  lastConfirmedHit = null;
+  lastTeamRejection = '';
+  held = fire = reload = jump = aiming = false;
+  for (const key of Object.keys(onlineKeys)) onlineKeys[key] = false;
+  yaw = me.yaw;
+  pitch = me.pitch;
+}
+
+/** @param {InstanceType<typeof import('../../server/tdmRoom.js').PlayerState>} me */
+function renderMatchState(me) {
+  if (!room) return;
+  const state = room.state;
+  const results = state.phase === 'results';
+  if (!me.alive && displayedAlive) document.exitPointerLock?.();
+  displayedAlive = me.alive;
+  if (displayedPhase !== state.phase) {
+    displayedPhase = state.phase;
+    onBlur();
+    if (results) document.exitPointerLock?.();
+  }
+  const panel = document.getElementById('mp-results');
+  if (panel) panel.hidden = !results;
+  const setText = (/** @type {string} */ id, /** @type {string} */ value) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  };
+  setText(
+    'mp-rules-label',
+    `${state.settings.killLimit} kills · ${state.settings.matchSeconds}s · friendly damage ${state.settings.friendlyFire * 100}%`
+  );
+  setText(
+    'mp-respawn',
+    !me.alive && state.phase === 'active'
+      ? me.respawnAtMs >= 0
+        ? `Respawn in ${Math.ceil(Math.max(0, me.respawnAtMs - state.nowMs) / 1000)}s`
+        : 'Waiting for a free spawn'
+      : ''
+  );
+  if (results) {
+    document.getElementById('pause-menu')?.style.setProperty('display', 'none');
+    setText(
+      'mp-result-title',
+      state.winner === 'draw' ? 'DRAW' : `${state.winner.toUpperCase()} WINS`
+    );
+    setText('mp-result-score', `BLUE ${state.scoreBlue} — ${state.scoreRed} RED`);
+    setText('mp-result-countdown', `Rematch in ${Math.ceil(state.resultsRemaining)}s`);
+    setText(
+      'mp-result-stats',
+      Array.from(
+        state.players.values(),
+        (p) => `${p.nickname}: ${p.kills} kills / ${p.deaths} deaths`
+      ).join(' · ')
+    );
+  }
+  if (!me.alive) document.getElementById('pause-menu')?.style.setProperty('display', 'none');
+  const resume = document.getElementById('mp-resume');
+  if (resume) resume.hidden = results || state.phase !== 'active' || locked;
 }
 
 // Called by the asset-ready loop; main owns the single explicit entry handler.
