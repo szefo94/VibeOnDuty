@@ -61,6 +61,10 @@ These capabilities are inferred from the existing implementation and the 2026-10
 - Current animation work already uses a shared target skeleton, offline Blender retargeting, and per-character mixers. A replacement should be evaluated against actual visual results and resource ownership rather than automatically discarding this work.
 - Historical roadmap/documentation proposals are reference material, not accepted active requirements. Current user decisions govern this project.
 
+### Workflow Defaults
+
+Project initialization uses reversible proposed defaults while no alternative preferences have been supplied: autonomous routine steps, fine-grained phases, independent work in parallel, tracked planning documents, research/plan checking/verification enabled, full instructions, and the current session model. These preferences can be revised with `$gsd-settings`. The initial roadmap is prepared for review before implementation.
+
 ### User-Selected Delivery Order
 
 1. Multiplayer, netcode, server, and server hit recognition.
@@ -120,4 +124,4 @@ After each phase transition, move verified requirements to Validated, move inval
 After each milestone, review every section, check the Core Value, reconsider deferred items, and update the current technical and player context.
 
 ---
-*Last updated: 2026-10-03 after project-scope dialogue; workflow preferences, research, formal requirements, and roadmap are pending.*
+*Last updated: 2026-10-03 after project-scope dialogue, research synthesis, and formal requirements; roadmap preparation is in progress.*
