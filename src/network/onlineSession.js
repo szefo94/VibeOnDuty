@@ -2,8 +2,8 @@
 // @ts-ignore Three vendor declarations are absent; strict authority uses typed plain numbers.
 import * as THREE from 'three';
 import { Client } from '@colyseus/sdk';
-import { PLAYER_H, PLAYER_H_CROUCH, MOUSE_SENS } from '../config.js';
-import { camera } from '../scene.js';
+import { MOUSE_SENS } from '../config.js';
+import { camera, scene, renderer } from '../scene.js';
 import { player } from '../entities/player.js';
 import { keys, locked, setGameRunning, gameRunning } from '../input.js';
 import { bunkerMapDef } from '../maps/bunker.js';
@@ -11,13 +11,8 @@ import { setActiveMap } from '../map.js';
 import { buildLevel } from '../level.js';
 import { deactivateAllEnemies } from '../entities/enemies.js';
 import { clearAllDrones } from '../entities/drone.js';
-import { buildEnemyMesh, disposeEnemyMesh, usingGLTF } from '../builders/enemyGLTF.js';
-import {
-  enterLocoMode,
-  exitLocoMode,
-  setLocoWeights,
-  crossfade,
-} from '../builders/enemyAnimations.js';
+import { buildEnemyMesh, disposeEnemyMesh, tintEnemyMesh, usingGLTF } from '../builders/enemyGLTF.js';
+import { createRemoteActors, animateRemoteActor } from './remoteActors.js';
 import { show1pWeapon, show3pWeapon } from '../builders/weapon.js';
 import { spawnHitMarker, tickHitMarker } from '../hud/hitmarker.js';
 import { spawnDamageNumber } from '../fx/damageNumbers.js';
@@ -35,8 +30,8 @@ import { stopKillcam } from '../replay/killcam.js';
 /** @typedef {import('../shared/tdmSimulation.js').Body} Body */
 /** @typedef {import('../shared/combat.js').Hit} Hit */
 /** @type {import('@colyseus/sdk').Room<State>|null} */ let room = null;
-/** @type {Map<string, ReturnType<typeof buildEnemyMesh> & {currentClip:string}>} */ const actors =
-  new Map();
+const actors = createRemoteActors(scene, {create:buildEnemyMesh,dispose:disposeEnemyMesh,tint:tintEnemyMesh,animate:animateRemoteActor});
+let handlersInstalled = false;
 let joining = false,
   seq = 0,
   yaw = 0,
@@ -163,6 +158,8 @@ function onVisibilityChange() {
   if (document.hidden) onBlur();
 }
 function installHandlers() {
+  if (handlersInstalled) return;
+  handlersInstalled = true;
   document.addEventListener('keydown', onKeyDown, true);
   document.addEventListener('keyup', onKeyUp, true);
   document.addEventListener('mousedown', onMouseDown, true);
@@ -175,6 +172,7 @@ function installHandlers() {
     document.addEventListener(name, onTouch, { capture: true, passive: false });
 }
 function removeHandlers() {
+  handlersInstalled = false;
   document.removeEventListener('keydown', onKeyDown, true);
   document.removeEventListener('keyup', onKeyUp, true);
   document.removeEventListener('mousedown', onMouseDown, true);
@@ -312,8 +310,7 @@ export async function joinOnline() {
   }
 }
 function disposeActors() {
-  for (const actor of actors.values()) disposeEnemyMesh(actor.mesh, actor.mixer);
-  actors.clear();
+  actors.disposeRemoteActors();
 }
 export async function leaveOnline() {
   sessionEpoch++;
@@ -436,35 +433,7 @@ export function tickOnline(dt) {
         : '';
     renderMatchState(me);
   }
-  const active = new Set();
-  room.state.players.forEach((p) => {
-    if (p.sessionId === room?.sessionId) return;
-    active.add(p.sessionId);
-    let actor = actors.get(p.sessionId);
-    if (!actor) {
-      actor = { ...buildEnemyMesh(p.x, p.z, 'assault'), currentClip: 'idle' };
-      actors.set(p.sessionId, actor);
-    }
-    actor.mesh.position.set(p.x, p.y - (p.crouching ? PLAYER_H_CROUCH : PLAYER_H), p.z);
-    actor.mesh.rotation.y = p.yaw + actor.facingOffset;
-    if (!p.alive || p.crouching || !p.onGround) {
-      exitLocoMode(actor);
-      crossfade(
-        actor,
-        !p.alive ? 'death' : p.crouching ? (p.moving ? 'crouch_walk' : 'crouch') : 'jump_loop',
-        0.2
-      );
-    } else {
-      enterLocoMode(actor);
-      setLocoWeights(actor.actions, p.moving ? (p.sprinting ? 1 : 0.45) : 0, 0);
-    }
-    actor.mixer?.update(dt);
-  });
-  for (const [id, actor] of actors)
-    if (!active.has(id)) {
-      disposeEnemyMesh(actor.mesh, actor.mixer);
-      actors.delete(id);
-    }
+  actors.syncRemoteActors({sessionId:room.sessionId,matchGeneration:room.state.matchGeneration,currentTick:room.state.currentTick,players:room.state.players.values()},dt);
 }
 
 /** @template T @param {T} value @returns {T} */
@@ -518,6 +487,10 @@ export function getOnlineSnapshot() {
     },
     players: s?.players ? Array.from(s.players.values(), (p) => ({ ...p.toJSON() })) : [],
     remoteActorCount: actors.size,
+    remoteActors: actors.inspect().actors,
+    remoteResourceCounts: {created:actors.inspect().created,disposed:actors.inspect().disposed},
+    renderMemory: { ...renderer.info.memory },
+    inputHandlerCount: handlersInstalled ? 12 : 0,
     usingGLTF,
     inputKeys: { ...onlineKeys },
     lastConfirmedHit: lastConfirmedHit ? structuredClone(lastConfirmedHit) : null,

@@ -12,7 +12,6 @@ function fixture() {
   preserveTemplateGeometry(template);
   const sharedDispose = vi.spyOn(shared, 'dispose');
   const ownedDispose = vi.fn();
-  const created = [];
   const create = vi.fn(() => {
     const mesh = template.clone();
     const geometry = new THREE.SphereGeometry();
@@ -21,7 +20,6 @@ function fixture() {
     material.userData.characterOwned = true;
     mesh.add(new THREE.Mesh(geometry, material));
     const mixer = new THREE.AnimationMixer(mesh);
-    created.push(mesh);
     return { mesh, mixer, actions: {}, muzzleFlash: null, facingOffset: 0 };
   });
   const dispose = vi.fn(disposeCharacter), tint = vi.fn(), animate = vi.fn();
@@ -30,7 +28,7 @@ function fixture() {
   const p = /** @type {any} */ ({ sessionId:'peer', x:1,y:1.65,z:2, lifeGeneration:1,team:'red',alive:true });
   const sync = (/** @type {any[]} */ players = [p], matchGeneration = 1) =>
     owner.syncRemoteActors({ sessionId:'me', players, matchGeneration }, 0.016);
-  return { owner, p, sync, scene, create, created, dispose, tint, animate, ownedDispose, sharedDispose };
+  return { owner, p, sync, scene, create, dispose, tint, animate, ownedDispose, sharedDispose };
 }
 
 describe('remote rig ownership', () => {
