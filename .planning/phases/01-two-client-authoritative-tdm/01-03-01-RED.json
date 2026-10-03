@@ -1,0 +1,9 @@
+{
+  "command": "npm run test:unit -- src/shared/movement.test.js --reporter=junit",
+  "exitCode": 1,
+  "targetTest": "authoritative minimum movement &gt; walks at 6m/s and sprints at 9.9m/s using only the server step",
+  "targetFile": "src/shared/movement.test.js",
+  "expected": "Versioned extended movement intent moves a body at 6m/s walking and 9.9m/s sprinting",
+  "actual": "AssertionError: expected 10 to be close to 12; extended intent is not accepted by the existing simulation",
+  "output": "<testsuites tests=\"5\" failures=\"5\"><testsuite name=\"src/shared/movement.test.js\" tests=\"5\" failures=\"5\"><testcase name=\"authoritative minimum movement &gt; walks at 6m/s and sprints at 9.9m/s using only the server step\"><failure type=\"AssertionError\" message=\"expected 10 to be close to 12\">AssertionError at src/shared/movement.test.js:31</failure></testcase></testsuite></testsuites>"
+}
