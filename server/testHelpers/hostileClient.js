@@ -36,7 +36,8 @@ export async function createHostileClient(serverUrl, options = {}) {
   room.onMessage('inputRejected', (/** @type {{reason:string}} */ message) =>
     rejections.push(message.reason)
   );
-  room.onMessage('hit', () => {});
+  /** @type {import('../../src/shared/combat.js').Hit[]} */ const confirmations = [];
+  room.onMessage('hit-confirmed', (/** @type {import('../../src/shared/combat.js').Hit} */ hit) => confirmations.push(hit));
   room.onLeave((code) => {
     closedCode = code;
   });
@@ -74,6 +75,7 @@ export async function createHostileClient(serverUrl, options = {}) {
     origin,
     command,
     rejections,
+    confirmations,
     get closedCode() {
       return closedCode;
     },

@@ -64,6 +64,8 @@ export class TdmRoom extends Room {
   inputGates = new Map();
   /** @type {Map<string,string>} */
   inputGenerations = new Map();
+  deliveredMatchGeneration = 0;
+  lastDeliveredEventId = 0;
   // Keep this numeric contract self-contained: browser state type imports must
   // not pull the filesystem CLI into the legacy browser-only type graph.
   /** @param {{settings?:{killLimit:number,matchSeconds:number,respawnSeconds:number,friendlyFire:number,resultsSeconds:number},combatSeed?:number}} [options] */
@@ -101,15 +103,49 @@ export class TdmRoom extends Room {
         }
       }
     });
-    this.onMessage('*', () => {});
+    this.onMessage('*', (client) => {
+      const gate = this.inputGates.get(client.sessionId);
+      const body = this.state.players.get(client.sessionId);
+      if (!gate || !body) return;
+      // Unsupported messages share the same bounded receipt budget. Their
+      // payload never reaches simulation or appears in a log/reply.
+      const result = gate.receive(null, this.inputContext(body, gate.lastSeq), performance.now());
+      client.send('inputRejected', {
+        reason: !result.ok && result.reason === 'rate_limit' ? 'rate_limit' : 'unknown_message',
+      });
+      if (result.disconnect) {
+        gate.clear();
+        this.simulation.clearInput(client.sessionId);
+        client.leave(4008);
+      }
+    });
     this.setFixedTimestep((ctx) => {
       this.consumeInputs(performance.now());
       this.simulation.stepSimulation(ctx.dt);
       this.syncState();
-      for (const event of this.simulation.events) {
-        this.clients.find((c) => c.sessionId === event.shooterSessionId)?.send('hit', event);
-      }
+      this.deliverCombatEvents();
     }, 30);
+  }
+  deliverCombatEvents() {
+    if (this.deliveredMatchGeneration !== this.state.matchGeneration) {
+      this.deliveredMatchGeneration = this.state.matchGeneration;
+      this.lastDeliveredEventId = 0;
+    }
+    for (const event of this.simulation.events) {
+      if (
+        event.matchGeneration !== this.state.matchGeneration ||
+        event.eventId <= this.lastDeliveredEventId
+      ) continue;
+      this.lastDeliveredEventId = event.eventId;
+      const shooter = this.state.players.get(event.shooterSessionId);
+      const target = this.state.players.get(event.targetSessionId);
+      if (
+        !shooter || !target ||
+        shooter.lifeGeneration !== event.lifeGeneration ||
+        target.lifeGeneration !== event.targetLifeGeneration
+      ) continue;
+      this.clients.find((c) => c.sessionId === event.shooterSessionId)?.send('hit-confirmed', event);
+    }
   }
   /** @param {import('@colyseus/core').Client} client */
   onJoin(client) {

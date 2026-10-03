@@ -3,6 +3,7 @@ import { startMpFixture } from '../tests/helpers/mpServer.js';
 import { createHostileClient, waitFor } from './testHelpers/hostileClient.js';
 import { createInputGate } from '../src/shared/protocol.js';
 import { TdmRoom } from './tdmRoom.js';
+import { createSimulation } from '../src/shared/tdmSimulation.js';
 
 let server, url;
 beforeAll(async () => {
@@ -18,16 +19,62 @@ describe('real room input boundary', () => {
     const a = await createHostileClient(url, { create: true });
     const b = await createHostileClient(url, { roomId: a.roomId });
     try {
+      await waitFor(() => Object.keys(a.snapshot().players).length === 2);
       const before = a.snapshot();
-      a.sendMessage('damage', { targetSessionId: b.sessionId, damage: 100, score: 999 });
-      await waitFor(() => a.rejections.includes('unknown_message'));
-      expect(a.rejections).toContain('unknown_message');
+      for (const type of ['damage', 'hit', 'hit-confirmed', 'kill', 'death', 'score', 'ammo', 'weapon', 'muzzle', 'cadence']) {
+        const count = a.rejections.length;
+        a.sendMessage(type, { targetSessionId: b.sessionId, damage: 100, score: 999 });
+        await waitFor(() => a.rejections.length > count);
+        expect(a.rejections.at(-1)).toBe('unknown_message');
+      }
+      for (const field of ['damage', 'hit', 'kill', 'death', 'score', 'ammo', 'reserve', 'weapon', 'muzzle', 'origin', 'velocity', 'range', 'spread', 'fireRate', 'nextFireAtMs', 'reloadEndsAtMs', 'shotId', 'eventId', 'targetLifeGeneration']) {
+        const count = a.rejections.length;
+        a.send({ ...a.command({ fire: true }), [field]: 999 });
+        await waitFor(() => a.rejections.length > count);
+        expect(a.rejections.at(-1)).toBe('invalid_shape');
+      }
       expect(a.snapshot().players).toEqual(before.players);
       expect([a.snapshot().scoreAlpha, a.snapshot().scoreBravo]).toEqual([0, 0]);
+      expect(a.confirmations).toEqual([]);
+      expect(b.confirmations).toEqual([]);
+      const shot = a.command({ fire: true });
+      a.send(shot);
+      await waitFor(() => a.snapshot().players[a.sessionId].ammo === 29);
+      expect(a.snapshot().players[a.sessionId].ammo).toBe(29);
+      a.send(shot);
+      await waitFor(() => a.rejections.at(-1) === 'duplicate_seq');
+      expect(a.rejections.at(-1)).toBe('duplicate_seq');
+      expect(a.snapshot().players[a.sessionId].ammo).toBe(29);
     } finally {
       await Promise.all([a.close(), b.close()]);
     }
   });
+  it('delivers a real eligible hit only to its firing session and replicates damage to both', async () => {
+    const a = await createHostileClient(url, { create: true });
+    const b = await createHostileClient(url, { roomId: a.roomId });
+    try {
+      async function route(x, z) {
+        const deadline = Date.now() + 6000;
+        while (Date.now() < deadline) {
+          const me = a.snapshot().players[a.sessionId];
+          const dx = x - me.x, dz = z - me.z;
+          if (Math.hypot(dx, dz) < 0.3) { a.send(a.command({ neutral: true })); return; }
+          a.send(a.command({ moveX: Math.abs(dx) > 0.2 ? Math.sign(dx) : 0, moveZ: Math.abs(dz) > 0.2 ? -Math.sign(dz) : 0 }));
+          await new Promise((resolve) => setTimeout(resolve, 40));
+        }
+        throw new Error(`SDK route did not reach (${x},${z})`);
+      }
+      await route(62, 46); await route(62, 22); await route(34, 22); await route(34, 46);
+      const me = a.snapshot().players[a.sessionId], target = b.snapshot().players[b.sessionId];
+      a.send(a.command({ fire: true, yaw: Math.atan2(me.x - target.x, me.z - target.z), pitch: Math.atan2(target.y - me.y - 0.1, Math.hypot(target.x - me.x, target.z - me.z)) }));
+      await waitFor(() => a.confirmations.length === 1 && b.snapshot().players[b.sessionId].health === 72);
+      expect(a.confirmations).toHaveLength(1);
+      expect(a.confirmations[0]).toMatchObject({ shooterSessionId: a.sessionId, targetSessionId: b.sessionId, damage: 28, shotId: 1, eventId: 1, targetLifeGeneration: 1 });
+      expect(a.snapshot().players[b.sessionId].health).toBe(72);
+      expect(b.snapshot().players[b.sessionId].health).toBe(72);
+      expect(b.confirmations).toEqual([]);
+    } finally { await Promise.all([a.close(), b.close()]); }
+  }, 30000);
   it('reports raw nonfinite rejection without mutation over the real SDK transport', async () => {
     const client = await createHostileClient(url, { create: true });
     try {
@@ -201,7 +248,7 @@ describe('room boundary with controlled server clock', () => {
   it('never applies a queued command after500ms or a death/generation/results transition', () => {
     for (const change of ['late', 'death', 'life', 'match', 'results']) {
       const { room, gate, context, command } = fixture();
-      gate.receive(command(0, { moveX: 1, fire: true }), context(), 0);
+      gate.receive(command(0, { moveX: 1, fire: true, reload: true }), context(), 0);
       const before = room.simulation.snapshot().players[0];
       if (change === 'death') room.state.players.get('a').alive = false;
       if (change === 'life') room.state.players.get('a').lifeGeneration++;
@@ -212,8 +259,74 @@ describe('room boundary with controlled server clock', () => {
       const after = room.simulation.snapshot().players[0];
       expect(after.x).toBe(before.x);
       expect(after.ammo).toBe(before.ammo);
+      expect(after.reloadRemaining).toBe(0);
+      expect(room.simulation.snapshot().projectileCount).toBe(0);
       expect(gate.pendingCount).toBe(0);
     }
+  });
+  function combatFixture(friendly = false) {
+    const { room, gate, context, command } = fixture();
+    const shooter = room.simulation.addPlayer('a'), target = room.simulation.addPlayer('b');
+    Object.assign(shooter, { x: 30, z: 22 });
+    Object.assign(target, { x: 34, z: 22, health: friendly ? 5.125 : 20 });
+    if (friendly) target.team = shooter.team;
+    const sent = { a: [], b: [] };
+    room.clients.push(...Object.entries(sent).map(([sessionId, messages]) => ({ sessionId, send: (type, event) => messages.push({ type, event }) })));
+    room.syncState();
+    return { room, gate, context, command, shooter, target, sent };
+  }
+  it('one real projectile retires one life and duplicate delivery cannot repeat its private confirmation or score', () => {
+    const { room, gate, context, command, target, sent } = combatFixture();
+    gate.receive(command(0, { fire: true, yaw: -Math.PI / 2 }), context(), 0);
+    room.consumeInputs(0);
+    room.simulation.stepSimulation(0.1);
+    room.syncState();
+    expect(target).toMatchObject({ health: 0, alive: false });
+    expect(room.state.scoreAlpha).toBe(1);
+    expect(room.simulation.events).toHaveLength(1);
+    room.deliverCombatEvents(); room.deliverCombatEvents();
+    expect(sent.a).toHaveLength(1);
+    expect(sent.a[0]).toMatchObject({ type: 'hit-confirmed', event: { damage: 20, killed: true, shotId: 1, eventId: 1 } });
+    expect(sent.b).toEqual([]);
+    gate.receive(command(1, { fire: true, yaw: -Math.PI / 2 }), context(), 100);
+    room.consumeInputs(100);
+    room.simulation.stepSimulation(0.1); room.syncState(); room.deliverCombatEvents();
+    expect(room.state.scoreAlpha).toBe(1);
+    expect(sent.a).toHaveLength(1);
+  });
+  it('friendly lethal damage clamps the exact fractional amount and never awards a team kill', () => {
+    const { room, gate, context, command, target, sent } = combatFixture(true);
+    gate.receive(command(0, { fire: true, yaw: -Math.PI / 2 }), context(), 0);
+    room.consumeInputs(0); room.simulation.stepSimulation(0.1); room.syncState(); room.deliverCombatEvents();
+    expect(target).toMatchObject({ health: 0, alive: false });
+    expect([room.state.scoreAlpha, room.state.scoreBravo]).toEqual([0, 0]);
+    expect(sent.a[0].event.damage).toBe(5.125);
+    expect(sent.b).toEqual([]);
+  });
+  it('old shooter/target lives and match generations cannot deliver a delayed confirmation', () => {
+    for (const transition of ['shooter', 'target', 'match', 'reconnect']) {
+      const { room, gate, context, command, sent } = combatFixture();
+      gate.receive(command(0, { fire: true, yaw: -Math.PI / 2 }), context(), 0);
+      room.consumeInputs(0); room.simulation.stepSimulation(0.1); room.syncState();
+      if (transition === 'shooter') room.state.players.get('a').lifeGeneration++;
+      if (transition === 'target') room.state.players.get('b').lifeGeneration++;
+      if (transition === 'match') room.state.matchGeneration++;
+      if (transition === 'reconnect') { room.state.players.delete('a'); room.simulation.removePlayer('a'); room.simulation.addPlayer('new-a'); }
+      room.deliverCombatEvents();
+      expect(sent.a).toEqual([]); expect(sent.b).toEqual([]);
+    }
+  });
+  it('a launched shot after disconnect can damage the current target but credits no replacement session', () => {
+    const data = { width: 40, height: 8, H2: 1.4, style: 'rooftop', tiles: Array.from({ length: 8 }, () => Array(40).fill(0)), heightmap: Array.from({ length: 8 }, () => Array(40).fill(0)), spawnAttacker: { x: 10, z: 10 }, spawnDefender: { x: 24, z: 10 } };
+    const sim = createSimulation(data, {}, { randomSeed: 7 });
+    const shooter = sim.addPlayer('old-a'), target = sim.addPlayer('b'); target.health = 20;
+    const { command } = fixture();
+    sim.queueInput(shooter.sessionId, { ...command(0, { fire: true, yaw: -Math.PI / 2 }), ackTick: 0 });
+    sim.stepSimulation(0.1); expect(target.health).toBe(20);
+    sim.removePlayer('old-a'); sim.addPlayer('new-a');
+    for (let i = 0; i < 4; i++) sim.stepSimulation(0.1);
+    expect(target).toMatchObject({ health: 0, alive: false });
+    expect(sim.snapshot().score).toEqual({ alpha: 0, bravo: 0 });
   });
   it('three exceeded receipt windows disconnect, while sixty-per-second traffic remains admissible', () => {
     const { gate, context, command } = fixture();

@@ -28,7 +28,7 @@ import { stopKillcam } from '../replay/killcam.js';
 
 /** @typedef {InstanceType<typeof import('../../server/tdmRoom.js').MatchState>} State */
 /** @typedef {import('../shared/tdmSimulation.js').Body} Body */
-/** @typedef {{targetSessionId:string,matchGeneration:number,lifeGeneration:number,targetLifeGeneration:number,shotId:number,eventId:number,damage:number,impact:{x:number,y:number,z:number}}} Hit */
+/** @typedef {import('../shared/combat.js').Hit} Hit */
 /** @type {import('@colyseus/sdk').Room<State>|null} */ let room = null;
 /** @type {Map<string, ReturnType<typeof buildEnemyMesh> & {currentClip:string}>} */ const actors =
   new Map();
@@ -211,11 +211,12 @@ export async function joinOnline() {
     });
     heartbeat = setInterval(sendHeartbeat, 1000 / 30);
     room.onMessage(
-      'hit',
+      'hit-confirmed',
       /** @param {Hit} event */ (event) => {
         const me = room?.state?.players?.get(room.sessionId);
         if (
           !me ||
+          event.shooterSessionId !== room?.sessionId ||
           event.matchGeneration !== room?.state.matchGeneration ||
           event.lifeGeneration !== me.lifeGeneration ||
           event.eventId <= lastEventId

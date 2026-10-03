@@ -112,13 +112,27 @@ async function aimAt(page, targetId) {
   throw new Error(`Real control aiming did not converge: ${JSON.stringify(await snapshot(page))}`);
 }
 
-test('combat: real M4 cover, ammo, reload and private hit outcomes agree', async ({ browser }) => {
+// Test-only browser instrumentation binds the actual bundled offline event bus.
+// The production build/room has no mutation endpoint. An attacker can execute
+// local JS; these exact legacy emits must still never award server outcomes.
+async function bindOfflineAttackProbe(page) {
+  await page.route('**/assets/index-*.js', async (route) => {
+    const response = await route.fetch();
+    const source = await response.text();
+    const emitters = [...source.matchAll(/([$\w]+)=\(([$\w]+),([$\w]+)\)=>\(([$\w]+)\[\2\]\?\?\[\]\)\.slice\(\)\.forEach\(([$\w]+)=>\5\(\3\)\)/g)];
+    expect(emitters).toHaveLength(1);
+    await route.fulfill({ response, body: `${source}\nwindow.__emitOfflineForTest = ${emitters[0][1]};` });
+  });
+}
+
+for (const authority of [false, true]) test(`${authority ? 'authority' : 'combat'}: real M4 cover, ammo, reload and private hit outcomes agree${authority ? ' after forged offline outcomes' : ''}`, async ({ browser }) => {
   test.setTimeout(240000);
   const fixture = await startMpFixture({ env: { VOD_COMBAT_SEED: '7' } });
   const contexts = [];
   try {
     for (let i = 0; i < 2; i++) contexts.push(await browser.newContext({ viewport: { width: 800, height: 600 }, deviceScaleFactor: 0.25 }));
     const [shooter, victim] = await Promise.all(contexts.map((c) => c.newPage()));
+    if (authority) await bindOfflineAttackProbe(shooter);
     for (const page of [shooter, victim]) {
       await page.goto(fixture.url);
       await expect(page.locator('#mp-join-btn')).toBeEnabled({ timeout: 60000 });
@@ -130,6 +144,21 @@ test('combat: real M4 cover, ammo, reload and private hit outcomes agree', async
     const initial = await snapshot(shooter), targetId = (await snapshot(victim)).sessionId;
     const me = (state) => state.players.find((p) => p.sessionId === initial.sessionId);
     const target = (state) => state.players.find((p) => p.sessionId === targetId);
+    if (authority) {
+      await shooter.evaluate((targetSessionId) => {
+        for (const name of ['enemy:killed', 'friendly:killed', 'player:died', 'damage', 'hit', 'kill', 'score'])
+          window.__emitOfflineForTest(name, { sessionId: targetSessionId, damage: 999, score: 999, ammo: 999 });
+      }, targetId);
+      await expect.poll(async () => (await snapshot(victim)).currentTick).toBeGreaterThan(initial.currentTick + 3);
+      const after = await snapshot(shooter), peer = await snapshot(victim);
+      expect(after.score).toEqual({ alpha: 0, bravo: 0 });
+      expect(peer.score).toEqual(after.score);
+      for (const state of [after, peer]) {
+        expect(state.players.every((p) => p.health === 100 && p.alive && p.ammo === 30)).toBe(true);
+        expect(state.lastConfirmedHit).toBeNull();
+      }
+      expect(await shooter.evaluate(() => window.__observedFeedback())).toEqual({ marker: false, numbers: [] });
+    }
     // Existing central cover separates the two spawn positions.
     await aimAt(shooter, targetId);
     await shooter.mouse.down(); await shooter.mouse.up();
@@ -160,7 +189,7 @@ test('combat: real M4 cover, ammo, reload and private hit outcomes agree', async
     expect((await snapshot(shooter)).score).toEqual((await snapshot(victim)).score);
     expect(await shooter.evaluate(() => window.__observedFeedback().numbers)).toEqual(['-28']);
     expect(await victim.evaluate(() => window.__observedFeedback())).toEqual({ marker: false, numbers: [] });
-    await shooter.screenshot({ path: test.info().outputPath('combat-confirmed.png') });
+    await shooter.screenshot({ path: test.info().outputPath(`${authority ? 'authority' : 'combat'}-confirmed.png`) });
   } finally {
     await Promise.all(contexts.map((c) => c.close()));
     await fixture.stop();
