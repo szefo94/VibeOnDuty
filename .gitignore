@@ -6,3 +6,5 @@ public/**/.DS_Store
 .planning/research/.cache/
 .gsd/
 .vod-server/tls/
+tools/art/sources/*.blend[0-9]
+tools/art/reports/

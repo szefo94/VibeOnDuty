@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "runtime": {
+    "url": "https://download.blender.org/release/Blender4.5/blender-4.5.13-windows-x64.zip",
+    "sha256": "b5fdf800ce65fa2f209e8f68d02667e4d720fa1c42f247c72d1882ab04decba6",
+    "actualVersion": "4.5.13 LTS",
+    "buildHash": "daeeeca98fb0",
+    "disposition": "official-checksummed-portable-cache-only"
+  },
+  "exporter": {
+    "format": "GLB",
+    "export_animations": false,
+    "export_apply": false,
+    "export_extras": true,
+    "export_def_bones": false,
+    "motionPolicy": "Imported editable actions retained in .blend; exact baseline rig/inverse binds/48 action occurrences merged into exported human render domains without resampling."
+  },
+  "assets": [
+    {
+      "path": "tools/art/sources/base.obj",
+      "sha256": "8e761e6624b8f54536409135d1636da63b32486a90d4897f84e121d144f6fb4c",
+      "role": "anatomical-base",
+      "source": "https://raw.githubusercontent.com/makehumancommunity/makehuman/a8bc2d54ff0ac92e78ff71431b1023eda42bf482/makehuman/data/3dobjs/base.obj",
+      "sourceCommit": "a8bc2d54ff0ac92e78ff71431b1023eda42bf482",
+      "terms": "CC0 explicitly stated in exact asset header; copyrights Data Collection AB, Joel Palmius and Jonas Hauquier 2020",
+      "disposition": "asset-specific-evidence-retained"
+    },
+    {
+      "path": "tools/art/sources/LICENSE.md",
+      "sha256": "edd99571ca62698f78c943fd4fffb159a413c315fa0d4819d3cec5cadaf8b4f1",
+      "role": "license-evidence",
+      "source": "https://raw.githubusercontent.com/makehumancommunity/makehuman/a8bc2d54ff0ac92e78ff71431b1023eda42bf482/LICENSE.md",
+      "sourceCommit": "a8bc2d54ff0ac92e78ff71431b1023eda42bf482",
+      "terms": "Unmodified upstream license evidence: assets CC0, application code separate AGPL",
+      "disposition": "asset-specific-evidence-retained"
+    },
+    {
+      "path": "tools/art/sources/LICENSE.ASSETS.md",
+      "sha256": "f6089cba01cb570a24712b41ab8a586ccd3cc5ef53dc266ca50b95c288956d2c",
+      "role": "license-evidence",
+      "source": "https://raw.githubusercontent.com/makehumancommunity/makehuman/a8bc2d54ff0ac92e78ff71431b1023eda42bf482/LICENSE.ASSETS.md",
+      "sourceCommit": "a8bc2d54ff0ac92e78ff71431b1023eda42bf482",
+      "terms": "Unmodified upstream license evidence: assets CC0, application code separate AGPL",
+      "disposition": "asset-specific-evidence-retained"
+    },
+    {
+      "role": "inherited-compatible-rig-and-mannequin-motion",
+      "sha256": "4074b9f468d6f281abb280c5cf45746e4b7be3b00f9d547c25194127e9d7354c",
+      "source": "git:8bef7d22a51533cecb1826bb5bd1fe62bb902a95:public/models/enemy.glb",
+      "terms": "Asset-specific original source and license not recovered. Quaternius-style and UE-mannequin comments are not license evidence. Local compatibility input only; redistribution unresolved.",
+      "disposition": "unresolved"
+    },
+    {
+      "role": "inherited-mixamo-motion",
+      "sha256": "4074b9f468d6f281abb280c5cf45746e4b7be3b00f9d547c25194127e9d7354c",
+      "source": "https://helpx.adobe.com/creative-cloud/faq/mixamo-faq.html",
+      "terms": "Adobe FAQ permits royalty-free use in games. Specific repository raw-source redistribution is not established. Existing retargeted motion retained without additional raw FBX redistribution.",
+      "disposition": "unresolved",
+      "embeddedIn": "git:8bef7d22a51533cecb1826bb5bd1fe62bb902a95:public/models/enemy.glb"
+    },
+    {
+      "path": "public/models/FBX/P90.fbx",
+      "sha256": "bd820ab3ba6b09c8b490023db452d3b32a80537b74199986f9f85b22edccfd9a",
+      "role": "inherited-weapon",
+      "source": "repository:public/models/FBX/P90.fbx",
+      "terms": "Existing game-loaded weapon; original download and asset-specific redistribution license not recovered.",
+      "disposition": "unresolved"
+    },
+    {
+      "path": "public/models/FBX/Pistol.fbx",
+      "sha256": "fb8b6429c89a00cc836490a3303afd248fd89b2b667b908e2d7889c6210da226",
+      "role": "inherited-weapon",
+      "source": "repository:public/models/FBX/Pistol.fbx",
+      "terms": "Existing game-loaded weapon; original download and asset-specific redistribution license not recovered.",
+      "disposition": "unresolved"
+    },
+    {
+      "path": "tools/art/build_soldier.py",
+      "sha256": "7794b13977c95e58f2267c6da1e666df1b4d4a960456ba613ac575740b333914",
+      "role": "original-authoring-script",
+      "source": "repository:tools/art/build_soldier.py",
+      "terms": "Newly authored project contribution. Does not alter inherited asset terms.",
+      "disposition": "original-contribution"
+    },
+    {
+      "path": "tools/art/pipeline.mjs",
+      "sha256": "ad9c848724ebe2eb45b0b39df5ce791c6dbf787ae673b4ac56fa23f472c1a608",
+      "role": "original-authoring-script",
+      "source": "repository:tools/art/pipeline.mjs",
+      "terms": "Newly authored project contribution. Does not alter inherited asset terms.",
+      "disposition": "original-contribution"
+    },
+    {
+      "path": "tools/art/sources/soldier.blend",
+      "sha256": "9ac2dd8724fa90cf3580c210a959b909e7ea01883ae667ef26e9117b1cf1e04b",
+      "role": "editable-mixed-source",
+      "source": "tools/art/build_soldier.py + CC0 base + inherited compatible rig/motion",
+      "terms": "Original armor, open helmet, eyes and fit operations; CC0 human topology; inherited rig/actions remain unresolved. No combined CC0 claim.",
+      "disposition": "mixed-provenance"
+    },
+    {
+      "path": "public/models/enemy.glb",
+      "sha256": "9205a7b183fd34f9f71a3615b3bffcf5508afd7fc5e35df708bf0d831a934b4a",
+      "role": "runtime-mixed-export",
+      "source": "tools/art/sources/soldier.blend + exact inherited compatibility domains",
+      "terms": "Derived combined GLB remains mixed provenance. CC0 base does not clear inherited skeleton/motion rights.",
+      "disposition": "mixed-provenance"
+    }
+  ],
+  "acceptance": {
+    "agentVisualReview": "Face/armed hands/Training Range reviewed at 1280x960; oversized head, jaw/neck distortion and shell defects corrected.",
+    "humanAestheticAcceptance": "pending-end-of-phase",
+    "deviceQualification": "unmeasured"
+  }
+}
