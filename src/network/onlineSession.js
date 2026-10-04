@@ -232,6 +232,7 @@ function connectionError(message) {
 
 export async function joinOnline() {
   if (isOnline()) return;
+  setOnlineKills(0);
   joining = true;
   const epoch = ++sessionEpoch;
   onBlur();
@@ -359,6 +360,7 @@ export async function leaveOnline() {
   reload = false;
   lastConfirmedHit = null;
   ui.reset();
+  setOnlineKills(0);
   document.getElementById('mp-leave-btn')?.setAttribute('hidden', '');
   document.getElementById('tdm-bar')?.style.setProperty('display', 'none');
   document.getElementById('mp-match-controls')?.setAttribute('hidden', '');
@@ -445,6 +447,7 @@ export function tickOnline(dt) {
       reloadTotal: 1800,
     });
     aimView.aimT += ((me.aiming ? 1 : 0) - aimView.aimT) * Math.min(1, dt * 14);
+    setOnlineKills(me.kills);
     updateHUD();
     document.getElementById('tdm-bar')?.style.setProperty('display', 'block');
     const label = document.getElementById('tdm-label');
@@ -485,6 +488,13 @@ export function tickOnline(dt) {
     },
     dt
   );
+}
+
+/** @param {number} kills */
+function setOnlineKills(kills) {
+  player.kills = kills;
+  const counter = document.getElementById('kills-num');
+  if (counter) counter.textContent = String(kills);
 }
 
 /** @template T @param {T} value @returns {T} */
@@ -528,6 +538,7 @@ export function getOnlineSnapshot() {
     resultsEndsAtMs: s?.resultsEndsAtMs ?? 0,
     resultsRemaining: s?.resultsRemaining ?? 0,
     presentation: {
+      kills: player.kills,
       weapon: view.weapon,
       punching: view.punching,
       throwingNade: view.throwingNade,

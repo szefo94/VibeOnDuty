@@ -122,6 +122,8 @@ and teams, increments match/life generations, resets inventory and clears bullet
 queues, acknowledgements and private event cursors. Zero humans suspends matches.
 The online adapter releases pointer lock on death/results, shows authoritative
 respawn/results timers, and exposes a gesture-driven Resume without delaying rematch.
+Online snapshots own both `player.kills` and the persistent KILLS HUD counter;
+entry/retirement reset it and the automatic rematch snapshot resets personal stats.
 
 Important dependencies and lifecycle constraints:
 

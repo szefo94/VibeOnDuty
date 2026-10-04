@@ -40,7 +40,7 @@ the documented remediation timeframes required for full V15.2.1 compliance.
 | T-01-01 | Mitigated | Exact approved release pins and lockfile; Node24 npm ci |01-01-SUMMARY approval/audit; package.json/package-lock.json unchanged by01-07; CI npm ci | V15.2.1 partial component governance |
 | T-01-02 | Mitigated | Owned temp builds/children, finite readiness, scoped teardown | tests/helpers/mpServer.js; isolation fingerprint check and timeout evidence in01-01/02 | No direct L1; V15.2.2 L2 |
 | T-01-03 | Mitigated | Room transport session chooses command body; no arbitrary target identity | server/tdmRoom.test.js forged session/SDK replay cases | V8.2.1, V8.3.1 |
-| T-01-04 | Mitigated | Online guards suppress local gameplay awards; authoritative snapshots own health/ammo/score | multiplayer authority scenario emits actual bundled offline outcome bus and sees zero awards | V8.3.1 |
+| T-01-04 | Mitigated after CR-05 | Online guards suppress local gameplay awards; snapshots own health/ammo/score and local KILLS presentation; entry/leave and automatic rematch reset counter | multiplayer authority actual bundled offline outcome bus has zero awards; real score-limit lifecycle asserts snapshot/local player/HUD kills1 then results and rematch0/retirement0, stale entry99 becomes0 | V8.3.1 |
 | T-01-05 | Mitigated | Private confirmation uses shooter client.send | tdmRoom private hit delivery; tracer/feedback victim has no marker or damage number | V8.2.2 |
 | T-01-06 | Mitigated | Each room clones canonical Greek Columns arrays/world; no browser singleton imports | world.test.js map parity and independent worlds; tdmRoom interleaved room test | V2.2.2, V8.3.1 |
 | T-01-07 | Mitigated | Membership/session identity comes from framework transport | tdmRoom forged identity and replacement-session SDK tests | V8.2.1, V8.3.1 |
@@ -79,12 +79,19 @@ rejects SVG/remote thumbnails and preserves a valid PNG. This extends the V3.2.2
 safe-sink and V15.2.2 L2 availability evidence; it does not change the historical
 29 planned threats into an exhaustive inventory. CR-02 predates this phase.
 
-All eight full automated gates passed: lint, both type checks, both builds,
+The original01-07 baseline passed all eight full automated gates: lint, both type checks, both builds,
 238 unit tests,18 offline/animation browser tests and13 production multiplayer
 tests. The fixture isolation check also passed. Full command results and screenshot
 paths are recorded in01-07-SUMMARY.md and evidence/01-07/manifest.json. No open
 high/critical planned mitigation failure is intentionally accepted. Accepted-low T-01-24 is a
 testing trust exception, not an automated validation of real browser trust.
+
+Review-fix validation and current counts are recorded separately in
+01-REVIEW-FIX.md. CR-03's real reversed-shot impacts, CR-04's real SDK patch-before-hit
+ordering and queued retirement, and CR-05's production-browser HUD/rematch checks
+extend the original evidence. Early startup/flood/keyboard-route timing failures
+are retained in that report alongside successful isolated reruns; they are not
+silently relabeled passing executions.
 
 Actual LAN certificate trust in two windows, gesture-driven pointer lock,
 map/rig/feedback visual judgment, the unclassified HOST-03 and MODE-01 probes and the

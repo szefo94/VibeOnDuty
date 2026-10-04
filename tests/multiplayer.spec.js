@@ -88,8 +88,11 @@ for (const path of ['score', 'time'])
       for (const page of [a, b]) {
         await page.goto(fixture.url);
         await expect(page.locator('#mp-join-btn')).toBeEnabled({ timeout: 60000 });
+        await page.locator('#kills-num').evaluate((counter) => { counter.textContent = '99'; });
         await page.locator('#mp-join-btn').click();
         await expect.poll(async () => (await snapshot(page)).sessionId).toBeTruthy();
+        await expect(page.locator('#kills-num')).toHaveText('0');
+        expect((await snapshot(page)).presentation.kills).toBe(0);
       }
       await expect.poll(async () => (await snapshot(a)).players.length).toBe(2);
       const first = await snapshot(a),
@@ -143,6 +146,9 @@ for (const path of ['score', 'time'])
           .poll(() => b.evaluate(() => window.__lifecycleSeen().freshInventory))
           .toBe(true);
         expect((await snapshot(a)).scoreBlue).toBe(1);
+        await expect(a.locator('#kills-num')).toHaveText('1');
+        expect(own(await snapshot(a), first.sessionId).kills).toBe(1);
+        expect((await snapshot(a)).presentation.kills).toBe(1);
         await a.screenshot({path:test.info().outputPath('respawn-current-rig.png')});
         await aimAt(a, targetId);
         await a.mouse.down();
@@ -181,6 +187,9 @@ for (const path of ['score', 'time'])
         );
         await expect(page.locator('#mp-result-countdown')).toContainText('Rematch in');
         await expect(page.locator('#mp-switch-team')).toBeEnabled();
+        const personalKills = own(s, s.sessionId).kills;
+        await expect(page.locator('#kills-num')).toHaveText(String(personalKills));
+        expect((await snapshot(page)).presentation.kills).toBe(personalKills);
       }
       await a.screenshot({ path: test.info().outputPath(`results-${path}.png`) });
       await b.screenshot({ path: test.info().outputPath(`results-${path}-peer.png`) });
@@ -242,6 +251,8 @@ for (const path of ['score', 'time'])
           )
         ).toBe(true);
         expect(s.lastConfirmedHit).toBeNull();
+        await expect(page.locator('#kills-num')).toHaveText('0');
+        expect((await snapshot(page)).presentation.kills).toBe(0);
         if (path === 'score') {
           expect(s.remoteActors).toHaveLength(1);
           const remote = s.players.find(p => p.sessionId !== s.sessionId);
@@ -254,6 +265,13 @@ for (const path of ['score', 'time'])
       await a.locator('#mp-resume').click();
       await expect.poll(() => a.evaluate(() => !!document.pointerLockElement)).toBe(true);
       await a.screenshot({path:test.info().outputPath(`rematch-${path}.png`)});
+      for (const page of [a, b]) {
+        await page.evaluate(() => document.exitPointerLock());
+        await page.locator('#mp-match-leave').click();
+        await expect(page.locator('#overlay')).toBeVisible();
+        await expect(page.locator('#kills-num')).toHaveText('0');
+        expect((await snapshot(page)).presentation.kills).toBe(0);
+      }
     } finally {
       try {
         await Promise.all(contexts.map((c) => c.close()));

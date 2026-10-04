@@ -107,6 +107,9 @@ balanced players, a switch is rejected until someone leaves.
 
 Enemy kills award team score once per life; friendly kills award none. The score
 limit or time limit ends combat, with equal scores producing a draw. Both players
+see their authoritative personal kills in the persistent HUD, matching results
+statistics. Entry/leave clear the counter, and rematch resets it from the snapshot.
+Both players
 see results for 15 seconds, then the server automatically starts a fresh match with
 the same settings and teams. Death resets health and M4 inventory at the configured
 respawn deadline; an occupied spawn waits safely. Results and death release pointer
