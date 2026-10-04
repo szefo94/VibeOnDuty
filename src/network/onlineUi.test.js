@@ -1,6 +1,8 @@
 // @ts-check
 import { describe, it, expect, vi } from 'vitest';
 import { createOnlineUi } from './onlineUi.js';
+import { createSimulation } from '../shared/tdmSimulation.js';
+import { requestFire, stepProjectiles } from '../shared/combat.js';
 /** @returns {any} */
 function fixture() {
   const marker = vi.fn(),
@@ -51,6 +53,36 @@ function fixture() {
   return { ui, elements, marker, number, tickMarker, clearMarker, session, event };
 }
 describe('confirmed online presentation', () => {
+  it('presents both real impacts when shot IDs reverse, but never repeats events or seen shots', () => {
+    const f = fixture();
+    const simulation = createSimulation({ width: 8, height: 8, H2: 1.4, style: 'rooftop',
+      tiles: Array.from({ length: 8 }, () => Array(8).fill(0)),
+      heightmap: Array.from({ length: 8 }, () => Array(8).fill(0)),
+      spawnAttacker: { x: 10, z: 10 }, spawnDefender: { x: 14, z: 10 } });
+    const shooter = simulation.addPlayer('shooter'), target = simulation.addPlayer('target');
+    shooter.yaw = -Math.PI / 2;
+    target.lifeGeneration = 2;
+    let shotId = 0, eventId = 0;
+    const launch = { active: true, matchGeneration: 1, nextShotId: () => ++shotId, random: () => 0.5 };
+    const first = requestFire(shooter, 0, simulation.world, launch);
+    const second = requestFire(shooter, 100, simulation.world, launch);
+    if (!first || !second) throw new Error('Expected two eligible real M4 shots');
+    /** @type {import('../shared/combat.js').Hit[]} */ const events = [];
+    stepProjectiles({ players: new Map([['shooter', shooter], ['target', target]]),
+      projectiles: [first, second], events, world: simulation.world,
+      matchGeneration: 1, phase: 'playing', rules: simulation.rules,
+      nextEventId: () => ++eventId, onDeath: () => {} }, 0.1);
+    expect(target.health).toBe(44);
+    expect(events.map((event) => [event.eventId, event.shotId])).toEqual([[1, 2], [2, 1]]);
+    for (const event of events) expect(f.ui.presentConfirmedHit(event, f.session)).toBe(true);
+    for (const event of events) expect(f.ui.presentConfirmedHit(event, f.session)).toBe(false);
+    expect(f.ui.presentConfirmedHit({ ...events[0], eventId: 3 }, f.session)).toBe(false);
+    expect(f.marker).toHaveBeenCalledTimes(2);
+    expect(f.number).toHaveBeenCalledTimes(2);
+    f.ui.presentSnapshot({ ...f.session, matchGeneration: 2 });
+    expect(f.ui.presentConfirmedHit({ ...events[0], matchGeneration: 2 },
+      { ...f.session, matchGeneration: 2 })).toBe(true);
+  });
   it('rejects malformed current-generation confirmations before marker, number or dedupe changes', () => {
     const f = fixture();
     for (const change of [

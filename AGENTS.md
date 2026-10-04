@@ -103,7 +103,8 @@ for 65m/s gravity-affected travel with a half-open 1.1s lifetime. All actors mov
 before current-step hit sweeps. Earliest contact wins, with a 1e-7 obstruction-first
 tie band and stable actor session IDs. Head damage is 4x the M4 base; default
 friendly damage is 0.25 with float64 health and actual clamped damage in feedback.
-Room-owned shot/event/life IDs deduplicate private `hit-confirmed` delivery.
+Room-owned event IDs deduplicate private `hit-confirmed` delivery in impact order;
+the UI's bounded seen-shot set accepts reversed firing IDs across travelling hits.
 Only exact input intentions are accepted; unsupported messages receive bounded
 rejections. `VOD_COMBAT_SEED` is an optional validated operator-only room RNG seed,
 used by production fixtures; clients cannot choose spread or combat outcomes.

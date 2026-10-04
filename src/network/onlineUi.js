@@ -7,8 +7,8 @@
  * @param {{marker:()=>void,number:(x:number,y:number,z:number,damage:number)=>NumberEffect|undefined,tickMarker:(dt:number)=>void,clearMarker:()=>void}} feedback */
 export function createOnlineUi(elements, feedback) {
   let generation = '',
-    lastEventId = 0,
-    lastShotId = 0;
+    lastEventId = 0;
+  const seenShots = new Set();
   /** @type {NumberEffect[]} */ let effects = [];
   /** @param {string} id @param {string} value */
   function text(id, value) {
@@ -25,7 +25,8 @@ export function createOnlineUi(elements, feedback) {
     const next = `${session.sessionId}/${session.matchGeneration}/${session.lifeGeneration}`;
     if (next === generation) return;
     generation = next;
-    lastEventId = lastShotId = 0;
+    lastEventId = 0;
+    seenShots.clear();
     clearFeedback();
   }
   /** @param {Hit} event @param {Session} session */
@@ -61,9 +62,11 @@ export function createOnlineUi(elements, feedback) {
     )
       return false;
     presentSnapshot(session);
-    if (event.eventId <= lastEventId || event.shotId <= lastShotId) return false;
+    // Events follow impact order; travelling shots can arrive out of fire order.
+    if (event.eventId <= lastEventId || seenShots.has(event.shotId)) return false;
     lastEventId = event.eventId;
-    lastShotId = event.shotId;
+    seenShots.add(event.shotId);
+    if (seenShots.size > 128) seenShots.delete(seenShots.values().next().value);
     feedback.marker();
     const effect = feedback.number(event.impact.x, event.impact.y, event.impact.z, event.damage);
     if (effect) effects.push(effect);
@@ -104,7 +107,8 @@ export function createOnlineUi(elements, feedback) {
     clearFeedback();
     clearConnectionError();
     generation = '';
-    lastEventId = lastShotId = 0;
+    lastEventId = 0;
+    seenShots.clear();
     for (const id of [
       'mp-result-title',
       'mp-result-score',
