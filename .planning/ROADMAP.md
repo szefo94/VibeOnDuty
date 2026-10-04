@@ -8,7 +8,7 @@ Deliver the full selected v1 scope in the user's order: multiplayer first, then 
 **Project mode:** mvp
 **Roadmap status:** Accepted on2026-10-03; all seven Phase1 automated plans are executed. Phase1 human acceptance remains pending; the five shared requirements are not yet marked achieved.
 
-Node24 and exact approved Colyseus dependencies are installed; owned fixture/TLS hosting, shared movement, traveling M4 and full TDM lifecycle have production-browser evidence. Current cloned rigs, private feedback/recovery and all six offline destinations pass their checks. The final gates are238 unit,18 offline/animation and13 production multiplayer tests, both types/builds and lint. Actual-window trust, pointer lock, full-size visual judgment, two unclassified probes and capacity/transparency wording remain human review. The extra high-resolution capture attempt is deferred; existing small production screenshots are not visual approval. Rapier adoption and full movement, art, editor and final-map overhauls retain their selected future position.
+Node24 and exact approved Colyseus dependencies are installed; owned fixture/TLS hosting, shared movement, traveling M4 and full TDM lifecycle have production-browser evidence. Current cloned rigs, private feedback/recovery and all six offline destinations pass their checks. Final gates after code-review and UI fixes pass247 unit,19 offline/animation and14 production multiplayer tests, both types/builds and lint. Independent verifier reports human_needed32/34; five UAT items are saved in01-UAT.md. Actual-window trust, pointer lock, full-size visual judgment, two unclassified probes and capacity/transparency wording remain human review. The extra high-resolution capture attempt is deferred; existing small production screenshots are not visual approval. Rapier adoption and full movement, art, editor and final-map overhauls retain their selected future position.
 
 ## Phases
 
@@ -31,7 +31,7 @@ Integer phases are the planned work. Decimal phases are reserved for later urgen
 
 ### Phase 1: Two-Client Authoritative TDM
 
-**Goal:** Two browser players can complete a fair, server-scored TDM match using the current maps and assets.
+**Goal:** As a browser player, I want to complete a fair server-scored TDM match with another player using the current maps and assets, so that both players share authoritative outcomes.
 **Mode:** mvp
 **Depends on:** Nothing (first phase)
 **Requirements:** NET-01, NET-03, NET-04, MODE-01, HOST-03
