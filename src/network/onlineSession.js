@@ -18,7 +18,7 @@ import {
   usingGLTF,
 } from '../builders/enemyGLTF.js';
 import { createRemoteActors, animateRemoteActor } from './remoteActors.js';
-import { createOnlineUi } from './onlineUi.js';
+import { createOnlineUi, teamSwitchReason } from './onlineUi.js';
 import { show1pWeapon, show3pWeapon } from '../builders/weapon.js';
 import { spawnHitMarker, tickHitMarker } from '../hud/hitmarker.js';
 import { spawnDamageNumber } from '../fx/damageNumbers.js';
@@ -72,6 +72,7 @@ const ui = createOnlineUi(
       'mp-match-controls',
       'mp-respawn',
       'mp-rules-label',
+      'mp-input-message',
     ].map((id) => [id, document.getElementById(id)])
   ),
   {
@@ -185,6 +186,10 @@ function onBlur() {
 }
 function onLockChange() {
   if (!document.pointerLockElement) onBlur();
+  else ui.clearPointerLockError();
+}
+function onPointerLockError() {
+  if (isOnline()) ui.showPointerLockError();
 }
 function onVisibilityChange() {
   if (document.hidden) onBlur();
@@ -199,6 +204,7 @@ function installHandlers() {
   document.addEventListener('mousemove', onMouseMove, true);
   window.addEventListener('blur', onBlur);
   document.addEventListener('pointerlockchange', onLockChange);
+  document.addEventListener('pointerlockerror', onPointerLockError);
   document.addEventListener('visibilitychange', onVisibilityChange);
   for (const name of /** @type {const} */ (['touchstart', 'touchmove', 'touchend', 'touchcancel']))
     document.addEventListener(name, onTouch, { capture: true, passive: false });
@@ -212,6 +218,7 @@ function removeHandlers() {
   document.removeEventListener('mousemove', onMouseMove, true);
   window.removeEventListener('blur', onBlur);
   document.removeEventListener('pointerlockchange', onLockChange);
+  document.removeEventListener('pointerlockerror', onPointerLockError);
   document.removeEventListener('visibilitychange', onVisibilityChange);
   for (const name of /** @type {const} */ (['touchstart', 'touchmove', 'touchend', 'touchcancel']))
     document.removeEventListener(name, onTouch, true);
@@ -471,12 +478,13 @@ export function tickOnline(dt) {
     const switchButton = /** @type {HTMLButtonElement|null} */ (
       document.getElementById('mp-switch-team')
     );
-    if (switchButton) switchButton.disabled = me.alive && room.state.phase !== 'results';
+    const switchReason = teamSwitchReason(me, room.state.phase, room.state.players.values());
+    if (switchButton) switchButton.disabled = !!switchReason;
     const rejection = document.getElementById('mp-team-rejection');
     if (rejection)
       rejection.textContent = lastTeamRejection
         ? `Team switch rejected: ${lastTeamRejection.replace(/_/g, ' ')}`
-        : '';
+        : switchReason;
     renderMatchState(me);
   }
   actors.syncRemoteActors(
@@ -582,14 +590,18 @@ function onSwitchTeam() {
     team: me.team === 'blue' ? 'red' : 'blue',
   });
 }
-function onResume() {
+export function resumeOnline() {
+  const epoch = sessionEpoch;
+  const failed = () => {
+    if (epoch === sessionEpoch && isOnline()) ui.showPointerLockError();
+  };
   try {
     document
       .getElementById('c')
       ?.requestPointerLock()
-      ?.catch(() => {});
+      ?.catch(failed);
   } catch {
-    /* Browser reports failed lock. */
+    failed();
   }
 }
 function onReturn() {
@@ -606,7 +618,7 @@ async function onRetry() {
   }
 }
 document.getElementById('mp-switch-team')?.addEventListener('click', onSwitchTeam);
-document.getElementById('mp-resume')?.addEventListener('click', onResume);
+document.getElementById('mp-resume')?.addEventListener('click', resumeOnline);
 document.getElementById('mp-match-leave')?.addEventListener('click', onReturn);
 document.getElementById('mp-error-return-btn')?.addEventListener('click', onReturn);
 document.getElementById('mp-retry-btn')?.addEventListener('click', onRetry);

@@ -51,6 +51,24 @@ test('teams: solo start and smaller-team assignments are visible in both browser
     }
     await expect(b.locator('#tdm-label')).toHaveText('ONLINE · RED');
     expect((await snapshot(a)).timeRemaining).toBeLessThan(solo.timeRemaining);
+    for (const page of [a, b]) {
+      const controls = await page.locator('#mp-match-controls').boundingBox();
+      const ammo = await page.locator('#ammo-display').boundingBox();
+      expect(controls).toBeTruthy();
+      expect(ammo).toBeTruthy();
+      expect(controls.y + controls.height).toBeLessThanOrEqual(ammo.y - 8);
+    }
+    await b.evaluate(() => document.exitPointerLock());
+    await expect(b.locator('#mp-resume')).toBeVisible();
+    await expect(b.locator('#pause-title')).toHaveText('MOUSE RELEASED');
+    await expect(b.locator('#pause-online-hint')).toBeVisible();
+    await b.evaluate(() => {
+      document.getElementById('c').requestPointerLock = () => Promise.reject(new Error('test capture denied'));
+    });
+    await b.locator('#mp-resume').click();
+    await expect(b.locator('#mp-input-message')).toContainText('Select Resume to retry');
+    await expect(b.locator('#mp-error-banner')).toBeHidden();
+    expect((await snapshot(b)).phase).toBe('active');
     await a.screenshot({ path: test.info().outputPath('teams.png') });
   } finally {
     try {
@@ -133,13 +151,12 @@ for (const path of ['score', 'time'])
         } finally {
           await a.mouse.up();
         }
-        await expect(b.locator('#mp-switch-team')).toBeEnabled();
+        await expect(b.locator('#mp-switch-team')).toBeDisabled();
         await expect(b.locator('#mp-respawn')).toContainText('Respawn in');
         await expect.poll(async () => (await snapshot(a)).remoteActors[0]?.clip).toBe('death');
         await b.screenshot({path:test.info().outputPath('death-respawn-timer.png')});
         // Two balanced members cannot become0v2, including at death.
-        await b.locator('#mp-switch-team').click();
-        await expect(b.locator('#mp-team-rejection')).toContainText('team balance');
+        await expect(b.locator('#mp-team-rejection')).toContainText('teams must stay balanced');
         for (const page of [a, b]) expect(own(await snapshot(page), targetId).team).toBe('red');
         await expect.poll(async () => own(await snapshot(b), targetId).lifeGeneration).toBe(2);
         await expect
@@ -198,7 +215,8 @@ for (const path of ['score', 'time'])
           path === 'score' ? 'BLUE WINS' : 'DRAW'
         );
         await expect(page.locator('#mp-result-countdown')).toContainText('Rematch in');
-        await expect(page.locator('#mp-switch-team')).toBeEnabled();
+        await expect(page.locator('#mp-switch-team')).toBeDisabled();
+        await expect(page.locator('#mp-team-rejection')).toContainText('teams must stay balanced');
         const personalKills = own(s, s.sessionId).kills;
         await expect(page.locator('#kills-num')).toHaveText(String(personalKills));
         expect((await snapshot(page)).presentation.kills).toBe(personalKills);
@@ -209,6 +227,7 @@ for (const path of ['score', 'time'])
         // A valid solo results switch persists, then a fresh connection joins the smaller team.
         await b.locator('#mp-match-leave').click();
         await expect.poll(async () => (await snapshot(a)).players.length).toBe(1);
+        await expect(a.locator('#mp-switch-team')).toBeEnabled();
         await a.locator('#mp-switch-team').click();
         await expect(a.locator('#tdm-label')).toHaveText('ONLINE · RED');
         await b.locator('#mp-join-btn').click();

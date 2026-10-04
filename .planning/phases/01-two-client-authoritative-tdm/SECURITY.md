@@ -10,6 +10,19 @@ human_acceptance: pending
 
 # Phase 1 security evidence
 
+## Independent L1 audit — 2026-10-04
+
+The typed gsd-security-auditor independently inspected all seven planned threat
+blocks, actual controls and their test assertions at HEAD32f8c47. Verdict SECURED
+for the configured Level1 mitigation-presence check:29/29 closed (28 mitigated,
+one documented accepted-low testing trust risk),0 blocking or non-blocking open.
+The register has20 high,8 medium,1 low threats and no transfer dispositions.
+The auditor did not rerun suites or modify implementation. Latest9/14 multiplayer
+evidence at that audit remained incomplete; control presence did not classify those
+five failures or certify behavior. Subsequent scoped UI remediation preserves safe
+text sinks and server-final team authority. Human trust, gestures and visual judgment
+remain pending. This is not ASVS certification or phase acceptance.
+
 This is an implementation/evidence map for the 29 unique planned threats, not an
 ASVS certification or an assertion that every ASVS requirement applies or passes.
 The exact IDs and levels were read from the [official tagged ASVS5.0.0 requirements](https://raw.githubusercontent.com/OWASP/ASVS/v5.0.0/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json)

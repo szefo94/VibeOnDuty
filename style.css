@@ -70,13 +70,16 @@ body{background:#000;overflow:hidden;font-family:'Courier New',monospace}
 #startbtn:hover,#snd-startbtn:hover,#tdm-startbtn:hover,#adaptive-startbtn:hover,#range-startbtn:hover,#editor-startbtn:hover{background:#fff}
 #tdm-startbtn{background:#27ae60;color:#fff}
 #tdm-startbtn:hover{background:#2ecc71;color:#000}
-#mp-join-btn,#mp-leave-btn{padding:12px 28px;background:#3498db;color:#fff;border:none;font:13px 'Courier New',monospace;letter-spacing:2px;cursor:pointer}
+#mp-join-btn,#mp-leave-btn{padding:16px 24px;background:#e8c84a;color:#111;border:none;font:14px 'Courier New',monospace;letter-spacing:2px;cursor:pointer}
 #mp-join-btn:disabled{opacity:0.45;cursor:wait}
-#mp-join-btn:hover:enabled,#mp-leave-btn:hover{background:#5dade2}
-#mp-actions{max-width:680px;margin:12px 20px 0;text-align:center;color:#aaa;font:11px/1.6 'Courier New',monospace}
+#mp-join-btn:hover:enabled,#mp-leave-btn:hover{background:#fff}
+#mp-actions{max-width:680px;margin:8px 16px 0;text-align:center;color:#aaa;font:14px/1.6 'Courier New',monospace}
 #mp-error-banner,#mp-match-controls{color:#fff;background:#111e;font:14px/1.4 'Courier New',monospace;overflow-wrap:anywhere;box-sizing:border-box;padding:16px;border:1px solid #666}
 #mp-error-banner{position:fixed;top:16px;left:50%;transform:translateX(-50%);width:min(680px,calc(100% - 24px));z-index:2000;pointer-events:auto}
-#mp-match-controls{position:fixed;left:12px;bottom:12px;max-width:min(360px,calc(100% - 24px));max-height:calc(100% - 32px);overflow:auto;z-index:120}
+#mp-match-controls{position:fixed;left:12px;bottom:76px;max-width:min(360px,calc(100% - 24px));max-height:calc(100% - 92px);overflow:auto;z-index:120}
+#pause-menu[data-online="true"]{max-width:calc(100% - 24px);padding:24px}
+#pause-menu[data-online="true"] #pause-title{font-size:16px;letter-spacing:2px}
+#pause-online-hint{color:#ddd;font:14px/1.4 'Courier New',monospace;margin-top:8px}
 #mp-error-banner[hidden],#mp-match-controls[hidden],#mp-results[hidden],#mp-resume[hidden]{display:none}
 #mp-error-banner strong,#mp-result-title{font-size:16px;color:#e8c84a}
 #mp-error-banner p,#mp-match-controls p{margin:8px 0}

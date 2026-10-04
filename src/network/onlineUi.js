@@ -3,6 +3,20 @@
 /** @typedef {{textContent:string|null,hidden:boolean|string}} Element */
 /** @typedef {{sessionId:string,matchGeneration:number,lifeGeneration:number,players:{sessionId:string,lifeGeneration:number}[]}} Session */
 /** @typedef {{tick:(dt:number)=>boolean,remove:()=>void}} NumberEffect */
+/** Project eligibility only; the server remains the final authority.
+ * @param {{team:string,alive:boolean}} me
+ * @param {string} phase
+ * @param {Iterable<{team:string}>} players
+ * @returns {string} */
+export function teamSwitchReason(me, phase, players) {
+  if (me.alive && phase !== 'results') return 'Switch teams when dead or during results.';
+  const members = Array.from(players);
+  const blue = members.filter((p) => p.team === 'blue').length;
+  const projectedBlue = blue + (me.team === 'blue' ? -1 : 1);
+  return Math.abs(2 * projectedBlue - members.length) > 1
+    ? 'Switch unavailable: teams must stay balanced.'
+    : '';
+}
 /** @param {Record<string,Element|null>} elements
  * @param {{marker:()=>void,number:(x:number,y:number,z:number,damage:number)=>NumberEffect|undefined,tickMarker:(dt:number)=>void,clearMarker:()=>void}} feedback */
 export function createOnlineUi(elements, feedback) {
@@ -103,9 +117,16 @@ export function createOnlineUi(elements, feedback) {
     text('mp-error-message', '');
     if (elements['mp-error-banner']) elements['mp-error-banner'].hidden = true;
   }
+  function showPointerLockError() {
+    text('mp-input-message', 'Mouse capture failed. The match continues. Select Resume to retry, or leave online.');
+  }
+  function clearPointerLockError() {
+    text('mp-input-message', '');
+  }
   function reset() {
     clearFeedback();
     clearConnectionError();
+    clearPointerLockError();
     generation = '';
     lastEventId = 0;
     seenShots.clear();
@@ -125,6 +146,8 @@ export function createOnlineUi(elements, feedback) {
     tickFeedback,
     showConnectionError,
     clearConnectionError,
+    showPointerLockError,
+    clearPointerLockError,
     reset,
   };
 }

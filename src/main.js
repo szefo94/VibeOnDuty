@@ -17,7 +17,7 @@ import { startLoop, setThirdPerson, getThirdPerson, toggleTpSide } from './loop.
 import { startSnd, nextRound, getSndSitePositions, isMatchOver, setSndMap, computeBotRole } from './modes/snd.js';
 import { on } from './events.js';
 import { getMode, setMode } from './modes/modeManager.js';
-import { isOnline, joinOnline, leaveOnline, requestOnlineAction } from './network/onlineSession.js';
+import { isOnline, joinOnline, leaveOnline, requestOnlineAction, resumeOnline } from './network/onlineSession.js';
 import { stopKillcam } from './replay/killcam.js';
 import { toggleBuyPanel, isBuyPanelOpen, buyWeapon } from './modes/buyMenu.js';
 import { startTdm } from './modes/tdm.js';
@@ -299,6 +299,10 @@ async function returnToMainMenu() {
 }
 
 document.addEventListener('pointerlockchange', () => {
+  const online = isOnline();
+  _pauseEl.dataset.online = String(online);
+  document.getElementById('pause-title').textContent = online ? 'MOUSE RELEASED' : 'PAUSED';
+  document.getElementById('pause-online-hint').hidden = !online;
   if (!document.pointerLockElement && gameRunning && !player.dead) {
     _pauseEl.style.display = 'block';
   } else {
@@ -307,6 +311,7 @@ document.addEventListener('pointerlockchange', () => {
 });
 
 document.getElementById('pause-resume-btn').addEventListener('click', () => {
+  if (isOnline()) { resumeOnline(); return; }
   document.getElementById('c').requestPointerLock();
 });
 document.getElementById('pause-mainmenu-btn').addEventListener('click', returnToMainMenu);
@@ -315,10 +320,11 @@ document.getElementById('mp-join-btn').addEventListener('click', async () => {
   if (isOnline()) return;
   const button = document.getElementById('mp-join-btn');
   button.disabled = true;
+  button.textContent = 'Connecting…';
   for (const timer of meleeTimers) clearTimeout(timer);
   meleeTimers.clear();
   try { await joinOnline(); }
-  finally { button.disabled = false; }
+  finally { button.disabled = false; button.textContent = 'Online TDM'; }
   document.getElementById('mp-leave-btn').hidden = !isOnline();
 });
 

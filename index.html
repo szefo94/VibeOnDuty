@@ -15,6 +15,7 @@
 <section id="mp-match-controls" aria-label="Online match" hidden>
   <button id="mp-switch-team">Switch team</button>
   <p id="mp-team-rejection" aria-live="polite"></p>
+  <p id="mp-input-message" aria-live="polite"></p>
   <p id="mp-rules-label"></p><p id="mp-respawn" aria-live="polite"></p>
   <section id="mp-results" aria-live="polite" hidden>
     <strong id="mp-result-title"></strong><p id="mp-result-score"></p>
@@ -166,6 +167,7 @@
 <!-- Pause Menu -->
 <div id="pause-menu" style="display:none">
   <div id="pause-title">PAUSED</div>
+  <p id="pause-online-hint" hidden>The online match continues while your mouse is released.</p>
   <div style="display:flex;flex-direction:column;gap:12px;align-items:center;margin-top:24px">
     <button id="pause-resume-btn">[ RESUME ]</button>
     <button id="pause-mainmenu-btn">[ MAIN MENU ]</button>

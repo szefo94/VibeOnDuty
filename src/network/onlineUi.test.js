@@ -1,6 +1,6 @@
 // @ts-check
 import { describe, it, expect, vi } from 'vitest';
-import { createOnlineUi } from './onlineUi.js';
+import { createOnlineUi, teamSwitchReason } from './onlineUi.js';
 import { createSimulation } from '../shared/tdmSimulation.js';
 import { requestFire, stepProjectiles } from '../shared/combat.js';
 /** @returns {any} */
@@ -21,6 +21,7 @@ function fixture() {
       'mp-match-controls',
       'mp-respawn',
       'mp-rules-label',
+      'mp-input-message',
     ].map((id) => [id, { textContent: '', hidden: true }])
   );
   for (const element of Object.values(elements))
@@ -53,6 +54,32 @@ function fixture() {
   return { ui, elements, marker, number, tickMarker, clearMarker, session, event };
 }
 describe('confirmed online presentation', () => {
+  it('disables balanced-team switches even while dead or during results', () => {
+    const me = { team: 'blue', alive: false }, peer = { team: 'red', alive: true };
+    for (const phase of ['active', 'results'])
+      expect(teamSwitchReason(me, phase, [me, peer])).toContain('balanced');
+    expect(teamSwitchReason({ ...me, team: 'red' }, 'results', [me, peer])).toContain('balanced');
+  });
+  it('allows solo results and legal smaller-team switches, while blocking active living players', () => {
+    const me = { team: 'blue', alive: true };
+    expect(teamSwitchReason(me, 'active', [me])).toContain('dead');
+    expect(teamSwitchReason(me, 'results', [me])).toBe('');
+    const players = [me, { team: 'blue' }, { team: 'red' }];
+    expect(teamSwitchReason({ ...me, alive: false }, 'active', players)).toBe('');
+    expect(teamSwitchReason({ team: 'red', alive: false }, 'active', players)).toContain('balanced');
+  });
+  it('shows mouse recovery without mislabeling the live connection and clears it on capture or teardown', () => {
+    const f = fixture();
+    f.ui.showPointerLockError();
+    expect(f.elements['mp-input-message'].textContent).toContain('match continues');
+    expect(f.elements['mp-input-message'].textContent).toContain('Resume');
+    expect(f.elements['mp-error-banner'].hidden).toBe(true);
+    f.ui.clearPointerLockError();
+    expect(f.elements['mp-input-message'].textContent).toBe('');
+    f.ui.showPointerLockError();
+    f.ui.reset();
+    expect(f.elements['mp-input-message'].textContent).toBe('');
+  });
   it('presents both real impacts when shot IDs reverse, but never repeats events or seen shots', () => {
     const f = fixture();
     const simulation = createSimulation({ width: 8, height: 8, H2: 1.4, style: 'rooftop',
