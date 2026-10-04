@@ -1,40 +1,40 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 01
-current_phase_name: Two-Client Authoritative TDM
-status: Automated plans complete; Phase1 human acceptance pending
-stopped_at: Phase01 verified human_needed; run gsd-verify-work 1
-last_updated: "2026-10-04T11:21:59.175Z"
+current_phase: 2
+current_phase_name: Responsive Cross-Device Lobbies and Deathmatch
+status: planning
+stopped_at: Phase 1 complete, ready to plan Phase 2
+last_updated: "2026-10-04T14:28:05.263Z"
 last_activity: 2026-10-04
-last_activity_desc: "Final review/verification:247 unit,19 offline and14 multiplayer tests pass; all5 review findings and UI remediation fixed; human acceptance pending"
-state_head: 0d67c112eb9c083668907d321029352a4f2d38bf
+last_activity_desc: Phase 1 complete, transitioned to Phase 2
+state_head: e9be1b4dcc71888cb6251374039c709af0aabcfd
 progress:
   total_phases: 12
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 7
   completed_plans: 7
-  percent: 0
+  percent: 8
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-03)
+See: .planning/PROJECT.md (updated 2026-10-04)
 
 **Core value:** Players on different devices can join the same match and enjoy responsive, fair combat with consistent movement and server-validated hits.
-**Current focus:** Phase 01 — Two-Client Authoritative TDM
+**Current focus:** Phase 02 — Responsive Cross-Device Lobbies and Deathmatch
 
 ## Current Position
 
-Phase: 01 (Two-Client Authoritative TDM) — AWAITING HUMAN ACCEPTANCE
-Plan: 7 of 7
-Status: All7 automated plans executed; Phase1 and its five shared requirements remain pending human acceptance.
-Next action: $gsd-verify-work 1 using01-UAT.md; actual LAN trust/gestures/visuals and remaining probe/wording judgments. No next phase is automatically accepted.
+Phase: 2 — Responsive Cross-Device Lobbies and Deathmatch
+Plan: Not started
+Status: Ready to plan
+Next action: $gsd-discuss-phase 2 — clarify lobbies, cross-device inputs, reconnect/prediction policies and device/network baselines before planning. Automatic advancement is disabled.
 Roadmap review: Accepted; Phase 1 execution resumed after package approval
-Last activity: 2026-10-04 — Final review/verification:247 unit,19 offline and14 multiplayer tests pass; all5 review findings and UI remediation fixed; human acceptance pending.
+Last activity: 2026-10-04 — Phase 1 complete, transitioned to Phase 2
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 8%
 
 ## Performance Metrics
 
@@ -47,7 +47,7 @@ Progress: [░░░░░░░░░░] 0%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 7 | 940 min | 134 min |
+| 1 | 7 | - | - |
 
 **Recent Trend:**
 - Last 5 plans:01-03 (86min),01-06 (31min),01-04 (29min),01-05 (42min),01-07 (520min including approximately454min host suspension)
@@ -73,7 +73,7 @@ Full decisions are recorded in PROJECT.md.
 
 - Preserve order: five-mode multiplayer → movement/collision → human art/animation → weapons/loadouts/progression/equipment → second editor → final maps.
 - First playable slice is two real clients completing authoritative TDM with current maps/assets; minimum shared simulation/collision foundations belong inside multiplayer.
-- Use MVP phase boundaries across the full selected scope; all 67 v1 requirements remain pending.
+- Use MVP phase boundaries across the full selected scope; five Phase1 requirements are complete and62 v1 requirements remain pending.
 - Phase 1 includes `npm run mp-server -- --port <port> --host <bind-address> --tls --public <advertised-address>` with documented TLS setup and client-facing address semantics.
 - 8/12/16/24 slots are gated by measured human/bot hosting profiles; 60 FPS remains a target across the three agreed device classes.
 - Armor plates are deferred to future longer modes.
@@ -93,7 +93,7 @@ Full decisions are recorded in PROJECT.md.
 - [Phase 01]: Life/match receipt reset preserves flood budget; spawn exhaustion waits safely and zero humans suspend matches until a fresh connection starts.
 - [Phase 01]: Disconnect retires SDK automatic reconnection and Retry creates fresh membership after local teardown; reconnect continuity remains Phase2.
 - [Phase 01]: Private hit UI validates bounded finite outcomes and current lives before dedupe, uses render delta and never changes snapshot health.
-- [Phase 01]: Final247 unit/19 offline/14 MP gates pass after code/UI fixes. Independent verifier human_needed32/34, valid MVP goal and11/11 decisions honored; five manual acceptance items persisted.
+- [Phase 01]: Final247 unit/19 offline/14 MP gates pass after code/UI fixes. Independent source verification and11/11 decisions are preserved; five human UAT passes canonicalize verification to passed and close all five shared requirements.
 
 ### Pending Todos
 
@@ -101,7 +101,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- Phase1: All final automated gates pass247 units/19 offline/14 MP; five critical findings and supplementary killcam/UI fixes committed. Independent security audit closes29 planned threats atL1 presence depth with one accepted-low self-signed testing risk. Verifier human_needed32/34; five UAT items pending, requirements unchecked. Small26 captures are not full-size approval; optional full-resolution controller remains deferred WINDOWS31. No Pi/FPS/capacity claims.
+- Phase1 carry-forward: Self-signed certificates retain the accepted-low testing trust exception. All Phase1 manual checks passed; other-device reachability and Pi/FPS/slot qualification remain unmeasured. Historical26 small captures retain their resolution limits; optional full-resolution capture remains deferred WINDOWS31.
 - Phase 2-4: Confirm representative devices/network limits and actual ARM64 Pi model, 4 GB/16 GB configuration, cooling/storage/access; no capacity/FPS benchmarks are complete.
 - Phase 5-7: Movement/input rules, human rig/motion terms, installed Blender automation, and in-game visual acceptance remain open; no Blender connector is assumed.
 - Phase 8-10: Choose catalogs, balance/penetration, minimal identity/recovery/save lifetime, durable reward storage, and equipment/streak/UAV rules.
@@ -115,11 +115,11 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-10-04T11:21:59.175Z
-Stopped at: Phase01 final verification human_needed; five UAT checks pending
+Last session: 2026-10-04T14:28:05.263Z
+Stopped at: Phase 1 complete, ready to plan Phase 2
 Resume file: None
 
 Review server: https://192.168.0.16:2567 — default rules, owned Node PID35084,
-attached exec session99002. HTTPS health and game verified; real browser trust
-pending. See01-UAT.md and ignored01-review-server.json for ownership/setup.
+attached exec session99002. HTTPS health and game verified; the user passed the
+two-window browser trust/gesture check. See01-UAT.md and ignored01-review-server.json for ownership/setup.
 Temporary git.allow_default_branch_commits override restored to its prior absence.

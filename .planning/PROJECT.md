@@ -21,11 +21,19 @@ These capabilities are inferred from the existing implementation and the 2026-10
 - Existing grid-based, multi-floor map editor with preview/playtest, local save slots, and URL sharing.
 - Existing unit and browser regression suites and test-gated static deployment.
 
+The following capabilities passed automated verification and human UAT on
+2026-10-04, within the two-human Phase 1 keyboard/mouse M4 slice:
+
+- ✓ NET-01: Two browser players complete dedicated-server TDM using current map and character assets — Phase 1.
+- ✓ NET-03: The server validates movement intents and rejects invalid, stale, duplicated or impossible requests — Phase 1.
+- ✓ NET-04: The server owns firing, projectile travel, hit recognition, damage, death and score — Phase 1.
+- ✓ MODE-01: Shared team assignment, respawns, match results and automatic same-settings rematch — Phase 1.
+- ✓ HOST-03: Console server startup with port, bind host, advertised address and self-signed testing TLS, plus documented help and errors — Phase 1.
+
 ### Active
 
-- [ ] Build netcode, multiplayer lobbies, and a dedicated server before the later movement and content overhaul.
-- [ ] Launch the first multiplayer server from the console with `npm run mp-server -- --port <port> --host <bind-address> --tls --public <advertised-address>`, with documented TLS configuration and clear startup/help/error output.
-- [ ] Make the server authoritative over match rules, player movement, firing, hit recognition, damage, kills, and score; research prediction, reconciliation, interpolation, and latency handling for responsive browser play.
+- [ ] Extend the accepted dedicated-server slice with multiplayer lobbies and responsive netcode before the later movement and content overhaul.
+- [ ] Add prediction, reconciliation, interpolation and bounded latency handling while preserving accepted server authority over match rules, movement and combat.
 - [ ] Support adjustable 8-, 12-, 16-, and 24-player match capacities with maps appropriate to each size and an optional lobby setting to fill empty slots with bots.
 - [ ] Provide multiplayer Team Deathmatch, Search & Destroy with bomb planting and no respawns during a round, free-for-all Deathmatch, Capture the Flag, and rotating King of the Hill/Hardpoint.
 - [ ] Support Raspberry Pi server hosting, initially considering a Pi 5 with 4 GB RAM or a Raspberry Pi configuration with 16 GB RAM; establish measured capacity rather than assuming all configurations sustain 24 slots.
@@ -56,7 +64,7 @@ These capabilities are inferred from the existing implementation and the 2026-10
 - Repository: `https://github.com/szefo94/VibeOnDuty.git`, local worktree `C:/Programowanie/VibeOnDuty`.
 - Baseline code commit: `748d8199047ad3344e6356a82371757d90413145`; codebase map committed as `f600648`.
 - Evidence-backed navigation: `AGENTS.md` and `.planning/codebase/{STACK,ARCHITECTURE,STRUCTURE,CONVENTIONS,TESTING,INTEGRATIONS,CONCERNS}.md`.
-- The current application is client-only. There is no implemented multiplayer transport, dedicated backend, account system, or persistent server-side progression.
+- Phase 1 adds a self-hosted Colyseus dedicated server and same-origin browser multiplayer entry, shared headless simulation, schema replication and authoritative M4 TDM. The acceptance slice admits two humans; it does not qualify 8/12/16/24-slot capacity. Accounts and persistent server-side progression remain unimplemented.
 - Runtime state is mostly mutable module singletons. Rendering/DOM initialization makes many gameplay modules unsuitable for direct headless-server imports.
 - Existing maps use integer grids, heightmaps, and optional floors. Navigation and several cached arrays have first-map or first-floor assumptions that matter for future collision and map work.
 - Current animation work already uses a shared target skeleton, offline Blender retargeting, and per-character mixers. A replacement should be evaluated against actual visual results and resource ownership rather than automatically discarding this work.
@@ -64,7 +72,7 @@ These capabilities are inferred from the existing implementation and the 2026-10
 
 ### Workflow Defaults
 
-Project initialization uses reversible proposed defaults while no alternative preferences have been supplied: autonomous routine steps, fine-grained phases, independent work in parallel, tracked planning documents, research/plan checking/verification enabled, full instructions, and the current session model. These preferences can be revised with `$gsd-settings`. The 12-phase roadmap is accepted; implementation begins after Phase 1 discussion and planning.
+Project initialization uses reversible proposed defaults while no alternative preferences have been supplied: autonomous routine steps, fine-grained phases, independent work in parallel, tracked planning documents, research/plan checking/verification enabled, full instructions, and the current session model. These preferences can be revised with `$gsd-settings`. The 12-phase roadmap is accepted; Phase 1 is complete and Phase 2 awaits discussion/planning. Automatic advancement is disabled.
 
 ### User-Selected Delivery Order
 
@@ -80,7 +88,7 @@ Necessary foundations may be added inside earlier phases when they enable a play
 ### Open Decisions for Research and Phase Discussion
 
 - Exact server hardware model, operating system, storage, cooling, connectivity, and whether initial access is LAN, Internet, or both.
-- Server tick/snapshot rates, transport, shared simulation boundaries, projectile lag handling, and measured player/bot budgets.
+- Phase 1 uses a 30 Hz server simulation, 20 Hz schema patches and same-origin WebSockets. Phase 2 must set prediction/interpolation and bounded projectile latency policies; measured player/bot budgets remain open.
 - Representative phone and PC baselines and performance acceptance scenarios; 60 FPS is a target, not a verified universal guarantee.
 - Exact omnimovement behavior and input mappings across mouse/keyboard, touch, and gamepad.
 - Player identity and progression persistence: login method, guest support, recovery, unlock rules, and save lifetime.
@@ -107,9 +115,12 @@ Necessary foundations may be added inside earlier phases when they enable a play
 | Browser delivery with phones, integrated graphics, and gaming PCs | User wants cross-platform access and 60 FPS | Pending implementation and device measurements |
 | Call of Duty-inspired omnimovement | User-selected combat and movement reference | Pending detailed movement definition |
 | Borderlands-inspired comic-book art | User-selected look: drawings over humanlike 3D models | Pending visual prototype and Blender iterations |
-| Dedicated server with server hit recognition | User wants multiplayer and server-owned combat outcomes | Pending network architecture research |
+| Dedicated server with server hit recognition | User wants multiplayer and server-owned combat outcomes | Validated for two-human M4 TDM in Phase 1; later responsiveness/capacity work remains |
+| Same-origin operator game link with CLI-configured testing TLS | One deployed server is the selected entry point; bind and advertised addresses have separate purposes | Phase 1 automated and human acceptance passed; self-signed trust remains a testing exception |
+| Server-owned simulation and recipient-private hit feedback | Client intents must not award trusted outcomes; only the shooter receives detailed confirmation | Validated in Phase 1; 30 Hz simulation and 20 Hz patches are slice defaults |
+| Fresh-membership Retry | Retiring session-owned inputs, rigs and effects prevents stale lifecycle state | Validated in Phase 1; reconnect continuity and prediction remain Phase 2 |
 | Adjustable 8/12/16/24-slot matches and optional bots | User wants sizes suited to different maps | Pending server/bot capacity measurements |
-| TDM, S&D, DM, CTF, and Hardpoint | Explicit multiplayer mode selection | Pending multiplayer implementation |
+| TDM, S&D, DM, CTF, and Hardpoint | Explicit multiplayer mode selection | TDM slice validated in Phase 1; other multiplayer modes remain assigned to Phases 2–3 |
 | Fast kills, health regen, ADS, headshots, recoil, bullet travel, and penetration | Explicit combat selection | Pending balancing and authoritative combat implementation |
 | Progressive weapon/attachment availability | Explicit loadout/progression choice | Pending identity, persistence, and unlock design |
 | Combined modular, extrusion, sculpting, and prompt-assisted editor | User wants a new flexible map workflow alongside the existing editor | Pending authoring format and tooling research |
@@ -125,4 +136,4 @@ After each phase transition, move verified requirements to Validated, move inval
 After each milestone, review every section, check the Core Value, reconsider deferred items, and update the current technical and player context.
 
 ---
-*Last updated: 2026-10-03 after acceptance of the initial 12-phase roadmap, including Phase 1 console-server startup.*
+*Last updated: 2026-10-04 after Phase 1 verification and five passing human UAT checks.*

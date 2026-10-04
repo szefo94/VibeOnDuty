@@ -9,17 +9,17 @@ This is the selected overhaul scope, delivered incrementally in the user's order
 
 ### Authoritative Multiplayer
 
-- [ ] **NET-01**: Two browser clients can join the same dedicated-server match on an existing map, see each other, and complete a playable TDM session.
+- [x] **NET-01**: Two browser clients can join the same dedicated-server match on an existing map, see each other, and complete a playable TDM session.
 - [ ] **NET-02**: Players can create or join a lobby and select its game mode, supported map, and 8-, 12-, 16-, or 24-slot capacity within the server's qualified hosting profile.
-- [ ] **NET-03**: The server derives player movement from validated input commands and rejects invalid, stale, duplicated, or impossible movement requests.
-- [ ] **NET-04**: The server determines firing eligibility, projectile travel, hits, damage, deaths, and score; clients cannot award their own hits or kills.
+- [x] **NET-03**: The server derives player movement from validated input commands and rejects invalid, stale, duplicated, or impossible movement requests.
+- [x] **NET-04**: The server determines firing eligibility, projectile travel, hits, damage, deaths, and score; clients cannot award their own hits or kills.
 - [ ] **NET-05**: Local movement remains responsive through prediction/reconciliation while remote players move smoothly through interpolation under the agreed network impairment profile.
 - [ ] **NET-06**: Traveling projectiles use a documented bounded latency policy that produces consistent confirmed outcomes for moving targets, cover, death, and respawn without trusting arbitrary client timestamps.
 - [ ] **NET-07**: Players can leave, reconnect under the chosen policy, finish, and restart a match without stale actors, projectiles, mode rules, or timers leaking into the next session.
 
 ### Multiplayer Modes and Bots
 
-- [ ] **MODE-01**: Players can complete a server-scored Team Deathmatch with team assignment, respawns, and a consistent match winner.
+- [x] **MODE-01**: Players can complete a server-scored Team Deathmatch with team assignment, respawns, and a consistent match winner.
 - [ ] **MODE-02**: Players can complete server-scored free-for-all Deathmatch with individual respawns and a consistent winner.
 - [ ] **MODE-03**: Players can complete Search & Destroy rounds with bomb planting/defusing, consistent round outcomes, and no respawn within a round.
 - [ ] **MODE-04**: Players can pick up, carry, drop, return, and capture flags in an authoritative Capture the Flag match with consistent team score.
@@ -32,7 +32,7 @@ This is the selected overhaul scope, delivered incrementally in the user's order
 
 - [ ] **HOST-01**: An operator can launch the dedicated server on the identified ARM64 Raspberry Pi configuration using documented setup, endpoint configuration, and startup/restart procedures.
 - [ ] **HOST-02**: An operator can select a qualified capacity using published sustained 8/12/16/24-slot human/bot benchmark results that record tick time, memory, network load, and hardware conditions.
-- [ ] **HOST-03**: An operator can launch the first multiplayer server with `npm run mp-server -- --port <port> --host <bind-address> --tls --public <advertised-address>`, using documented TLS certificate configuration, an advertised address distinct from the bind address, and clear startup/help/configuration-error output.
+- [x] **HOST-03**: An operator can launch the first multiplayer server with `npm run mp-server -- --port <port> --host <bind-address> --tls --public <advertised-address>`, using documented TLS certificate configuration, an advertised address distinct from the bind address, and clear startup/help/configuration-error output.
 - [ ] **PLAT-01**: Players on keyboard/mouse PCs, touch phones, and supported gamepad configurations can join and complete the same multiplayer match using usable device-specific controls.
 - [ ] **PERF-01**: Players can choose scalable visual settings, with a reproducible browser benchmark targeting sustained 60 FPS on agreed representative phone, integrated-graphics PC, and gaming-PC devices.
 - [ ] **PERF-02**: Each major movement, character, weapon, and final-map delivery is checked against the established client/server performance scenarios, with measured limits and regressions recorded.
@@ -143,14 +143,14 @@ All 67 v1 requirements are assigned to exactly one roadmap phase. The initial ro
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NET-01 | Phase 1 | Pending |
+| NET-01 | Phase 1 | Complete |
 | NET-02 | Phase 2 | Pending |
-| NET-03 | Phase 1 | Pending |
-| NET-04 | Phase 1 | Pending |
+| NET-03 | Phase 1 | Complete |
+| NET-04 | Phase 1 | Complete |
 | NET-05 | Phase 2 | Pending |
 | NET-06 | Phase 2 | Pending |
 | NET-07 | Phase 2 | Pending |
-| MODE-01 | Phase 1 | Pending |
+| MODE-01 | Phase 1 | Complete |
 | MODE-02 | Phase 2 | Pending |
 | MODE-03 | Phase 3 | Pending |
 | MODE-04 | Phase 3 | Pending |
@@ -160,7 +160,7 @@ All 67 v1 requirements are assigned to exactly one roadmap phase. The initial ro
 | BOT-03 | Phase 4 | Pending |
 | HOST-01 | Phase 4 | Pending |
 | HOST-02 | Phase 4 | Pending |
-| HOST-03 | Phase 1 | Pending |
+| HOST-03 | Phase 1 | Complete |
 | PLAT-01 | Phase 2 | Pending |
 | PERF-01 | Phase 2 | Pending |
 | PERF-02 | Phase 12 | Pending |
@@ -220,4 +220,4 @@ All 67 v1 requirements are assigned to exactly one roadmap phase. The initial ro
 
 ---
 *Requirements defined: 2026-10-03 from the user's project dialogue and source-backed enabling dependencies.*
-*Last updated: 2026-10-03 after acceptance of the roadmap with console-server startup assigned to Phase 1.*
+*Last updated: 2026-10-04 after Phase 1 automated verification and five passing human UAT checks.*

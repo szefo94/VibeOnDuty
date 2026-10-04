@@ -2,13 +2,35 @@
 phase: "01"
 standard: OWASP-ASVS-5.0.0
 target_level: 1
-status: automated-verified-human-pending
+status: verified
 threats_open: 0
 threats_accepted: 1
-human_acceptance: pending
+human_acceptance: passed
 ---
 
 # Phase 1 security evidence
+
+## Post-UAT security audit — 2026-10-04
+
+The verify:post review retained the existing29-row planned threat register and
+the independent L1 mitigation-presence evidence. All seven PLAN files contain
+threat models; no blocking or non-blocking threat remains open. Runtime source
+and dependency pins did not change during conversational UAT. Under the
+secure-phase L1/no-open-threat rule, no duplicate auditor run is required.
+
+The user passed all five human checks in01-UAT.md. This closes the documented
+testing trust, gesture, visual and scope/wording acceptance items; it does not
+turn a self-signed certificate into a publicly trusted certificate or establish
+hardware capacity, universal FPS or ASVS certification. T-01-24 remains the
+already documented accepted-low testing risk. Earlier pending language below
+is retained as the historical audit record.
+
+| Metric | Count |
+| --- | --- |
+| Planned threats reviewed | 29 |
+| Closed | 29 |
+| Open | 0 |
+| Previously accepted low testing risks | 1 |
 
 ## Independent L1 audit — 2026-10-04
 

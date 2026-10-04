@@ -82,10 +82,10 @@ Infrastructure belongs inside the first end-to-end slice or the task immediately
 - [x] Every task has automated verification or a real human checkpoint.
 - [x] No three consecutive implementation tasks without automated feedback.
 - [x] All new test/config references exist before their verify command runs.
-- [ ] Full automated suite and required manual acceptance evidence recorded.
+- [x] Full automated suite and required manual acceptance evidence recorded.
 - [x] `nyquist_compliant: true` only after the validation audit confirms coverage.
 
-**Approval:** Automated coverage audited on2026-10-04; human acceptance remains pending. Nyquist compliance does not accept the five shared requirements.
+**Approval:** Automated coverage audited on2026-10-04; the user passed all five manual checks in01-UAT.md on2026-10-04. Canonical verification and the shared phase-completion gate determine requirement completion.
 
 ## Validation Audit 2026-10-04
 
@@ -100,3 +100,18 @@ All18 task rows and all five requirement IDs map to existing behavioral tests. N
 | HOST-03 | CLI, real HTTP/Origin/admission, TLS SAN/pair/ACL/reuse and production HTTPS/WSS restart | COVERED |
 
 Missing automated coverage:0. Current failing tests:0. Latest247 units22files155.31s,19 offline3.3min and14 multiplayer6.5min pass, as do lint/both types/both builds. All suites discover nonzero tests. See01-CLOSEOUT.md and01-REVIEW-FIX.md for final results and distinct failed-run history. Remaining trust, gestures, full-size visuals and unspecified-probe/capacity judgments are complementary manual checks. The typed verifier still assesses goal achievement independently; no hardware or FPS acceptance is inferred.
+
+## Post-UAT validation audit — 2026-10-04
+
+The verify:post no-gap path reconciled the existing18 task rows, five requirement
+mappings and final green evidence above. No implementation or test source changed
+during UAT, so no new tests or duplicate suite runs were needed. All five manual
+checks now pass with human attribution in01-UAT.md. Historical pending wording
+above describes the earlier automated audit, not the current UAT state.
+
+| Metric | Count |
+| --- | --- |
+| Automated coverage gaps found | 0 |
+| Resolved through new tests | 0 |
+| Escalated | 0 |
+| Human UAT checks passed | 5 |

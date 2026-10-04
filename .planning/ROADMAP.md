@@ -6,15 +6,15 @@ Deliver the full selected v1 scope in the user's order: multiplayer first, then 
 
 **Granularity:** fine
 **Project mode:** mvp
-**Roadmap status:** Accepted on2026-10-03; all seven Phase1 automated plans are executed. Phase1 human acceptance remains pending; the five shared requirements are not yet marked achieved.
+**Roadmap status:** Accepted on2026-10-03; Phase1 completed on2026-10-04 with7/7 plans,5/5 human UAT checks and all five shared requirements accepted. Phase2 awaits discussion/planning.
 
-Node24 and exact approved Colyseus dependencies are installed; owned fixture/TLS hosting, shared movement, traveling M4 and full TDM lifecycle have production-browser evidence. Current cloned rigs, private feedback/recovery and all six offline destinations pass their checks. Final gates after code-review and UI fixes pass247 unit,19 offline/animation and14 production multiplayer tests, both types/builds and lint. Independent verifier reports human_needed32/34; five UAT items are saved in01-UAT.md. Actual-window trust, pointer lock, full-size visual judgment, two unclassified probes and capacity/transparency wording remain human review. The extra high-resolution capture attempt is deferred; existing small production screenshots are not visual approval. Rapier adoption and full movement, art, editor and final-map overhauls retain their selected future position.
+Node24 and exact approved Colyseus dependencies are installed; owned fixture/TLS hosting, shared movement, traveling M4 and full TDM lifecycle have production-browser evidence. Current cloned rigs, private feedback/recovery and all six offline destinations pass their checks. Final gates after code-review and UI fixes pass247 unit,19 offline/animation and14 production multiplayer tests, both types/builds and lint. Canonical verification is passed after all five human checks in01-UAT.md; the shared completion gate reports no blockers and current source evidence. Human acceptance covers actual-window trust, pointer lock, full-size gameplay/visual judgment and scope/capacity wording. Small production screenshots retain their historical limits. No Pi/FPS/slot qualification is claimed. Rapier adoption and full movement, art, editor and final-map overhauls retain their selected future position.
 
 ## Phases
 
 Integer phases are the planned work. Decimal phases are reserved for later urgent insertions. Execute in numeric order.
 
-- [ ] **Phase 1: Two-Client Authoritative TDM** - Two browser players can complete a fair, server-scored TDM match using the current maps and assets.
+- [x] **Phase 1: Two-Client Authoritative TDM** - Two browser players can complete a fair, server-scored TDM match using the current maps and assets. (completed 2026-10-04)
 - [ ] **Phase 2: Responsive Cross-Device Lobbies and Deathmatch** - Players on PCs and phones can choose a lobby, complete responsive TDM or free-for-all sessions, and safely start another match.
 - [ ] **Phase 3: Bomb, Flag, and Hardpoint Matches** - Players can complete all five selected multiplayer modes with authoritative objectives and consistent outcomes.
 - [ ] **Phase 4: Bot-Filled Matches on Measured Pi Hosting** - An operator can host the five modes on identified Raspberry Pi hardware and offer only measured human/bot capacities.
@@ -43,7 +43,7 @@ Integer phases are the planned work. Decimal phases are reserved for later urgen
 4. Modified client messages cannot grant firing eligibility, create trusted hit outcomes, award damage or kills, or overwrite server score.
 5. An operator starts the server with `npm run mp-server -- --port <port> --host <bind-address> --tls --public <advertised-address>`; port/binding/TLS/advertised-address configuration takes effect, certificate setup is documented, and invalid configuration produces actionable errors.
 
-**Plans:** 7/7 automated plans executed; phase acceptance pending human review
+**Plans:** 7/7 complete; automated verification and human acceptance passed2026-10-04
 **UI hint:** yes
 
 Plans:
@@ -53,18 +53,18 @@ Plans:
 **Wave 2** *(complete)*
 - [x] 01-02-PLAN.md — Prove two-browser movement and confirmed M4 hit, canonical map and online entry (Wave 2).
 
-**Wave 3** *(ready after Wave 2 completion)*
+**Wave 3** *(complete)*
 - [x] 01-03-PLAN.md — Deliver minimum movement and reject hostile/replayed input commands (Wave 3).
 - [x] 01-06-PLAN.md — Launch one CLI-configured HTTP/TLS game link with protected certificate reuse (Wave 3).
 
-**Wave 4** *(blocked on Wave 3 completion)*
+**Wave 4** *(complete)*
 - [x] 01-04-PLAN.md — Enforce firing/reload, swept impacts and server combat outcomes (Wave 4).
 
-**Wave 5** *(blocked on Wave 4 completion)*
+**Wave 5** *(complete)*
 - [x] 01-05-PLAN.md — Finish teams, death/respawn, results and same-settings rematch (Wave 5).
 
-**Wave 6** *(blocked on Wave 5 completion)*
-- [x] 01-07-PLAN.md — Automated current-rig, feedback, recovery, offline and security checks pass (Wave6); human trust/gesture/visual/probe acceptance remains open.
+**Wave 6** *(complete)*
+- [x] 01-07-PLAN.md — Current-rig, feedback, recovery, offline and security checks pass (Wave6); human trust/gesture/visual/probe acceptance passed in01-UAT.md.
 
 **Research/discussion focus:** Validate the proposed runtime/transport/physics combination, shared headless simulation boundaries, fixed-step input contract, and minimum authoritative collision/projectile behavior. Define CLI defaults, `--help`, port/bind validation, TLS certificate configuration, and the client-facing hostname/URL semantics of `--public`, including direct TLS and proxy hosting. Keep existing art and maps; extract only the collision/map/lifecycle foundations needed for this playable slice.
 
@@ -299,7 +299,7 @@ Armor plates remain future longer-mode scope. Monetization and generic authentic
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Two-Client Authoritative TDM | 7/7 | Awaiting human acceptance |  |
+| 1. Two-Client Authoritative TDM | 7/7 | Complete    | 2026-10-04 |
 | 2. Responsive Cross-Device Lobbies and Deathmatch | 0/TBD | Not started | - |
 | 3. Bomb, Flag, and Hardpoint Matches | 0/TBD | Not started | - |
 | 4. Bot-Filled Matches on Measured Pi Hosting | 0/TBD | Not started | - |
@@ -312,7 +312,7 @@ Armor plates remain future longer-mode scope. Monetization and generic authentic
 | 11. Combined Second Editor with Inspectable Prompt Edits | 0/TBD | Not started | - |
 | 12. Qualified Adaptations and Two Playable Final Maps | 0/TBD | Not started | - |
 
-**Coverage:**67/67 v1 requirements assigned exactly once; no orphaned or duplicate assignments. Traceability lives in REQUIREMENTS.md. Phase1 automated implementation evidence exists; its shared requirement achievement remains pending human acceptance. Later plans remain pending.
+**Coverage:**67/67 v1 requirements assigned exactly once; no orphaned or duplicate assignments. Traceability lives in REQUIREMENTS.md. Phase1's five requirements are complete after automated verification and human acceptance;62 requirements and later plans remain pending.
 
 ---
 *Created: 2026-10-03. Accepted with Phase 1 console-server startup on 2026-10-03.*

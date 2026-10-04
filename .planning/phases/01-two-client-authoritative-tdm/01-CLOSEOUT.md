@@ -1,9 +1,9 @@
 ---
 phase: "01"
 source_head: 44c3e298a705cec3e0ffeecd54b357ef32e693d9
-updated: 2026-10-04T11:01:33Z
+updated: 2026-10-04T14:24:46Z
 automated_gates: passed
-human_acceptance: pending
+human_acceptance: passed
 ---
 
 # Phase 01 final automated closeout
@@ -45,10 +45,19 @@ Schema drift, codebase drift and UI safety queries all returned block:false.
 Nyquist coverage is audited with existing real tests for all five requirements.
 These checks do not certify ASVS or accept the shared requirements.
 
-## Pending acceptance
+## Human acceptance — 2026-10-04
 
-Actual LAN two-window certificate trust, ordinary gesture-driven mouse capture,
-full-size map/rig/hit-feedback review, HOST-03/MODE-01 manual probes and capacity
-wording judgment remain pending. No Pi, device, capacity or60FPS qualification is
-claimed. The goal verifier and human acceptance must precede phase completion;
-Phase02 and later remain unstarted.
+The user passed the actual LAN two-window certificate trust and mouse-capture
+check, then the full-size gameplay/visual/lifecycle check. Their explicit
+"pass all tests" passed the remaining hosting/mode scope acknowledgements and
+capacity-wording review.01-UAT.md records five human passes and zero issues;
+no additional unspecified acceptance predicate was supplied or invented.
+
+The verify:post Nyquist review found no coverage gaps; the L1 security review
+retained29 closed planned threats and the existing accepted-low testing trust
+risk. The automatic UI-review step reused the existing review and its completed
+remediation evidence, without regenerating its historical15/24 score.
+
+No runtime source, dependencies or tests changed during UAT; the green runs
+above remain the latest automated evidence. No Pi, device, capacity or60FPS
+qualification is claimed. Phase02 and later remain unstarted.
