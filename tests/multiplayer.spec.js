@@ -370,8 +370,20 @@ async function walkTo(page, sessionId, x, z) {
 
 async function aimAt(page, targetId) {
   await focusControls(page);
-  await page.mouse.move(400, 300);
-  await page.waitForTimeout(200);
+  // A mouse move updates local intention before its authoritative yaw patch.
+  // Wait for a subsequently sent command to be consumed; a fixed sleep can
+  // falsely report convergence against the pre-move snapshot.
+  const moveAndObserve = async (x, y) => {
+    const beforeSeq = (await snapshot(page)).inputSeq;
+    await page.mouse.move(x, y);
+    await expect.poll(async () => (await snapshot(page)).inputSeq).toBeGreaterThan(beforeSeq);
+    const sentSeq = (await snapshot(page)).inputSeq;
+    await expect.poll(async () => {
+      const state = await snapshot(page);
+      return state.players.find((p) => p.sessionId === state.sessionId).lastConsumedSeq >= sentSeq;
+    }).toBe(true);
+  };
+  await moveAndObserve(400, 300);
   let mouseX = 400, mouseY = 300;
   for (let attempt = 0; attempt < 6; attempt++) {
     const state = await snapshot(page);
@@ -384,8 +396,7 @@ async function aimAt(page, targetId) {
     const pitchError = pitch - me.pitch;
     if (Math.abs(yawError) < 0.02 && Math.abs(pitchError) < 0.02) return;
     mouseX -= yawError / MOUSE_SENS; mouseY -= pitchError / MOUSE_SENS;
-    await page.mouse.move(mouseX, mouseY);
-    await page.waitForTimeout(250);
+    await moveAndObserve(mouseX, mouseY);
   }
   throw new Error(`Real control aiming did not converge: ${JSON.stringify(await snapshot(page))}`);
 }

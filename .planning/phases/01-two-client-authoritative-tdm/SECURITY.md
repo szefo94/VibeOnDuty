@@ -89,7 +89,7 @@ testing trust exception, not an automated validation of real browser trust.
 Review-fix validation and current counts are recorded separately in
 01-REVIEW-FIX.md. CR-03's real reversed-shot impacts, CR-04's real SDK patch-before-hit
 ordering and queued retirement, and CR-05's production-browser HUD/rematch checks
-extend the original evidence. Early startup/flood/keyboard-route timing failures
+extend the original evidence. Early startup/flood and browser-controller failures
 are retained in that report alongside successful isolated reruns; they are not
 silently relabeled passing executions.
 
@@ -99,6 +99,12 @@ was retiring that session, replacing the menu with `KILLED IN ACTION`. Retiremen
 now cancels that callback and target; expiry and explicit Skip still complete once.
 The focused unit regression and real browser death/menu flow failed before the fix.
 This extends lifecycle evidence without claiming a visual or human-trust check.
+
+The retained score-route trace separately showed the aiming probe accepting the
+pre-mouse authoritative yaw before its input patch arrived; the changed yaw then
+sent its waypoint route into a wall. The controller now waits for a subsequently
+sent sequence to be consumed before judging convergence. Authority, input-age
+rejection, route deadlines, damage/HUD assertions and flood limits stay intact.
 
 Actual LAN certificate trust in two windows, gesture-driven pointer lock,
 map/rig/feedback visual judgment, the unclassified HOST-03 and MODE-01 probes and the
