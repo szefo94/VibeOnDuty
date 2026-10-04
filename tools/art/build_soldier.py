@@ -5,6 +5,7 @@ import math
 import os
 import sys
 import bpy
+import numpy as np
 from mathutils import Vector
 
 parser = argparse.ArgumentParser()
@@ -86,7 +87,69 @@ def material(name, color, domain):
     bsdf.inputs['Base Color'].default_value = (*color, 1)
     bsdf.inputs['Roughness'].default_value = 0.8
     m['artDomain'] = domain
+    m['baseAppearance'] = json.dumps({'color': list(color), 'roughness': 0.8})
     return m
+
+def paint(m, domain, color):
+    """Original editable UV images, with broad strokes and sparse internal marks."""
+    size = 512
+    y, x = np.mgrid[0:size, 0:size] / size
+    strokes = np.sin(x * 21 + np.sin(y * 17) * 0.8) * np.sin(y * 13)
+    fine = np.sin(x * 321 + y * 23) * np.sin(y * 291)
+    value = 1 + strokes * (0.10 if domain == 'skin' else 0.16) + fine * 0.012
+    if domain == 'fabric':
+        value += (np.sin(x * 750) * np.sin(y * 750)) * 0.04
+        seams = (np.abs(np.sin(x * math.pi * 4)) < 0.018) | (np.abs(np.sin(y * math.pi * 6)) < 0.014)
+        value[seams] *= 0.52
+    elif domain in ['armor', 'team-accent']:
+        seams = (x < 0.015) | (x > 0.985) | (y < 0.015) | (y > 0.985)
+        value[seams] *= 0.3
+        wear = ((x < 0.04) | (x > 0.96) | (y < 0.04) | (y > 0.96)) & (np.sin(x * 71 + y * 93) > 0.4)
+        value[wear] += 0.35
+    pixels = np.ones((size, size, 4), dtype=np.float32)
+    pixels[:, :, :3] = np.clip(np.array(color)[None, None, :] * value[:, :, None], 0, 1)
+    if domain == 'skin':
+        # UV-aware soft neckline transition avoids a polygon-shaped skin boundary.
+        blend = np.clip((y * FIT['stature'] - 1.51) / 0.055, 0, 1)
+        blend = blend * blend * (3 - 2 * blend)
+        pixels[:, :, :3] = pixels[:, :, :3] * blend[:, :, None] + np.array((0.188, 0.224, 0.251))[None, None, :] * (1-blend[:, :, None])
+    image = bpy.data.images.new('Paint_' + domain, width=size, height=size)
+    image.pixels.foreach_set(pixels.ravel())
+    image.pack()
+    image['originalContribution'] = 'VibeOnDuty original soft planes, brush marks and seam ink'
+    tree = m.node_tree
+    texture = tree.nodes.new('ShaderNodeTexImage')
+    texture.name = 'Editable illustrated color'
+    texture.image = image
+    bsdf = tree.nodes.get('Principled BSDF')
+    bsdf.inputs['Base Color'].default_value = (1, 1, 1, 1)
+    tree.links.new(texture.outputs['Color'], bsdf.inputs['Base Color'])
+    if domain != 'skin':
+        # A genuine tangent normal image: tiny surface variation, no baked key light.
+        gy, gx = np.gradient(strokes * 0.9 + fine * 0.04)
+        normals = np.ones((size, size, 4), dtype=np.float32)
+        normals[:, :, 0] = 0.5 - gx * 0.3
+        normals[:, :, 1] = 0.5 - gy * 0.3
+        normals[:, :, 2] = 1
+        normal = bpy.data.images.new('Surface_' + domain, width=size, height=size)
+        normal.colorspace_settings.name = 'Non-Color'
+        normal.pixels.foreach_set(normals.ravel())
+        normal.pack()
+        nt = tree.nodes.new('ShaderNodeTexImage')
+        nt.image = normal
+        nm = tree.nodes.new('ShaderNodeNormalMap')
+        tree.links.new(nt.outputs['Color'], nm.inputs['Color'])
+        tree.links.new(nm.outputs['Normal'], bsdf.inputs['Normal'])
+
+def projected_uv(obj):
+    uv = obj.data.uv_layers.new(name='PaintUV')
+    coords = [v.co for v in obj.data.vertices]
+    bounds = [(min(p[i] for p in coords), max(p[i] for p in coords)) for i in range(3)]
+    for face in obj.data.polygons:
+        axes = sorted(sorted(range(3), key=lambda i: abs(face.normal[i]))[:2])
+        for loop in face.loop_indices:
+            p = coords[obj.data.loops[loop].vertex_index]
+            uv.data[loop].uv = [(p[i] - bounds[i][0]) / max(0.001, bounds[i][1] - bounds[i][0]) for i in axes]
 
 def attach(obj, arm, name, weights):
     obj.parent = arm
@@ -203,19 +266,30 @@ def build():
     bpy.context.collection.objects.link(obj)
     obj['anatomicalFace'] = True
     obj['sourceRole'] = 'CC0 anatomical body fitted to inherited compatible skeleton'
-    skin = material('Skin', (0.48, 0.29, 0.19), 'skin')
-    fabric = material('Fabric', (0.075, 0.095, 0.115), 'fabric')
+    skin = material('Skin', (0.58, 0.39, 0.28), 'skin')
+    fabric = material('Fabric', (0.188, 0.224, 0.251), 'fabric')
+    paint(skin, 'skin', (0.58, 0.39, 0.28))
+    paint(fabric, 'fabric', (0.188, 0.224, 0.251))
     obj.data.materials.append(skin)
     obj.data.materials.append(fabric)
     for poly in obj.data.polygons:
         poly.use_smooth = True
         source_height = sum(verts[body_indices[i]].z for i in poly.vertices) / len(poly.vertices)
-        neck_face = max(abs(verts[body_indices[i]].x) for i in poly.vertices) < 0.07
+        neck_face = max(abs(verts[body_indices[i]].x) for i in poly.vertices) < 0.12
         hand_face = all(weights[i][0][0].startswith(('hand_', 'thumb_', 'index_', 'middle_', 'ring_', 'pinky_')) for i in poly.vertices)
-        poly.material_index = 0 if source_height > head_source.z + 0.03 or (source_height > head_source.z - 0.025 and neck_face) or hand_face else 1
+        poly.material_index = 0 if source_height > head_source.z + 0.03 or (source_height > head_source.z - 0.10 and neck_face) or hand_face else 1
     attach(obj, arm, 'HumanBody', weights)
-    armor = material('Armor', (0.20, 0.25, 0.21), 'armor')
-    accent = material('TeamAccent', (0.47, 0.39, 0.16), 'team-accent')
+    # Cylinder projection avoids disconnected face-color islands at the neck.
+    uv = mesh.uv_layers.new(name='PaintUV')
+    for loop in mesh.loops:
+        p = fitted[loop.vertex_index]
+        is_hand = weights[loop.vertex_index][0][0].startswith(('hand_', 'thumb_', 'index_', 'middle_', 'ring_', 'pinky_'))
+        uv.data[loop.index].uv = (0.5 + math.atan2(p.x, -p.y) / math.tau, 0.92 if is_hand else p.z / FIT['stature'])
+    armor = material('Armor', (0.349, 0.392, 0.353), 'armor')
+    accent = material('TeamAccent', (0.714, 0.627, 0.357), 'team-accent')
+    ink = material('Ink', (0.031, 0.035, 0.043), 'ink')
+    paint(armor, 'armor', (0.349, 0.392, 0.353))
+    paint(accent, 'team-accent', (0.714, 0.627, 0.357))
     def box(name, location, scale, bone, mat, bevel=0.02):
         bpy.ops.mesh.primitive_cube_add(size=1, location=location)
         o = bpy.context.object
@@ -230,11 +304,91 @@ def build():
             v.co = o.matrix_world @ v.co
         o.matrix_world.identity()
         o.data.materials.append(mat)
+        projected_uv(o)
         attach(o, arm, name, [[(bone, 1)] for v in o.data.vertices])
         return o
-    box('ChestPlate', (0, -0.125, 1.31), (0.34, 0.065, 0.30), 'spine_03', armor, 0.035)
-    box('ChestIdentifier', (0.085, -0.161, 1.38), (0.095, 0.012, 0.035), 'spine_03', accent, 0.005)
-    box('BackPlate', (0, 0.15, 1.31), (0.32, 0.065, 0.29), 'spine_03', armor)
+    def surface_plate(name, front, bottom, top, bone):
+        points, quads = [], []
+        rows, columns = 8, 8
+        for r in range(rows + 1):
+            z = bottom + r / rows * (top-bottom)
+            width = 0.135 * (0.82 if r == rows else 1)
+            for c in range(columns + 1):
+                x = -width + c / columns * width * 2
+                # Smooth tailored curvature; nearest-body samples at each grid point
+                # created noisy ridges that looked like disconnected scraps when posed.
+                y = (-0.116 if front else 0.118) + (0.020 if front else -0.020) * (x/0.135)**2
+                points.append((x, y, z))
+        for r in range(rows):
+            for c in range(columns):
+                a = r * (columns+1) + c
+                quad = [a, a+1, a+columns+2, a+columns+1]
+                quads.append(quad if front else list(reversed(quad)))
+        data = bpy.data.meshes.new(name)
+        data.from_pydata(points, [], quads)
+        data.update()
+        plate = bpy.data.objects.new(name, data)
+        bpy.context.collection.objects.link(plate)
+        plate.data.materials.append(armor)
+        uv = data.uv_layers.new(name='PaintUV')
+        for loop in data.loops:
+            index = loop.vertex_index
+            uv.data[loop.index].uv = ((index % (columns+1)) / columns, (index // (columns+1)) / rows)
+        solid = plate.modifiers.new('Fitted plate thickness', 'SOLIDIFY')
+        solid.thickness = 0.009
+        bpy.context.view_layer.objects.active = plate
+        bpy.ops.object.modifier_apply(modifier=solid.name)
+        attach(plate, arm, name, [[(bone, 1)] for v in plate.data.vertices])
+        return points
+    chest_points = surface_plate('ChestPlate', True, 1.315, 1.425, 'spine_03')
+    surface_plate('BackPlate', False, 1.315, 1.425, 'spine_03')
+    surface_plate('LowerChestPlate', True, 1.205, 1.305, 'spine_02')
+    surface_plate('LowerBackPlate', False, 1.205, 1.305, 'spine_02')
+    identifier_y = min(p[1] for p in chest_points if p[2] > 1.35) - 0.008
+    box('ChestIdentifier', (0.065, identifier_y, 1.385), (0.082, 0.009, 0.027), 'spine_03', accent, 0.004)
+    for sign in [-1, 1]:
+        box('CarrierFastener' + str(sign), (sign * 0.11, identifier_y + 0.009, 1.395), (0.016, 0.010, 0.025), 'spine_03', ink, 0.003)
+
+    def tube(name, points, radius, bone, mat):
+        vertices, faces = [], []
+        for i, point in enumerate(points):
+            p = Vector(point)
+            tangent = Vector(points[min(i+1, len(points)-1)]) - Vector(points[max(0, i-1)])
+            a = tangent.normalized().cross(Vector((0, 1, 0)))
+            if a.length < 0.1:
+                a = tangent.normalized().cross(Vector((1, 0, 0)))
+            a.normalize()
+            b = tangent.normalized().cross(a)
+            for j in range(6):
+                vertices.append(p + radius * (a*math.cos(j*math.tau/6) + b*math.sin(j*math.tau/6)))
+            if i:
+                for j in range(6):
+                    q = i*6+j
+                    faces.append([q, i*6+(j+1)%6, (i-1)*6+(j+1)%6, q-6])
+        data = bpy.data.meshes.new(name)
+        data.from_pydata(vertices, [], faces)
+        data.update()
+        o = bpy.data.objects.new(name, data)
+        bpy.context.collection.objects.link(o)
+        data.materials.append(mat)
+        projected_uv(o)
+        attach(o, arm, name, [[(bone, 1)] for v in data.vertices])
+
+    # A flexible raised collar covers the skin-to-suit boundary without hiding the jaw.
+    collar_points = [(0.073*math.sin(t*math.tau/32), -0.006 + 0.077*math.cos(t*math.tau/32), 1.518) for t in range(33)]
+    tube('RaisedFabricCollar', collar_points, 0.026, 'Head', fabric)
+    for side, sign in [('l', 1), ('r', -1)]:
+        box('ShoulderPlate_' + side, (sign*0.245, 0.062, 1.467), (0.128, 0.145, 0.092), 'upperarm_' + side, accent, 0.025)
+        box('ForearmGuard_' + side, (sign*0.595, 0.062, 1.480), (0.185, 0.082, 0.046), 'lowerarm_' + side, armor, 0.014)
+        for x in [0.54, 0.65]:
+            box('ForearmStrap_' + side + str(x), (sign*x, 0.062, 1.478), (0.013, 0.091, 0.047), 'lowerarm_' + side, ink, 0.004)
+        box('ShinPanel_' + side, (sign*0.089, -0.050, 0.355), (0.092, 0.035, 0.215), 'calf_' + side, armor, 0.014)
+        box('KneeGuard_' + side, (sign*0.089, -0.060, 0.505), (0.105, 0.04, 0.07), 'calf_' + side, armor, 0.016)
+        box('BootAnkle_' + side, (sign*0.089, 0.025, 0.140), (0.102, 0.126, 0.172), 'foot_' + side, fabric, 0.018)
+        box('BootToe_' + side, (sign*0.089, -0.092, 0.054), (0.111, 0.245, 0.086), 'foot_' + side, armor, 0.022)
+        box('BootSole_' + side, (sign*0.089, -0.078, 0.019), (0.116, 0.284, 0.028), 'foot_' + side, ink, 0.008)
+        for n in range(4):
+            box('BootLace_' + side + str(n), (sign*0.089, -0.018-n*0.019, 0.103-n*0.008), (0.060, 0.006, 0.005), 'foot_' + side, ink, 0.001)
     # Original continuous shell: high front brow opening, lower sides/back. No face visor.
     helmet_points, helmet_faces = [], []
     rings, sides = 12, 32
@@ -256,11 +410,25 @@ def build():
     ho = bpy.data.objects.new('OpenHelmet', hm)
     bpy.context.collection.objects.link(ho)
     ho.data.materials.append(armor)
+    hu = hm.uv_layers.new(name='PaintUV')
+    for poly in hm.polygons:
+        for loop in poly.loop_indices:
+            index = hm.loops[loop].vertex_index
+            side = index % sides
+            # Wrap only the rear seam, keeping continuous brush planes across the brow.
+            hu.data[loop].uv = (side / sides, (index // sides) / rings)
     for poly in hm.polygons:
         poly.use_smooth = True
     attach(ho, arm, 'OpenHelmet', [[('Head', 1)] for p in helmet_points])
+    tube('HelmetRim', helmet_points[-sides:] + [helmet_points[-sides]], 0.004, 'Head', ink)
+    for sign in [-1, 1]:
+        box('HelmetSidePanel' + str(sign), (sign*0.100, -0.025, 1.705), (0.016, 0.085, 0.042), 'Head', accent, 0.008)
+        box('HelmetRail' + str(sign), (sign*0.102, 0.004, 1.675), (0.014, 0.071, 0.014), 'Head', ink, 0.003)
+        tube('HelmetStrap' + str(sign), [(sign*0.087, -0.025, 1.670), (sign*0.067, -0.062, 1.585), (sign*0.034, -0.083, 1.565)], 0.005, 'Head', fabric)
+    box('HelmetBrowMount', (0, -0.155, 1.727), (0.032, 0.014, 0.025), 'Head', ink, 0.004)
     for side in ['l', 'r']:
         center = head_target + (landmark(f'joint-{side}-eye') - head_source) * head_scale
+        tube('BrowInk_' + side, [center + Vector((x, -0.004, 0.018 + 0.003*math.cos(x*90))) for x in [-0.013, -0.006, 0, 0.006, 0.013]], 0.0018, 'Head', ink)
         bpy.ops.mesh.primitive_uv_sphere_add(segments=16, ring_count=8, radius=0.012, location=center)
         eye = bpy.context.object
         for v in eye.data.vertices:

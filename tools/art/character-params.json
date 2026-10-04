@@ -24,6 +24,12 @@
     "headTransition": 0.05,
     "helmet": { "widthRadius": 0.105, "depthRadius": 0.119, "heightRadius": 0.139 }
   },
+  "illustration": {
+    "imageDimension": 512,
+    "palette": { "armor": "#59645a", "fabric": "#303940", "accent": "#b6a05b", "ink": "#08090b" },
+    "equipment": ["split fitted chest/back carrier", "shoulder guards", "forearm guards", "shin and knee plates", "tactical boots", "open helmet rails and straps", "flexible collar"],
+    "paintPolicy": "Packed original UV color and tangent normal images; no directional light bake"
+  },
   "compatibility": {
     "policy": "exact baseline skeleton, inverse binds and motion; no resampling",
     "requiredClips": [
