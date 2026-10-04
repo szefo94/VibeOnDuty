@@ -162,6 +162,13 @@ Plans:
 4. A creator performs an LLM-assisted Blender change through an available documented integration or script workflow, inspects the change, and restores the prior editable source version.
 
 **Plans:** TBD
+- [x] 06-01-PLAN.md
+- [ ] 06-02-PLAN.md
+- [ ] 06-03-PLAN.md
+- [ ] 06-04-PLAN.md
+- [ ] 06-05-PLAN.md
+- [ ] 06-06-PLAN.md
+
 **UI hint:** yes
 
 **Research/discussion focus:** Confirm installed Blender/tooling, reusable human rigs and asset terms, exporter compatibility, and browser material/outline costs. Choose art from repeated in-game review using current movement; do not assume a Blender connector or discard the working rig pipeline without comparison. Preserve Phase1 multiplayer and offline regressions. Record the actual visual-review device and measured art costs; broader cross-device/Pi qualification is still assigned to Phases2 and4.
@@ -309,7 +316,7 @@ Armor plates remain future longer-mode scope. Monetization and generic authentic
 | 3. Bomb, Flag, and Hardpoint Matches | 0/TBD | Not started | - |
 | 4. Bot-Filled Matches on Measured Pi Hosting | 0/TBD | Not started | - |
 | 5. Omnimovement with Reliable Body and Camera Collision | 0/TBD | Not started | - |
-| 6. Human Characters and Comic-Book Blender Iteration | 0/TBD | Not started | - |
+| 6. Human Characters and Comic-Book Blender Iteration | 1/6 | In Progress|  |
 | 7. Movement-Matched and Action-Safe Animation | 0/TBD | Not started | - |
 | 8. Distinct Weapons and Authoritative Fast Combat | 0/TBD | Not started | - |
 | 9. Live Loadouts, Attachments, and Durable Unlocks | 0/TBD | Not started | - |
