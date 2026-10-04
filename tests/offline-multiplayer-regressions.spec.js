@@ -31,9 +31,16 @@ test('offline modes and editor remain usable after each real online retirement',
     ]) {
       await expect(page.locator('#mp-join-btn')).toBeEnabled({ timeout: 60000 });
       await expect(page.locator('#range-hud')).toHaveCount(0);
+      const joiningAt = Date.now();
       await page.locator('#mp-join-btn').click();
       try {
-        await expect.poll(() => page.evaluate(() => window.__mpDebug().sessionId)).toBeTruthy();
+        // A real SDK handshake shares the main thread with software WebGL after
+        // mode teardown. The default five-second poll can end before its next
+        // sample even though the session has joined; retain bounded readiness.
+        await expect.poll(() => page.evaluate(() => window.__mpDebug().sessionId), {
+          timeout: 20000,
+          intervals: [100, 250, 500],
+        }).toBeTruthy();
       } catch (error) {
         await test.info().attach('online-entry-diagnostic', {
           body: JSON.stringify({ button, admission, errors, state: await page.evaluate(() => ({
@@ -46,6 +53,7 @@ test('offline modes and editor remain usable after each real online retirement',
         });
         throw error;
       }
+      console.log(`[offline lifecycle] ${button}: joined in ${Date.now() - joiningAt}ms`);
       await page.evaluate(() => document.exitPointerLock());
       await page.locator('#mp-match-leave').click();
       await expect(page.locator('#overlay')).toBeVisible();
