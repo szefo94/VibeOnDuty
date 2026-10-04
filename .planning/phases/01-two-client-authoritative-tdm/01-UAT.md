@@ -8,6 +8,8 @@ updated: 2026-10-04T11:21:59.175Z
 
 ## Current Test
 
+<!-- Review setup is recorded below; no manual test has been pre-approved. -->
+
 number: 1
 name: Open the operator's actual advertised LAN TLS link in two ordinary browser windows, complete certificate trust, and click Online TDM/Resume.
 expected: |
@@ -48,3 +50,24 @@ blocked: 0
 ## Gaps
 
 No user test outcomes have been supplied. Undefined probe predicates are not invented.
+
+## Review setup
+
+The parent started the actual requested console command in an attached exec session:
+
+```powershell
+npm run mp-server -- --port 2567 --host 0.0.0.0 --tls --public 192.168.0.16
+```
+
+Open [the LAN game](https://192.168.0.16:2567) in two ordinary browser windows.
+Follow the self-signed testing trust instructions in docs/MULTIPLAYER.md, wait for
+Online TDM to become enabled, and click it in each window. The default rules remain
+50 kills,600 seconds,3-second respawn,25% friendly damage and15-second rematch.
+
+Owned Node PID35084, exec session99002; ownership/readiness record is in ignored
+`.planning/research/.cache/01-review-server.json`. HTTPS health and root game
+both returned200; this readiness request trusted only the generated certificate
+explicitly and verified its LAN identity. No certificate was installed in the
+browser/OS trust store. Actual browser trust and other-device reachability remain
+manual tests. The server is intentionally left running for this review; request
+its shutdown when finished. No firewall/NAT setting or remote publication changed.

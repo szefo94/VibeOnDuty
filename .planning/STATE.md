@@ -118,3 +118,8 @@ None yet.
 Last session: 2026-10-04T11:21:59.175Z
 Stopped at: Phase01 final verification human_needed; five UAT checks pending
 Resume file: None
+
+Review server: https://192.168.0.16:2567 — default rules, owned Node PID35084,
+attached exec session99002. HTTPS health and game verified; real browser trust
+pending. See01-UAT.md and ignored01-review-server.json for ownership/setup.
+Temporary git.allow_default_branch_commits override restored to its prior absence.
