@@ -19,6 +19,9 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      - run: npm run typecheck:mp
+      - run: npm run build
+      - run: npm run build:mp
       - run: npm run test:unit
       - name: Disable unused Chrome package source
         # Playwright downloads its own Chromium. A broken Google apt index on the
@@ -33,10 +36,13 @@ jobs:
           done
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+      - run: npm run test:mp
       - name: Upload Playwright report on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: playwright-report/
+          path: |
+            playwright-report/
+            test-results/
           retention-days: 7

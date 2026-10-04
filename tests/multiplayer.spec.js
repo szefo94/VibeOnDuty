@@ -132,6 +132,7 @@ for (const path of ['score', 'time'])
         }
         await expect(b.locator('#mp-switch-team')).toBeEnabled();
         await expect(b.locator('#mp-respawn')).toContainText('Respawn in');
+        await expect.poll(async () => (await snapshot(a)).remoteActors[0]?.clip).toBe('death');
         await b.screenshot({path:test.info().outputPath('death-respawn-timer.png')});
         // Two balanced members cannot become0v2, including at death.
         await b.locator('#mp-switch-team').click();
@@ -213,7 +214,16 @@ for (const path of ['score', 'time'])
       await expect
         .poll(async () => (await snapshot(a)).nowMs, { timeout: 16000 })
         .toBeGreaterThanOrEqual(result.resultsEndsAtMs - 1000);
-      expect((await snapshot(a)).phase).toBe('results');
+      // One coherent snapshot may already cross the deadline on a busy runner.
+      // It must still be results before it, or the correct next match after it.
+      const nearDeadline = await snapshot(a);
+      if (nearDeadline.nowMs < result.resultsEndsAtMs) {
+        expect(nearDeadline.phase).toBe('results');
+      } else {
+        expect(nearDeadline.phase).toBe('active');
+        expect(nearDeadline.matchGeneration).toBe(2);
+        expect(nearDeadline.startedAtMs + 1e-7).toBeGreaterThanOrEqual(result.resultsEndsAtMs);
+      }
       await expect.poll(async () => (await snapshot(a)).matchGeneration, { timeout: 3000 }).toBe(2);
       for (const page of [a, b]) {
         await expect.poll(async () => (await snapshot(page)).phase).toBe('active');

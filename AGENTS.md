@@ -69,6 +69,17 @@ map consumes them and each world clones them. Server code must not import browse
 singletons. Frozen `window.__mpDebug()` is observation only. `clearAllDrones()` also
 cancels delayed offline drone respawns during mode transitions.
 
+`network/remoteActors.js` owns cloned rigs by connection/match/life generation,
+team tint and snapshot-derived cosmetic motion; retirement uses the existing
+template-safe character disposal. `network/onlineUi.js` validates and deduplicates
+private confirmed feedback without changing health. Static match/result/error
+controls in `index.html` have one adapter owner. Top connection errors offer Retry
+and Return; disconnect releases mouse lock, retires the old room and disables SDK
+automatic reconnect so Retry creates fresh membership. Feedback uses render delta
+even when dead or unlocked, and session retirement clears owned cosmetic nodes.
+Menu return calls `stopTrainingRange()` to retire range targets, HUD and its input
+handler before another online/offline mode or the editor starts.
+
 `server/cli.js` validates bind/port/public URL, root-base builds and operator rules.
 `server/tls.js` publishes one atomic certificate/key manifest under ignored
 `.vod-server/tls/` with actual restricted Windows ACL or POSIX permission checks.

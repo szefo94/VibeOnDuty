@@ -1,0 +1,209 @@
+{
+  "plan": "01-07",
+  "created_utc": "2026-10-04T05:30:04.3279754Z",
+  "production": {
+    "trust": "ignoreHTTPSErrors for automated testing; real LAN browser trust pending",
+    "viewport": "800x600; entry scenario 1000x800",
+    "browser": "Playwright Chromium, actual production build and current enemy.glb",
+    "command": "npm run test:mp",
+    "deviceScaleFactor": 0.25,
+    "result": "13 passed (6.4m)"
+  },
+  "offline": {
+    "command": "npm run test:e2e",
+    "viewport": "800x600",
+    "result": "18 passed (2.9m)",
+    "deviceScaleFactor": 1
+  },
+  "additional_high_resolution_capture": {
+    "script": "../../01-07-CAPTURE.mjs",
+    "result": "failed twice at first-corner navigation, 60-second route timeout",
+    "disposition": "deferred; no passing capture or visual-acceptance claim",
+    "images": 0
+  },
+  "human_acceptance": "pending real-window trust, gesture and visual judgment plus unclassified HOST-03/MODE-01 probes and product-transparency prohibition",
+  "images": [
+    {
+      "path": "offline/offline-adaptive-startbtn.png",
+      "width": 800,
+      "height": 600,
+      "sha256": "a776a2dc1722f7f044802018c64d479210ebbe3123aa75e9c9efbf334d00c635",
+      "last_write_utc": "2026-10-04T05:05:23.1542443Z"
+    },
+    {
+      "path": "offline/offline-editor-startbtn.png",
+      "width": 800,
+      "height": 600,
+      "sha256": "29f0e1e6975082d1e0d42181a4d5b8e64d1494277ca302f16852a5c5ee994181",
+      "last_write_utc": "2026-10-04T05:07:07.7823759Z"
+    },
+    {
+      "path": "offline/offline-range-startbtn.png",
+      "width": 800,
+      "height": 600,
+      "sha256": "5aa59ef6009d6f28e0961090616da01194dec0425a68496a5262017e6e024a05",
+      "last_write_utc": "2026-10-04T05:06:31.8423022Z"
+    },
+    {
+      "path": "offline/offline-snd-startbtn.png",
+      "width": 800,
+      "height": 600,
+      "sha256": "531346462cb2d69d75f8e22b1046c773bd1af117b5ce16772ba2053f185d2f35",
+      "last_write_utc": "2026-10-04T05:05:40.3186251Z"
+    },
+    {
+      "path": "offline/offline-startbtn.png",
+      "width": 800,
+      "height": 600,
+      "sha256": "eb15aee9aa1fb329e23e4cfc21007e6a06b796674e8e78a8a8c990435617723d",
+      "last_write_utc": "2026-10-04T05:05:10.4690558Z"
+    },
+    {
+      "path": "offline/offline-tdm-startbtn.png",
+      "width": 800,
+      "height": 600,
+      "sha256": "19bd97da96b2ad005cfb01219361efbb2b9fb6c1dc786064e300b96501ca4de3",
+      "last_write_utc": "2026-10-04T05:06:02.5954616Z"
+    },
+    {
+      "path": "production/multiplayer-authority-real-7f5a2-ter-forged-offline-outcomes/authority-confirmed.png",
+      "width": 200,
+      "height": 150,
+      "sha256": "ef1f954174215e580292bde78956b1e979f9e37d82532d16ec56d7d9f5c6094c",
+      "last_write_utc": "2026-10-04T05:11:56.4288632Z"
+    },
+    {
+      "path": "production/multiplayer-combat-real-M4-73bf0--private-hit-outcomes-agree/combat-confirmed.png",
+      "width": 200,
+      "height": 150,
+      "sha256": "9eab725b6f4fd1ddf30e0b45bf2d1bbf06e9315d73bc94353f21ae2f4abdeb11",
+      "last_write_utc": "2026-10-04T05:11:01.7555795Z"
+    },
+    {
+      "path": "production/multiplayer-entry-assets-g-5d2d2-line-controls-remain-usable/offline-after-online.png",
+      "width": 250,
+      "height": 200,
+      "sha256": "517ef4cbac48e00fff2cbe86b6fb3a6834fe1a16a35cdff82aec82b1afd83155",
+      "last_write_utc": "2026-10-04T05:14:38.3142139Z"
+    },
+    {
+      "path": "production/multiplayer-entry-assets-g-5d2d2-line-controls-remain-usable/online-menu.png",
+      "width": 250,
+      "height": 200,
+      "sha256": "e8ebba2b1ddf22c57621ed7cd671caf71315f9141c253ff4847b8900d7669841",
+      "last_write_utc": "2026-10-04T05:14:26.5292525Z"
+    },
+    {
+      "path": "production/multiplayer-errors-unavail-6bab6-isible-top-Retry-and-Return/connection-error.png",
+      "width": 200,
+      "height": 150,
+      "sha256": "a5069771e3ae807cabbd29927f0abbde91256f05a13942b354df0ab97aa88efc",
+      "last_write_utc": "2026-10-04T05:12:56.4142217Z"
+    },
+    {
+      "path": "production/multiplayer-feedback-real--50b78--private-hit-outcomes-agree/combat-confirmed.png",
+      "width": 200,
+      "height": 150,
+      "sha256": "b979c5a474cfeab70aefe1457755de0d157b3729344390cb09589ff768abe383",
+      "last_write_utc": "2026-10-04T05:12:51.4787499Z"
+    },
+    {
+      "path": "production/multiplayer-feedback-real--50b78--private-hit-outcomes-agree/feedback-shooter-hit.png",
+      "width": 200,
+      "height": 150,
+      "sha256": "78919e3f8bc829b5150a3a7f2073a53c7e411264836d494adf740b330d7489bd",
+      "last_write_utc": "2026-10-04T05:12:50.3749778Z"
+    },
+    {
+      "path": "production/multiplayer-feedback-real--50b78--private-hit-outcomes-agree/feedback-victim.png",
+      "width": 200,
+      "height": 150,
+      "sha256": "9ab230e4ceaaa528822c222a0bbba0b6089bfb4ebae16e3873c213e06bf1edf8",
+      "last_write_utc": "2026-10-04T05:12:50.72016Z"
+    },
+    {
+      "path": "production/multiplayer-lifecycle-two--34136-matic-same-settings-rematch/rematch-time.png",
+      "width": 200,
+      "height": 150,
+      "sha256": "4343052c456e302c36266534556297bb0750e10494ba4c273ce75deb73ddb7ce",
+      "last_write_utc": "2026-10-04T05:10:09.530764Z"
+    },
+    {
+      "path": "production/multiplayer-lifecycle-two--34136-matic-same-settings-rematch/results-time-peer.png",
+      "width": 200,
+      "height": 150,
+      "sha256": "b1fceacf36f2aa2453051e4cc053735338091f15835c7633a679d8fc4736b741",
+      "last_write_utc": "2026-10-04T05:09:54.814912Z"
+    },
+    {
+      "path": "production/multiplayer-lifecycle-two--34136-matic-same-settings-rematch/results-time.png",
+      "width": 200,
+      "height": 150,
+      "sha256": "3aea321f5185151e1708f266923797079bebb7ec7ee8cf6d264e6d79860cc04c",
+      "last_write_utc": "2026-10-04T05:09:54.496219Z"
+    },
+    {
+      "path": "production/multiplayer-movement-real--8ef02-store-agree-in-two-browsers/movement-rig.png",
+      "width": 200,
+      "height": 150,
+      "sha256": "99c93a1a5f3c4979f821f0e40875c25f33254734fbf5459a6603bbaae9f7d5fe",
+      "last_write_utc": "2026-10-04T05:14:20.6561585Z"
+    },
+    {
+      "path": "production/multiplayer-resources-life-22f5a-matic-same-settings-rematch/death-respawn-timer.png",
+      "width": 200,
+      "height": 150,
+      "sha256": "b6987012d709c9cfd072ea4d516725aaed2031183e4faa567b9402e1b41e8a0e",
+      "last_write_utc": "2026-10-04T05:09:21.806665Z"
+    },
+    {
+      "path": "production/multiplayer-resources-life-22f5a-matic-same-settings-rematch/rematch-score.png",
+      "width": 200,
+      "height": 150,
+      "sha256": "c89f22227722a8639a7146624da48efb7c285aded6aab0927c4dae20afe418b2",
+      "last_write_utc": "2026-10-04T05:09:44.5481409Z"
+    },
+    {
+      "path": "production/multiplayer-resources-life-22f5a-matic-same-settings-rematch/respawn-current-rig.png",
+      "width": 200,
+      "height": 150,
+      "sha256": "f2518eb7fe18a34f38d5145397b7439aa97c205ea84aee81fc11f94bb77f960f",
+      "last_write_utc": "2026-10-04T05:09:26.9598161Z"
+    },
+    {
+      "path": "production/multiplayer-resources-life-22f5a-matic-same-settings-rematch/results-score-peer.png",
+      "width": 200,
+      "height": 150,
+      "sha256": "dd7674e8fff27dc94b5028f818da8494701b3cdcba14e7ea0fefd3a5b852e0ed",
+      "last_write_utc": "2026-10-04T05:09:29.3558841Z"
+    },
+    {
+      "path": "production/multiplayer-resources-life-22f5a-matic-same-settings-rematch/results-score.png",
+      "width": 200,
+      "height": 150,
+      "sha256": "9f545c457a5743e3afde63eb7ac94a4c9b193332bbca7206bd348a277339a7e4",
+      "last_write_utc": "2026-10-04T05:09:29.0173026Z"
+    },
+    {
+      "path": "production/multiplayer-resources-repe-1bbcd-s-and-stabilize-allocations/resource-rejoin.png",
+      "width": 200,
+      "height": 150,
+      "sha256": "2e8cbb29764d1664d801dc2cf041c514afd24288d5448e2870bc7402f5427bfe",
+      "last_write_utc": "2026-10-04T05:13:08.5469086Z"
+    },
+    {
+      "path": "production/multiplayer-teams-solo-sta-53a43-re-visible-in-both-browsers/teams.png",
+      "width": 200,
+      "height": 150,
+      "sha256": "0bdd3da73db4d9e0d7218bc2729121bc07086c6c3115cc5f9cf88df3a353a9bf",
+      "last_write_utc": "2026-10-04T05:08:34.4312591Z"
+    },
+    {
+      "path": "production/multiplayer-tracer-two-browsers-join-and-move/current-rig.png",
+      "width": 200,
+      "height": 150,
+      "sha256": "7c9bd3713aef3b2677566e9f76f97de5d360c8b9f241957e16363704280716b6",
+      "last_write_utc": "2026-10-04T05:13:53.6551312Z"
+    }
+  ]
+}

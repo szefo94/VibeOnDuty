@@ -36,7 +36,7 @@ import { rooftopMapDef } from './maps/rooftop.js';
 import { conceptMapDef } from './maps/concept.js';
 import { rangeMapDef } from './maps/range.js';
 import { vanguardMapDef } from './maps/vanguard.js';
-import { startTrainingRange } from './modes/trainingRange.js';
+import { startTrainingRange, stopTrainingRange } from './modes/trainingRange.js';
 import { initEditor, openEditor, mapDefFromB64 } from './editor/mapEditor.js';
 import { adaptStart, adaptStop } from './ai/difficultyAdapter.js';
 
@@ -236,6 +236,7 @@ const _pauseEl = document.getElementById('pause-menu');
 
 async function returnToMainMenu() {
   await leaveOnline();
+  stopTrainingRange();
   cancelGrenadeThrow();
   for (const timer of meleeTimers) clearTimeout(timer);
   meleeTimers.clear();

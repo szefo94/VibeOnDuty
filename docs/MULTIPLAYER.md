@@ -139,6 +139,35 @@ switching, grenades, melee, dance, lean, slide/dive and local shop/equipment act
 are disabled online. Touch/gamepad online control expansion comes later. Use the
 pause menu's leave action to return to the existing offline modes and editor.
 
+Confirmed hits create the existing crosshair marker and a damage number at the
+server impact position for the shooter. The UI rejects malformed, duplicate,
+wrong-recipient and retired match/life events; feedback never awards health or
+score. Remote characters use existing cloned GLB rigs and the current M4 mount,
+with readable BLUE/RED team names and team tint. Retirement releases owned rig
+resources while retaining templates for later joins. Feedback expiry and remote
+cosmetics continue while the local player is dead or the mouse is unlocked.
+
+Connection failures remain at the top above pause/results overlays. **Retry**
+retires the old session and joins fresh; **Return to menu** performs the normal
+offline cleanup. A browser network failure may also mean missing HTTPS trust;
+the banner cannot diagnose every certificate error. Confirm the advertised
+address and operator certificate before retrying. Results always end after
+15 seconds on the server; **Resume** obtains mouse lock without delaying rematch.
+
+Verification uses Node24 unit/strict-boundary checks, separate Vite offline/real
+production-server Playwright suites, and real asset/resource lifecycle checks.
+The additional offline regression enters each local mode and the editor after
+leaving a real room. Automated HTTPS contexts bypass warnings explicitly; actual
+LAN trust, mouse-lock gesture usability and visual pose/feedback judgment remain
+pending human acceptance. There is no security certification claim. The phase
+security evidence records its applicable ASVS5.0.0 controls and this exception.
+
+Phase2 retains lobby/prediction/latency and cross-device work; Phase3 retains other
+online modes; Phase4 retains bots and measured Pi hosting profiles; Phase8 retains
+richer combat; Phase9 retains loadouts and gameplay persistence. Current tests do not
+classify the two descriptor-less product/requirement probes; those remain flagged
+for human judgment alongside the unmeasured-capacity wording.
+
 Prediction, measured latency handling, phone responsiveness, Raspberry Pi/ARM64
 capacity, 8/12/16/24-slot qualification and device FPS benchmarks have not been
 performed. This hosting work makes no capacity, smoothness or 60 FPS guarantee.
