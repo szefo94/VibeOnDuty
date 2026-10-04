@@ -59,7 +59,9 @@ describe('testing TLS certificate lifecycle', () => {
     const repaired = await loadOrCreateCertificate('127.0.0.1', dir);
     expect(repaired.reused).toBe(false);
     expect(validPair(repaired, '127.0.0.1', Date.now())).toBe(true);
-  }, 20000);
+    // Four generation/publication cycles each include real Windows ACL checks.
+    // Match the existing 15s allowance per cycle on a contended runner.
+  }, 4 * 15000);
   it('failed publication preserves the old pair and errors expose no PEM', async () => {
     const dir = join(owned.tempRoot, 'atomic');
     const original = await loadOrCreateCertificate('localhost', dir);
