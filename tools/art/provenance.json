@@ -18,7 +18,67 @@
     "export_all_influences": false,
     "motionPolicy": "Imported editable actions retained in .blend; exact baseline rig/inverse binds/48 action occurrences merged into exported human render domains without resampling."
   },
+  "atlas": {
+    "path": "public/textures/comic-slice.png",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "colorSpace": "sRGB",
+    "regions": {
+      "metal": [
+        0,
+        0,
+        0.5,
+        0.5
+      ],
+      "polymer": [
+        0.5,
+        0,
+        0.5,
+        0.5
+      ],
+      "stoneWall": [
+        0,
+        0.5,
+        0.5,
+        0.5
+      ],
+      "stoneFloor": [
+        0.5,
+        0.5,
+        0.5,
+        0.5
+      ]
+    },
+    "repeatability": "Saved source reopened; byte-identical PNG observed",
+    "contribution": "Original illustrated UV planes, sparse seams, weave and edge wear; no directional light bake or inherited weapon FBX"
+  },
   "assets": [
+    {
+      "path": "tools/art/build_slice.py",
+      "sha256": "0910c38550c256c082abd2431fc2cd95c3eda639781427d8d454c8f7d97d90a8",
+      "role": "original-authoring-script",
+      "source": "repository:tools/art/build_slice.py",
+      "terms": "Newly authored project contribution; no inherited input models or maps copied.",
+      "disposition": "original-contribution"
+    },
+    {
+      "path": "tools/art/sources/slice.blend",
+      "sha256": "dad24886c8e7484d3c8d2e0f6b7b82825672403bfa3dd353e5e4d6f74007935d",
+      "role": "editable-original-source",
+      "source": "tools/art/build_slice.py",
+      "terms": "Original editable paint images and Principled swatch materials; does not clear or replace inherited weapon FBX.",
+      "disposition": "original-contribution"
+    },
+    {
+      "path": "public/textures/comic-slice.png",
+      "sha256": "7faae7a58bb4669af51c5081c772be671af8544681c762af54f9263995a4c31e",
+      "role": "runtime-original-export",
+      "source": "tools/art/sources/slice.blend",
+      "terms": "Original atlas exported from packed editable paint source; no third-party texture input.",
+      "disposition": "original-contribution"
+    },
     {
       "path": "tools/art/sources/base.obj",
       "sha256": "8e761e6624b8f54536409135d1636da63b32486a90d4897f84e121d144f6fb4c",
@@ -79,7 +139,7 @@
     },
     {
       "path": "tools/art/build_soldier.py",
-      "sha256": "64f6bb91bd3be74c6ca5108b60101079c2ce230f45d9f9ae6147f1eecb1a4b17",
+      "sha256": "0911a17c79f0230aaa448a726ecad682c2d5f76a2ee80ac8fc88119fd2fa4eda",
       "role": "original-authoring-script",
       "source": "repository:tools/art/build_soldier.py",
       "terms": "Newly authored project contribution. Does not alter inherited asset terms.",
@@ -87,7 +147,7 @@
     },
     {
       "path": "tools/art/pipeline.mjs",
-      "sha256": "b7ff80ed2ef9d45d3b3123a3140d5e69dc46c9e5bb840f21937611ad3514e9db",
+      "sha256": "a01c021f75ba76e44a7ccc17e1e508ca0e6baf7fc1b2d059a934d5bbc3ff3067",
       "role": "original-authoring-script",
       "source": "repository:tools/art/pipeline.mjs",
       "terms": "Newly authored project contribution. Does not alter inherited asset terms.",
@@ -95,7 +155,7 @@
     },
     {
       "path": "tools/art/sources/soldier.blend",
-      "sha256": "f892f126e18eeba35d6d1715e32a895e8cca38df7b0eff71deb2cd1c9943e33d",
+      "sha256": "b90305086f1710a2bf40ffc571cc1d0736694ad3e6b9a86245e5bf9a53afa042",
       "role": "editable-mixed-source",
       "source": "tools/art/build_soldier.py + CC0 base + inherited compatible rig/motion",
       "terms": "Original armor, open helmet, eyes and fit operations; CC0 human topology; inherited rig/actions remain unresolved. No combined CC0 claim.",
@@ -103,7 +163,7 @@
     },
     {
       "path": "public/models/enemy.glb",
-      "sha256": "da5725994f3c90284d3fbe5e392785238adfa0330c3f05c8d22ce66ce571e004",
+      "sha256": "a2449b048c5a48bb92bb3c1c0cf66209bf669679e24d60932b7934425e287705",
       "role": "runtime-mixed-export",
       "source": "tools/art/sources/soldier.blend + exact inherited compatibility domains",
       "terms": "Derived combined GLB remains mixed provenance. CC0 base does not clear inherited skeleton/motion rights.",
@@ -111,12 +171,12 @@
     }
   ],
   "acceptance": {
-    "agentVisualReview": "Face/armed hands/Training Range reviewed at 1280x960; oversized head, jaw/neck distortion and shell defects corrected.",
+    "agentVisualReview": "Actual game rig sampled in 15 current movement/action poses plus face/hands/front/shadow/distance at 1280x960. Split fitted carrier by spine region; added real boots/limb armor/helmet hardware and corrected polygon-shaped neckline and UV orientation. No animation data changes.",
     "humanAestheticAcceptance": "pending-end-of-phase",
     "deviceQualification": "unmeasured"
   },
   "parameters": {
     "path": "tools/art/character-params.json",
-    "sha256": "8bf65890890d7552d42f30530ab5d6ac95ef43de94f994c8554a2c612acce92b"
+    "sha256": "2b74289e18fd68cacece69af7fde7fe694e5fb6f6d5912ac412dc3c2899eb236"
   }
 }

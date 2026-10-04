@@ -236,7 +236,7 @@ export async function refreshProvenance() {
   for (const asset of ledger.assets)
     if (
       asset.path &&
-      ['original-authoring-script', 'editable-mixed-source', 'runtime-mixed-export'].includes(
+      ['original-authoring-script', 'editable-mixed-source', 'runtime-mixed-export', 'editable-original-source', 'runtime-original-export'].includes(
         asset.role
       )
     )
@@ -312,16 +312,40 @@ async function main() {
   const command = process.argv[2],
     args = process.argv.slice(3);
   if (command === 'self-test') return selfTest();
-  if (!['bootstrap', 'build', 'probe', 'export'].includes(command))
+  if (!['bootstrap', 'build', 'build-slice', 'probe', 'export'].includes(command))
     throw Error('Unknown operation');
   if (
     (command === 'bootstrap' && args.length) ||
     (command === 'build' && args.some((a) => a !== '--probe')) ||
+    (command === 'build-slice' && args.some((a) => a !== '--probe')) ||
     (command === 'probe' && args.some((a) => a !== '--provenance')) ||
     (command === 'export' && (args.length !== 4 || args[0] !== '--source' || args[2] !== '--out'))
   )
     throw Error('Unknown/invalid operation arguments');
   await fs.mkdir(CACHE, { recursive: true });
+  if (command === 'build-slice') {
+    const source = owned(CACHE, path.join(CACHE, 'slice-candidate.blend'));
+    const out = owned(CACHE, path.join(CACHE, 'slice-candidate.png'));
+    const repeat = owned(CACHE, path.join(CACHE, 'slice-reopened.png'));
+    const exe = await bootstrap();
+    const invoke = (mode, output) => run(exe, ['--background', '--factory-startup',
+      '--disable-autoexec', '--python-exit-code', '1', '--python',
+      path.join(ROOT, 'tools/art/build_slice.py'), '--', '--mode', mode,
+      '--source', source, '--out', output]);
+    await invoke('build', out);
+    await invoke('export', repeat);
+    const bytes = await fs.readFile(out);
+    assert.equal(hash(bytes), hash(await fs.readFile(repeat)), 'Saved source must reproduce atlas bytes');
+    assert.equal(bytes.readUInt32BE(16), 1024);
+    assert.equal(bytes.readUInt32BE(20), 1024);
+    assert.ok(bytes.length > 20000 && bytes.length < 8000000, 'Atlas byte bound');
+    await fs.mkdir(owned(ROOT, path.join(ROOT, 'public/textures')), { recursive: true });
+    await fs.copyFile(source, owned(SOURCES, path.join(SOURCES, 'slice.blend')));
+    await fs.copyFile(out, owned(ROOT, path.join(ROOT, 'public/textures/comic-slice.png')));
+    await refreshProvenance();
+    console.log('Editable original slice reopened with identical bounded PNG export');
+    return;
+  }
   if (command === 'bootstrap') {
     await run(await bootstrap(), ['--version']);
     return;
