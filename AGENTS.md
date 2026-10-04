@@ -126,6 +126,10 @@ The online adapter releases pointer lock on death/results, shows authoritative
 respawn/results timers, and exposes a gesture-driven Resume without delaying rematch.
 Online snapshots own both `player.kills` and the persistent KILLS HUD counter;
 entry/retirement reset it and the automatic rematch snapshot resets personal stats.
+The online controls reserve the bottom ammo HUD band. Client switch eligibility
+projects the snapshot team counts; server validation remains final. Unlock labels
+say the online match continues, and either Resume button reports capture failure
+separately from connection errors. New capture and session retirement clear it.
 
 Important dependencies and lifecycle constraints:
 

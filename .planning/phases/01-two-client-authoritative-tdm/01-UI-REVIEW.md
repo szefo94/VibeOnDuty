@@ -108,6 +108,7 @@ and illegal projected balance and capture recovery/reset. The two focused produc
 browser cases passed in44.5s: actual ammo/panel rectangles have at least8px clearance,
 failed Resume retains an active session and shows recovery, balanced results switches
 are disabled, and solo results switching/replacement/rematch remains legal. Original
-server rejection/replay assertions remain in shared/server tests. Full reruns are
-pending at this amendment. The original15/24 is the pre-fix score, not a new visual
+server rejection/replay assertions remain in shared/server tests. Final full reruns
+pass247 unit,19 offline and14 multiplayer cases; see01-CLOSEOUT.md.
+The original15/24 is the pre-fix score, not a new visual
 approval; full-size human inspection remains pending.
