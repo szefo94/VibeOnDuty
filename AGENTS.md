@@ -79,6 +79,8 @@ automatic reconnect so Retry creates fresh membership. Feedback uses render delt
 even when dead or unlocked, and session retirement clears owned cosmetic nodes.
 Menu return calls `stopTrainingRange()` to retire range targets, HUD and its input
 handler before another online/offline mode or the editor starts.
+`stopKillcam()` cancels the retired death callback on menu return and online entry;
+only natural expiry and the explicit Skip controls complete the current death screen.
 
 `server/cli.js` validates bind/port/public URL, root-base builds and operator rules.
 `server/tls.js` publishes one atomic certificate/key manifest under ignored

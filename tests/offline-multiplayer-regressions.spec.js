@@ -12,6 +12,11 @@ test('offline modes and editor remain usable after each real online retirement',
   try {
     const page = await context.newPage();
     const errors = [];
+    const admission = [];
+    page.on('response', (response) => {
+      if (response.url().includes('/matchmake/'))
+        admission.push({ url: response.url(), status: response.status() });
+    });
     page.on('pageerror', (error) => {
       if (!/pointer lock|WrongDocumentError/i.test(error.message)) errors.push(error.message);
     });
@@ -27,7 +32,20 @@ test('offline modes and editor remain usable after each real online retirement',
       await expect(page.locator('#mp-join-btn')).toBeEnabled({ timeout: 60000 });
       await expect(page.locator('#range-hud')).toHaveCount(0);
       await page.locator('#mp-join-btn').click();
-      await expect.poll(() => page.evaluate(() => window.__mpDebug().sessionId)).toBeTruthy();
+      try {
+        await expect.poll(() => page.evaluate(() => window.__mpDebug().sessionId)).toBeTruthy();
+      } catch (error) {
+        await test.info().attach('online-entry-diagnostic', {
+          body: JSON.stringify({ button, admission, errors, state: await page.evaluate(() => ({
+            debug: window.__mpDebug(),
+            menu: document.getElementById('overlay')?.innerText,
+            error: document.getElementById('mp-error-message')?.textContent,
+            joiningDisabled: document.getElementById('mp-join-btn')?.disabled,
+          })) }, null, 2),
+          contentType: 'application/json',
+        });
+        throw error;
+      }
       await page.evaluate(() => document.exitPointerLock());
       await page.locator('#mp-match-leave').click();
       await expect(page.locator('#overlay')).toBeVisible();

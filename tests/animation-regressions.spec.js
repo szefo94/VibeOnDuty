@@ -5,6 +5,26 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator('#startbtn')).toBeEnabled({ timeout: 20000 });
 });
 
+test('returning during an offline death killcam preserves the main menu', async ({ page }) => {
+  await page.evaluate(async () => {
+    const src = new URL('src/', location.href).href;
+    const { player } = await import(src + 'entities/player.js');
+    const { triggerDeath } = await import(src + 'entities/enemies.js');
+    player.lastAttacker = { dead: false, x: 0, z: 0, facingY: 0 };
+    triggerDeath();
+    document.getElementById('pause-mainmenu-btn').click();
+  });
+  await expect(page.locator('#killcam-wrap')).toBeHidden();
+  await expect(page.locator('#mp-join-btn')).toBeEnabled();
+  await page.evaluate(async () => {
+    const { tickKillcam } = await import(new URL('src/replay/killcam.js', location.href).href);
+    tickKillcam(10);
+  });
+  await expect(page.locator('#overlay')).toBeVisible();
+  await expect(page.locator('#overlay')).not.toContainText('KILLED IN ACTION');
+  await expect(page.locator('#startbtn')).toBeEnabled();
+});
+
 test('real character returns from shooting and dies without leftover locomotion', async ({ page }) => {
   const result = await page.evaluate(async () => {
     const src = new URL('src/', location.href).href;

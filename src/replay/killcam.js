@@ -39,15 +39,19 @@ export function tickKillcam(dt) {
 export function isKillcamActive() { return _active; }
 
 export function stopKillcam() {
-  if (!_active) return;
-  _finish();
+  // Session retirement cancels completion; only expiry or an explicit skip
+  // may show the current offline death screen.
+  _active = false;
+  _target = null;
+  _timer = 0;
+  _onDone = null;
+  _hideUI();
 }
 
 function _finish() {
-  _active = false;
-  _hideUI();
+  if (!_active) return;
   const cb = _onDone;
-  _onDone = null;
+  stopKillcam();
   if (cb) cb();
 }
 
@@ -58,8 +62,8 @@ function _showUI() {
     el.id = 'killcam-wrap';
     el.innerHTML = '<span id="kc-label">KILLCAM</span><button id="kc-skip">[K] SKIP</button>';
     document.body.appendChild(el);
-    document.getElementById('kc-skip')?.addEventListener('click', stopKillcam);
-    document.addEventListener('keydown', (e) => { if (e.code === 'KeyK' && _active) stopKillcam(); });
+    document.getElementById('kc-skip')?.addEventListener('click', _finish);
+    document.addEventListener('keydown', (e) => { if (e.code === 'KeyK' && _active) _finish(); });
   }
   el.style.display = 'flex';
 }

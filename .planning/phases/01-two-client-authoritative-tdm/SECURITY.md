@@ -93,6 +93,13 @@ extend the original evidence. Early startup/flood/keyboard-route timing failures
 are retained in that report alongside successful isolated reruns; they are not
 silently relabeled passing executions.
 
+Review-fix offline verification also reproduced an inherited lifecycle defect:
+`stopKillcam()` executed the pending death callback while menu return or online entry
+was retiring that session, replacing the menu with `KILLED IN ACTION`. Retirement
+now cancels that callback and target; expiry and explicit Skip still complete once.
+The focused unit regression and real browser death/menu flow failed before the fix.
+This extends lifecycle evidence without claiming a visual or human-trust check.
+
 Actual LAN certificate trust in two windows, gesture-driven pointer lock,
 map/rig/feedback visual judgment, the unclassified HOST-03 and MODE-01 probes and the
 descriptor-less product-transparency prohibition remain pending human acceptance.
