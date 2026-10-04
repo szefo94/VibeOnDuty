@@ -7,7 +7,7 @@ import { loadOrCreateCertificate } from './tls.js';
 import { lstat, readFile, readdir, realpath, stat } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Server, matchMaker } from '@colyseus/core';
+import { Server, matchMaker, createAuthContext } from '@colyseus/core';
 import { WebSocketTransport } from '@colyseus/ws-transport';
 import { TdmRoom } from './tdmRoom.js';
 import { defaultBuildDir, defaultCertificateDir, help, isWildcard, loadRoomSettings,
@@ -93,7 +93,59 @@ export async function startServer(options = {}) {
   const failure = new Promise((_, reject) => { onError = reject; http.once('error', onError); });
   try {
     await Promise.race([server.listen(port, host), failure]);
-    await matchMaker.createRoom('tdm', {});
+    // Colyseus installs REST ahead of Express. Gate before its body reader:
+    // Phase 1 offers seats in one operator room, never public room creation.
+    const listeners = http.listeners('request');
+    http.removeAllListeners('request');
+    let operatorRoomId = '';
+    http.on('request', async (req, res) => {
+      let path;
+      try { path = decodeURIComponent(new URL(req.url ?? '/', listenUrl).pathname); }
+      catch { res.writeHead(400); res.end(); return; }
+      if (!/^\/+matchmake(?:\/|$)/.test(path)) {
+        for (const listener of listeners) listener.call(http, req, res);
+        return;
+      }
+      const origin = req.headers.origin ?? '';
+      const reply = (/** @type {number} */ status, /** @type {object} */ body) => {
+        res.writeHead(status, { 'content-type': 'application/json' });
+        res.end(JSON.stringify(body));
+      };
+      if (!origins.has(origin)) { reply(403, { error: 'Origin not allowed' }); return; }
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
+      if (req.method === 'OPTIONS') {
+        res.setHeader('Access-Control-Allow-Methods', 'POST');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+        res.writeHead(204); res.end(); return;
+      }
+      if (req.method !== 'POST' || !operatorRoomId || ![
+        '/matchmake/joinOrCreate/tdm', '/matchmake/join/tdm',
+        `/matchmake/joinById/${operatorRoomId}`,
+      ].includes(path)) {
+        reply(403, { error: 'Only joining the operator TDM room is available' }); return;
+      }
+      try {
+        let body = '';
+        for await (const chunk of req) {
+          body += chunk.toString();
+          if (Buffer.byteLength(body) > 1024) { reply(413, { error: 'Join request too large' }); return; }
+        }
+        const options = JSON.parse(body || '{}');
+        if (!options || typeof options !== 'object' || Array.isArray(options)) {
+          reply(400, { error: 'Invalid join request' }); return;
+        }
+        const headers = new Headers();
+        for (const [name, value] of Object.entries(req.headers))
+          if (value !== undefined) headers.set(name, Array.isArray(value) ? value.join(', ') : value);
+        const seat = await matchMaker.joinById(operatorRoomId, options,
+          createAuthContext({ headers, req, remoteAddress: req.socket.remoteAddress }));
+        reply(200, seat);
+      } catch {
+        reply(409, { error: 'Room full or join request rejected' });
+      }
+    });
+    operatorRoomId = (await matchMaker.createRoom('tdm', {})).roomId;
   } catch (error) {
     await server.gracefullyShutdown(false).catch(() => {});
     const code = /** @type {NodeJS.ErrnoException} */ (error).code;

@@ -78,6 +78,11 @@ user gesture. If a trust prompt, focus change or Escape releases the mouse, clic
 is paused. Open a second window at the same link to join the same room. The current
 acceptance slice admits two humans; this is not a qualified hosting capacity.
 
+Phase 1 starts one operator-created room. Public matchmaking may only join that
+room; a full room rejects new seats and never creates another room. Client room
+creation and arbitrary room IDs are rejected. Unjoined seat reservations expire
+without allocating more rooms. Player-created lobbies remain Phase 2.
+
 Automated `ignoreHTTPSErrors` is a test-runner bypass. It proves HTTPS/WSS integration,
 not the usability of these manual trust and pointer-lock steps. At phase-end human
 acceptance, use the actual LAN link in two windows, complete trust in each, click
@@ -125,7 +130,8 @@ Leave `--tls` off for this topology. The HTTPS public URL is operator informatio
 and an allowed WebSocket Origin; the internal listener remains HTTP/WS. Forward
 `/matchmake/` and room upgrade paths as well as game assets. There is no automatic
 proxy setup, forwarded-host redirect, or trust in arbitrary browser origins.
-Absent/unknown WebSocket Origins are rejected before the handshake. Direct local
+Absent/unknown Origins are rejected before both matchmaking REST and WebSocket
+handshakes. Direct local
 listener and configured advertised origin are allowed; SDK test clients set the
 approved Origin explicitly.
 

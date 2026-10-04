@@ -3,7 +3,8 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import WebSocket from 'ws';
 import { allocateMpBuild, buildMpClient, startMpFixture } from '../tests/helpers/mpServer.js';
-import { validateBuildDir } from './index.js';
+import { startServer, validateBuildDir } from './index.js';
+import { matchMaker } from '@colyseus/core';
 import { defaultCertificateDir } from './cli.js';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
@@ -31,6 +32,47 @@ function rejectedSocket(url, origin) {
 }
 
 describe('built-game host boundary', () => {
+  it('bounds public admission before REST and retains only the operator room after seat expiry', async () => {
+    const probe = createServer();
+    probe.listen(0, '127.0.0.1');
+    await once(probe, 'listening');
+    const port = probe.address().port;
+    await new Promise((ok) => probe.close(ok));
+    const hosted = await startServer({ host: '127.0.0.1', port, buildDir: fixture.buildDir });
+    try {
+      const url = hosted.listenUrl;
+      const rooms = () => matchMaker.query({ name: 'tdm' });
+      const initial = await rooms();
+      expect(initial).toHaveLength(1);
+      const post = (route, origin = url) => fetch(url + route, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...(origin ? { Origin: origin } : {}) },
+        body: JSON.stringify({ protocolVersion: 1 }),
+      });
+      for (const origin of ['', 'https://foreign.example', url]) {
+        for (let i = 0; i < 4; i++)
+          expect((await post('/matchmake/create/tdm', origin)).status).toBe(403);
+      }
+      expect((await post('/matchmake/joinOrCreate/tdm', '')).status).toBe(403);
+      expect((await post('/matchmake/joinOrCreate/tdm', 'https://foreign.example')).status).toBe(403);
+      expect((await post('/matchmake/%63reate/tdm')).status).toBe(403);
+      expect((await post('/matchmake/joinById/unknown')).status).toBe(403);
+      for (let i = 0; i < 2; i++) {
+        const response = await post('/matchmake/joinOrCreate/tdm');
+        expect(response.status).toBe(200);
+        expect((await response.json()).roomId).toBe(initial[0].roomId);
+      }
+      for (let i = 0; i < 4; i++)
+        expect((await post('/matchmake/joinOrCreate/tdm')).status).toBe(409);
+      expect(await rooms()).toHaveLength(1);
+      const room = matchMaker.getLocalRoomById(initial[0].roomId);
+      await new Promise((ok) => setTimeout(ok, (room.seatReservationTimeout + 1) * 1000));
+      expect(await rooms()).toHaveLength(1);
+      expect(room.clients).toHaveLength(0);
+      const joined = await createHostileClient(url);
+      expect(joined.roomId).toBe(initial[0].roomId);
+      await joined.close();
+    } finally { await hosted.close(); }
+  }, 30000);
   it('permits configured proxy Origin over private HTTP and rejects a foreign real join', async () => {
     const proxy = await startMpFixture({ publicAddress: 'https://play.example' });
     try {
@@ -58,7 +100,7 @@ describe('built-game host boundary', () => {
     try {
       const { Client } = await import('@colyseus/sdk');
       const client = new Client(short.url, { headers: { Origin: short.url } });
-      const joined = await client.create('tdm', { protocolVersion: 1, settings: { matchSeconds: 9999 } });
+      const joined = await client.joinOrCreate('tdm', { protocolVersion: 1, settings: { matchSeconds: 9999 } });
       try {
         await expect.poll(() => joined.state?.players?.size ?? 0).toBe(1);
         expect(joined.state.timeRemaining).toBeLessThanOrEqual(7);

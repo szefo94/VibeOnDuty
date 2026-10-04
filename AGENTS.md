@@ -84,7 +84,10 @@ handler before another online/offline mode or the editor starts.
 `server/tls.js` publishes one atomic certificate/key manifest under ignored
 `.vod-server/tls/` with actual restricted Windows ACL or POSIX permission checks.
 Use `docs/MULTIPLAYER.md` for self-signed trust and reverse-proxy setup. Advertised
-addresses select printed links/SAN and approved WebSocket Origin, while browser
+addresses select printed links/SAN and approved admission Origin. Public
+matchmaking HTTP is gated before the framework router and only reserves seats in
+the operator-created room (full seats reject; public creation is Phase 2). These
+same approved origins cover REST and WebSocket admission. Browser
 transport uses the page origin. Fixture TLS storage and builds are owned OS-temp
 paths; their restart helper retains those paths until stopping the owned server.
 

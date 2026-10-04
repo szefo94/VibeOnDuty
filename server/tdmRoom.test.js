@@ -22,7 +22,7 @@ describe('real room input boundary', () => {
     });
     let a, b, replacement;
     try {
-      a = await createHostileClient(fixture.url, { create: true });
+      a = await createHostileClient(fixture.url);
       b = await createHostileClient(fixture.url, { roomId: a.roomId });
       await waitFor(() => Object.keys(a.snapshot().players).length === 2);
       async function route(x, z) {
@@ -142,7 +142,7 @@ describe('real room input boundary', () => {
     }
   }, 60000);
   it('binds guest identity and team requests to membership, life and operator rules', async () => {
-    const a = await createHostileClient(url, { create: true, joinOptions: { protocolVersion: 1, nickname: '\u0000<script>guest</script>', team: 'red', settings: { killLimit: 999, matchSeconds: 9999 } } });
+    const a = await createHostileClient(url, { joinOptions: { protocolVersion: 1, nickname: '\u0000<script>guest</script>', team: 'red', settings: { killLimit: 999, matchSeconds: 9999 } } });
     const b = await createHostileClient(url, { roomId: a.roomId });
     try {
       await waitFor(() => Object.keys(a.snapshot().players).length === 2);
@@ -160,7 +160,7 @@ describe('real room input boundary', () => {
     } finally { await Promise.all([a.close(), b.close()]); }
   });
   it('explicitly rejects outcome messages without awarding damage, ammo or score', async () => {
-    const a = await createHostileClient(url, { create: true });
+    const a = await createHostileClient(url);
     const b = await createHostileClient(url, { roomId: a.roomId });
     try {
       await waitFor(() => Object.keys(a.snapshot().players).length === 2);
@@ -194,7 +194,7 @@ describe('real room input boundary', () => {
     }
   });
   it('delivers a real eligible hit only to its firing session and replicates damage to both', async () => {
-    const a = await createHostileClient(url, { create: true });
+    const a = await createHostileClient(url);
     const b = await createHostileClient(url, { roomId: a.roomId });
     try {
       async function route(x, z) {
@@ -262,7 +262,7 @@ describe('real room input boundary', () => {
     }
   }, 30000);
   it('reports raw nonfinite rejection without mutation over the real SDK transport', async () => {
-    const client = await createHostileClient(url, { create: true });
+    const client = await createHostileClient(url);
     try {
       expect(client.origin).toBe(new URL(url).origin);
       const initial = client.snapshot().players[client.sessionId];
@@ -281,13 +281,15 @@ describe('real room input boundary', () => {
     }
   });
   it('rejects forged identity, replay, stale/future ticks and generations; valid traffic still moves only its own room', async () => {
-    const a = await createHostileClient(url, { create: true });
+    const a = await createHostileClient(url);
     const b = await createHostileClient(url, { roomId: a.roomId });
-    const isolated = await createHostileClient(url, { create: true });
+    const sibling = await startMpFixture();
+    const isolated = await createHostileClient(sibling.url);
     try {
       expect(a.roomId).not.toBe(isolated.roomId);
       const other = b.snapshot().players[b.sessionId];
       const differentRoom = isolated.snapshot().players[isolated.sessionId];
+      const generation = a.snapshot().matchGeneration;
       for (const [changes, reason] of [
         [{ sessionId: b.sessionId, moveX: 1 }, 'invalid_shape'],
         [{ origin: { x: 1, y: 9, z: 1 }, damage: 999, score: 999 }, 'invalid_shape'],
@@ -327,13 +329,14 @@ describe('real room input boundary', () => {
       expect(isolated.snapshot().players[isolated.sessionId]).toEqual(differentRoom);
       expect(a.snapshot().scoreAlpha).toBe(0);
       expect(a.snapshot().scoreBravo).toBe(0);
-      expect(a.snapshot().matchGeneration).toBe(1);
+      expect(a.snapshot().matchGeneration).toBe(generation);
     } finally {
       await Promise.all([a.close(), b.close(), isolated.close()]);
+      await sibling.stop();
     }
-  }, 10000);
+  }, 30000);
   it('hundreds of real commands overflow bounded queues/rates but never accelerate fixed-tick movement', async () => {
-    const a = await createHostileClient(url, { create: true });
+    const a = await createHostileClient(url);
     const b = await createHostileClient(url, { roomId: a.roomId });
     try {
       const start = a.snapshot();
@@ -366,7 +369,7 @@ describe('real room input boundary', () => {
     }
   }, 10000);
   it('retires exhausted sequence sessions rather than allowing wrap reuse', async () => {
-    const client = await createHostileClient(url, { create: true });
+    const client = await createHostileClient(url);
     try {
       client.send(client.command({ seq: 2147483647 }));
       await waitFor(
@@ -381,7 +384,7 @@ describe('real room input boundary', () => {
     }
   });
   it('disconnects a sustained real transport flood after three exceeded windows', async () => {
-    const client = await createHostileClient(url, { create: true });
+    const client = await createHostileClient(url);
     const peer = await createHostileClient(url, { roomId: client.roomId });
     try {
       const tick = peer.snapshot().currentTick;

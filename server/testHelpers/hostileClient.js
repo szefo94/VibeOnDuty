@@ -20,7 +20,7 @@ export async function waitFor(predicate, timeoutMs = 2000) {
 }
 
 /** Real SDK, actual transport identity, no server mutation/test endpoint.
- * @param {string} serverUrl @param {{roomId?:string,create?:boolean,joinOptions?:Record<string,unknown>}} [options] */
+ * @param {string} serverUrl @param {{roomId?:string,joinOptions?:Record<string,unknown>}} [options] */
 export async function createHostileClient(serverUrl, options = {}) {
   const origin = new URL(serverUrl).origin;
   const client = new Client(serverUrl, { headers: { Origin: origin } });
@@ -28,9 +28,7 @@ export async function createHostileClient(serverUrl, options = {}) {
   /** @type {import('@colyseus/sdk').Room<State>} */
   const room = options.roomId
     ? await client.joinById(options.roomId, joinOptions)
-    : options.create
-      ? await client.create('tdm', joinOptions)
-      : await client.joinOrCreate('tdm', joinOptions);
+    : await client.joinOrCreate('tdm', joinOptions);
   /** @type {string[]} */ const rejections = [];
   let closedCode = 0,
     seq = 0;
