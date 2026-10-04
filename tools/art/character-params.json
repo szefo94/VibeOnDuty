@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "numericTolerance": 0.00001,
+  "budgets": {
+    "maxGlbBytes": 32000000,
+    "maxVertices": 60000,
+    "maxTriangles": 75000,
+    "maxAccessorElements": 2000000,
+    "maxImageDimension": 2048,
+    "maxImageBytes": 8000000,
+    "maxImages": 12,
+    "maxTotalImagePixels": 12582912
+  },
+  "measuredTracer": {
+    "vertices": 16212,
+    "triangles": 28632,
+    "joints": 65,
+    "animationOccurrences": 48,
+    "viewport": [1280, 960],
+    "renderer": "Chromium SwiftShader headless; geometry cost only, not device qualification"
+  },
+  "fit": {
+    "stature": 1.82,
+    "headTransition": 0.05,
+    "helmet": { "widthRadius": 0.105, "depthRadius": 0.119, "heightRadius": 0.139 }
+  },
+  "compatibility": {
+    "policy": "exact baseline skeleton, inverse binds and motion; no resampling",
+    "requiredClips": [
+      "attack",
+      "walk",
+      "run",
+      "shoot",
+      "reload",
+      "hit",
+      "nade",
+      "Crouch_Idle_Loop",
+      "Crouch_Fwd_Loop",
+      "Death01",
+      "Roll",
+      "Jump_Start",
+      "Jump_Loop",
+      "Jump_Land",
+      "run_back",
+      "walk_back",
+      "strafe_l",
+      "strafe_r",
+      "Dance_Loop",
+      "Punch_Cross",
+      "Punch_Jab"
+    ]
+  }
+}

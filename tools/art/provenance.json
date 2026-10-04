@@ -13,6 +13,9 @@
     "export_apply": false,
     "export_extras": true,
     "export_def_bones": false,
+    "export_skins": true,
+    "export_influence_nb": 4,
+    "export_all_influences": false,
     "motionPolicy": "Imported editable actions retained in .blend; exact baseline rig/inverse binds/48 action occurrences merged into exported human render domains without resampling."
   },
   "assets": [
@@ -76,7 +79,7 @@
     },
     {
       "path": "tools/art/build_soldier.py",
-      "sha256": "7794b13977c95e58f2267c6da1e666df1b4d4a960456ba613ac575740b333914",
+      "sha256": "64f6bb91bd3be74c6ca5108b60101079c2ce230f45d9f9ae6147f1eecb1a4b17",
       "role": "original-authoring-script",
       "source": "repository:tools/art/build_soldier.py",
       "terms": "Newly authored project contribution. Does not alter inherited asset terms.",
@@ -84,7 +87,7 @@
     },
     {
       "path": "tools/art/pipeline.mjs",
-      "sha256": "ad9c848724ebe2eb45b0b39df5ce791c6dbf787ae673b4ac56fa23f472c1a608",
+      "sha256": "b7ff80ed2ef9d45d3b3123a3140d5e69dc46c9e5bb840f21937611ad3514e9db",
       "role": "original-authoring-script",
       "source": "repository:tools/art/pipeline.mjs",
       "terms": "Newly authored project contribution. Does not alter inherited asset terms.",
@@ -92,7 +95,7 @@
     },
     {
       "path": "tools/art/sources/soldier.blend",
-      "sha256": "9ac2dd8724fa90cf3580c210a959b909e7ea01883ae667ef26e9117b1cf1e04b",
+      "sha256": "f892f126e18eeba35d6d1715e32a895e8cca38df7b0eff71deb2cd1c9943e33d",
       "role": "editable-mixed-source",
       "source": "tools/art/build_soldier.py + CC0 base + inherited compatible rig/motion",
       "terms": "Original armor, open helmet, eyes and fit operations; CC0 human topology; inherited rig/actions remain unresolved. No combined CC0 claim.",
@@ -100,7 +103,7 @@
     },
     {
       "path": "public/models/enemy.glb",
-      "sha256": "9205a7b183fd34f9f71a3615b3bffcf5508afd7fc5e35df708bf0d831a934b4a",
+      "sha256": "da5725994f3c90284d3fbe5e392785238adfa0330c3f05c8d22ce66ce571e004",
       "role": "runtime-mixed-export",
       "source": "tools/art/sources/soldier.blend + exact inherited compatibility domains",
       "terms": "Derived combined GLB remains mixed provenance. CC0 base does not clear inherited skeleton/motion rights.",
@@ -111,5 +114,9 @@
     "agentVisualReview": "Face/armed hands/Training Range reviewed at 1280x960; oversized head, jaw/neck distortion and shell defects corrected.",
     "humanAestheticAcceptance": "pending-end-of-phase",
     "deviceQualification": "unmeasured"
+  },
+  "parameters": {
+    "path": "tools/art/character-params.json",
+    "sha256": "8bf65890890d7552d42f30530ab5d6ac95ef43de94f994c8554a2c612acce92b"
   }
 }

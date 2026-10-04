@@ -12,6 +12,7 @@ parser.add_argument('--mode', choices=['probe', 'build', 'export'], required=Tru
 parser.add_argument('--baseline')
 parser.add_argument('--base')
 parser.add_argument('--source')
+parser.add_argument('--params', default=os.path.join(os.path.dirname(__file__), 'character-params.json'))
 parser.add_argument('--out', required=True)
 args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
 ROOT = os.path.realpath(os.path.join(os.path.dirname(__file__), '../..'))
@@ -29,6 +30,15 @@ if args.baseline:
     args.baseline = bounded(args.baseline, [CACHE])
 if args.base:
     args.base = bounded(args.base, [CACHE, SOURCES])
+args.params = bounded(args.params, [os.path.join(ROOT, 'tools', 'art'), CACHE])
+with open(args.params, encoding='utf8') as f:
+    parameters = json.load(f)
+FIT = parameters['fit']
+for value, low, high in [(FIT['stature'], 1.6, 2.0), (FIT['headTransition'], 0.03, 0.08),
+    (FIT['helmet']['widthRadius'], 0.08, 0.14), (FIT['helmet']['depthRadius'], 0.09, 0.16),
+    (FIT['helmet']['heightRadius'], 0.1, 0.17)]:
+    if not isinstance(value, (int, float)) or not math.isfinite(value) or not low <= value <= high:
+        raise RuntimeError('Authoring parameter out of bounds')
 
 def probe():
     options = [p.identifier for p in bpy.ops.export_scene.gltf.get_rna_type().properties]
@@ -44,7 +54,8 @@ def probe():
 
 def export():
     bpy.ops.export_scene.gltf(filepath=args.out, export_format='GLB', export_animations=False,
-        export_apply=False, export_extras=True, export_def_bones=False)
+        export_apply=False, export_extras=True, export_def_bones=False,
+        export_skins=True, export_influence_nb=4, export_all_influences=False)
 
 def parse_base(filename):
     verts, faces, groups = [], [], {}
@@ -142,9 +153,9 @@ def build():
     head_target = arm.matrix_world @ arm.data.bones['Head'].head_local
     body_indices = sorted(set(i for f in faces for i in f))
     source_top = max(verts[i].z for i in body_indices)
-    head_scale = (1.82 - head_target.z) / (source_top - head_source.z)
+    head_scale = (FIT['stature'] - head_target.z) / (source_top - head_source.z)
     head_end = head_source + Vector((0, 0, source_top - head_source.z))
-    segments.append(('Head', head_source, head_end, head_target, head_target + Vector((0, 0, 1.82-head_target.z)), Vector((0, 0, 1)).rotation_difference(Vector((0, 0, 1)))))
+    segments.append(('Head', head_source, head_end, head_target, head_target + Vector((0, 0, FIT['stature']-head_target.z)), Vector((0, 0, 1)).rotation_difference(Vector((0, 0, 1)))))
     fitted, weights = [], []
     for i in body_indices:
         p = verts[i]
@@ -174,7 +185,7 @@ def build():
             pairs.append((name, w))
         # Keep face planes/ears intact. Blend only at the lower neck, where articulation belongs.
         if p.z > head_source.z - 0.06 and (abs(p.x) < 0.07 or p.z > head_source.z + 0.03):
-            alpha = max(0.0, min(1.0, (p.z - (head_source.z - 0.06)) / 0.05))
+            alpha = max(0.0, min(1.0, (p.z - (head_source.z - 0.06)) / FIT['headTransition']))
             alpha = alpha * alpha * (3 - 2 * alpha)
             out = out.lerp(head_target + (p - head_source) * head_scale, alpha)
             accumulated = {name: value * (1-alpha) for name, value in pairs}
@@ -232,8 +243,9 @@ def build():
             phi = side * math.tau / sides
             maximum = 1.60 - 0.25 * math.cos(phi)
             theta = 0.02 + (maximum - 0.02) * ring / rings
-            helmet_points.append(Vector((0.105 * math.sin(theta) * math.sin(phi),
-                -0.055 - 0.119 * math.sin(theta) * math.cos(phi), 1.70 + 0.139 * math.cos(theta))))
+            helmet_points.append(Vector((FIT['helmet']['widthRadius'] * math.sin(theta) * math.sin(phi),
+                -0.055 - FIT['helmet']['depthRadius'] * math.sin(theta) * math.cos(phi),
+                FIT['stature'] - 0.12 + FIT['helmet']['heightRadius'] * math.cos(theta))))
     for ring in range(rings):
         for side in range(sides):
             a = ring * sides + side
@@ -269,6 +281,7 @@ def build():
     arm.data.pose_position = 'POSE'
     for action in bpy.data.actions:
         action.use_fake_user = True
+    bpy.context.scene['authoringParameters'] = json.dumps(parameters, sort_keys=True)
     bpy.ops.wm.save_as_mainfile(filepath=args.source)
     export()
     print(json.dumps({'source': args.source, 'bodyVertices': len(fitted), 'actions': len(bpy.data.actions), 'headScale': head_scale}))

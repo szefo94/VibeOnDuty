@@ -1,0 +1,3 @@
+# Exact-byte provenance pins must survive a Windows checkout with core.autocrlf.
+* -text
+sources/* -text
