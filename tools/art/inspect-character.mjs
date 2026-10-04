@@ -88,7 +88,7 @@ export async function preserveCompatibility(rawPath, baselinePath, outputPath) {
   await fs.writeFile(outputPath, encodeGLB(j, binary));
 }
 export async function inspectCharacter(filename, options = {}) {
-  const asset = parseGLB(await fs.readFile(filename)), j = asset.json;
+  const asset = parseGLB(Buffer.isBuffer(filename) ? filename : await fs.readFile(filename)), j = asset.json;
   for (let i = 0; i < j.accessors.length; i++) accessor(asset, i);
   if (!j.meshes?.length || !j.materials?.length || !j.skins?.length || !j.animations?.length) throw Error('Missing mesh/material/skin/motion');
   let vertices = 0, triangles = 0;
@@ -129,7 +129,15 @@ export async function inspectCharacter(filename, options = {}) {
   return { vertices, triangles, joints: j.skins[0].joints.length, animations: j.animations.length, materials: j.materials.map((m) => m.name), byteHash: asset.byteHash };
 }
 async function main() {
-  if (process.argv.includes('--self-test')) { assert.throws(() => parseGLB(Buffer.alloc(0))); console.log('Inspector empty/corrupt rejection passed'); return; }
+  if (process.argv.includes('--self-test')) {
+    const { test } = await import('node:test');
+    await test('rejects missing required gameplay clips', async () => {
+      const asset = parseGLB(await fs.readFile(new URL('../../public/models/enemy.glb', import.meta.url)));
+      asset.json.animations = asset.json.animations.filter((a) => a.name !== 'attack');
+      await assert.rejects(() => inspectCharacter(encodeGLB(asset.json, asset.binary)), /Required clip/);
+    });
+    return;
+  }
   const filename = process.argv[2], idx = process.argv.indexOf('--baseline');
   console.log(JSON.stringify(await inspectCharacter(filename, { baseline: idx < 0 ? undefined : process.argv[idx + 1] }), null, 2));
 }
