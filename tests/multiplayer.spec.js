@@ -364,13 +364,23 @@ async function walkTo(page, sessionId, x, z) {
           ? 'KeyD'
           : 'KeyA';
     const precise = distance < 2;
-    await page.keyboard.press(precise ? `ControlLeft+${key}` : key, {
-      // Keep an intention alive across at least three 30 Hz steps. Very short
-      // down/up pairs can reach the room in one batch and correctly cancel.
-      delay: Math.min(150, Math.max(100, distance * 40)),
-    });
+    if (precise) {
+      await page.keyboard.down('ControlLeft');
+      const stanceSeq = (await snapshot(page)).inputSeq;
+      await expect.poll(async () => {
+        const current = (await snapshot(page)).players.find((b) => b.sessionId === sessionId);
+        return current.crouching && current.lastConsumedSeq >= stanceSeq;
+      }).toBe(true);
+    }
+    let releaseSeq;
+    try {
+      // The page owns the release timer: driver IPC can stretch a requested
+      // 150ms keyboard.press into seconds while WebGL is contended.
+      releaseSeq = await pulseRouteKey(page, key, Math.min(150, Math.max(100, distance * 40)));
+    } finally {
+      if (precise) await page.keyboard.up('ControlLeft');
+    }
     // Wait for the neutral command's replicated body before choosing another pulse.
-    const releaseSeq = (await snapshot(page)).inputSeq;
     await expect.poll(async () => {
       const current = (await snapshot(page)).players.find((b) => b.sessionId === sessionId);
       return !current.moving && current.lastConsumedSeq >= releaseSeq;
@@ -379,6 +389,42 @@ async function walkTo(page, sessionId, x, z) {
   throw new Error(
     `Keyboard route did not reach (${x}, ${z}) within 45s: ${JSON.stringify(await snapshot(page))}`
   );
+}
+
+/** Release ordinary key input in the page, independent of driver response latency.
+ * @param {import('@playwright/test').Page} page
+ * @param {string} key
+ * @param {number} duration
+ */
+async function pulseRouteKey(page, key, duration) {
+  await page.evaluate(({ key, duration }) => {
+    const pulse = { released: false, releaseSeq: -1, timer: null, start: null };
+    pulse.start = (event) => {
+      if (event.code !== key) return;
+      document.removeEventListener('keydown', pulse.start, true);
+      pulse.timer = setTimeout(() => {
+        // Use the same keyup handlers as native input; never alter gameplay state.
+        document.dispatchEvent(new KeyboardEvent('keyup', { code: key, bubbles: true }));
+        pulse.releaseSeq = window.__mpDebug().inputSeq;
+        pulse.released = true;
+      }, duration);
+    };
+    window.__routePulse = pulse;
+    document.addEventListener('keydown', pulse.start, true);
+  }, { key, duration });
+  try {
+    await page.keyboard.down(key);
+    await page.waitForFunction(() => window.__routePulse.released);
+    return await page.evaluate(() => window.__routePulse.releaseSeq);
+  } finally {
+    await page.keyboard.up(key);
+    await page.evaluate(() => {
+      const pulse = window.__routePulse;
+      clearTimeout(pulse.timer);
+      document.removeEventListener('keydown', pulse.start, true);
+      delete window.__routePulse;
+    });
+  }
 }
 
 async function aimAt(page, targetId) {
