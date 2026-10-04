@@ -72,18 +72,19 @@ The following capabilities passed automated verification and human UAT on
 
 ### Workflow Defaults
 
-Project initialization uses reversible proposed defaults while no alternative preferences have been supplied: autonomous routine steps, fine-grained phases, independent work in parallel, tracked planning documents, research/plan checking/verification enabled, full instructions, and the current session model. These preferences can be revised with `$gsd-settings`. The 12-phase roadmap is accepted; Phase 1 is complete and Phase 2 awaits discussion/planning. Automatic advancement is disabled.
+Project initialization uses reversible proposed defaults while no alternative preferences have been supplied: autonomous routine steps, fine-grained phases, independent work in parallel, tracked planning documents, research/plan checking/verification enabled, full instructions, and the current session model. These preferences can be revised with `$gsd-settings`. The 12-phase roadmap is accepted; Phase1 is complete and the user's revised next step is Phase6 discussion. Automatic advancement is disabled.
 
 ### User-Selected Delivery Order
 
-1. Multiplayer, netcode, server, and server hit recognition.
-2. Omnimovement and reliable elevation/collision/camera behavior.
-3. Human character models and animation overhaul.
-4. Weapons, attachments, tuning, loadouts, progression, equipment, and score streaks.
-5. The second editor and the new map-creation pipeline.
-6. Maps produced or adapted through that pipeline, at the end of the content sequence.
+1. Completed two-client dedicated-server and authoritative TDM foundation (Phase1).
+2. Human models and comic-book Blender iterations (Phase6).
+3. Character/action animation and future movement-clip preparation (Phase7).
+4. Omnimovement, elevation/body/camera collision and final animation integration (Phase5).
+5. Remaining lobbies/netcode/device work, objective modes, bots and measured Pi hosting (Phases2–4).
+6. Weapons, attachments, loadouts, progression, equipment and score streaks (Phases8–10).
+7. The second editor followed by final sourced/original maps (Phases11–12).
 
-Necessary foundations may be added inside earlier phases when they enable a playable multiplayer result; this does not move the full movement or map-editor overhaul ahead of multiplayer.
+This order was explicitly revised by the user on2026-10-04 to prioritize6 → 7 → 5. Phase numbers stay stable, and postponed work remains pending. Phase7 can accept animation for current gameplay and inspect future clips; Phase5 closes ANIM-01 against actual omnimovement. Minimum input/prediction foundations needed for Phase5 belong there, while broader Phase2 qualification remains pending.
 
 ### Open Decisions for Research and Phase Discussion
 
@@ -106,7 +107,7 @@ Necessary foundations may be added inside earlier phases when they enable a play
 - **Creation:** Use Blender and LLM-assisted workflows iteratively for art and environment work; confirm tooling rather than assuming a Blender MCP connection exists.
 - **Content:** Imported maps, models, animations, and textures need clear reuse/modification terms and recorded provenance.
 - **Compatibility:** Preserve prefix-aware asset URLs, safe shared resource ownership, and tile serialization when existing systems are used during migration.
-- **Scope order:** Multiplayer precedes the full movement, character, weapon, editor, and map overhauls.
+- **Scope order:** After completed Phase1, follow6 → 7 → 5 → 2 → 3 → 4 → 8 → 9 → 10 → 11 → 12. Keep all postponed requirements and revalidate animation when omnimovement is integrated.
 
 ## Key Decisions
 
@@ -124,7 +125,7 @@ Necessary foundations may be added inside earlier phases when they enable a play
 | Fast kills, health regen, ADS, headshots, recoil, bullet travel, and penetration | Explicit combat selection | Pending balancing and authoritative combat implementation |
 | Progressive weapon/attachment availability | Explicit loadout/progression choice | Pending identity, persistence, and unlock design |
 | Combined modular, extrusion, sculpting, and prompt-assisted editor | User wants a new flexible map workflow alongside the existing editor | Pending authoring format and tooling research |
-| Multiplayer-first delivery order | Explicit user priority | Accepted scope order and 12-phase roadmap |
+| Models → animation → omnimovement after the multiplayer foundation | User explicitly changed the next priorities on2026-10-04 | Phase6 → Phase7 → Phase5 next; Phases2–4 remain pending afterward; final ANIM-01 acceptance is in Phase5 |
 | Armor plates deferred | User reserves them for future longer modes | Deferred |
 
 ## Evolution
@@ -136,4 +137,4 @@ After each phase transition, move verified requirements to Validated, move inval
 After each milestone, review every section, check the Core Value, reconsider deferred items, and update the current technical and player context.
 
 ---
-*Last updated: 2026-10-04 after Phase 1 verification and five passing human UAT checks.*
+*Last updated: 2026-10-04 after the user prioritized Phase6, then7, then5 following accepted Phase1.*

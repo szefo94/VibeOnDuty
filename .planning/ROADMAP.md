@@ -2,17 +2,21 @@
 
 ## Overview
 
-Deliver the full selected v1 scope in the user's order: multiplayer first, then omnimovement and collision, human characters and animation, weapons/loadouts/progression/equipment, the second editor, and final maps. Phase 1 is a playable two-client authoritative TDM result using existing maps and assets, with a straightforward console startup command. Each phase is an MVP delivery boundary within the full 67-requirement scope; an early playable slice does not remove later commitments.
+Deliver the full selected v1 scope in the user's revised order: the completed multiplayer foundation, human characters, animation, omnimovement/collision, the remaining multiplayer work, weapons/loadouts/progression/equipment, the second editor, and final maps. Phase 1 is a playable two-client authoritative TDM result using existing maps and assets, with a straightforward console startup command. Each phase is an MVP delivery boundary within the full 67-requirement scope; an early playable slice does not remove later commitments.
 
 **Granularity:** fine
 **Project mode:** mvp
-**Roadmap status:** Accepted on2026-10-03; Phase1 completed on2026-10-04 with7/7 plans,5/5 human UAT checks and all five shared requirements accepted. Phase2 awaits discussion/planning.
+**Roadmap status:** Accepted on2026-10-03; Phase1 completed on2026-10-04 with7/7 plans,5/5 human UAT checks and all five shared requirements accepted. On2026-10-04 the user prioritized Phase6, then7, then5. Phase6 is next for discussion; Phases2–4 retain their pending work afterward.
+
+**Execution order:** 1 (complete) → 6 → 7 → 5 → 2 → 3 → 4 → 8 → 9 → 10 → 11 → 12. Phase numbers remain stable identifiers. Follow this order when updating the current phase or choosing a next action; numeric next-phase suggestions from tooling do not override it.
+
+**Animation/movement boundary:** Phase7 owns the rig, clips, action blending and accepted transitions for current gameplay, plus inspectable preparation for future slides/dives/prone. Phase5 owns final ANIM-01 acceptance against actual omnimovement simulation. Any input or prediction foundation needed to deliver Phase5 must be implemented there; Phase2 subsequently extends and qualifies the broader lobby/network/device experience.
 
 Node24 and exact approved Colyseus dependencies are installed; owned fixture/TLS hosting, shared movement, traveling M4 and full TDM lifecycle have production-browser evidence. Current cloned rigs, private feedback/recovery and all six offline destinations pass their checks. Final gates after code-review and UI fixes pass247 unit,19 offline/animation and14 production multiplayer tests, both types/builds and lint. Canonical verification is passed after all five human checks in01-UAT.md; the shared completion gate reports no blockers and current source evidence. Human acceptance covers actual-window trust, pointer lock, full-size gameplay/visual judgment and scope/capacity wording. Small production screenshots retain their historical limits. No Pi/FPS/slot qualification is claimed. Rapier adoption and full movement, art, editor and final-map overhauls retain their selected future position.
 
 ## Phases
 
-Integer phases are the planned work. Decimal phases are reserved for later urgent insertions. Execute in numeric order.
+Integer phases identify the planned work. Decimal phases are reserved for later urgent insertions. Execute in the user-selected order above; the checklist and sections retain their original numeric positions.
 
 - [x] **Phase 1: Two-Client Authoritative TDM** - Two browser players can complete a fair, server-scored TDM match using the current maps and assets. (completed 2026-10-04)
 - [ ] **Phase 2: Responsive Cross-Device Lobbies and Deathmatch** - Players on PCs and phones can choose a lobby, complete responsive TDM or free-for-all sessions, and safely start another match.
@@ -72,7 +76,7 @@ Plans:
 
 **Goal:** Players on PCs and phones can choose a lobby, complete responsive TDM or free-for-all sessions, and safely start another match.
 **Mode:** mvp
-**Depends on:** Phase 1
+**Depends on:** Phase 5
 **Requirements:** NET-02, NET-05, NET-06, NET-07, MODE-02, PLAT-01, PERF-01
 **Success Criteria** (what must be TRUE):
 
@@ -85,7 +89,7 @@ Plans:
 **Plans:** TBD
 **UI hint:** yes
 
-**Research/discussion focus:** Set network impairment and device baselines; compare bounded travelling-projectile policies and prediction replay. Decide input ergonomics, reconnect policy, endpoint topology, tick/snapshot rates, and initial capacity gating. Phase 4 qualifies Raspberry Pi profiles; this phase does not imply that every requested capacity is supported on that hardware.
+**Research/discussion focus:** Build on the accepted character, animation and movement work. Set network impairment and device baselines; compare bounded travelling-projectile policies and extend any prediction/input foundation delivered by Phase5. Decide input ergonomics, reconnect policy, endpoint topology, tick/snapshot rates, and initial capacity gating. Phase4 qualifies Raspberry Pi profiles; this phase does not imply that every requested capacity is supported on that hardware.
 
 ### Phase 3: Bomb, Flag, and Hardpoint Matches
 
@@ -122,14 +126,14 @@ Plans:
 **Plans:** TBD
 **UI hint:** yes
 
-**Research/discussion focus:** Confirm the actual Pi model, 4 GB/16 GB alternatives, ARM64 OS, cooling, storage, network access, and bot workloads. Benchmark measured limits rather than infer 24-player capacity from RAM. This closes the multiplayer-first delivery group before the full movement overhaul.
+**Research/discussion focus:** Confirm the actual Pi model, 4 GB/16 GB alternatives, ARM64 OS, cooling, storage, network access, and bot workloads. Benchmark measured limits with the already accepted character/animation/movement costs rather than infer 24-player capacity from RAM. This completes the remaining multiplayer delivery group before weapons and loadouts.
 
 ### Phase 5: Omnimovement with Reliable Body and Camera Collision
 
 **Goal:** Players use the selected directional movement on every input device while bodies, aim, and cameras remain consistent with the world and server.
 **Mode:** mvp
-**Depends on:** Phase 4
-**Requirements:** MOVE-01, MOVE-02, MOVE-03, MOVE-04, MOVE-05, MOVE-06
+**Depends on:** Phase 7
+**Requirements:** MOVE-01, MOVE-02, MOVE-03, MOVE-04, MOVE-05, MOVE-06, ANIM-01
 **Success Criteria** (what must be TRUE):
 
 1. Players sprint forward, backward, and sideways and enter/cancel directional slides under agreed speed, stance, and action rules, with prediction and server validation agreeing.
@@ -137,17 +141,18 @@ Plans:
 3. Players jump, land, and traverse supported ramps, stairs, uneven terrain, and overlapping floors without entering terrain, falling through it, or snapping to another floor.
 4. Stance changes respect wall, ceiling, and body clearance; pressing or leaning near walls cannot reveal the opposite side through the camera.
 5. Keyboard/mouse, touch, and gamepad players perform the selected simultaneous movement/actions using documented, configurable controls in the settings menu.
+6. The Phase7 clips follow actual simulated idle, directional locomotion, sprint, slide, dive, prone, jump and landing with accepted transitions; visual motion does not displace the authoritative body.
 
 **Plans:** TBD
 **UI hint:** yes
 
-**Research/discussion focus:** Define the exact Call of Duty-inspired move/action transitions, collider rotation/resizing, clearance rules, and cross-device mappings. Re-run the established network/device/server scenarios and retain movement metrics needed by later animation and maps.
+**Research/discussion focus:** Define the exact Call of Duty-inspired move/action transitions, collider rotation/resizing, clearance rules, and cross-device mappings. Implement any minimum input/prediction foundation required by these criteria instead of assuming unfinished Phase2 functionality exists. Integrate the Phase7 motion with actual server states and close ANIM-01 here. Run available Phase1 regressions and explicitly selected movement/device/network trials; broader Phase2/Pi qualification remains pending.
 
 ### Phase 6: Human Characters and Comic-Book Blender Iteration
 
-**Goal:** Players see an accepted human character and comic-book visual slice that creators can reproduce and improve through Blender.
+**Goal:** As a browser player and creator, I want to see an accepted human character and comic-book visual slice that I can reproduce and improve through Blender, so that gameplay has the chosen appearance and creators can iterate it recoverably.
 **Mode:** mvp
-**Depends on:** Phase 5
+**Depends on:** Phase 1
 **Requirements:** ART-01, ART-02, ART-03, ART-04
 **Success Criteria** (what must be TRUE):
 
@@ -159,17 +164,17 @@ Plans:
 **Plans:** TBD
 **UI hint:** yes
 
-**Research/discussion focus:** Confirm installed Blender/tooling, reusable human rigs and asset terms, exporter compatibility, and browser material/outline costs. Choose art from repeated in-game review; do not assume a Blender connector or discard the working rig pipeline without comparison. Re-run device/server scenarios.
+**Research/discussion focus:** Confirm installed Blender/tooling, reusable human rigs and asset terms, exporter compatibility, and browser material/outline costs. Choose art from repeated in-game review using current movement; do not assume a Blender connector or discard the working rig pipeline without comparison. Preserve Phase1 multiplayer and offline regressions. Record the actual visual-review device and measured art costs; broader cross-device/Pi qualification is still assigned to Phases2 and4.
 
 ### Phase 7: Movement-Matched and Action-Safe Animation
 
 **Goal:** Human characters move and act smoothly in first- and third-person views while staying aligned with authoritative gameplay.
 **Mode:** mvp
 **Depends on:** Phase 6
-**Requirements:** ANIM-01, ANIM-02, ANIM-03, ANIM-04, ANIM-05
+**Requirements:** ANIM-02, ANIM-03, ANIM-04, ANIM-05
 **Success Criteria** (what must be TRUE):
 
-1. Characters visibly follow actual simulated idle, directional locomotion, sprint, slide, dive, prone, jump, and landing without unacceptable snapping at transitions.
+1. Characters visibly follow current simulated idle, directional locomotion, sprint, crouch, jump and landing without unacceptable snapping. Future slide/dive/prone clips and transition candidates are inspectable in a preview; their final match against implemented omnimovement is accepted under ANIM-01 in Phase5.
 2. ADS, firing, reload, melee, equipment, damage, and death action animations retain accepted grips and avoid unintended overlap in first- and third-person views.
 3. Remote posture and aim match the server state; visual blending and root motion never shift the gameplay body independently of simulation.
 4. A creator imports or retargets approved reusable motion onto the selected rig, regenerates runtime clips, and reviews the resulting transitions through the Blender-to-game workflow.
@@ -178,13 +183,13 @@ Plans:
 **Plans:** TBD
 **UI hint:** yes
 
-**Research/discussion focus:** Select compatible licensed motion, transition/action permissions, authoritative pose signals, and resource ownership. Evaluate actual in-game poses and export reproducibility; future weapons/equipment must preserve this animation acceptance. Re-run device/server scenarios.
+**Research/discussion focus:** Select compatible licensed motion, transition/action permissions, authoritative pose signals, and resource ownership. Use current supported gameplay for acceptance; agree provisional omnimovement pose/transition interfaces without inventing server states or counting previews as ANIM-01 completion. Phase5 implements those states and performs final movement/animation integration. Evaluate actual in-game poses and export reproducibility; future weapons/equipment must preserve this animation acceptance. Re-run available multiplayer/offline regressions and measure animation cost on the selected review device.
 
 ### Phase 8: Distinct Weapons and Authoritative Fast Combat
 
 **Goal:** Players fight with a small distinct rifle/SMG roster, readable aiming and recoil, fast kills, regeneration, and consistent projectile rules.
 **Mode:** mvp
-**Depends on:** Phase 7
+**Depends on:** Phase 4
 **Requirements:** GUN-01, GUN-02, GUN-03, GUN-04, GUN-05, GUN-06, GUN-07
 **Success Criteria** (what must be TRUE):
 
@@ -277,7 +282,7 @@ Plans:
 
 - Before multiplayer acceptance, name the impaired-network scenarios, numeric correction/tick limits, target devices, frame-time limits, bot mixes, and hardware conditions. Do not report unrun tests as evidence.
 - Phase 2 establishes scalable visual settings and reproducible sustained browser scenarios targeting 60 FPS across phones, integrated-graphics PCs, and gaming PCs. Phase 4 publishes measured ARM64 Pi hosting profiles for 8/12/16/24 total human-plus-bot slots; unqualified sizes remain unavailable on that profile.
-- Re-run the established client/server scenarios at the movement, character/animation, and weapon/loadout/equipment deliveries. Record limits and regressions at each delivery; Phase 12 owns final closure of the cross-delivery performance requirement and qualification of every advertised final-map combination.
+- Re-run available client/server scenarios at each movement, character/animation and weapon/loadout/equipment delivery. Before Phases2 and4 run, record explicitly chosen review devices and local measurements without claiming the later qualification exists. Once those phases establish full scenarios, use them for subsequent regressions. Phase12 owns final closure of the cross-delivery performance requirement and qualification of every advertised final-map combination.
 - Assess art/animation through running-game visual review, not numerical pose checks alone. Keep editable sources, reproducible exports, asset-specific provenance, safe shared resource ownership, existing serialization compatibility, and prefix-aware asset URLs throughout.
 
 ## Open Decisions

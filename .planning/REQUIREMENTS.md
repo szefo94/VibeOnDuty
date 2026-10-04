@@ -174,7 +174,7 @@ All 67 v1 requirements are assigned to exactly one roadmap phase. The initial ro
 | ART-02 | Phase 6 | Pending |
 | ART-03 | Phase 6 | Pending |
 | ART-04 | Phase 6 | Pending |
-| ANIM-01 | Phase 7 | Pending |
+| ANIM-01 | Phase 5 | Pending |
 | ANIM-02 | Phase 7 | Pending |
 | ANIM-03 | Phase 7 | Pending |
 | ANIM-04 | Phase 7 | Pending |
@@ -216,8 +216,8 @@ All 67 v1 requirements are assigned to exactly one roadmap phase. The initial ro
 - Mapped to phases: 67
 - Unmapped requirements: 0
 - Duplicate phase assignments: 0
-- Completed requirements: 0
+- Completed requirements: 5
 
 ---
 *Requirements defined: 2026-10-03 from the user's project dialogue and source-backed enabling dependencies.*
-*Last updated: 2026-10-04 after Phase 1 automated verification and five passing human UAT checks.*
+*Last updated: 2026-10-04 after the user selected Phase6 → Phase7 → Phase5; ANIM-01 final integration acceptance moved to Phase5. All67 requirements remain in scope.*

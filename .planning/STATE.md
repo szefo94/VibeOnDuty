@@ -1,17 +1,17 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 2
-current_phase_name: Responsive Cross-Device Lobbies and Deathmatch
-status: planning
-stopped_at: Phase 1 complete, ready to plan Phase 2
-last_updated: "2026-10-04T14:28:05.263Z"
+current_phase: 6
+current_phase_name: Human Characters and Comic-Book Blender Iteration
+status: executing
+stopped_at: Phase 6 research reconciled from durable report after stalled foreground return
+last_updated: "2026-10-04T18:05:51.678Z"
 last_activity: 2026-10-04
-last_activity_desc: Phase 1 complete, transitioned to Phase 2
-state_head: e9be1b4dcc71888cb6251374039c709af0aabcfd
+last_activity_desc: Phase 6 execution started
+state_head: ba72458c108d59859b0653acee91cf9c9358d450
 progress:
   total_phases: 12
   completed_phases: 1
-  total_plans: 7
+  total_plans: 13
   completed_plans: 7
   percent: 8
 ---
@@ -23,16 +23,18 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-04)
 
 **Core value:** Players on different devices can join the same match and enjoy responsive, fair combat with consistent movement and server-validated hits.
-**Current focus:** Phase 02 — Responsive Cross-Device Lobbies and Deathmatch
+**Current focus:** Phase 6 — Human Characters and Comic-Book Blender Iteration
 
 ## Current Position
 
-Phase: 2 — Responsive Cross-Device Lobbies and Deathmatch
-Plan: Not started
-Status: Ready to plan
-Next action: $gsd-discuss-phase 2 — clarify lobbies, cross-device inputs, reconnect/prediction policies and device/network baselines before planning. Automatic advancement is disabled.
-Roadmap review: Accepted; Phase 1 execution resumed after package approval
-Last activity: 2026-10-04 — Phase 1 complete, transitioned to Phase 2
+Phase: 6 (Human Characters and Comic-Book Blender Iteration) — EXECUTING
+Plan: 1 of 6
+Status: Executing Phase 6
+Next action: $gsd-discuss-phase 6 — choose human model/rig direction, comic-book look, Blender automation and visual review criteria. Automatic advancement is disabled.
+Roadmap review: User revised remaining order to6 → 7 → 5 → 2 → 3 → 4 → 8 → 9 → 10 → 11 → 12; Phase1 remains complete.
+Last activity: 2026-10-04 — Phase 6 execution started
+
+Routing: Follow the selected order rather than numeric next-phase suggestions. After Phase7 select5; after5 select2; after4 select8. Phases2–5 and7–12 remain pending, with no skipped phase marked complete.
 
 Progress: [█░░░░░░░░░] 8%
 
@@ -71,7 +73,7 @@ Progress: [█░░░░░░░░░] 8%
 
 Full decisions are recorded in PROJECT.md.
 
-- Preserve order: five-mode multiplayer → movement/collision → human art/animation → weapons/loadouts/progression/equipment → second editor → final maps.
+- Revised user order: accepted Phase1 → human art6 → animation7 → movement/collision5 → remaining multiplayer2–4 → weapons/loadouts/progression/equipment8–10 → editor11 → final maps12.
 - First playable slice is two real clients completing authoritative TDM with current maps/assets; minimum shared simulation/collision foundations belong inside multiplayer.
 - Use MVP phase boundaries across the full selected scope; five Phase1 requirements are complete and62 v1 requirements remain pending.
 - Phase 1 includes `npm run mp-server -- --port <port> --host <bind-address> --tls --public <advertised-address>` with documented TLS setup and client-facing address semantics.
@@ -107,6 +109,10 @@ None yet.
 - Phase 8-10: Choose catalogs, balance/penetration, minimal identity/recovery/save lifetime, durable reward storage, and equipment/streak/UAV rules.
 - Phase 11-12: Choose compiler/import/prompt backend and two-map mode/size matrix; no complete reusable map source is qualified yet.
 
+### Roadmap Evolution
+
+- Phase 6 edited: User selected 6 then 7 then 5; adjusted future dependencies and moved final ANIM-01 acceptance to Phase 5; all requirements retained
+
 ## Deferred Items
 
 | Category | Item | Status | Deferred At | Milestone |
@@ -115,9 +121,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-10-04T14:28:05.263Z
-Stopped at: Phase 1 complete, ready to plan Phase 2
-Resume file: None
+Last session: 2026-10-04T17:28:13.976Z
+Stopped at: Phase 6 research reconciled from durable report after stalled foreground return
+Resume file: .planning/phases/06-human-characters-and-comic-book-blender-iteration/06-RESEARCH.md
 
 Review server: https://192.168.0.16:2567 — default rules, owned Node PID35084,
 attached exec session99002. HTTPS health and game verified; the user passed the

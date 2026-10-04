@@ -392,10 +392,10 @@ All proposed implementation policies are explicitly tagged `[ASSUMED]`. The user
 
 ## Open Questions and Blocker Distinctions
 
-1. **Inherited rig and mannequin clip provenance:** unresolved; examine history/original downloadable pack evidence. Do not assign a license by name. Blocks a claim of fully cleared asset provenance, not local implementation or testing. [ASSUMED]
-2. **Actual base fit and Blender roundtrip:** not executed by this research agent (ownership is research only). Must be an early execution task with corrective iterations. A failed specific export/property/fit probe is actionable evidence, not a reason to stop at missing binary. [ASSUMED]
-3. **Human aesthetic acceptance:** delegated agent review is authorized; still label final human acceptance accurately. [VERIFIED: 06-CONTEXT.md, Discretion quoted above]
-4. **Device-class performance:** only review hardware/browser measurements available during execution can be asserted; broader qualification remains outside this phase. [VERIFIED: .planning/ROADMAP.md, Phase 6 research/discussion focus]
+1. **Inherited rig and mannequin clip provenance — RESOLVED planning disposition:** 06-01-2 and 06-06-2 retain asset-specific evidence and an explicit unresolved origin/raw-redistribution disposition while local compatibility work proceeds. Actual rig/motion license facts remain unresolved pending source-history/original-download evidence; a filename does not clear them. No fully cleared provenance claim is planned. [ASSUMED]
+2. **Actual base fit and Blender roundtrip — RESOLVED planning disposition:** 06-01-1 executes the pinned portable runtime, actual anatomical fitting and game-export tracer before expansion; 06-01-3 proves reopening/repeat export. Compatibility and fitting results remain pending execution, with corrective iterations required rather than inferred success. [ASSUMED]
+3. **Human aesthetic acceptance — RESOLVED planning disposition:** Agent visual review and corrections run autonomously in the implementation tasks; 06-06-2 presents the completed running result for the end-of-phase human check. Actual human approval remains pending a real response and is never inferred from agent or automated evidence. [VERIFIED: 06-CONTEXT.md, Discretion quoted above]
+4. **Device-class performance — RESOLVED planning disposition:** 06-06-1 records actual renderer/hardware, warmed tier costs and frame measurements, explicitly labeling software/headless evidence. Phone/iGPU/Pi qualification and a demonstrated device-class 60 FPS pass remain pending actual measurements; broader qualification retains its assigned later-phase scope. [VERIFIED: .planning/ROADMAP.md, Phase 6 research/discussion focus]
 
 ## Sources
 
