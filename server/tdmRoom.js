@@ -105,6 +105,8 @@ export class TdmRoom extends Room {
   inputGenerations = new Map();
   deliveredMatchGeneration = 0;
   lastDeliveredEventId = 0;
+  /** @type {import('../src/shared/combat.js').Hit[]} */
+  pendingCombatEvents = [];
   // Keep this numeric contract self-contained: browser state type imports must
   // not pull the filesystem CLI into the legacy browser-only type graph.
   /** @param {{settings?:{killLimit:number,matchSeconds:number,respawnSeconds:number,friendlyFire:number,resultsSeconds:number},combatSeed?:number}} [options] */
@@ -187,6 +189,7 @@ export class TdmRoom extends Room {
     if (this.deliveredMatchGeneration !== this.state.matchGeneration) {
       this.deliveredMatchGeneration = this.state.matchGeneration;
       this.lastDeliveredEventId = 0;
+      this.pendingCombatEvents = [];
     }
     for (const event of this.simulation.events) {
       if (
@@ -195,9 +198,20 @@ export class TdmRoom extends Room {
       )
         continue;
       this.lastDeliveredEventId = event.eventId;
+      // Stage until the patch boundary, not just until local syncState().
+      // Recheck generations there because another simulation tick may retire them.
+      this.pendingCombatEvents.push(event);
+      if (this.pendingCombatEvents.length > 128) this.pendingCombatEvents.shift();
+    }
+  }
+  onBeforePatch() {
+    const pending = this.pendingCombatEvents;
+    this.pendingCombatEvents = [];
+    for (const event of pending) {
       const shooter = this.state.players.get(event.shooterSessionId);
       const target = this.state.players.get(event.targetSessionId);
       if (
+        event.matchGeneration !== this.state.matchGeneration ||
         !shooter ||
         !target ||
         shooter.lifeGeneration !== event.lifeGeneration ||
@@ -206,7 +220,7 @@ export class TdmRoom extends Room {
         continue;
       this.clients
         .find((c) => c.sessionId === event.shooterSessionId)
-        ?.send('hit-confirmed', event);
+        ?.send('hit-confirmed', event, { afterNextPatch: true });
     }
   }
   /** @param {import('@colyseus/core').Client} client @param {unknown} [options] */
@@ -258,6 +272,7 @@ export class TdmRoom extends Room {
       for (const gate of this.inputGates.values()) gate.resetSequence();
       this.inputGenerations.clear();
       this.lastDeliveredEventId = 0;
+      this.pendingCombatEvents = [];
     }
     for (const p of s.players) {
       let replicated = this.state.players.get(p.sessionId);

@@ -472,6 +472,7 @@ describe('room boundary with controlled server clock', () => {
     expect(room.inputGates.get('b').pendingCount).toBe(0);
     room.simulation.events.push(...delayed);
     room.deliverCombatEvents();
+    room.onBeforePatch();
     expect(sent).toEqual([]);
     expect(
       room.inputGates
@@ -527,6 +528,7 @@ describe('room boundary with controlled server clock', () => {
     ).toBe('wrong_generation');
     room.simulation.events.push(...delayed);
     room.deliverCombatEvents();
+    room.onBeforePatch();
     expect(sent).toEqual([]);
   });
   function fixture() {
@@ -598,12 +600,15 @@ describe('room boundary with controlled server clock', () => {
     expect(room.state.scoreAlpha).toBe(1);
     expect(room.simulation.events).toHaveLength(1);
     room.deliverCombatEvents(); room.deliverCombatEvents();
+    expect(sent.a).toHaveLength(0);
+    room.onBeforePatch();
     expect(sent.a).toHaveLength(1);
     expect(sent.a[0]).toMatchObject({ type: 'hit-confirmed', event: { damage: 20, killed: true, shotId: 1, eventId: 1 } });
     expect(sent.b).toEqual([]);
     gate.receive(command(1, { fire: true, yaw: -Math.PI / 2 }), context(), 100);
     room.consumeInputs(100);
     room.simulation.stepSimulation(0.1); room.syncState(); room.deliverCombatEvents();
+    room.onBeforePatch();
     expect(room.state.scoreAlpha).toBe(1);
     expect(sent.a).toHaveLength(1);
   });
@@ -611,6 +616,7 @@ describe('room boundary with controlled server clock', () => {
     const { room, gate, context, command, target, sent } = combatFixture(true);
     gate.receive(command(0, { fire: true, yaw: -Math.PI / 2 }), context(), 0);
     room.consumeInputs(0); room.simulation.stepSimulation(0.1); room.syncState(); room.deliverCombatEvents();
+    room.onBeforePatch();
     expect(target).toMatchObject({ health: 0, alive: false });
     expect([room.state.scoreAlpha, room.state.scoreBravo]).toEqual([0, 0]);
     expect(sent.a[0].event.damage).toBe(5.125);
@@ -621,11 +627,13 @@ describe('room boundary with controlled server clock', () => {
       const { room, gate, context, command, sent } = combatFixture();
       gate.receive(command(0, { fire: true, yaw: -Math.PI / 2 }), context(), 0);
       room.consumeInputs(0); room.simulation.stepSimulation(0.1); room.syncState();
+      room.deliverCombatEvents();
+      expect(room.pendingCombatEvents).toHaveLength(1);
       if (transition === 'shooter') room.state.players.get('a').lifeGeneration++;
       if (transition === 'target') room.state.players.get('b').lifeGeneration++;
       if (transition === 'match') room.state.matchGeneration++;
       if (transition === 'reconnect') { room.state.players.delete('a'); room.simulation.removePlayer('a'); room.simulation.addPlayer('new-a'); }
-      room.deliverCombatEvents();
+      room.onBeforePatch();
       expect(sent.a).toEqual([]); expect(sent.b).toEqual([]);
     }
   });

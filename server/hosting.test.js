@@ -12,6 +12,7 @@ import { createServer } from 'node:net';
 import { request } from 'node:https';
 import { TdmRoom } from './tdmRoom.js';
 import { createHostileClient } from './testHelpers/hostileClient.js';
+import { createOnlineUi } from '../src/network/onlineUi.js';
 
 let fixture;
 beforeAll(async () => { fixture = await startMpFixture(); }, 30000);
@@ -73,6 +74,66 @@ describe('built-game host boundary', () => {
       await joined.close();
     } finally { await hosted.close(); }
   }, 30000);
+  it('real SDK receives the respawn patch before its confirmed hit and drops retired queued lives', async () => {
+    const probe = createServer();
+    probe.listen(0, '127.0.0.1');
+    await once(probe, 'listening');
+    const port = probe.address().port;
+    await new Promise((ok) => probe.close(ok));
+    const hosted = await startServer({ host: '127.0.0.1', port, buildDir: fixture.buildDir });
+    let a, b;
+    try {
+      a = await createHostileClient(hosted.listenUrl);
+      b = await createHostileClient(hosted.listenUrl, { roomId: a.roomId });
+      const room = matchMaker.getLocalRoomById(a.roomId);
+      // Test-owned room/clock only; no production mutation endpoint.
+      room.setTimestep();
+      room.patchRate = null;
+      const shooter = room.simulation.addPlayer(a.sessionId), target = room.simulation.addPlayer(b.sessionId);
+      Object.assign(shooter, { x: 34, z: 46 });
+      Object.assign(target, { x: 30, z: 46, alive: true, health: 100 });
+      room.syncState();
+      room.broadcastPatch();
+      await expect.poll(() => a.snapshot().players[b.sessionId]?.lifeGeneration).toBe(1);
+      // A due dead target respawns during this very step, after the firing actor
+      // has launched. The old client schema remains life1 until broadcastPatch.
+      Object.assign(target, { alive: false, health: 0, respawnAtMs: room.state.nowMs });
+      room.simulation.queueInput(a.sessionId, a.command({ fire: true, yaw: Math.PI / 2 }));
+      room.simulation.stepSimulation(0.1);
+      room.syncState();
+      room.deliverCombatEvents();
+      expect(target.lifeGeneration).toBe(2);
+      expect(target.health).toBe(72);
+      expect(a.snapshot().players[b.sessionId].lifeGeneration).toBe(1);
+      expect(a.confirmations).toEqual([]);
+      room.broadcastPatch();
+      await expect.poll(() => a.confirmations.length).toBe(1);
+      const event = a.confirmations[0], atDelivery = a.confirmationSnapshots[0];
+      expect(atDelivery.players[b.sessionId].lifeGeneration).toBe(event.targetLifeGeneration);
+      let markers = 0;
+      const ui = createOnlineUi({}, { marker: () => markers++, number: () => undefined,
+        tickMarker: () => {}, clearMarker: () => {} });
+      expect(ui.presentConfirmedHit(event, { sessionId: a.sessionId,
+        matchGeneration: atDelivery.matchGeneration,
+        lifeGeneration: atDelivery.players[a.sessionId].lifeGeneration,
+        players: Object.values(atDelivery.players) })).toBe(true);
+      expect(markers).toBe(1);
+      room.deliverCombatEvents(); room.broadcastPatch();
+      expect(room.pendingCombatEvents).toEqual([]);
+      expect(a.confirmations).toHaveLength(1);
+      // Generate another current real hit, then retire its target before flushing.
+      room.simulation.queueInput(a.sessionId, a.command({ fire: true, yaw: Math.PI / 2 }));
+      room.simulation.stepSimulation(0.1); room.syncState(); room.deliverCombatEvents();
+      expect(room.pendingCombatEvents).toHaveLength(1);
+      target.lifeGeneration++;
+      room.syncState(); room.broadcastPatch();
+      await new Promise((ok) => setTimeout(ok, 100));
+      expect(a.confirmations).toHaveLength(1);
+    } finally {
+      await Promise.all([a?.close(), b?.close()]);
+      await hosted.close();
+    }
+  }, 15000);
   it('permits configured proxy Origin over private HTTP and rejects a foreign real join', async () => {
     const proxy = await startMpFixture({ publicAddress: 'https://play.example' });
     try {

@@ -38,7 +38,11 @@ export async function createHostileClient(serverUrl, options = {}) {
   /** @type {string[]} */ const teamRejections = [];
   room.onMessage('teamRejected', (/** @type {{reason:string}} */ message) => teamRejections.push(message.reason));
   /** @type {import('../../src/shared/combat.js').Hit[]} */ const confirmations = [];
-  room.onMessage('hit-confirmed', (/** @type {import('../../src/shared/combat.js').Hit} */ hit) => confirmations.push(hit));
+  /** @type {ReturnType<State['toJSON']>[]} */ const confirmationSnapshots = [];
+  room.onMessage('hit-confirmed', (/** @type {import('../../src/shared/combat.js').Hit} */ hit) => {
+    confirmations.push(hit);
+    confirmationSnapshots.push(structuredClone(room.state.toJSON()));
+  });
   room.onLeave((code) => {
     closedCode = code;
   });
@@ -77,6 +81,7 @@ export async function createHostileClient(serverUrl, options = {}) {
     command,
     rejections,
     confirmations,
+    confirmationSnapshots,
     teamRejections,
     get closedCode() {
       return closedCode;

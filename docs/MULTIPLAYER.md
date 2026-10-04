@@ -148,7 +148,9 @@ pause menu's leave action to return to the existing offline modes and editor.
 Confirmed hits create the existing crosshair marker and a damage number at the
 server impact position for the shooter. The UI rejects malformed, duplicate,
 wrong-recipient and retired match/life events; feedback never awards health or
-score. Remote characters use existing cloned GLB rigs and the current M4 mount,
+score. Confirmations follow their authoritative state patch, including hits on a
+target that respawns in the same simulation step; travelling shots may confirm
+in a different order from firing. Remote characters use existing cloned GLB rigs and the current M4 mount,
 with readable BLUE/RED team names and team tint. Retirement releases owned rig
 resources while retaining templates for later joins. Feedback expiry and remote
 cosmetics continue while the local player is dead or the mouse is unlocked.
