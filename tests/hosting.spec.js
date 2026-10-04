@@ -5,6 +5,39 @@ import { startMpFixture } from './helpers/mpServer.js';
 
 test.use({ trace: { mode: 'retain-on-failure', screenshots: false, snapshots: false } });
 
+test('hosting: shared-map URL renders literal text and only editor PNG thumbnails', async ({ browser }) => {
+  test.setTimeout(180000);
+  const fixture = await startMpFixture();
+  const context = await browser.newContext({ viewport: { width: 800, height: 600 }, deviceScaleFactor: 0.25 });
+  try {
+    const page = await context.newPage();
+    const markup = '<img src=x onerror="document.body.dataset.reviewXss=1">';
+    const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a3ioAAAAASUVORK5CYII=';
+    for (const thumbnail of [
+      'x" onerror="document.body.dataset.reviewThumbXss=1',
+      'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" onload="document.body.dataset.reviewThumbXss=1"/>',
+      'https://foreign.example/thumbnail.png',
+      png,
+    ]) {
+      const map = { v: 2, w: 1, h: 1, floors: [{ base: 0, t: [0], hm: [0] }],
+        name: markup, desc: markup, thumb: thumbnail };
+      await page.goto(`${fixture.url}/?map=${encodeURIComponent(Buffer.from(JSON.stringify(map)).toString('base64'))}`);
+      await expect(page.locator('#mp-join-btn')).toBeEnabled({ timeout: 60000 });
+      const card = page.locator('.map-card[data-map="custom"]');
+      await expect(card.locator('.map-name')).toHaveText(markup.toUpperCase());
+      await expect(card.locator('.map-sub')).toHaveText(markup);
+      await expect(card.locator('.map-name img, .map-sub img')).toHaveCount(0);
+      await expect(card.locator('img')).toHaveCount(thumbnail === png ? 1 : 0);
+      if (thumbnail === png) {
+        await expect(card.locator('img')).toHaveAttribute('src', png);
+        await expect.poll(() => card.locator('img').evaluate((image) => image.naturalWidth)).toBe(1);
+      }
+      expect(await page.evaluate(() => ({ xss: document.body.dataset.reviewXss,
+        thumb: document.body.dataset.reviewThumbXss }))).toEqual({ xss: undefined, thumb: undefined });
+    }
+  } finally { await context.close(); await fixture.stop(); }
+});
+
 test('hosting: two production browsers share HTTPS assets and the same WSS room', async ({ browser }) => {
   test.setTimeout(180000);
   const fixture = await startMpFixture({ tls: true, publicAddress: '127.0.0.1' });

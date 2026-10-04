@@ -69,6 +69,16 @@ the documented remediation timeframes required for full V15.2.1 compliance.
 
 ## Verification and acceptance limits
 
+Code review found two additional public boundaries missed by the original planned
+register: unbounded HTTP room allocation (CR-01) and inherited shared-map card
+HTML injection (CR-02). CR-01 now admits only seats in the operator room and gates
+REST Origin before framework parsing. CR-02 constructs text nodes and accepts only
+the editor's bounded PNG data thumbnails. `tests/hosting.spec.js` exercises harmless
+name/description/thumbnail DOM sentinels on the real hosted production origin,
+rejects SVG/remote thumbnails and preserves a valid PNG. This extends the V3.2.2
+safe-sink and V15.2.2 L2 availability evidence; it does not change the historical
+29 planned threats into an exhaustive inventory. CR-02 predates this phase.
+
 All eight full automated gates passed: lint, both type checks, both builds,
 238 unit tests,18 offline/animation browser tests and13 production multiplayer
 tests. The fixture isolation check also passed. Full command results and screenshot

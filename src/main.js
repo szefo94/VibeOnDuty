@@ -90,11 +90,24 @@ document.querySelectorAll('.map-card').forEach(card => {
         const card = document.createElement('div');
         card.className = 'map-card';
         card.dataset.map = 'custom';
-        card.innerHTML = `
-          <div class="map-thumb custom-thumb">${customDef.thumb ? `<img src="${customDef.thumb}" alt="">` : 'CUSTOM'}</div>
-          <div class="map-name">${customDef.name.toUpperCase()}</div>
-          <div class="map-sub">${customDef.desc || 'User-created'}</div>
-        `;
+        const thumb = document.createElement('div');
+        thumb.className = 'map-thumb custom-thumb';
+        // Editor thumbnails are PNG data URLs. Reject remote URLs, SVG and
+        // attribute-shaped input before assigning a browser image source.
+        if (typeof customDef.thumb === 'string' && customDef.thumb.length <= 1024 * 1024 &&
+            /^data:image\/png;base64,iVBORw0KGgo[A-Za-z0-9+/]*={0,2}$/.test(customDef.thumb)) {
+          const image = document.createElement('img');
+          image.src = customDef.thumb;
+          image.alt = '';
+          thumb.appendChild(image);
+        } else thumb.textContent = 'CUSTOM';
+        const name = document.createElement('div');
+        name.className = 'map-name';
+        name.textContent = String(customDef.name).toUpperCase();
+        const description = document.createElement('div');
+        description.className = 'map-sub';
+        description.textContent = String(customDef.desc || 'User-created');
+        card.append(thumb, name, description);
         document.getElementById('map-selector').appendChild(card);
         card.addEventListener('click', () => {
           document.querySelectorAll('.map-card').forEach(c => c.classList.remove('selected'));
