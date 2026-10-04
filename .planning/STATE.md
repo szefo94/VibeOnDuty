@@ -2,17 +2,17 @@
 gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Two-Client Authoritative TDM
-status: Ready to execute Wave6 plan 01-07
-stopped_at: Completed 01-05-PLAN.md; next dependency-ready plan 01-07 Wave6
-last_updated: "2026-10-03T20:46:42.960Z"
-last_activity: 2026-10-03
-last_activity_desc: "Completed 01-05: authoritative TDM lifecycle; 231 unit, 3 teams/lifecycle and 17 offline browser tests pass"
-state_head: c7807c65921630b231887bd04724d58974efe03c
+status: Automated plans complete; Phase1 human acceptance pending
+stopped_at: Completed automated01-07; Phase1 actual-window human acceptance pending
+last_updated: "2026-10-04T05:35:22.788Z"
+last_activity: 2026-10-04
+last_activity_desc: "Completed automated01-07:238 unit,18 offline/animation and13 production MP tests pass; actual-window trust/gesture/visual and unclassified probes remain pending"
+state_head: dd212e4f6210a40354c5d7e301e27809e371a7a2
 progress:
   total_phases: 12
   completed_phases: 0
   total_plans: 7
-  completed_plans: 6
+  completed_plans: 7
   percent: 0
 ---
 
@@ -27,30 +27,30 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 
 ## Current Position
 
-Phase: 01 (Two-Client Authoritative TDM) — EXECUTING
+Phase: 01 (Two-Client Authoritative TDM) — AWAITING HUMAN ACCEPTANCE
 Plan: 7 of 7
-Status: Ready to execute Wave6 plan 01-07
-Next dependency-ready plan: 01-07 (Wave6); teams, death/respawn, results and automatic rematch are complete.
+Status: All7 automated plans executed; Phase1 and its five shared requirements remain pending human acceptance.
+Next action: Parent-owned actual LAN two-window review of trust, gestures, visuals and the unclassified HOST-03/MODE-01 probes; no next phase is automatically accepted.
 Roadmap review: Accepted; Phase 1 execution resumed after package approval
-Last activity: 2026-10-03 — Completed 01-05: authoritative TDM lifecycle; 231 unit, 3 teams/lifecycle and 17 offline browser tests pass
+Last activity: 2026-10-04 — Completed automated01-07:238 unit,18 offline/animation and13 production MP tests pass; honest human acceptance retained.
 
 Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
-- Average duration: Approximately 70 min of wall time
-- Total execution time: Approximately 7.0 hours of wall time, including the 01-02 interruption
+- Total automated plans completed: 7
+- Average duration: Approximately134min of wall time
+- Total execution time: Approximately15.7hours of wall time, including the01-02 interruption and approximately454min host suspension during01-07
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 6 | 420 min | 70 min |
+| 01 | 7 | 940 min | 134 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-02 (214 min including interruption), 01-03 (86 min including browser-load investigation), 01-06 (31 min), 01-04 (29 min), 01-05 (42 min through measured context HEAD)
+- Last 5 plans:01-03 (86min),01-06 (31min),01-04 (29min),01-05 (42min),01-07 (520min including approximately454min host suspension)
 - Trend: Interrupted wall time is not comparable to uninterrupted execution effort
 
 **Per-Plan Metrics:**
@@ -63,6 +63,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P06 | 31min | 3 tasks | 14 files |
 | Phase 01 P04 | 29min | 2 tasks | 16 files |
 | Phase 01 P05 | 42min | 2 tasks | 21 files |
+| Phase 01 P07 | 520min | 3 tasks | 47 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,9 @@ Full decisions are recorded in PROJECT.md.
 - [Phase 01]: Two balanced humans cannot switch without violating difference<=1; solo results switch then smaller-team replacement join proves the legal path.
 - [Phase 01]: Current-step impacts score before score/time expiry; fixed15-second rematch preserves settings/teams and resets life/match inputs, inventory and private events.
 - [Phase 01]: Life/match receipt reset preserves flood budget; spawn exhaustion waits safely and zero humans suspend matches until a fresh connection starts.
+- [Phase 01]: Disconnect retires SDK automatic reconnection and Retry creates fresh membership after local teardown; reconnect continuity remains Phase2.
+- [Phase 01]: Private hit UI validates bounded finite outcomes and current lives before dedupe, uses render delta and never changes snapshot health.
+- [Phase 01]: All full gates pass238unit/18offline/13MP; actual-window trust, visual and gesture acceptance plus unclassified probes remain pending, with no shared requirement marked achieved.
 
 ### Pending Todos
 
@@ -97,7 +101,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- Phase 1-2: Exact dependencies, isolated fixtures, minimum movement, protected console TLS hosting, authoritative M4 combat and full TDM teams/death/respawn/results/rematch are verified. Canonical stance-aware terrain, bounded raw-input rejection, precise first-impact damage, private deduplicated feedback and life/match reset are implemented; Rapier is deferred. Final presentation/security acceptance remains 01-07. Real LAN trust/pointer-lock acceptance is pending. Prediction/latency/reconnect continuity, cross-device responsiveness and capacity remain for later phases.
+- Phase1: All automated presentation/resource/security/offline checks pass;29 unique planned threats have recorded mitigation/evidence with accepted-low self-signed testing trust. Real LAN two-window trust, pointer-lock gesture usability and full-size map/rig/feedback judgment remain pending, alongside HOST-03/MODE-01 unclassified probes and descriptor-less capacity/transparency wording. Five shared requirements remain unchecked. Additional full-resolution capture controller failed twice and is deferred (WINDOWS31); required26 captures exist. Parent owns the review server. Rapier, prediction/latency/reconnect continuity, cross-device responsiveness and capacity remain later scope.
 - Phase 2-4: Confirm representative devices/network limits and actual ARM64 Pi model, 4 GB/16 GB configuration, cooling/storage/access; no capacity/FPS benchmarks are complete.
 - Phase 5-7: Movement/input rules, human rig/motion terms, installed Blender automation, and in-game visual acceptance remain open; no Blender connector is assumed.
 - Phase 8-10: Choose catalogs, balance/penetration, minimal identity/recovery/save lifetime, durable reward storage, and equipment/streak/UAV rules.
@@ -111,6 +115,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-10-03T20:45:02.212Z
-Stopped at: Completed 01-05-PLAN.md; next dependency-ready plan 01-07 Wave6
+Last session: 2026-10-04T05:35:22.736Z
+Stopped at: Completed automated01-07; Phase1 actual-window human acceptance pending
 Resume file: None

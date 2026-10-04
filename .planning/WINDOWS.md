@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 2
+open_count: 5
 waived_count: 0
-fixed_count: 22
-total_count: 24
-last_updated: 2026-10-03T20:41:04.598Z
+fixed_count: 26
+total_count: 31
+last_updated: 2026-10-04T05:30:04.172Z
 ---
 
 # Broken Windows Ledger
@@ -39,6 +39,13 @@ last_updated: 2026-10-03T20:41:04.598Z
 | 22 | 01 | deviation | src/shared/movement.test.js |  | New operator time minimum excludes the old zero-second fixture; advance the approved one-second match to results and verify frozen movement. | fixed |  | 2026-10-03T20:33:30.338Z | 2026-10-03T20:41:04.598Z |
 | 23 | 01 | deviation | tests/multiplayer.spec.js |  | Real lifecycle acceptance uses an approved five-second UI respawn window, waits replacement snapshots, tolerates 1e-7ms clocks, and always cleans owned fixtures; SDK movement waits neutral acknowledgements. | fixed |  | 2026-10-03T20:33:31.433Z | 2026-10-03T20:39:34.363Z |
 | 24 | 01 | deviation | .planning/phases/01-two-client-authoritative-tdm/01-05-01-RED.json |  | Initial behavioral RED record used unescaped XML greater-than; corrected checker evidence passed before any production implementation. | fixed |  | 2026-10-03T20:33:32.309Z | 2026-10-03T20:39:34.787Z |
+| 25 | 01 | deviation | src/fx/damageNumbers.js |  | Online cosmetics need render-delta expiry and owned removal; optional managed damage number handles preserve the offline default. | fixed |  | 2026-10-04T05:03:58.973Z | 2026-10-04T05:04:27.704Z |
+| 26 | 01 | deviation | src/main.js |  | Menu return now invokes existing stopTrainingRange so range HUD, targets and key handlers cannot persist into online or editor. | fixed |  | 2026-10-04T05:03:59.411Z | 2026-10-04T05:08:11.068Z |
+| 27 | 01 | deviation | tests/multiplayer.spec.js |  | Lifecycle deadline assertions now use a coherent snapshot: results before the authoritative deadline, or the next active generation after it, including software-renderer scheduling delays. | fixed |  | 2026-10-04T05:04:28.129Z | 2026-10-04T05:15:27.999Z |
+| 28 | 01 | deviation | .planning/phases/01-two-client-authoritative-tdm/01-07-02-RED.json |  | Escaped greater-than in the intentional assertion RED evidence; checker returned RED_EVIDENCE_OK before GREEN implementation. | fixed |  | 2026-10-04T05:04:28.549Z | 2026-10-04T05:04:28.979Z |
+| 29 | 01 | unmet-truth | .planning/phases/01-two-client-authoritative-tdm/01-07-PLAN.md |  | HOST-03 and MODE-01 unclassified probes plus descriptor-less capacity/product-transparency prohibition remain flagged for explicit phase-end human judgment. | open |  | 2026-10-04T05:04:29.486Z |  |
+| 30 | 01 | unrun-verify | .planning/phases/01-two-client-authoritative-tdm/evidence/01-07 |  | Real map/rig/feedback visual quality and gesture usability remain pending human judgment; automated production screenshots do not establish visual approval. | open |  | 2026-10-04T05:04:29.908Z |  |
+| 31 | 01 | unrun-verify | .planning/phases/01-two-client-authoritative-tdm/01-07-CAPTURE.mjs |  | Additional deviceScaleFactor1 production capture timed out twice at first-corner navigation; required production captures and all 13 MP tests pass, but high-resolution online capture remains unverified. | open |  | 2026-10-04T05:30:04.172Z |  |
 
 ````json
 [
@@ -352,6 +359,97 @@ last_updated: 2026-10-03T20:41:04.598Z
     "reason": "",
     "recorded_at": "2026-10-03T20:33:32.309Z",
     "resolved_at": "2026-10-03T20:39:34.787Z",
+    "milestone": null
+  },
+  {
+    "id": 25,
+    "kind": "deviation",
+    "phase": "01",
+    "file": "src/fx/damageNumbers.js",
+    "line": null,
+    "description": "Online cosmetics need render-delta expiry and owned removal; optional managed damage number handles preserve the offline default.",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-10-04T05:03:58.973Z",
+    "resolved_at": "2026-10-04T05:04:27.704Z",
+    "milestone": null
+  },
+  {
+    "id": 26,
+    "kind": "deviation",
+    "phase": "01",
+    "file": "src/main.js",
+    "line": null,
+    "description": "Menu return now invokes existing stopTrainingRange so range HUD, targets and key handlers cannot persist into online or editor.",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-10-04T05:03:59.411Z",
+    "resolved_at": "2026-10-04T05:08:11.068Z",
+    "milestone": null
+  },
+  {
+    "id": 27,
+    "kind": "deviation",
+    "phase": "01",
+    "file": "tests/multiplayer.spec.js",
+    "line": null,
+    "description": "Lifecycle deadline assertions now use a coherent snapshot: results before the authoritative deadline, or the next active generation after it, including software-renderer scheduling delays.",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-10-04T05:04:28.129Z",
+    "resolved_at": "2026-10-04T05:15:27.999Z",
+    "milestone": null
+  },
+  {
+    "id": 28,
+    "kind": "deviation",
+    "phase": "01",
+    "file": ".planning/phases/01-two-client-authoritative-tdm/01-07-02-RED.json",
+    "line": null,
+    "description": "Escaped greater-than in the intentional assertion RED evidence; checker returned RED_EVIDENCE_OK before GREEN implementation.",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-10-04T05:04:28.549Z",
+    "resolved_at": "2026-10-04T05:04:28.979Z",
+    "milestone": null
+  },
+  {
+    "id": 29,
+    "kind": "unmet-truth",
+    "phase": "01",
+    "file": ".planning/phases/01-two-client-authoritative-tdm/01-07-PLAN.md",
+    "line": null,
+    "description": "HOST-03 and MODE-01 unclassified probes plus descriptor-less capacity/product-transparency prohibition remain flagged for explicit phase-end human judgment.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-04T05:04:29.486Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 30,
+    "kind": "unrun-verify",
+    "phase": "01",
+    "file": ".planning/phases/01-two-client-authoritative-tdm/evidence/01-07",
+    "line": null,
+    "description": "Real map/rig/feedback visual quality and gesture usability remain pending human judgment; automated production screenshots do not establish visual approval.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-04T05:04:29.908Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 31,
+    "kind": "unrun-verify",
+    "phase": "01",
+    "file": ".planning/phases/01-two-client-authoritative-tdm/01-07-CAPTURE.mjs",
+    "line": null,
+    "description": "Additional deviceScaleFactor1 production capture timed out twice at first-corner navigation; required production captures and all 13 MP tests pass, but high-resolution online capture remains unverified.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-04T05:30:04.172Z",
+    "resolved_at": null,
     "milestone": null
   }
 ]
