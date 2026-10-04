@@ -172,7 +172,19 @@ for (const path of ['score', 'time'])
         matchGeneration: 1,
       });
       expect(result.resultsEndsAtMs - result.nowMs).toBeLessThanOrEqual(15000);
-      expect(result.resultsRemaining).toBeGreaterThan(13);
+      expect(result.settings.resultsSeconds).toBe(15);
+      expect(result.resultsRemaining).toBeGreaterThan(0);
+      expect(result.resultsRemaining).toBeCloseTo(
+        (result.resultsEndsAtMs - result.nowMs) / 1000,
+        7
+      );
+      if (path === 'time') {
+        // Results start on the first 30 Hz step at the authoritative match deadline.
+        // Browser scheduling may observe that snapshot later in the results window.
+        const resultsDuration = result.resultsEndsAtMs - result.endsAtMs;
+        expect(resultsDuration + 1e-7).toBeGreaterThanOrEqual(15000);
+        expect(resultsDuration).toBeLessThan(15000 + 1000 / 30 + 1e-7);
+      }
       for (const page of [a, b]) {
         const s = await snapshot(page);
         expect([s.winner, s.scoreBlue, s.scoreRed, s.resultsEndsAtMs]).toEqual([
@@ -225,8 +237,9 @@ for (const path of ['score', 'time'])
         .toBeGreaterThanOrEqual(result.resultsEndsAtMs - 1000);
       // One coherent snapshot may already cross the deadline on a busy runner.
       // It must still be results before it, or the correct next match after it.
+      // Use the same 1e-7 ms boundary tolerance as shared/tdmRules.js.
       const nearDeadline = await snapshot(a);
-      if (nearDeadline.nowMs < result.resultsEndsAtMs) {
+      if (nearDeadline.nowMs + 1e-7 < result.resultsEndsAtMs) {
         expect(nearDeadline.phase).toBe('results');
       } else {
         expect(nearDeadline.phase).toBe('active');
