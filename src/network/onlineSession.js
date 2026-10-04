@@ -11,8 +11,14 @@ import { setActiveMap } from '../map.js';
 import { buildLevel } from '../level.js';
 import { deactivateAllEnemies } from '../entities/enemies.js';
 import { clearAllDrones } from '../entities/drone.js';
-import { buildEnemyMesh, disposeEnemyMesh, tintEnemyMesh, usingGLTF } from '../builders/enemyGLTF.js';
+import {
+  buildEnemyMesh,
+  disposeEnemyMesh,
+  tintEnemyMesh,
+  usingGLTF,
+} from '../builders/enemyGLTF.js';
 import { createRemoteActors, animateRemoteActor } from './remoteActors.js';
+import { createOnlineUi } from './onlineUi.js';
 import { show1pWeapon, show3pWeapon } from '../builders/weapon.js';
 import { spawnHitMarker, tickHitMarker } from '../hud/hitmarker.js';
 import { spawnDamageNumber } from '../fx/damageNumbers.js';
@@ -30,7 +36,12 @@ import { stopKillcam } from '../replay/killcam.js';
 /** @typedef {import('../shared/tdmSimulation.js').Body} Body */
 /** @typedef {import('../shared/combat.js').Hit} Hit */
 /** @type {import('@colyseus/sdk').Room<State>|null} */ let room = null;
-const actors = createRemoteActors(scene, {create:buildEnemyMesh,dispose:disposeEnemyMesh,tint:tintEnemyMesh,animate:animateRemoteActor});
+const actors = createRemoteActors(scene, {
+  create: buildEnemyMesh,
+  dispose: disposeEnemyMesh,
+  tint: tintEnemyMesh,
+  animate: animateRemoteActor,
+});
 let handlersInstalled = false;
 let joining = false,
   seq = 0,
@@ -48,7 +59,28 @@ let inputGeneration = '';
 let displayedPhase = '';
 let displayedAlive = true;
 /** @type {Hit|null} */ let lastConfirmedHit = null;
-let lastEventId = 0;
+const ui = createOnlineUi(
+  Object.fromEntries(
+    [
+      'mp-error-banner',
+      'mp-error-message',
+      'mp-result-title',
+      'mp-result-score',
+      'mp-result-countdown',
+      'mp-result-stats',
+      'mp-results',
+      'mp-match-controls',
+      'mp-respawn',
+      'mp-rules-label',
+    ].map((id) => [id, document.getElementById(id)])
+  ),
+  {
+    marker: spawnHitMarker,
+    number: (x, y, z, damage) => spawnDamageNumber(x, y, z, damage, false, true),
+    tickMarker: tickHitMarker,
+    clearMarker: () => tickHitMarker(1),
+  }
+);
 /** @type {string|null} */ let lastInputRejection = null;
 /** @type {ReturnType<typeof setInterval>|null} */ let heartbeat = null;
 const euler = new THREE.Euler(0, 0, 0, 'YXZ');
@@ -195,7 +227,7 @@ export function requestOnlineAction(action) {
 }
 /** @param {string} message */
 function connectionError(message) {
-  showStatus(`Online TDM: ${message}`, 5000);
+  ui.showConnectionError('unavailable', message);
 }
 
 export async function joinOnline() {
@@ -220,11 +252,13 @@ export async function joinOnline() {
       return;
     }
     room = joined;
+    // This slice retires membership on loss; continuity is a Phase2 contract.
+    joined.reconnection.enabled = false;
     seq = 0;
     yaw = 0;
     pitch = 0;
     lastConfirmedHit = null;
-    lastEventId = 0;
+    ui.reset();
     lastInputRejection = null;
     inputGeneration = '';
     displayedPhase = '';
@@ -244,27 +278,26 @@ export async function joinOnline() {
         if (room !== joined || epoch !== sessionEpoch) return;
         syncInputGeneration();
         const me = room?.state?.players?.get(room.sessionId);
-        const target = room?.state.players.get(event.targetSessionId);
         if (
-          !me ||
-          event.shooterSessionId !== room?.sessionId ||
-          event.matchGeneration !== room?.state.matchGeneration ||
-          event.lifeGeneration !== me.lifeGeneration ||
-          !target ||
-          event.targetLifeGeneration !== target.lifeGeneration ||
-          event.eventId <= lastEventId
+          me &&
+          ui.presentConfirmedHit(event, {
+            sessionId: joined.sessionId,
+            matchGeneration: joined.state.matchGeneration,
+            lifeGeneration: me.lifeGeneration,
+            players: Array.from(joined.state.players.values()),
+          })
         )
-          return;
-        lastEventId = event.eventId;
-        lastConfirmedHit = event;
-        spawnHitMarker();
-        spawnDamageNumber(event.impact.x, event.impact.y, event.impact.z, event.damage);
+          lastConfirmedHit = event;
       }
     );
-    room.onError((_code, message) => connectionError(message ?? 'Connection failed'));
+    room.onError((_code, message) => {
+      if (room === joined) ui.showConnectionError('rejected', message ?? 'Connection failed');
+    });
     room.onLeave(() => {
       if (room === joined) {
         void leaveOnline();
+        document.exitPointerLock?.();
+        ui.showConnectionError('disconnected');
         setGameRunning(false);
         document.getElementById('overlay')?.style.setProperty('display', 'flex');
       }
@@ -304,6 +337,7 @@ export async function joinOnline() {
     if (epoch !== sessionEpoch) return;
     room = null;
     removeHandlers();
+    document.exitPointerLock?.();
     connectionError(String(error));
   } finally {
     if (epoch === sessionEpoch) joining = false;
@@ -324,10 +358,13 @@ export async function leaveOnline() {
   onBlur();
   reload = false;
   lastConfirmedHit = null;
+  ui.reset();
   document.getElementById('mp-leave-btn')?.setAttribute('hidden', '');
   document.getElementById('tdm-bar')?.style.setProperty('display', 'none');
-  document.getElementById('mp-match-controls')?.remove();
-  if (previous) await previous.leave().catch(() => {});
+  document.getElementById('mp-match-controls')?.setAttribute('hidden', '');
+  // A closed connection already emitted onLeave; SDK leave() would wait for an
+  // event that cannot arrive again. Closed rooms are already transport-retired.
+  if (previous?.connection.isOpen) await previous.leave().catch(() => {});
 }
 
 /** @param {boolean} [forceNeutral] */
@@ -372,9 +409,9 @@ function sendHeartbeat() {
 
 /** @param {number} dt */
 export function tickOnline(dt) {
+  ui.tickFeedback(dt);
   if (!room?.state?.players) return;
   sendHeartbeat();
-  tickHitMarker(dt);
   tickImpacts(dt);
   tickTracers(dt);
   tickGrenadeParticles(dt);
@@ -382,6 +419,12 @@ export function tickOnline(dt) {
   coolSpray(dt);
   const me = room.state.players.get(room.sessionId);
   if (me) {
+    ui.presentSnapshot({
+      sessionId: room.sessionId,
+      matchGeneration: room.state.matchGeneration,
+      lifeGeneration: me.lifeGeneration,
+      players: Array.from(room.state.players.values()),
+    });
     camera.position.set(me.x, me.y, me.z);
     euler.set(pitch, yaw, 0);
     camera.quaternion.setFromEuler(euler);
@@ -433,7 +476,15 @@ export function tickOnline(dt) {
         : '';
     renderMatchState(me);
   }
-  actors.syncRemoteActors({sessionId:room.sessionId,matchGeneration:room.state.matchGeneration,currentTick:room.state.currentTick,players:room.state.players.values()},dt);
+  actors.syncRemoteActors(
+    {
+      sessionId: room.sessionId,
+      matchGeneration: room.state.matchGeneration,
+      currentTick: room.state.currentTick,
+      players: room.state.players.values(),
+    },
+    dt
+  );
 }
 
 /** @template T @param {T} value @returns {T} */
@@ -488,7 +539,10 @@ export function getOnlineSnapshot() {
     players: s?.players ? Array.from(s.players.values(), (p) => ({ ...p.toJSON() })) : [],
     remoteActorCount: actors.size,
     remoteActors: actors.inspect().actors,
-    remoteResourceCounts: {created:actors.inspect().created,disposed:actors.inspect().disposed},
+    remoteResourceCounts: {
+      created: actors.inspect().created,
+      disposed: actors.inspect().disposed,
+    },
     renderMemory: { ...renderer.info.memory },
     inputHandlerCount: handlersInstalled ? 12 : 0,
     usingGLTF,
@@ -503,68 +557,48 @@ Object.defineProperty(window, '__mpDebug', {
 });
 
 function installMatchControls() {
-  document.getElementById('mp-match-controls')?.remove();
   lastTeamRejection = '';
-  const panel = document.createElement('div');
-  panel.id = 'mp-match-controls';
-  panel.style.cssText =
-    'position:fixed;left:12px;bottom:12px;z-index:120;color:white;font:14px monospace;background:#111b;padding:10px;max-width:320px';
-  const button = document.createElement('button');
-  button.id = 'mp-switch-team';
-  button.textContent = 'Switch team';
-  button.addEventListener('click', () => {
-    const me = room?.state.players.get(room.sessionId);
-    if (!room || !me) return;
-    lastTeamRejection = '';
-    room.send('switch-team', {
-      protocolVersion: 1,
-      matchGeneration: room.state.matchGeneration,
-      lifeGeneration: me.lifeGeneration,
-      team: me.team === 'blue' ? 'red' : 'blue',
-    });
-  });
-  const text = document.createElement('div');
-  text.id = 'mp-team-rejection';
-  panel.append(button, text);
-  const settings = document.createElement('div');
-  settings.id = 'mp-rules-label';
-  const respawn = document.createElement('div');
-  respawn.id = 'mp-respawn';
-  const results = document.createElement('section');
-  results.id = 'mp-results';
-  results.hidden = true;
-  for (const id of [
-    'mp-result-title',
-    'mp-result-score',
-    'mp-result-countdown',
-    'mp-result-stats',
-  ]) {
-    const row = document.createElement('div');
-    row.id = id;
-    results.append(row);
-  }
-  const resume = document.createElement('button');
-  resume.id = 'mp-resume';
-  resume.textContent = 'Resume';
-  resume.hidden = true;
-  resume.addEventListener('click', () => {
-    try {
-      document
-        .getElementById('c')
-        ?.requestPointerLock()
-        ?.catch(() => {});
-    } catch {
-      /* Browser reports failed lock. */
-    }
-  });
-  panel.append(settings, respawn, results, resume);
-  const leave = document.createElement('button');
-  leave.id = 'mp-match-leave';
-  leave.textContent = 'Leave online';
-  leave.addEventListener('click', () => document.getElementById('pause-mainmenu-btn')?.click());
-  panel.append(leave);
-  document.body.append(panel);
+  document.getElementById('mp-match-controls')?.removeAttribute('hidden');
 }
+function onSwitchTeam() {
+  const me = room?.state.players.get(room.sessionId);
+  if (!room || !me) return;
+  lastTeamRejection = '';
+  room.send('switch-team', {
+    protocolVersion: 1,
+    matchGeneration: room.state.matchGeneration,
+    lifeGeneration: me.lifeGeneration,
+    team: me.team === 'blue' ? 'red' : 'blue',
+  });
+}
+function onResume() {
+  try {
+    document
+      .getElementById('c')
+      ?.requestPointerLock()
+      ?.catch(() => {});
+  } catch {
+    /* Browser reports failed lock. */
+  }
+}
+function onReturn() {
+  document.getElementById('pause-mainmenu-btn')?.click();
+}
+async function onRetry() {
+  const button = /** @type {HTMLButtonElement|null} */ (document.getElementById('mp-retry-btn'));
+  if (button) button.disabled = true;
+  try {
+    await leaveOnline();
+    await joinOnline();
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+document.getElementById('mp-switch-team')?.addEventListener('click', onSwitchTeam);
+document.getElementById('mp-resume')?.addEventListener('click', onResume);
+document.getElementById('mp-match-leave')?.addEventListener('click', onReturn);
+document.getElementById('mp-error-return-btn')?.addEventListener('click', onReturn);
+document.getElementById('mp-retry-btn')?.addEventListener('click', onRetry);
 
 function syncInputGeneration() {
   const me = room?.state.players.get(room.sessionId);
@@ -573,7 +607,6 @@ function syncInputGeneration() {
   if (generation === inputGeneration) return;
   inputGeneration = generation;
   seq = 0;
-  lastEventId = 0;
   lastConfirmedHit = null;
   lastTeamRejection = '';
   held = fire = reload = jump = aiming = false;

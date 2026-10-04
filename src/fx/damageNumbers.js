@@ -3,7 +3,7 @@ import * as THREE from 'three';
 
 const _v = new THREE.Vector3();
 
-export function spawnDamageNumber(wx, wy, wz, amount, isPlayerDmg = false) {
+export function spawnDamageNumber(wx, wy, wz, amount, isPlayerDmg = false, managed = false) {
   _v.set(wx, wy, wz).project(camera);
   if (_v.z > 1) return; // behind camera
 
@@ -20,12 +20,13 @@ export function spawnDamageNumber(wx, wy, wz, amount, isPlayerDmg = false) {
 
   let t = 0;
   const DURATION = 0.85;
-  function step() {
-    t += 0.016;
+  function tick(dt) {
+    t += dt;
     div.style.transform = `translateX(-50%) translateY(${-t * 56}px)`;
     div.style.opacity   = Math.max(0, 1 - t / DURATION).toFixed(2);
-    if (t < DURATION) requestAnimationFrame(step);
-    else div.remove();
+    return t < DURATION;
   }
-  requestAnimationFrame(step);
+  function step() { if (tick(0.016)) requestAnimationFrame(step); else div.remove(); }
+  if (!managed) requestAnimationFrame(step);
+  return { tick, remove: () => div.remove() };
 }

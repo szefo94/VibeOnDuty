@@ -132,6 +132,7 @@ for (const path of ['score', 'time'])
         }
         await expect(b.locator('#mp-switch-team')).toBeEnabled();
         await expect(b.locator('#mp-respawn')).toContainText('Respawn in');
+        await b.screenshot({path:test.info().outputPath('death-respawn-timer.png')});
         // Two balanced members cannot become0v2, including at death.
         await b.locator('#mp-switch-team').click();
         await expect(b.locator('#mp-team-rejection')).toContainText('team balance');
@@ -141,6 +142,7 @@ for (const path of ['score', 'time'])
           .poll(() => b.evaluate(() => window.__lifecycleSeen().freshInventory))
           .toBe(true);
         expect((await snapshot(a)).scoreBlue).toBe(1);
+        await a.screenshot({path:test.info().outputPath('respawn-current-rig.png')});
         await aimAt(a, targetId);
         await a.mouse.down();
         try {
@@ -180,6 +182,7 @@ for (const path of ['score', 'time'])
         await expect(page.locator('#mp-switch-team')).toBeEnabled();
       }
       await a.screenshot({ path: test.info().outputPath(`results-${path}.png`) });
+      await b.screenshot({ path: test.info().outputPath(`results-${path}-peer.png`) });
       if (path === 'time') {
         // A valid solo results switch persists, then a fresh connection joins the smaller team.
         await b.locator('#mp-match-leave').click();
@@ -240,6 +243,7 @@ for (const path of ['score', 'time'])
       await expect(a.locator('#mp-resume')).toBeVisible();
       await a.locator('#mp-resume').click();
       await expect.poll(() => a.evaluate(() => !!document.pointerLockElement)).toBe(true);
+      await a.screenshot({path:test.info().outputPath(`rematch-${path}.png`)});
     } finally {
       try {
         await Promise.all(contexts.map((c) => c.close()));
@@ -382,8 +386,9 @@ for (const kind of ['combat', 'authority', 'feedback']) test(`${kind}: real M4 c
     if (authority) await bindOfflineAttackProbe(shooter);
     if (kind === 'feedback') for (const page of [shooter, victim]) await page.route('**/assets/index-*.js', async route => {
       const response = await route.fetch(), source = await response.text();
-      expect(source.match(/\.onMessage\("hit-confirmed",/g)).toHaveLength(1);
-      await route.fulfill({ response, body: source.replace('.onMessage("hit-confirmed",', '.onMessage("hit-confirmed",window.__receiveHitForTest=') });
+      const pattern=/\.onMessage\(["'`]hit-confirmed["'`],/g;
+      expect(source.match(pattern)).toHaveLength(1);
+      await route.fulfill({ response, body: source.replace(pattern, '$&window.__receiveHitForTest=') });
     });
     for (const page of [shooter, victim]) {
       await page.goto(fixture.url);
@@ -443,6 +448,10 @@ for (const kind of ['combat', 'authority', 'feedback']) test(`${kind}: real M4 c
     await shooter.mouse.down(); await shooter.mouse.up();
     await expect.poll(async () => target(await snapshot(victim)).health).toBe(72);
     await expect.poll(async () => (await snapshot(shooter)).lastConfirmedHit?.damage).toBe(28);
+    if(kind==='feedback') {
+      await shooter.screenshot({path:test.info().outputPath('feedback-shooter-hit.png')});
+      await victim.screenshot({path:test.info().outputPath('feedback-victim.png')});
+    }
     expect(me(await snapshot(shooter)).ammo).toBe(29);
     expect(me(await snapshot(victim)).ammo).toBe(29);
     expect((await snapshot(shooter)).score).toEqual((await snapshot(victim)).score);
@@ -493,14 +502,14 @@ test('errors: unavailable join and disconnected session offer visible top Retry 
     expect(await snapshot(page)).toMatchObject({sessionId:null,remoteActorCount:0,inputHandlerCount:0});
     await page.screenshot({path:test.info().outputPath('connection-error.png')});
     await page.locator('#mp-retry-btn').click();
-    await expect.poll(async()=> (await snapshot(page)).sessionId).toBeTruthy();
+    await expect.poll(async()=> (await snapshot(page)).sessionId, {message:'Retry must join a fresh room'}).toBeTruthy();
     await fixture.restart();
     await expect(page.locator('#mp-error-banner')).toBeVisible();
     await page.locator('#mp-error-return-btn').click();
     await expect(page.locator('#overlay')).toBeVisible();
     await expect(page.locator('#mp-error-banner')).toBeHidden();
     expect(await snapshot(page)).toMatchObject({sessionId:null,remoteActorCount:0,inputHandlerCount:0});
-  } finally { await context.close(); await fixture.stop(); }
+  } finally { try { await context.close(); } finally { await fixture.stop(); } }
 });
 
 test('resources: repeated leave and rejoin preserve real template clones and stabilize allocations', async ({ browser }) => {
@@ -530,7 +539,7 @@ test('resources: repeated leave and rejoin preserve real template clones and sta
     expect(counts[2].textures).toBe(counts[1].textures);
     console.log('[resources] rendered allocation samples', JSON.stringify(counts));
     await a.screenshot({path:test.info().outputPath('resource-rejoin.png')});
-  } finally { await Promise.all(contexts.map(c=>c.close())); await fixture.stop(); }
+  } finally { try { await Promise.all(contexts.map(c=>c.close())); } finally { await fixture.stop(); } }
 });
 
 test('tracer: two browsers join and move', async ({ browser }) => {

@@ -7,6 +7,21 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<section id="mp-error-banner" role="alert" aria-live="assertive" hidden>
+  <strong>Online connection</strong>
+  <p id="mp-error-message"></p>
+  <div><button id="mp-retry-btn">Retry</button><button id="mp-error-return-btn">Return to menu</button></div>
+</section>
+<section id="mp-match-controls" aria-label="Online match" hidden>
+  <button id="mp-switch-team">Switch team</button>
+  <p id="mp-team-rejection" aria-live="polite"></p>
+  <p id="mp-rules-label"></p><p id="mp-respawn" aria-live="polite"></p>
+  <section id="mp-results" aria-live="polite" hidden>
+    <strong id="mp-result-title"></strong><p id="mp-result-score"></p>
+    <p id="mp-result-countdown"></p><p id="mp-result-stats"></p>
+  </section>
+  <button id="mp-resume" hidden>Resume</button><button id="mp-match-leave">Leave online</button>
+</section>
 <canvas id="c"></canvas>
 <canvas id="hudCanvas"></canvas>
 <div id="scope-overlay" style="display:none">
