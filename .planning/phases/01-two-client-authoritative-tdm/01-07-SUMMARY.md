@@ -136,7 +136,7 @@ The separate metadata commit records this SUMMARY, STATE, ROADMAP and defect led
 
 Both behavior-adding tasks used actual assertion REDs against extracted baseline behavior, not missing modules. `01-07-01-RED.json` reports disposal expected once but observed zero; `01-07-02-RED.json` reports malformed feedback accepted when false was required. The canonical checker returned `RED_EVIDENCE_OK` for each before GREEN and again at closeout. Remote ownership3 and online UI4 tests pass in the full238-test run. No implementation-reflection tests or skipped tests were added.
 
-## Verification Results
+## Automated Check Results
 
 | Gate | Final result |
 | --- | --- |
