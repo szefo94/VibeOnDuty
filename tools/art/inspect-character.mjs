@@ -747,7 +747,28 @@ export async function compareSemanticExports(first, second, options = {}) {
     differences,
   };
 }
+// Separate motion modes preserve the existing exact full-domain comparator.
+export async function inspectMotionCandidate(candidate, baseline, manifest) {
+  const { validateMotionCandidate } = await import('./motion-pipeline.mjs');
+  return validateMotionCandidate(candidate, baseline, manifest);
+}
+export async function compareMotionExports(first, second, manifest) {
+  const { validateManifest, validateListedMotion } = await import('./motion-pipeline.mjs');
+  validateManifest(manifest);
+  for (const input of [first, second])
+    validateListedMotion(parseGLB(Buffer.isBuffer(input) ? input : await fs.readFile(input)), manifest);
+  const comparison = await compareSemanticExports(first, second, { tolerance: 0.000001 });
+  assert.ok(comparison.equal, 'Independent motion exports differ: ' + comparison.differences.join(','));
+  return comparison;
+}
 async function main() {
+  if (process.argv[2] === '--motion' && process.argv.length === 8 &&
+      process.argv[4] === '--baseline' && process.argv[6] === '--manifest') {
+    const { parseManifest } = await import('./motion-pipeline.mjs');
+    console.log(JSON.stringify(await inspectMotionCandidate(process.argv[3], process.argv[5],
+      parseManifest(await fs.readFile(process.argv[7], 'utf8'))), null, 2));
+    return;
+  }
   if (process.argv.includes('--self-test')) {
     const { test } = await import('node:test');
     const original = await fs.readFile(new URL('../../public/models/enemy.glb', import.meta.url));

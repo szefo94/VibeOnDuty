@@ -1,5 +1,25 @@
 {
   "schemaVersion": 1,
+  "originalMotion": {
+    "authoringScript": "tools/art/build_motion.py",
+    "editableSource": "tools/art/sources/motion.blend",
+    "sourceSha256": "d8f6c2315f2661254256f22f049d1c8cf0826c3cab304db41663ad4a45e8303d",
+    "manifest": "tools/art/motion-manifest.json",
+    "manifestSha256": "e37d4c19e27dba60e922f182e9714027f0ca0da7b6f646b585c9573acc0e3de8",
+    "curveAuthorship": "Original inspectable keyed walk curves authored from neutral/rest; no inherited clip copied or renamed.",
+    "donorRig": "Inherited 65-joint target derivative with distinct rest rolls; source-file rig redistribution terms remain unresolved.",
+    "action": "OriginalWalk",
+    "slot": "OBMotionDonor",
+    "exportedClip": "vod_walk_forward",
+    "candidateSha256": "e5f1dfb8c45ba1d4492297d4818c3188efccc46cb23f6bcd6b2e48fcae221ddb",
+    "protectedAcceptedExportSha256": "3d92a093fc6724c295fdabb456d41110a0b03fc7f72f565b42b36c4c09b00847",
+    "validation": "Exact protected mesh/render graph, skin/inverse binds, materials/images and 48 inherited animation occurrences; only exact manifest additions allowed.",
+    "evidenceRoot": ".planning/research/.cache/07-motion/",
+    "commands": ["build --candidate", "self-test", "repeat", "recover --demo", "verify-export --motion"],
+    "publication": "Candidate only in plan 07-02; publish --latest is first invoked by plan 07-03.",
+    "terms": "Original new curves are separately authored project work. No external motion acquisition and no combined rig, inherited mannequin/Mixamo motion, weapon/FBX or anatomical asset clearance is asserted.",
+    "aestheticAcceptance": "Pending end-of-phase moving human review; the unclassified ANIM-04 assumption remains open."
+  },
   "runtime": {
     "url": "https://download.blender.org/release/Blender4.5/blender-4.5.13-windows-x64.zip",
     "sha256": "b5fdf800ce65fa2f209e8f68d02667e4d720fa1c42f247c72d1882ab04decba6",

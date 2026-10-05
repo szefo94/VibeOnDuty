@@ -252,10 +252,13 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
         .then(() => true, () => false);
       assert.equal(result, true, 'Independent source re-export and changed-domain checks must pass');
     });
+  } else if (process.argv[2] === '--motion' && process.argv.length === 3) {
+    const { verifyMotion } = await import('./motion-pipeline.mjs');
+    await verifyMotion().catch((error) => { console.error(error); process.exitCode = 1; });
   } else if (process.argv[2] === '--iteration' && process.argv.length === 3) {
     verifyIteration().catch((error) => { console.error(error); process.exitCode = 1; });
   } else if (process.argv[2] !== '--repeat') {
-    console.error('Expected --repeat, --iteration or --self-test');
+    console.error('Expected --repeat, --iteration, --motion or --self-test');
     process.exitCode = 1;
   } else
     verifyRepeat().catch((error) => {

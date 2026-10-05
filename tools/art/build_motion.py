@@ -12,12 +12,13 @@ import bpy
 from mathutils import Matrix, Quaternion, Vector
 
 p = argparse.ArgumentParser()
-p.add_argument('--mode', choices=['author', 'export', 'edit', 'script-fixture'], required=True)
+p.add_argument('--mode', choices=['author', 'export', 'edit', 'script-fixture', 'invalid-fixture'], required=True)
 p.add_argument('--source')
 p.add_argument('--manifest', required=True)
 p.add_argument('--baseline', required=True)
 p.add_argument('--out', required=True)
 p.add_argument('--gain', type=float, default=1.12)
+p.add_argument('--corruption', choices=['slot', 'action', 'rig', 'unchanged'])
 args = p.parse_args(sys.argv[sys.argv.index('--') + 1:])
 ROOT = os.path.realpath(os.path.join(os.path.dirname(__file__), '../..'))
 CACHE = os.path.join(ROOT, '.planning', 'research', '.cache', '07-motion')
@@ -132,11 +133,15 @@ def load_donor():
     donor = bpy.data.objects.get('MotionDonor')
     if not donor or donor.type != 'ARMATURE':
         raise RuntimeError('Missing original donor')
+    if len(donor.data.bones) != manifest['targetJoints']:
+        raise RuntimeError('Wrong donor skeleton')
     actions = {}
     for spec in manifest['actions']:
         action = bpy.data.actions.get(spec['donorAction'])
         if not action or len(action.slots) != 1 or action.slots[0].identifier != spec['donorSlot']:
             raise RuntimeError('Missing/duplicate action or slot')
+        if action.slots[0].target_id_type != 'OBJECT':
+            raise RuntimeError('Unsupported action slot target')
         if list(action.frame_range) != spec['frames']:
             raise RuntimeError('Donor frame range mismatch')
         if any(n not in donor.pose.bones for n in spec['boneMap']):
@@ -165,9 +170,13 @@ def export():
     evidence = {'freshProcess': True, 'reopened': True, 'libraryAppended': True,
         'autoexecDisabled': not bpy.context.preferences.filepaths.use_scripts_auto_execute,
         'sourceScripts': False, 'retarget': 'world-rest delta parents-first',
-        'distinctDonorRollRadians': 0.27, 'targetJoints': len(target.data.bones), 'actions': []}
+        'targetJoints': len(target.data.bones), 'actions': []}
     for spec in manifest['actions']:
         source_action = actions[spec['id']]
+        rest_angles = [(rest_world(donor, s).to_quaternion().rotation_difference(
+            rest_world(target, t).to_quaternion())).angle for s, t in spec['boneMap'].items()]
+        if min(rest_angles) < 0.1:
+            raise RuntimeError('Donor must retain its distinct rest convention')
         donor.animation_data_create()
         donor.animation_data.action = source_action
         donor.animation_data.action_slot = source_action.slots[0]
@@ -202,7 +211,7 @@ def export():
                 pb.keyframe_insert('rotation_quaternion', frame=frame, group=target_name)
         evidence['actions'].append({'id': spec['id'], 'donorAction': source_action.name,
             'donorSlot': source_action.slots[0].identifier, 'clip': action.name, 'frames': spec['frames'],
-            'mappedBones': list(spec['boneMap'].values())})
+            'mappedBones': list(spec['boneMap'].values()), 'measuredRestDifferenceRadians': rest_angles})
     bpy.data.objects.remove(donor, do_unlink=True)
     for action in list(actions.values()):
         bpy.data.actions.remove(action)
@@ -245,9 +254,31 @@ elif args.mode == 'edit':
             pb.rotation_quaternion.normalize()
             pb.keyframe_insert('rotation_quaternion', frame=frame)
     bpy.ops.wm.save_as_mainfile(filepath=args.out, check_existing=False)
-else:
+elif args.mode == 'script-fixture':
     bpy.ops.wm.open_mainfile(filepath=args.source, use_scripts=False)
     text = bpy.data.texts.new('motion_autoexec_sentinel.py')
     text.write('raise RuntimeError("SOURCE SCRIPT EXECUTED")')
     text.use_module = True
+    bpy.ops.wm.save_as_mainfile(filepath=args.out, check_existing=False)
+else:
+    donor, actions = load_donor()
+    action = next(iter(actions.values()))
+    if args.corruption == 'slot':
+        action.slots[0].identifier = 'OBWrongSlot'
+    elif args.corruption == 'action':
+        action.name = 'UnlistedAction'
+    elif args.corruption == 'rig':
+        bpy.context.view_layer.objects.active = donor
+        bpy.ops.object.mode_set(mode='EDIT')
+        donor.data.edit_bones.remove(donor.data.edit_bones['donor_ball_l'])
+        bpy.ops.object.mode_set(mode='OBJECT')
+    elif args.corruption == 'unchanged':
+        for layer in action.layers:
+            for strip in layer.strips:
+                for bag in strip.channelbags:
+                    for curve in bag.fcurves:
+                        for key in curve.keyframe_points:
+                            key.co.y = 1 if curve.array_index == 0 else 0
+    else:
+        raise RuntimeError('Explicit corruption required')
     bpy.ops.wm.save_as_mainfile(filepath=args.out, check_existing=False)
