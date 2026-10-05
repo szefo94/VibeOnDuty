@@ -65,9 +65,9 @@
     }
   ],
   "next": {
-    "command": "$gsd-execute-phase 7",
-    "label": "Execute the verified animation plans",
-    "reason": "Ten plans, twenty-two tasks, nine waves; independent checker and all fifteen coverage items pass. Phase 5 follows Phase 7."
+    "command": "/gsd:progress --next",
+    "label": "Advance to the next step",
+    "reason": "Phase 7 of 12 · 17% · executing"
   },
-  "updated_at": "2026-10-05T19:39:01.932Z"
+  "updated_at": "2026-10-05T20:18:47.838Z"
 }
