@@ -6,7 +6,7 @@ Deliver the full selected v1 scope in the user's revised order: the completed mu
 
 **Granularity:** fine
 **Project mode:** mvp
-**Roadmap status:** Accepted on2026-10-03; Phase1 completed on2026-10-04 with7/7 plans,5/5 human UAT checks and all five shared requirements accepted. On2026-10-04 the user prioritized Phase6, then7, then5. Phase6 is next for discussion; Phases2–4 retain their pending work afterward.
+**Roadmap status:** Accepted on2026-10-03; Phase1 completed on2026-10-04 with7/7 plans,5/5 human UAT checks and all five shared requirements accepted. On2026-10-04 the user prioritized Phase6, then7, then5. All six Phase6 implementations are delivered with seven passing stable gates; phase verification and human aesthetic acceptance remain pending. Phases7/5 and2–4 have not started.
 
 **Execution order:** 1 (complete) → 6 → 7 → 5 → 2 → 3 → 4 → 8 → 9 → 10 → 11 → 12. Phase numbers remain stable identifiers. Follow this order when updating the current phase or choosing a next action; numeric next-phase suggestions from tooling do not override it.
 
@@ -161,13 +161,13 @@ Plans:
 3. A creator changes a model or material using the verified Blender automation path, exports it reproducibly, and compares the result in-game before acceptance.
 4. A creator performs an LLM-assisted Blender change through an available documented integration or script workflow, inspects the change, and restores the prior editable source version.
 
-**Plans:** TBD
+**Plans:** 6/6 implementations delivered; phase verification and human aesthetic acceptance pending
 - [x] 06-01-PLAN.md
 - [x] 06-02-PLAN.md
 - [x] 06-03-PLAN.md
 - [x] 06-04-PLAN.md
 - [x] 06-05-PLAN.md
-- [ ] 06-06-PLAN.md
+- [x] 06-06-PLAN.md
 
 **UI hint:** yes
 
@@ -316,7 +316,7 @@ Armor plates remain future longer-mode scope. Monetization and generic authentic
 | 3. Bomb, Flag, and Hardpoint Matches | 0/TBD | Not started | - |
 | 4. Bot-Filled Matches on Measured Pi Hosting | 0/TBD | Not started | - |
 | 5. Omnimovement with Reliable Body and Camera Collision | 0/TBD | Not started | - |
-| 6. Human Characters and Comic-Book Blender Iteration | 5/6 | In Progress|  |
+| 6. Human Characters and Comic-Book Blender Iteration | 6/6 | Implementation ready; verification pending | - |
 | 7. Movement-Matched and Action-Safe Animation | 0/TBD | Not started | - |
 | 8. Distinct Weapons and Authoritative Fast Combat | 0/TBD | Not started | - |
 | 9. Live Loadouts, Attachments, and Durable Unlocks | 0/TBD | Not started | - |
