@@ -166,7 +166,7 @@ Plans:
 - [x] 06-02-PLAN.md
 - [x] 06-03-PLAN.md
 - [x] 06-04-PLAN.md
-- [ ] 06-05-PLAN.md
+- [x] 06-05-PLAN.md
 - [ ] 06-06-PLAN.md
 
 **UI hint:** yes
@@ -316,7 +316,7 @@ Armor plates remain future longer-mode scope. Monetization and generic authentic
 | 3. Bomb, Flag, and Hardpoint Matches | 0/TBD | Not started | - |
 | 4. Bot-Filled Matches on Measured Pi Hosting | 0/TBD | Not started | - |
 | 5. Omnimovement with Reliable Body and Camera Collision | 0/TBD | Not started | - |
-| 6. Human Characters and Comic-Book Blender Iteration | 4/6 | In Progress|  |
+| 6. Human Characters and Comic-Book Blender Iteration | 5/6 | In Progress|  |
 | 7. Movement-Matched and Action-Safe Animation | 0/TBD | Not started | - |
 | 8. Distinct Weapons and Authoritative Fast Combat | 0/TBD | Not started | - |
 | 9. Live Loadouts, Attachments, and Durable Unlocks | 0/TBD | Not started | - |

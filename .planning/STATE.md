@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 6
 current_phase_name: Human Characters and Comic-Book Blender Iteration
 status: executing
-stopped_at: Completed 06-04-PLAN.md; ready for 06-05 Blender iteration
-last_updated: "2026-10-05T08:40:47.146Z"
+stopped_at: Completed 06-05-PLAN.md; ready for 06-06 final visual and regression delivery
+last_updated: "2026-10-05T09:10:40.088Z"
 last_activity: 2026-10-05
-last_activity_desc: Completed Phase 6 plan 04 graphics quality and playable asset recovery
-state_head: 4007dea79c0d4eb3a9685cbe01c0d75fbeac9953
+last_activity_desc: Completed Phase 6 plan 05 bounded Blender iteration and independently verified editable recovery
+state_head: ed63c292a3039f6fb3c155e5248e70aa918f9668
 progress:
   total_phases: 12
   completed_phases: 1
   total_plans: 13
-  completed_plans: 11
+  completed_plans: 12
   percent: 8
 ---
 
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-10-04)
 ## Current Position
 
 Phase: 6 (Human Characters and Comic-Book Blender Iteration) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 Status: Ready to execute
-Next action: $gsd-execute-phase 6 — continue 06-05 Blender iteration within the authorized Phase 6 run. Human aesthetic review follows all six plans.
+Next action: $gsd-execute-phase 6 — continue 06-06 final visual evidence and full regression delivery within the authorized Phase 6 run. Human aesthetic review follows all six plans.
 Roadmap review: User revised remaining order to6 → 7 → 5 → 2 → 3 → 4 → 8 → 9 → 10 → 11 → 12; Phase1 remains complete.
-Last activity: 2026-10-05 — Completed 06-04 with synchronized live quality, asset recovery, inspected compact controls, 14 focused unit tests and 12 browser cases passing
+Last activity: 2026-10-05 — Completed 06-05 with bounded offline edit/rejections, matched actual-game before/changed/restored views and independent editable-source re-export passing; accepted assets unchanged
 
 Routing: Follow the selected order rather than numeric next-phase suggestions. After Phase7 select5; after5 select2; after4 select8. Phases2–5 and7–12 remain pending, with no skipped phase marked complete.
 
@@ -69,6 +69,7 @@ Progress: [█░░░░░░░░░] 8%
 | Phase 06 P01 | 42min | 3 tasks | 14 files |
 | Phase 06 P03 | 23min | 2 tasks | 8 files |
 | Phase 06 P04 | 21min | 3 tasks | 7 files |
+| Phase 06 P05 | 27min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -105,6 +106,8 @@ Full decisions are recorded in PROJECT.md.
 - [Phase 06]: Selective r160 skinned hull ink uses shared geometry and outline-only normals, explicit disposal and finally-state/eye restoration; open collar shell stays in the paint pass.
 - [Phase 06]: One bounded persisted graphics preference shares initial/resize DPR and shadow policy with synchronized native menu/pause controls.
 - [Phase 06]: Native settings input and menu/pause touch scrolling are isolated before document gameplay capture; lighting and shadow dimensions remain unchanged after matched real-rig review.
+- [Phase 06]: Fixed inspectable offline Python operations author candidate-only helmet/paint edits; no prompt execution, backend or publication mutation.
+- [Phase 06]: Separately retained editable source/parameters are reopened through fresh pinned Blender; independent semantic exports and matched actual-game pixels prove baseline recovery.
 
 ### Pending Todos
 
@@ -114,7 +117,7 @@ None yet.
 
 - Phase1 carry-forward: Self-signed certificates retain the accepted-low testing trust exception. All Phase1 manual checks passed; other-device reachability and Pi/FPS/slot qualification remain unmeasured. Historical26 small captures retain their resolution limits; optional full-resolution capture remains deferred WINDOWS31.
 - Phase 2-4: Confirm representative devices/network limits and actual ARM64 Pi model, 4 GB/16 GB configuration, cooling/storage/access; no capacity/FPS benchmarks are complete.
-- Phase 5-7: Movement/input rules, human rig/motion terms, installed Blender automation, and in-game visual acceptance remain open; no Blender connector is assumed.
+- Phase 5-7: Movement/input rules, inherited human rig/motion terms and final in-game human aesthetic acceptance remain open. Phase 6 now demonstrates pinned portable Blender, bounded offline edits and independently verified editable recovery; no Blender connector is assumed.
 - Phase 8-10: Choose catalogs, balance/penetration, minimal identity/recovery/save lifetime, durable reward storage, and equipment/streak/UAV rules.
 - Phase 11-12: Choose compiler/import/prompt backend and two-map mode/size matrix; no complete reusable map source is qualified yet.
 
@@ -130,9 +133,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-10-05T08:40:47.076Z
-Stopped at: Completed 06-04-PLAN.md; ready for 06-05 Blender iteration
-Resume file: .planning/phases/06-human-characters-and-comic-book-blender-iteration/06-05-PLAN.md
+Last session: 2026-10-05T09:10:40.019Z
+Stopped at: Completed 06-05-PLAN.md; ready for 06-06 final visual and regression delivery
+Resume file: .planning/phases/06-human-characters-and-comic-book-blender-iteration/06-06-PLAN.md
 
 Review server: https://192.168.0.16:2567 — default rules, owned Node PID35084,
 attached exec session99002. HTTPS health and game verified; the user passed the
