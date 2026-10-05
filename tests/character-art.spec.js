@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { readFile, mkdtemp, rm } from 'node:fs/promises';
+import { readFile, writeFile, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { execFile, spawn } from 'node:child_process';
@@ -63,6 +63,200 @@ test('art domains: real offline and generation-owned online actors preserve prot
     else expect(state.remoteRed[i]).toEqual(state.remoteBlue[i]);
   }
   expect(state.stats.created).toBe(2); expect(state.stats.disposed).toBe(2);
+});
+
+async function setupComicReview(page) {
+  await page.setViewportSize({ width: 1280, height: 960 });
+  await page.goto('/');
+  await expect(page.locator('#startbtn')).toBeEnabled({ timeout: 30000 });
+  await page.evaluate(async () => {
+    const src = new URL('src/', location.href).href;
+    const g = await import(src + 'builders/enemyGLTF.js');
+    const ink = await import(src + 'comicOutline.js');
+    const T = window.__THREE;
+    const actor = g.buildEnemyMesh(0, 0);
+    actor.mixer.stopAllAction(); actor.actions.idle.reset().setEffectiveWeight(1).play();
+    actor.mixer.update(0.4);
+    const scene = new T.Scene(); scene.background = new T.Color(0x303840);
+    scene.add(actor.mesh, new T.HemisphereLight(0xfff4e5, 0x667080, 2));
+    const key = new T.DirectionalLight(0xffffff, 2.2); key.position.set(3, 4, 5); scene.add(key);
+    const renderer = new T.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    renderer.setSize(1280, 960); renderer.outputColorSpace = T.SRGBColorSpace;
+    const camera = new T.PerspectiveCamera(32, 1280 / 960, 0.01, 60);
+    camera.position.set(1.8, 1.5, 3.2); camera.lookAt(0, 0.98, 0);
+    renderer.domElement.id = 'comic-capture';
+    renderer.domElement.style.cssText = 'position:fixed;inset:0;z-index:99999';
+    document.body.append(renderer.domElement);
+    window.__comicReview = { g, ink, T, actor, scene, renderer, camera };
+  });
+}
+
+test('art ink: posed current rig has selective black silhouettes near face/fingers and at 20m', async ({ page }) => {
+  test.setTimeout(120000);
+  const errors = [];
+  page.on('console', (message) => { if (message.type() === 'error' && /shader|WebGLProgram/.test(message.text())) errors.push(message.text()); });
+  await setupComicReview(page);
+  for (const view of ['armed', 'face', 'hands', 'crouch', 'jump', 'distant-10m', 'distant-20m']) {
+    const state = await page.evaluate((view) => {
+      const { actor, ink, scene, renderer, camera, g } = window.__comicReview;
+      actor.mixer.stopAllAction();
+      const pose = view === 'crouch' ? 'crouch' : view === 'jump' ? 'jump_loop' : 'idle';
+      actor.actions[pose].reset().setEffectiveWeight(1).play(); actor.mixer.update(0.4);
+      g.tintEnemyMesh(actor.mesh, view === 'crouch' ? 0xff5555 : 0x4488ff);
+      if (view === 'face') { camera.position.set(0.5, 1.7, 1.05); camera.lookAt(0, 1.64, 0.03); }
+      else if (view === 'hands') {
+        actor.mesh.updateMatrixWorld(true);
+        const T = window.__comicReview.T;
+        const left = actor.mesh.getObjectByName('hand_l').getWorldPosition(new T.Vector3());
+        const right = actor.mesh.getObjectByName('hand_r').getWorldPosition(new T.Vector3());
+        const center = left.add(right).multiplyScalar(0.5);
+        camera.position.copy(center).add(new T.Vector3(0.65, 0.2, 0.85)); camera.lookAt(center);
+      }
+      else if (view.startsWith('distant')) { camera.position.set(0, 1.5, view.endsWith('20m') ? 20 : 10); camera.lookAt(0, 1, 0); }
+      else { camera.position.set(1.8, 1.5, 3.2); camera.lookAt(0, view === 'crouch' ? 0.65 : 0.98, 0); }
+      const capture = () => {
+        const c = document.createElement('canvas'); c.width = 1280; c.height = 960;
+        const ctx = c.getContext('2d'); ctx.drawImage(renderer.domElement, 0, 0);
+        return ctx.getImageData(0, 0, 1280, 960).data;
+      };
+      ink.setComicQuality('low'); ink.renderComicScene(renderer, scene, camera); const low = capture();
+      const lowImage = ['face', 'hands'].includes(view) ? renderer.domElement.toDataURL('image/png') : null;
+      ink.setComicQuality('medium'); ink.renderComicScene(renderer, scene, camera); const medium = capture();
+      let addedInk = 0;
+      for (let i = 0; i < medium.length; i += 4) {
+        if (Math.max(medium[i], medium[i + 1], medium[i + 2]) < 35 &&
+            Math.max(low[i], low[i + 1], low[i + 2]) > 40) addedInk++;
+      }
+      return { addedInk, programs: renderer.info.programs.length, lowImage };
+    }, view);
+    expect(state.addedInk, `${view} must visibly gain near-black silhouette pixels`).toBeGreaterThan(0);
+    if (state.lowImage) await writeFile(`.planning/research/.cache/06-art/ink-${view}-low.png`,
+      Buffer.from(state.lowImage.split(',')[1], 'base64'));
+    await page.locator('#comic-capture').screenshot({ path: `.planning/research/.cache/06-art/ink-${view}.png` });
+  }
+  expect(errors).toEqual([]);
+  await page.evaluate(() => {
+    const { ink, renderer, g, actor } = window.__comicReview;
+    g.disposeEnemyMesh(actor.mesh, actor.mixer); ink.disposeComicOwner(renderer); renderer.dispose();
+  });
+});
+
+test('art resources: ten tint/tier/retirement cycles plateau with a live actual-rig keeper', async ({ page }) => {
+  test.setTimeout(120000);
+  await setupComicReview(page);
+  const result = await page.evaluate(async () => {
+    const { g, ink, actor, scene, renderer, camera } = window.__comicReview;
+    const keeper = [];
+    actor.mesh.traverse((n) => { if (n.isSkinnedMesh) keeper.push(n); });
+    const disposedMaps = new Set(), watchedMaps = new Set();
+    actor.mesh.traverse((n) => {
+      for (const m of Array.isArray(n.material) ? n.material : [n.material]) {
+        for (const texture of [m?.map, m?.normalMap]) {
+          if (texture && !watchedMaps.has(texture)) {
+            watchedMaps.add(texture); texture.addEventListener('dispose', () => disposedMaps.add(texture.uuid));
+          }
+        }
+      }
+    });
+    const samples = [];
+    for (let i = 0; i < 14; i++) {
+      const temporary = g.buildEnemyMesh(1, 0);
+      scene.add(temporary.mesh); temporary.mixer.update(0.3);
+      for (const tier of ['medium', 'high', 'low', 'medium']) {
+        ink.setComicQuality(tier);
+        g.tintEnemyMesh(temporary.mesh, i % 2 ? 0x4488ff : 0xff5555);
+        g.tintEnemyMesh(actor.mesh, i % 2 ? 0xff5555 : 0x4488ff);
+        ink.renderComicScene(renderer, scene, camera);
+      }
+      g.disposeEnemyMesh(temporary.mesh, temporary.mixer); g.disposeEnemyMesh(temporary.mesh, temporary.mixer);
+      ink.renderComicScene(renderer, scene, camera);
+      samples.push({ ...renderer.info.memory, programs: renderer.info.programs.length });
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
+    const intact = keeper.every((n) => n.geometry.attributes.position.count > 0 && n.skeleton.boneTexture?.image?.data.length > 0);
+    const after = samples.at(-1);
+    g.disposeEnemyMesh(actor.mesh, actor.mixer); ink.disposeComicOwner(renderer); renderer.dispose();
+    return { samples, intact, disposedMaps: [...disposedMaps], after };
+  });
+  expect(result.intact).toBe(true); expect(result.disposedMaps).toEqual([]);
+  const warm = result.samples[3];
+  for (const sample of result.samples.slice(4)) {
+    expect(sample.geometries).toBe(warm.geometries);
+    expect(sample.textures).toBe(warm.textures);
+    expect(sample.programs).toBe(warm.programs);
+  }
+  await test.info().attach('ink-resource-plateau', { body: JSON.stringify(result, null, 2), contentType: 'application/json' });
+  await writeFile('.planning/research/.cache/06-art/03-ink-resource-plateau.json', JSON.stringify(result, null, 2));
+});
+
+test('art ink: gameplay rendering restores the simulation eye after an outline error', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#startbtn')).toBeEnabled({ timeout: 30000 });
+  const result = await page.evaluate(async () => {
+    const src = new URL('src/', location.href).href;
+    const { scene, renderer, camera } = await import(src + 'scene.js');
+    const { loop, setThirdPerson } = await import(src + 'loop.js');
+    const g = await import(src + 'builders/enemyGLTF.js');
+    const { setComicQuality } = await import(src + 'comicOutline.js');
+    const actor = g.buildEnemyMesh(0, 0);
+    scene.add(actor.mesh); setComicQuality('medium'); setThirdPerson(true);
+    const eye = camera.position.toArray(), render = renderer.render;
+    let calls = 0, caught = '', displaced = false;
+    renderer.render = function (...args) {
+      displaced ||= camera.position.distanceTo(new window.__THREE.Vector3(...eye)) > 0.001;
+      if (++calls === 2) throw new Error('intentional ink failure');
+      return render.apply(this, args);
+    };
+    try { loop(performance.now()); } catch (error) { caught = error.message; }
+    finally { renderer.render = render; setThirdPerson(false); g.disposeEnemyMesh(actor.mesh, actor.mixer); }
+    return { eye, restored: camera.position.toArray(), calls, caught, displaced };
+  });
+  expect(result.calls).toBe(2); expect(result.caught).toBe('intentional ink failure');
+  expect(result.displaced).toBe(true); expect(result.restored).toEqual(result.eye);
+});
+
+test('art ink: High outlines actual Greek Columns structural slots with bounded selection', async ({ page }) => {
+  test.setTimeout(120000);
+  await page.setViewportSize({ width: 1280, height: 960 });
+  await page.goto('/');
+  await expect(page.locator('#tdm-startbtn')).toBeEnabled({ timeout: 30000 });
+  await page.locator('.map-card[data-map="bunker"]').click(); await page.locator('#tdm-startbtn').click();
+  const state = await page.evaluate(async () => {
+    const src = new URL('src/', location.href).href;
+    const { scene } = await import(src + 'scene.js');
+    const ink = await import(src + 'comicOutline.js'), T = window.__THREE;
+    const renderer = new T.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    renderer.setSize(1280, 960); renderer.outputColorSpace = T.SRGBColorSpace;
+    const camera = new T.PerspectiveCamera(75, 1280 / 960, 0.05, 120);
+    camera.position.set(34, 3.2, 36); camera.lookAt(46, 2, 40);
+    const structures = [], omitted = [];
+    scene.traverse((n) => {
+      const materials = Array.isArray(n.material) ? n.material : [n.material];
+      if (!materials.some((m) => m?.userData.artDomain === 'stone')) return;
+      (materials.some((m) => m?.userData.artContour) ? structures : omitted).push({ n, material: n.material });
+    });
+    const render = renderer.render;
+    let passes = 0, outlined = 0, excluded = false;
+    renderer.render = function (...args) {
+      if (++passes === 2) {
+        outlined = structures.filter(({ n }) => (Array.isArray(n.material) ? n.material : [n.material])
+          .some((m) => m.name === 'Comic silhouette')).length;
+        excluded = omitted.every(({ n }) => !n.visible);
+      }
+      return render.apply(this, args);
+    };
+    ink.setComicQuality('high'); ink.renderComicScene(renderer, scene, camera);
+    renderer.domElement.id = 'comic-stone-capture';
+    renderer.domElement.style.cssText = 'position:fixed;inset:0;z-index:99999'; document.body.append(renderer.domElement);
+    const restored = [...structures, ...omitted].every(({ n, material }) => n.material === material && n.visible);
+    ink.setComicQuality('medium'); ink.disposeComicOwner(renderer);
+    window.__comicStoneRenderer = renderer;
+    return { passes, outlined, excluded, restored };
+  });
+  expect(state.passes).toBe(2); expect(state.outlined).toBeGreaterThan(0);
+  expect(state.excluded).toBe(true); expect(state.restored).toBe(true);
+  await page.locator('#comic-stone-capture').screenshot({ path: '.planning/research/.cache/06-art/ink-greek-columns-high.png' });
+  await page.evaluate(() => window.__comicStoneRenderer.dispose());
 });
 
 test('art tracer: anatomical face and separate fingers load through the actual game', async ({

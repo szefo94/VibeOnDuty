@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { renderComicScene } from './comicOutline.js';
 import { renderer, scene, camera } from './scene.js';
 import { PLAYER_H, PLAYER_H_CROUCH, WEAPONS, LEAN_SHIFT, JUMP_START_DUR, JUMP_LAND_DUR, ROLL_ANIM_DUR, GRENADE_THROW_DUR } from './config.js';
 import { touchLook } from './touch.js';
@@ -337,10 +338,12 @@ export function loop(ts) {
     tickScreenShake(dt);
   }
 
-  renderer.render(scene, camera);
-
-  // restore eye position (camera.position must stay at player eye for movement)
-  if (!isKillcamActive()) camera.position.set(eyeX, eyeY, eyeZ);
+  try {
+    renderComicScene(renderer, scene, camera);
+  } finally {
+    // Movement reads the simulation eye even if a GPU/render callback throws.
+    if (!isKillcamActive()) camera.position.set(eyeX, eyeY, eyeZ);
+  }
 
   drawHUD();
   requestAnimationFrame(loop);

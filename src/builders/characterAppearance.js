@@ -7,12 +7,21 @@ export function characterDomain(node, material) {
 }
 
 const appearances = new WeakMap();
+const owners = new WeakMap();
+
+export function characterOwner(node) {
+  return owners.get(node);
+}
 
 export function applyCharacterAppearance(root) {
   if (!root || appearances.has(root)) return;
   const accents = new Map();
   root.traverse((node) => {
     if (!node.isMesh || !node.material) return;
+    owners.set(node, root);
+    // Open collar shell: its authored edge ink is finer than a filled inverted
+    // hull. Leave it in the paint pass to avoid blacking out the visible neckline.
+    if (node.name === 'RaisedFabricCollar') node.userData.artContour = false;
     const assign = (material) => {
       if (!material || !['team-accent', 'teamAccent'].includes(characterDomain(node, material)))
         return material;

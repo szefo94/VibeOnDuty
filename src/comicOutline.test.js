@@ -65,6 +65,33 @@ describe('comic outlines', () => {
     expect(disposed).toHaveBeenCalledTimes(1);
     expect(f.mesh.material).toBe(f.material);
   });
+  it('smooths the outline hull at split-normal seams without changing lit normals', () => {
+    const f = setup(); ink.setComicQuality('medium');
+    const authored = f.mesh.geometry.attributes.normal.array.slice();
+    ink.renderComicScene(f.renderer, f.scene, f.camera);
+    const smooth = f.mesh.geometry.attributes.comicNormal;
+    expect(smooth.count).toBe(f.mesh.geometry.attributes.position.count);
+    expect(smooth.array).not.toEqual(authored);
+    expect(f.mesh.geometry.attributes.normal.array).toEqual(authored);
+    expect([...smooth.array].every(Number.isFinite)).toBe(true);
+    ink.disposeComicOwner(f.renderer);
+  });
+  it('disposes replaced and expired contour materials and tears down the renderer cache', () => {
+    const f = setup(); ink.setComicQuality('medium');
+    const seen = [];
+    f.renderer.render.mockImplementation(() => seen.push(f.mesh.material));
+    ink.renderComicScene(f.renderer, f.scene, f.camera);
+    const first = vi.spyOn(seen[1], 'dispose');
+    f.mesh.material = f.material.clone();
+    ink.renderComicScene(f.renderer, f.scene, f.camera);
+    expect(first).toHaveBeenCalledTimes(1);
+    const second = vi.spyOn(seen[3], 'dispose');
+    f.root.removeFromParent();
+    ink.renderComicScene(f.renderer, f.scene, f.camera);
+    expect(second).toHaveBeenCalledTimes(1);
+    ink.disposeComicOwner(f.renderer); ink.disposeComicOwner(f.renderer);
+    expect(second).toHaveBeenCalledTimes(1);
+  });
   it('Low omits silhouettes; High alone selects stone; effects and untagged surfaces stay excluded', () => {
     const f = setup('stone');
     ink.setComicQuality('low'); ink.renderComicScene(f.renderer, f.scene, f.camera);
@@ -75,6 +102,15 @@ describe('comic outlines', () => {
     f.renderer.render.mockClear();
     ink.setComicQuality('high'); ink.renderComicScene(f.renderer, f.scene, f.camera);
     expect(f.renderer.render).toHaveBeenCalledTimes(2);
+    ink.disposeComicOwner(f.renderer);
+  });
+  it('keeps an explicitly excluded open collar in the base pass only', () => {
+    const f = setup(); ink.setComicQuality('medium');
+    f.mesh.name = 'RaisedFabricCollar';
+    f.mesh.userData.artContour = false;
+    ink.renderComicScene(f.renderer, f.scene, f.camera);
+    expect(f.renderer.render).toHaveBeenCalledTimes(1);
+    expect(f.mesh.material).toBe(f.material);
     ink.disposeComicOwner(f.renderer);
   });
 });
