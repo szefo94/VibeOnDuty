@@ -5,6 +5,7 @@ import path from 'node:path';
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createServer } from 'node:net';
+import { startMpFixture } from './helpers/mpServer.js';
 
 const qualityKey = 'vod_graphics_quality_v1';
 
@@ -94,11 +95,10 @@ test('art quality resize: live and future real rigs share bounded passes and kee
 });
 
 test('art quality: defaults and invalid saved values use Medium', async ({ page }) => {
-  await page.addInitScript((key) => localStorage.setItem(key, 'HIGH'), qualityKey);
   await readyForArt(page);
   await expect(page.getByLabel('Graphics quality', { exact: true }).first()).toHaveValue('medium');
   await expect(page.locator('#graphics-quality-menu-help')).toHaveText('Balanced detail and performance.');
-  await page.evaluate((key) => localStorage.removeItem(key), qualityKey);
+  await page.evaluate((key) => localStorage.setItem(key, 'HIGH'), qualityKey);
   await page.reload();
   await expect(page.locator('#graphics-quality-menu')).toHaveValue('medium');
 });
@@ -155,6 +155,138 @@ test('art quality: blocked storage retains the session selection and readable sa
     const { renderer } = await import(new URL('src/scene.js', location.href).href);
     return renderer.shadowMap.enabled;
   })).toBe(true);
+});
+
+test('art fallback: loading settles into a playable detailed-character failure', async ({ page }) => {
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  await page.route('**/models/enemy.glb', async (route) => {
+    await gate; await route.fulfill({ status: 404, body: '' });
+  });
+  await page.goto('/');
+  await expect(page.locator('#character-asset-message')).toHaveText('Loading character assets…');
+  await expect(page.locator('#range-startbtn')).toBeDisabled();
+  release();
+  await expect(page.locator('#range-startbtn')).toBeEnabled({ timeout: 30000 });
+  await expect(page.locator('#character-asset-title')).toHaveText('Character preview unavailable');
+  await expect(page.locator('#character-asset-recovery')).toHaveText('Using the fallback character. Reload the page to try loading the detailed model again.');
+  await expect(page.locator('#character-asset-message')).toHaveText('Detailed character could not load. You can keep playing with the fallback or reload the page to retry.');
+  await page.locator('#range-startbtn').click();
+  expect(await page.evaluate(async () => {
+    const { gameRunning } = await import(new URL('src/input.js', location.href).href);
+    const { playerBody } = await import(new URL('src/builders/playerBody.js', location.href).href);
+    return gameRunning && playerBody.children.length > 0;
+  })).toBe(true);
+});
+
+for (const [kind, pattern, status, body, detailed] of [
+  ['corrupt GLB', '**/models/enemy.glb', 200, 'broken GLB', false],
+  ['missing image', '**/textures/comic-slice.png', 404, '', true],
+  ['corrupt image', '**/textures/comic-slice.png', 200, 'broken PNG', true],
+]) {
+  test(`art fallback: ${kind} keeps independent playable media and Return/Resume`, async ({ page }) => {
+    await page.route(pattern, (route) => route.fulfill({ status, body, contentType: 'application/octet-stream' }));
+    await readyForArt(page);
+    if (detailed) await expect(page.locator('#character-asset-status')).toBeHidden();
+    else await expect(page.locator('#character-asset-title')).toBeVisible();
+    await page.evaluate(() => {
+      window.__fallbackCaptures = 0;
+      HTMLCanvasElement.prototype.requestPointerLock = () => { window.__fallbackCaptures++; };
+    });
+    await page.locator('#range-startbtn').click();
+    await page.evaluate(() => document.dispatchEvent(new Event('pointerlockchange')));
+    const before = await page.evaluate(() => window.__fallbackCaptures);
+    await page.locator('#pause-resume-btn').click();
+    expect(await page.evaluate(() => window.__fallbackCaptures)).toBeGreaterThan(before);
+    await page.locator('#pause-mainmenu-btn').click();
+    await expect(page.locator('#overlay')).toBeVisible();
+    await expect(page.locator('#range-startbtn')).toBeEnabled();
+    await expect(page.locator('#mp-error-banner')).toBeHidden();
+  });
+}
+
+for (const viewport of [{ width: 320, height: 568 }, { width: 640, height: 320 }]) {
+  test.describe(`compact ${viewport.width}`, () => {
+  test.use({ hasTouch: viewport.width === 320 });
+  test(`art compact: all menu and pause actions remain reachable at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+    test.setTimeout(60000);
+    await page.setViewportSize(viewport);
+    await readyForArt(page);
+    const check = async (selector) => {
+      const control = page.locator(selector);
+      await control.scrollIntoViewIfNeeded(); await control.focus();
+      expect(await control.evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        return r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight &&
+          el.contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2));
+      })).toBe(true);
+    };
+    for (const id of ['startbtn', 'tdm-startbtn', 'mp-join-btn', 'snd-startbtn', 'adaptive-startbtn', 'range-startbtn', 'editor-startbtn', 'graphics-quality-menu']) await check('#' + id);
+    const size = await page.locator('#graphics-quality-menu').boundingBox();
+    expect(size.height).toBeGreaterThanOrEqual(44); expect(size.width).toBeLessThanOrEqual(320);
+    await page.locator('#graphics-quality-menu').focus(); await page.keyboard.press('Shift+Tab');
+    await expect(page.locator('#editor-startbtn')).toBeFocused();
+    await page.locator('#graphics-quality-menu').focus();
+    await page.screenshot({ path: `.planning/research/.cache/06-art/04-menu-${viewport.width}.png` });
+    await page.evaluate(() => { HTMLCanvasElement.prototype.requestPointerLock = () => {}; });
+    await page.locator('#range-startbtn').click();
+    await page.evaluate(() => document.dispatchEvent(new Event('pointerlockchange')));
+    expect(await page.locator('#pause-menu').evaluate((el) => {
+      const touch = new TouchEvent('touchmove', { bubbles: true, cancelable: true });
+      el.dispatchEvent(touch); return touch.defaultPrevented;
+    })).toBe(false);
+    for (const id of ['pause-resume-btn', 'pause-mainmenu-btn', 'graphics-quality-pause']) await check('#' + id);
+    expect(await page.evaluate(() => Number(getComputedStyle(document.getElementById('pause-menu')).zIndex) >
+      Number(getComputedStyle(document.getElementById('range-hud')).zIndex))).toBe(true);
+    await page.locator('#graphics-quality-pause').selectOption('low');
+    await page.locator('#graphics-quality-pause').focus(); await page.keyboard.press('Shift+Tab');
+    await expect(page.locator('#pause-mainmenu-btn')).toBeFocused();
+    await page.locator('#graphics-quality-pause').focus();
+    await page.screenshot({ path: `.planning/research/.cache/06-art/04-pause-${viewport.width}.png` });
+    const bounds = await page.locator('#pause-menu').boundingBox();
+    expect(bounds.y + bounds.height).toBeLessThanOrEqual(viewport.height - 76);
+    await page.locator('#pause-mainmenu-btn').click();
+    await expect(page.locator('#graphics-quality-menu')).toHaveValue('low');
+  });
+  });
+}
+
+test('art compact: online pause keeps native quality input and its separate Resume gesture', async ({ page }) => {
+  test.setTimeout(120000);
+  const fixture = await startMpFixture({ testSettings: { matchSeconds: 120 } });
+  try {
+    await page.goto(fixture.url);
+    await expect(page.locator('#mp-join-btn')).toBeEnabled({ timeout: 60000 });
+    await page.evaluate(() => {
+      window.__onlineQualityCaptures = 0;
+      HTMLCanvasElement.prototype.requestPointerLock = () => { window.__onlineQualityCaptures++; };
+    });
+    await page.locator('#mp-join-btn').click();
+    await expect.poll(() => page.evaluate(() => window.__mpDebug()?.phase)).toBe('active');
+    await page.evaluate(() => document.dispatchEvent(new Event('pointerlockchange')));
+    await expect(page.locator('#pause-online-hint')).toHaveText('The online match continues while your mouse is released.');
+    const before = await page.evaluate(() => ({ captures: window.__onlineQualityCaptures, state: window.__mpDebug() }));
+    const events = await page.locator('#graphics-quality-pause').evaluate((el) => {
+      const events = [new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }),
+        new MouseEvent('mouseup', { bubbles: true, cancelable: true, button: 0 }),
+        new KeyboardEvent('keydown', { bubbles: true, cancelable: true, code: 'KeyR' }),
+        new TouchEvent('touchstart', { bubbles: true, cancelable: true })];
+      for (const event of events) el.dispatchEvent(event);
+      return events.map((e) => e.defaultPrevented);
+    });
+    expect(events).toEqual([false, false, false, false]);
+    await page.locator('#graphics-quality-pause').focus(); await page.keyboard.press('ArrowUp');
+    await expect(page.locator('#graphics-quality-pause')).toHaveValue('low');
+    await expect(page.locator('#graphics-quality-menu')).toHaveValue('low');
+    const after = await page.evaluate(() => ({ captures: window.__onlineQualityCaptures, state: window.__mpDebug() }));
+    expect(after.captures).toBe(before.captures);
+    expect(after.state.sessionId).toBe(before.state.sessionId);
+    expect(after.state.matchGeneration).toBe(before.state.matchGeneration);
+    await page.locator('#pause-resume-btn').click();
+    expect(await page.evaluate(() => window.__onlineQualityCaptures)).toBeGreaterThan(after.captures);
+    await page.locator('#pause-mainmenu-btn').click();
+    await expect(page.locator('#overlay')).toBeVisible();
+  } finally { await fixture.stop(); }
 });
 
 test.beforeEach(async ({ page }) => {

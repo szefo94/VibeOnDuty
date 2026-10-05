@@ -73,6 +73,18 @@ function onGraphicsQualityChange(event) {
 
 // Preserve native select keys instead of letting gameplay prevent their defaults.
 function onGraphicsQualityKey(event) { event.stopPropagation(); }
+// Online capture and offline touch dispatch run on document. Let native settings
+// receive their default interaction without sending gameplay intentions.
+function onGraphicsQualityInput(event) {
+  if (event.target instanceof Element &&
+      (event.target.closest('.graphics-quality') ||
+       (event.type.startsWith('touch') && event.target.closest('#overlay, #pause-menu')))) {
+    event.stopPropagation();
+  }
+}
+for (const type of ['keydown', 'keyup', 'mousedown', 'mouseup', 'touchstart', 'touchmove', 'touchend', 'touchcancel']) {
+  window.addEventListener(type, onGraphicsQualityInput, { capture: true });
+}
 for (const { select } of qualityControls) {
   select.addEventListener('change', onGraphicsQualityChange);
   select.addEventListener('keydown', onGraphicsQualityKey);
@@ -353,6 +365,13 @@ document.getElementById('pause-resume-btn').addEventListener('click', () => {
 });
 document.getElementById('pause-mainmenu-btn').addEventListener('click', returnToMainMenu);
 document.getElementById('mp-leave-btn').addEventListener('click', returnToMainMenu);
+
+function onMenuControlKey(event) {
+  if (event.target.closest('button, select, input, textarea')) event.stopPropagation();
+}
+for (const id of ['overlay', 'pause-menu']) {
+  document.getElementById(id).addEventListener('keydown', onMenuControlKey);
+}
 document.getElementById('mp-join-btn').addEventListener('click', async () => {
   if (isOnline()) return;
   const button = document.getElementById('mp-join-btn');
@@ -496,6 +515,14 @@ playerBody.add(weapon3p);
 
 (async () => {
   const assets = await loadAll();
+  const assetStatus = document.getElementById('character-asset-status');
+  assetStatus.hidden = !!assets['enemy-glb'];
+  if (!assets['enemy-glb']) {
+    document.getElementById('character-asset-title').hidden = false;
+    document.getElementById('character-asset-recovery').hidden = false;
+    document.getElementById('character-asset-message').textContent =
+      'Detailed character could not load. You can keep playing with the fallback or reload the page to retry.';
+  }
   _startBtn.textContent          = 'INCURSION';
   _sndStartBtn.textContent       = 'S&D — START';
   _tdmStartBtn.textContent       = 'TEAM DEATHMATCH';
