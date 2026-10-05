@@ -42,7 +42,18 @@ export async function verifyRepeat() {
   return report;
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  if (process.argv[2] !== '--repeat') {
+  if (process.argv[2] === '--self-test') {
+    const { test } = await import('node:test');
+    const { default: assert } = await import('node:assert/strict');
+    const { execFile } = await import('node:child_process');
+    const { promisify } = await import('node:util');
+    await test('independent iteration verification reopens restored source and checks changed domains', async () => {
+      const result = await promisify(execFile)(process.execPath,
+        [fileURLToPath(import.meta.url), '--iteration'], { maxBuffer: 4000000, windowsHide: true })
+        .then(() => true, () => false);
+      assert.equal(result, true, 'Independent source re-export and changed-domain checks must pass');
+    });
+  } else if (process.argv[2] !== '--repeat') {
     console.error('Expected --repeat');
     process.exitCode = 1;
   } else
