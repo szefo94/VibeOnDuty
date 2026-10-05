@@ -6,6 +6,77 @@ import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createServer } from 'node:net';
 
+const qualityKey = 'vod_graphics_quality_v1';
+
+async function readyForArt(page) {
+  await page.goto('/');
+  await expect(page.locator('#range-startbtn')).toBeEnabled({ timeout: 30000 });
+}
+
+test('art quality: defaults and invalid saved values use Medium', async ({ page }) => {
+  await page.addInitScript((key) => localStorage.setItem(key, 'HIGH'), qualityKey);
+  await readyForArt(page);
+  await expect(page.getByLabel('Graphics quality', { exact: true }).first()).toHaveValue('medium');
+  await expect(page.locator('#graphics-quality-menu-help')).toHaveText('Balanced detail and performance.');
+  await page.evaluate((key) => localStorage.removeItem(key), qualityKey);
+  await page.reload();
+  await expect(page.locator('#graphics-quality-menu')).toHaveValue('medium');
+});
+
+test('art quality: menu and pause apply and persist without capture or restart', async ({ page }) => {
+  await readyForArt(page);
+  await page.evaluate(() => {
+    window.__qualityCaptures = 0;
+    HTMLCanvasElement.prototype.requestPointerLock = () => { window.__qualityCaptures++; };
+  });
+  await page.locator('#graphics-quality-menu').selectOption('low');
+  await expect(page.locator('#graphics-quality-pause')).toHaveValue('low');
+  expect(await page.evaluate((key) => localStorage.getItem(key), qualityKey)).toBe('low');
+  await page.locator('#range-startbtn').click();
+  await page.evaluate(() => document.dispatchEvent(new Event('pointerlockchange')));
+  await expect(page.locator('#pause-menu')).toBeVisible();
+  const read = () => page.evaluate(async () => {
+    const src = new URL('src/', location.href).href;
+    const { renderer } = await import(src + 'scene.js');
+    const { player } = await import(src + 'entities/player.js');
+    const { gameRunning } = await import(src + 'input.js');
+    const { getMode } = await import(src + 'modes/modeManager.js');
+    return { ratio: renderer.getPixelRatio(), shadows: renderer.shadowMap.enabled,
+      ammo: player.ammo, hp: player.hp, running: gameRunning, mode: getMode()?.name,
+      body: window.__bodyRef().uuid, captures: window.__qualityCaptures };
+  });
+  const before = await read();
+  expect(before.ratio).toBe(1); expect(before.shadows).toBe(false);
+  await page.locator('#graphics-quality-pause').focus();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Tab');
+  await expect(page.locator('#graphics-quality-menu')).toHaveValue('medium');
+  const after = await read();
+  expect(after.shadows).toBe(true);
+  for (const key of ['ammo', 'hp', 'running', 'mode', 'body', 'captures']) expect(after[key]).toEqual(before[key]);
+  await page.locator('#pause-mainmenu-btn').click();
+  await page.locator('#graphics-quality-menu').selectOption('high');
+  await expect(page.locator('#graphics-quality-pause-status')).toHaveText('Graphics quality: High.');
+  await page.reload();
+  await expect(page.locator('#graphics-quality-menu')).toHaveValue('high');
+  await expect(page.locator('#graphics-quality-pause')).toHaveValue('high');
+});
+
+test('art quality: blocked storage retains the session selection and readable save error', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, 'localStorage', { get() { throw new DOMException('Blocked', 'SecurityError'); } });
+  });
+  await readyForArt(page);
+  await expect(page.locator('#graphics-quality-menu')).toHaveValue('medium');
+  await page.locator('#graphics-quality-menu').selectOption('high');
+  await expect(page.locator('#graphics-quality-pause')).toHaveValue('high');
+  await expect(page.locator('#graphics-quality-menu-status')).toHaveText('Quality changed for this session. Your browser could not save the setting.');
+  expect(await page.evaluate(async () => {
+    const { renderer } = await import(new URL('src/scene.js', location.href).href);
+    return renderer.shadowMap.enabled;
+  })).toBe(true);
+});
+
 test.beforeEach(async ({ page }) => {
   if (process.env.VOD_ART_CANDIDATE) {
     const body = await readFile(process.env.VOD_ART_CANDIDATE);
