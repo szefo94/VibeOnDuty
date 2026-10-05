@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 6
 current_phase_name: Human Characters and Comic-Book Blender Iteration
 status: executing
-stopped_at: Completed 06-03-PLAN.md; continuing 06-04 graphics quality
-last_updated: "2026-10-05T08:09:31.037Z"
+stopped_at: Completed 06-04-PLAN.md; ready for 06-05 Blender iteration
+last_updated: "2026-10-05T08:40:47.146Z"
 last_activity: 2026-10-05
-last_activity_desc: Completed Phase 6 plan 03 protected appearance and skinned comic ink
-state_head: 3c59ef7a3094ded677344f387f38892267a49736
+last_activity_desc: Completed Phase 6 plan 04 graphics quality and playable asset recovery
+state_head: 4007dea79c0d4eb3a9685cbe01c0d75fbeac9953
 progress:
   total_phases: 12
   completed_phases: 1
   total_plans: 13
-  completed_plans: 10
+  completed_plans: 11
   percent: 8
 ---
 
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-10-04)
 ## Current Position
 
 Phase: 6 (Human Characters and Comic-Book Blender Iteration) — EXECUTING
-Plan: 4 of 6
+Plan: 5 of 6
 Status: Ready to execute
-Next action: $gsd-execute-phase 6 — continue 06-04 graphics quality within the authorized Phase 6 run. Human aesthetic review follows all six plans.
+Next action: $gsd-execute-phase 6 — continue 06-05 Blender iteration within the authorized Phase 6 run. Human aesthetic review follows all six plans.
 Roadmap review: User revised remaining order to6 → 7 → 5 → 2 → 3 → 4 → 8 → 9 → 10 → 11 → 12; Phase1 remains complete.
-Last activity: 2026-10-05 — Completed 06-03 with protected team accents, inspected skinned contours, 15 focused unit tests and five real-browser cases passing
+Last activity: 2026-10-05 — Completed 06-04 with synchronized live quality, asset recovery, inspected compact controls, 14 focused unit tests and 12 browser cases passing
 
 Routing: Follow the selected order rather than numeric next-phase suggestions. After Phase7 select5; after5 select2; after4 select8. Phases2–5 and7–12 remain pending, with no skipped phase marked complete.
 
@@ -68,6 +68,7 @@ Progress: [█░░░░░░░░░] 8%
 | Phase 01 P07 | 520min | 3 tasks | 47 files |
 | Phase 06 P01 | 42min | 3 tasks | 14 files |
 | Phase 06 P03 | 23min | 2 tasks | 8 files |
+| Phase 06 P04 | 21min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -102,6 +103,8 @@ Full decisions are recorded in PROJECT.md.
 - [Phase 06]: Keep asset-specific CC0 evidence separate from unresolved inherited rig/motion/weapon redistribution evidence; no combined asset clearance.
 - [Phase 06]: Only designated team accents are actor-owned tint clones; protected painted domains and shared maps retain base appearance.
 - [Phase 06]: Selective r160 skinned hull ink uses shared geometry and outline-only normals, explicit disposal and finally-state/eye restoration; open collar shell stays in the paint pass.
+- [Phase 06]: One bounded persisted graphics preference shares initial/resize DPR and shadow policy with synchronized native menu/pause controls.
+- [Phase 06]: Native settings input and menu/pause touch scrolling are isolated before document gameplay capture; lighting and shadow dimensions remain unchanged after matched real-rig review.
 
 ### Pending Todos
 
@@ -127,9 +130,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-10-05T08:09:30.962Z
-Stopped at: Completed 06-03-PLAN.md; continuing 06-04 graphics quality
-Resume file: .planning/phases/06-human-characters-and-comic-book-blender-iteration/06-04-PLAN.md
+Last session: 2026-10-05T08:40:47.076Z
+Stopped at: Completed 06-04-PLAN.md; ready for 06-05 Blender iteration
+Resume file: .planning/phases/06-human-characters-and-comic-book-blender-iteration/06-05-PLAN.md
 
 Review server: https://192.168.0.16:2567 — default rules, owned Node PID35084,
 attached exec session99002. HTTPS health and game verified; the user passed the
