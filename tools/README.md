@@ -138,7 +138,10 @@ then reopen those files through a fresh pinned Blender process and export again.
 The demo performs this step as `restored.blend` / `restored.params.json` /
 `restored.glb`. `verify-export --iteration` independently reopens them and writes
 `independent-*/regenerated.glb`. It checks full semantic mesh/material/image/skin/
-action equality against `before.glb`, checks the changed panel translation,
+action equality against `before.glb`, including active scene roots, authored-node
+reachability, parents, resolved mesh/skin bindings, local transforms and rendering
+metadata. These identities survive serializer node/mesh/skin/scene index changes.
+The inspector requires the expected body/equipment in that active scene. It also checks the changed panel translation,
 UVs/weights/winding and accent pixels independently, and verifies the recorded
 matched game captures. Copying an earlier GLB or resetting Git is not recovery.
 

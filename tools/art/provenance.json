@@ -207,7 +207,7 @@
   "iteration": {
     "schemaVersion": 1,
     "disposition": "demonstrated-offline-candidate-restored",
-    "demonstration": ".planning\\research\\.cache\\06-art\\iteration-GKGhaJ",
+    "demonstration": ".planning\\research\\.cache\\06-art\\iteration-G2mHM3",
     "operations": {
       "schemaVersion": 1,
       "operations": {
@@ -224,10 +224,10 @@
     "scriptHashes": {
       "iterate.py": "205d8e0b346b6a6f0ea745c31a586ff10d45c37fd3b483667c4d48cc384df672",
       "pipeline.mjs": "b6f0c819ef87f8ee1a10abc2be183b5d5f9d60338780a5805f769a7d5f53652d",
-      "review.mjs": "9143907ade224fdc57310ac4d1198f8644facdd117fb547fda9cabae41a10a5f",
+      "review.mjs": "b2f8c3c58d515dffc171fedc46cb63b4faf291e80ff284b2ad6d0eb5e5ed1477",
       "build_soldier.py": "1461595dbf47907671aa0a867f742c4ee35b758636a1fcb55dc571220300f432",
-      "inspect-character.mjs": "f0cd8726f12e891454b2aca5d730c6023b9dd23e04a5eaf78f4870b36f17a1b3",
-      "verify-export.mjs": "b0455a49d4919d5b23bf389c9bb46b598a2ea9ed271b4fda0861cc12330ac919"
+      "inspect-character.mjs": "c1fd9ab6e8144f9b56fa4d96c0bfb815aef108cfe18e9ce13a2858eb190f87e8",
+      "verify-export.mjs": "66aa023a1c83209ef2ee827d838e477bb82349776964a1da8f620f99f1f40a58"
     },
     "acceptedInputHashes": {
       "source": "d657f3d906a23e344e0188b9b060ca57f7e19d860530fe0618a6dd6a1178a4f7",
@@ -239,15 +239,16 @@
       "baseline.params.json": "2b74289e18fd68cacece69af7fde7fe694e5fb6f6d5912ac412dc3c2899eb236",
       "request.json": "b9b6b586251e09aa05352ab6ff0ff713ab6528dfed38405cd5f089b851d1d85f",
       "before.glb": "3d92a093fc6724c295fdabb456d41110a0b03fc7f72f565b42b36c4c09b00847",
-      "changed.blend": "f5b93fd1c0a233816fa17d52178aa8fb23b1023c2ee53d8b44fa6d7ae695bca1",
+      "changed.blend": "33a04d9df703377cfa416ae34415cd844a11b792aa24cf1c4c62af7a0af5effb",
       "changed.blend.params.json": "925672550f5e41654c9c02e5977155828afa8b97da1612e634e3882527c26ac7",
-      "changed.blend.operation.json": "47e3858e7b51f6a122347754b3a5ee658a7fac99406b56be77d6149be0b43426",
+      "changed.blend.operation.json": "32185cc247942972bb545c01e971083c09849752b0f34f4a8c17198e5a7a958c",
       "changed.glb": "8f0b28b6731f70c2670559e3f85d4e568f57b1c2f19b554b524ca5541abe432e",
       "restored.blend": "d657f3d906a23e344e0188b9b060ca57f7e19d860530fe0618a6dd6a1178a4f7",
       "restored.params.json": "2b74289e18fd68cacece69af7fde7fe694e5fb6f6d5912ac412dc3c2899eb236",
       "restored.glb": "3d92a093fc6724c295fdabb456d41110a0b03fc7f72f565b42b36c4c09b00847"
     },
     "changedDomains": {
+      "semanticSchemaVersion": 2,
       "equal": false,
       "byteIdentical": false,
       "byteHashes": [
@@ -257,16 +258,18 @@
       "domains": {
         "mesh": false,
         "skin": true,
-        "materials": true,
+        "materials": false,
         "images": false,
         "motion": true
       },
       "differences": [
-        "mesh.34.primitives.0.attributes.NORMAL.228",
+        "mesh.resources.34.primitives.0.attributes.NORMAL.228",
+        "materials.8.extras.baseAppearance",
         "images.5.pixels"
       ]
     },
     "restoredSemanticComparison": {
+      "semanticSchemaVersion": 2,
       "equal": true,
       "byteIdentical": true,
       "byteHashes": [
@@ -1218,9 +1221,26 @@
       "renderer": "WebKit WebGL"
     },
     "independentVerification": {
-      "reportHash": "e84604a955a2471f7a38a0d6e7e7b1cad53726b4b8f3b066ffc44632c6890adc",
-      "regeneratedOutput": ".planning\\research\\.cache\\06-art\\iteration-GKGhaJ\\independent-0A0dm5\\regenerated.glb",
+      "reportHash": "0348844719cb9d81e73e465086defe344f35268b8d773f47eaab69cb1782f289",
+      "regeneratedOutput": ".planning\\research\\.cache\\06-art\\iteration-G2mHM3\\independent-ssqk2m\\regenerated.glb",
       "regeneratedHash": "3d92a093fc6724c295fdabb456d41110a0b03fc7f72f565b42b36c4c09b00847",
+      "regenerated": {
+        "semanticSchemaVersion": 2,
+        "equal": true,
+        "byteIdentical": true,
+        "byteHashes": [
+          "3d92a093fc6724c295fdabb456d41110a0b03fc7f72f565b42b36c4c09b00847",
+          "3d92a093fc6724c295fdabb456d41110a0b03fc7f72f565b42b36c4c09b00847"
+        ],
+        "domains": {
+          "mesh": true,
+          "skin": true,
+          "materials": true,
+          "images": true,
+          "motion": true
+        },
+        "differences": []
+      },
       "rejected": [
         "unknown-operation",
         "out-of-range",
@@ -2398,11 +2418,1040 @@
       "publishedAssetsUnchanged": true,
       "humanAestheticAcceptance": "pending-end-of-phase",
       "deviceQualification": "unmeasured"
+    },
+    {
+      "schemaVersion": 1,
+      "disposition": "demonstrated-offline-candidate-restored",
+      "demonstration": ".planning\\research\\.cache\\06-art\\iteration-GKGhaJ",
+      "operations": {
+        "schemaVersion": 1,
+        "operations": {
+          "helmet-cheek-guard-offset": 0.022,
+          "accent-paint-gain": 0.55
+        }
+      },
+      "runtime": {
+        "version": "4.5.13 LTS",
+        "archiveHash": "b5fdf800ce65fa2f209e8f68d02667e4d720fa1c42f247c72d1882ab04decba6",
+        "buildHash": "daeeeca98fb0",
+        "executableHash": "339c3879999f619ffeb3ff4b53966853153e2e2547d79048ed2886f1826d1306"
+      },
+      "scriptHashes": {
+        "iterate.py": "205d8e0b346b6a6f0ea745c31a586ff10d45c37fd3b483667c4d48cc384df672",
+        "pipeline.mjs": "b6f0c819ef87f8ee1a10abc2be183b5d5f9d60338780a5805f769a7d5f53652d",
+        "review.mjs": "9143907ade224fdc57310ac4d1198f8644facdd117fb547fda9cabae41a10a5f",
+        "build_soldier.py": "1461595dbf47907671aa0a867f742c4ee35b758636a1fcb55dc571220300f432",
+        "inspect-character.mjs": "f0cd8726f12e891454b2aca5d730c6023b9dd23e04a5eaf78f4870b36f17a1b3",
+        "verify-export.mjs": "b0455a49d4919d5b23bf389c9bb46b598a2ea9ed271b4fda0861cc12330ac919"
+      },
+      "acceptedInputHashes": {
+        "source": "d657f3d906a23e344e0188b9b060ca57f7e19d860530fe0618a6dd6a1178a4f7",
+        "params": "2b74289e18fd68cacece69af7fde7fe694e5fb6f6d5912ac412dc3c2899eb236",
+        "published": "3d92a093fc6724c295fdabb456d41110a0b03fc7f72f565b42b36c4c09b00847"
+      },
+      "artifactHashes": {
+        "baseline.blend": "d657f3d906a23e344e0188b9b060ca57f7e19d860530fe0618a6dd6a1178a4f7",
+        "baseline.params.json": "2b74289e18fd68cacece69af7fde7fe694e5fb6f6d5912ac412dc3c2899eb236",
+        "request.json": "b9b6b586251e09aa05352ab6ff0ff713ab6528dfed38405cd5f089b851d1d85f",
+        "before.glb": "3d92a093fc6724c295fdabb456d41110a0b03fc7f72f565b42b36c4c09b00847",
+        "changed.blend": "f5b93fd1c0a233816fa17d52178aa8fb23b1023c2ee53d8b44fa6d7ae695bca1",
+        "changed.blend.params.json": "925672550f5e41654c9c02e5977155828afa8b97da1612e634e3882527c26ac7",
+        "changed.blend.operation.json": "47e3858e7b51f6a122347754b3a5ee658a7fac99406b56be77d6149be0b43426",
+        "changed.glb": "8f0b28b6731f70c2670559e3f85d4e568f57b1c2f19b554b524ca5541abe432e",
+        "restored.blend": "d657f3d906a23e344e0188b9b060ca57f7e19d860530fe0618a6dd6a1178a4f7",
+        "restored.params.json": "2b74289e18fd68cacece69af7fde7fe694e5fb6f6d5912ac412dc3c2899eb236",
+        "restored.glb": "3d92a093fc6724c295fdabb456d41110a0b03fc7f72f565b42b36c4c09b00847"
+      },
+      "changedDomains": {
+        "equal": false,
+        "byteIdentical": false,
+        "byteHashes": [
+          "3d92a093fc6724c295fdabb456d41110a0b03fc7f72f565b42b36c4c09b00847",
+          "8f0b28b6731f70c2670559e3f85d4e568f57b1c2f19b554b524ca5541abe432e"
+        ],
+        "domains": {
+          "mesh": false,
+          "skin": true,
+          "materials": true,
+          "images": false,
+          "motion": true
+        },
+        "differences": [
+          "mesh.34.primitives.0.attributes.NORMAL.228",
+          "images.5.pixels"
+        ]
+      },
+      "restoredSemanticComparison": {
+        "equal": true,
+        "byteIdentical": true,
+        "byteHashes": [
+          "3d92a093fc6724c295fdabb456d41110a0b03fc7f72f565b42b36c4c09b00847",
+          "3d92a093fc6724c295fdabb456d41110a0b03fc7f72f565b42b36c4c09b00847"
+        ],
+        "domains": {
+          "mesh": true,
+          "skin": true,
+          "materials": true,
+          "images": true,
+          "motion": true
+        },
+        "differences": []
+      },
+      "gameCaptures": {
+        "before": {
+          "mode": "range",
+          "pose": {
+            "action": "idle",
+            "time": 0.4
+          },
+          "camera": {
+            "position": [
+              28.51239438034399,
+              1.5369086972174666,
+              11.118006822859968
+            ],
+            "target": [
+              27.89239438034399,
+              1.4419086972174666,
+              10.068006822859967
+            ],
+            "fov": 24
+          },
+          "lights": [
+            {
+              "type": "AmbientLight",
+              "color": [
+                0.2541520943200296,
+                0.45641102317066595,
+                0.6583748172725346
+              ],
+              "intensity": 2,
+              "position": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "type": "DirectionalLight",
+              "color": [
+                1,
+                0.7454042095350284,
+                0.3515325994898463
+              ],
+              "intensity": 0,
+              "position": [
+                40,
+                60,
+                20
+              ]
+            },
+            {
+              "type": "DirectionalLight",
+              "color": [
+                0.11697066774917994,
+                0.21586050010324417,
+                0.3515325994898463
+              ],
+              "intensity": 1.2566370614359172,
+              "position": [
+                -30,
+                20,
+                -20
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                0.24620132669705552,
+                1,
+                0.057805430183792694
+              ],
+              "intensity": 0,
+              "position": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                1,
+                0.4019777798219466,
+                0.015996293361446288
+              ],
+              "intensity": 0,
+              "position": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                0.6307571363387763,
+                0.6866853124288864,
+                1
+              ],
+              "intensity": 2.5,
+              "position": [
+                28,
+                3.6,
+                10
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                0.6307571363387763,
+                0.6866853124288864,
+                1
+              ],
+              "intensity": 2.5,
+              "position": [
+                28,
+                3.6,
+                18
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                0.6307571363387763,
+                0.6866853124288864,
+                1
+              ],
+              "intensity": 2.5,
+              "position": [
+                28,
+                3.6,
+                26
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                0.6307571363387763,
+                0.6866853124288864,
+                1
+              ],
+              "intensity": 2.5,
+              "position": [
+                28,
+                3.6,
+                34
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                0.6307571363387763,
+                0.6866853124288864,
+                1
+              ],
+              "intensity": 2.5,
+              "position": [
+                28,
+                3.6,
+                42
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                0.6307571363387763,
+                0.6866853124288864,
+                1
+              ],
+              "intensity": 2.5,
+              "position": [
+                28,
+                3.6,
+                50
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                0.6307571363387763,
+                0.6866853124288864,
+                1
+              ],
+              "intensity": 2.5,
+              "position": [
+                28,
+                3.6,
+                58
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                0.6307571363387763,
+                0.6866853124288864,
+                1
+              ],
+              "intensity": 2.5,
+              "position": [
+                28,
+                3.6,
+                66
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                0.6307571363387763,
+                0.6866853124288864,
+                1
+              ],
+              "intensity": 2.5,
+              "position": [
+                28,
+                3.6,
+                74
+              ]
+            }
+          ],
+          "viewport": [
+            1280,
+            960
+          ],
+          "dpr": 1,
+          "exposure": 1.05,
+          "renderer": "WebKit WebGL",
+          "human": true,
+          "mount": "hand_r",
+          "panels": [
+            true,
+            true
+          ],
+          "modelHash": "3d92a093fc6724c295fdabb456d41110a0b03fc7f72f565b42b36c4c09b00847",
+          "imageHash": "cd5b5e17e86ded82dd284d8695d74b329aac6960e14e4dd60ce75895ddcd05ae",
+          "pixelHash": "0f4e7cfd7c9a2bdd8daf9abb9b19e76f42dcf61a5a4b386b6fca58a5f7adb1a4",
+          "routedRequests": 1,
+          "image": "before-game.png"
+        },
+        "changed": {
+          "mode": "range",
+          "pose": {
+            "action": "idle",
+            "time": 0.4
+          },
+          "camera": {
+            "position": [
+              28.51239438034399,
+              1.5369086972174666,
+              11.118006822859968
+            ],
+            "target": [
+              27.89239438034399,
+              1.4419086972174666,
+              10.068006822859967
+            ],
+            "fov": 24
+          },
+          "lights": [
+            {
+              "type": "AmbientLight",
+              "color": [
+                0.2541520943200296,
+                0.45641102317066595,
+                0.6583748172725346
+              ],
+              "intensity": 2,
+              "position": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "type": "DirectionalLight",
+              "color": [
+                1,
+                0.7454042095350284,
+                0.3515325994898463
+              ],
+              "intensity": 0,
+              "position": [
+                40,
+                60,
+                20
+              ]
+            },
+            {
+              "type": "DirectionalLight",
+              "color": [
+                0.11697066774917994,
+                0.21586050010324417,
+                0.3515325994898463
+              ],
+              "intensity": 1.2566370614359172,
+              "position": [
+                -30,
+                20,
+                -20
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                0.24620132669705552,
+                1,
+                0.057805430183792694
+              ],
+              "intensity": 0,
+              "position": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                1,
+                0.4019777798219466,
+                0.015996293361446288
+              ],
+              "intensity": 0,
+              "position": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                0.6307571363387763,
+                0.6866853124288864,
+                1
+              ],
+              "intensity": 2.5,
+              "position": [
+                28,
+                3.6,
+                10
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                0.6307571363387763,
+                0.6866853124288864,
+                1
+              ],
+              "intensity": 2.5,
+              "position": [
+                28,
+                3.6,
+                18
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                0.6307571363387763,
+                0.6866853124288864,
+                1
+              ],
+              "intensity": 2.5,
+              "position": [
+                28,
+                3.6,
+                26
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                0.6307571363387763,
+                0.6866853124288864,
+                1
+              ],
+              "intensity": 2.5,
+              "position": [
+                28,
+                3.6,
+                34
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                0.6307571363387763,
+                0.6866853124288864,
+                1
+              ],
+              "intensity": 2.5,
+              "position": [
+                28,
+                3.6,
+                42
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                0.6307571363387763,
+                0.6866853124288864,
+                1
+              ],
+              "intensity": 2.5,
+              "position": [
+                28,
+                3.6,
+                50
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                0.6307571363387763,
+                0.6866853124288864,
+                1
+              ],
+              "intensity": 2.5,
+              "position": [
+                28,
+                3.6,
+                58
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                0.6307571363387763,
+                0.6866853124288864,
+                1
+              ],
+              "intensity": 2.5,
+              "position": [
+                28,
+                3.6,
+                66
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                0.6307571363387763,
+                0.6866853124288864,
+                1
+              ],
+              "intensity": 2.5,
+              "position": [
+                28,
+                3.6,
+                74
+              ]
+            }
+          ],
+          "viewport": [
+            1280,
+            960
+          ],
+          "dpr": 1,
+          "exposure": 1.05,
+          "renderer": "WebKit WebGL",
+          "human": true,
+          "mount": "hand_r",
+          "panels": [
+            true,
+            true
+          ],
+          "modelHash": "8f0b28b6731f70c2670559e3f85d4e568f57b1c2f19b554b524ca5541abe432e",
+          "imageHash": "8b7a13e6d3eeac55828268460aada8189e7f2f502b9c28d21882ef54e8ea1b7c",
+          "pixelHash": "ebaf87d32c29c18c1ed07a34c10a951a4646aa14112448a582127ee2e435bb9c",
+          "routedRequests": 1,
+          "image": "changed-game.png"
+        },
+        "restored": {
+          "mode": "range",
+          "pose": {
+            "action": "idle",
+            "time": 0.4
+          },
+          "camera": {
+            "position": [
+              28.51239438034399,
+              1.5369086972174666,
+              11.118006822859968
+            ],
+            "target": [
+              27.89239438034399,
+              1.4419086972174666,
+              10.068006822859967
+            ],
+            "fov": 24
+          },
+          "lights": [
+            {
+              "type": "AmbientLight",
+              "color": [
+                0.2541520943200296,
+                0.45641102317066595,
+                0.6583748172725346
+              ],
+              "intensity": 2,
+              "position": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "type": "DirectionalLight",
+              "color": [
+                1,
+                0.7454042095350284,
+                0.3515325994898463
+              ],
+              "intensity": 0,
+              "position": [
+                40,
+                60,
+                20
+              ]
+            },
+            {
+              "type": "DirectionalLight",
+              "color": [
+                0.11697066774917994,
+                0.21586050010324417,
+                0.3515325994898463
+              ],
+              "intensity": 1.2566370614359172,
+              "position": [
+                -30,
+                20,
+                -20
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                0.24620132669705552,
+                1,
+                0.057805430183792694
+              ],
+              "intensity": 0,
+              "position": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                1,
+                0.4019777798219466,
+                0.015996293361446288
+              ],
+              "intensity": 0,
+              "position": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                0.6307571363387763,
+                0.6866853124288864,
+                1
+              ],
+              "intensity": 2.5,
+              "position": [
+                28,
+                3.6,
+                10
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                0.6307571363387763,
+                0.6866853124288864,
+                1
+              ],
+              "intensity": 2.5,
+              "position": [
+                28,
+                3.6,
+                18
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                0.6307571363387763,
+                0.6866853124288864,
+                1
+              ],
+              "intensity": 2.5,
+              "position": [
+                28,
+                3.6,
+                26
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                0.6307571363387763,
+                0.6866853124288864,
+                1
+              ],
+              "intensity": 2.5,
+              "position": [
+                28,
+                3.6,
+                34
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                0.6307571363387763,
+                0.6866853124288864,
+                1
+              ],
+              "intensity": 2.5,
+              "position": [
+                28,
+                3.6,
+                42
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                0.6307571363387763,
+                0.6866853124288864,
+                1
+              ],
+              "intensity": 2.5,
+              "position": [
+                28,
+                3.6,
+                50
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                0.6307571363387763,
+                0.6866853124288864,
+                1
+              ],
+              "intensity": 2.5,
+              "position": [
+                28,
+                3.6,
+                58
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                0.6307571363387763,
+                0.6866853124288864,
+                1
+              ],
+              "intensity": 2.5,
+              "position": [
+                28,
+                3.6,
+                66
+              ]
+            },
+            {
+              "type": "PointLight",
+              "color": [
+                0.6307571363387763,
+                0.6866853124288864,
+                1
+              ],
+              "intensity": 2.5,
+              "position": [
+                28,
+                3.6,
+                74
+              ]
+            }
+          ],
+          "viewport": [
+            1280,
+            960
+          ],
+          "dpr": 1,
+          "exposure": 1.05,
+          "renderer": "WebKit WebGL",
+          "human": true,
+          "mount": "hand_r",
+          "panels": [
+            true,
+            true
+          ],
+          "modelHash": "3d92a093fc6724c295fdabb456d41110a0b03fc7f72f565b42b36c4c09b00847",
+          "imageHash": "cd5b5e17e86ded82dd284d8695d74b329aac6960e14e4dd60ce75895ddcd05ae",
+          "pixelHash": "0f4e7cfd7c9a2bdd8daf9abb9b19e76f42dcf61a5a4b386b6fca58a5f7adb1a4",
+          "routedRequests": 1,
+          "image": "restored-game.png"
+        }
+      },
+      "matchedSettings": {
+        "camera": {
+          "position": [
+            28.51239438034399,
+            1.5369086972174666,
+            11.118006822859968
+          ],
+          "target": [
+            27.89239438034399,
+            1.4419086972174666,
+            10.068006822859967
+          ],
+          "fov": 24
+        },
+        "pose": {
+          "action": "idle",
+          "time": 0.4
+        },
+        "lights": [
+          {
+            "type": "AmbientLight",
+            "color": [
+              0.2541520943200296,
+              0.45641102317066595,
+              0.6583748172725346
+            ],
+            "intensity": 2,
+            "position": [
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "type": "DirectionalLight",
+            "color": [
+              1,
+              0.7454042095350284,
+              0.3515325994898463
+            ],
+            "intensity": 0,
+            "position": [
+              40,
+              60,
+              20
+            ]
+          },
+          {
+            "type": "DirectionalLight",
+            "color": [
+              0.11697066774917994,
+              0.21586050010324417,
+              0.3515325994898463
+            ],
+            "intensity": 1.2566370614359172,
+            "position": [
+              -30,
+              20,
+              -20
+            ]
+          },
+          {
+            "type": "PointLight",
+            "color": [
+              0.24620132669705552,
+              1,
+              0.057805430183792694
+            ],
+            "intensity": 0,
+            "position": [
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "type": "PointLight",
+            "color": [
+              1,
+              0.4019777798219466,
+              0.015996293361446288
+            ],
+            "intensity": 0,
+            "position": [
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "type": "PointLight",
+            "color": [
+              0.6307571363387763,
+              0.6866853124288864,
+              1
+            ],
+            "intensity": 2.5,
+            "position": [
+              28,
+              3.6,
+              10
+            ]
+          },
+          {
+            "type": "PointLight",
+            "color": [
+              0.6307571363387763,
+              0.6866853124288864,
+              1
+            ],
+            "intensity": 2.5,
+            "position": [
+              28,
+              3.6,
+              18
+            ]
+          },
+          {
+            "type": "PointLight",
+            "color": [
+              0.6307571363387763,
+              0.6866853124288864,
+              1
+            ],
+            "intensity": 2.5,
+            "position": [
+              28,
+              3.6,
+              26
+            ]
+          },
+          {
+            "type": "PointLight",
+            "color": [
+              0.6307571363387763,
+              0.6866853124288864,
+              1
+            ],
+            "intensity": 2.5,
+            "position": [
+              28,
+              3.6,
+              34
+            ]
+          },
+          {
+            "type": "PointLight",
+            "color": [
+              0.6307571363387763,
+              0.6866853124288864,
+              1
+            ],
+            "intensity": 2.5,
+            "position": [
+              28,
+              3.6,
+              42
+            ]
+          },
+          {
+            "type": "PointLight",
+            "color": [
+              0.6307571363387763,
+              0.6866853124288864,
+              1
+            ],
+            "intensity": 2.5,
+            "position": [
+              28,
+              3.6,
+              50
+            ]
+          },
+          {
+            "type": "PointLight",
+            "color": [
+              0.6307571363387763,
+              0.6866853124288864,
+              1
+            ],
+            "intensity": 2.5,
+            "position": [
+              28,
+              3.6,
+              58
+            ]
+          },
+          {
+            "type": "PointLight",
+            "color": [
+              0.6307571363387763,
+              0.6866853124288864,
+              1
+            ],
+            "intensity": 2.5,
+            "position": [
+              28,
+              3.6,
+              66
+            ]
+          },
+          {
+            "type": "PointLight",
+            "color": [
+              0.6307571363387763,
+              0.6866853124288864,
+              1
+            ],
+            "intensity": 2.5,
+            "position": [
+              28,
+              3.6,
+              74
+            ]
+          }
+        ],
+        "viewport": [
+          1280,
+          960
+        ],
+        "dpr": 1,
+        "exposure": 1.05,
+        "quality": "medium",
+        "renderer": "WebKit WebGL"
+      },
+      "independentVerification": {
+        "reportHash": "e84604a955a2471f7a38a0d6e7e7b1cad53726b4b8f3b066ffc44632c6890adc",
+        "regeneratedOutput": ".planning\\research\\.cache\\06-art\\iteration-GKGhaJ\\independent-0A0dm5\\regenerated.glb",
+        "regeneratedHash": "3d92a093fc6724c295fdabb456d41110a0b03fc7f72f565b42b36c4c09b00847",
+        "rejected": [
+          "unknown-operation",
+          "out-of-range",
+          "path-escape",
+          "real-linked-output"
+        ],
+        "inputsUnchanged": true
+      },
+      "publishedAssetsUnchanged": true,
+      "humanAestheticAcceptance": "pending-end-of-phase",
+      "deviceQualification": "unmeasured"
     }
   ],
   "finalReview": {
     "evidence": ".planning/phases/06-human-characters-and-comic-book-blender-iteration/evidence/06-review.json",
-    "evidenceHash": "3944d4c0cd0217896b6f69eb26380175a4e13baa57be35d8fca8379436bf330f",
+    "evidenceHash": "263566ef6a44bf74e83f93c3a8af722a85bafc25f20937c130768d5f8c883b9a",
     "validation": {
       "sourceHead": "a93e0f94163ce67f17d0fe286768e6c0661c7240",
       "completed": "2026-10-05T12:55:02.821Z",
@@ -2619,9 +3668,12 @@
       "tools/art/review.mjs": "b2f8c3c58d515dffc171fedc46cb63b4faf291e80ff284b2ad6d0eb5e5ed1477",
       "tools/art/iterate.py": "205d8e0b346b6a6f0ea745c31a586ff10d45c37fd3b483667c4d48cc384df672",
       "tools/art/pipeline.mjs": "b6f0c819ef87f8ee1a10abc2be183b5d5f9d60338780a5805f769a7d5f53652d",
-      "tools/art/verify-export.mjs": "b0455a49d4919d5b23bf389c9bb46b598a2ea9ed271b4fda0861cc12330ac919",
-      "tests/character-art.spec.js": "bfc202ccf904df1bdef498e404359b95a0bfde807a88292e23342e3ba925c8e4",
-      "tests/multiplayer.spec.js": "a2e57c7b9a4810d0140f36bcfedfe4e8682e7999eebf02a25e01d2e535e7c9f1"
+      "tools/art/verify-export.mjs": "66aa023a1c83209ef2ee827d838e477bb82349776964a1da8f620f99f1f40a58",
+      "tests/character-art.spec.js": "d82954bf3a8e22ca561201ec9509aff398a917e887c28d236743aaf9b7ce07e8",
+      "tests/multiplayer.spec.js": "a2e57c7b9a4810d0140f36bcfedfe4e8682e7999eebf02a25e01d2e535e7c9f1",
+      "src/builders/enemy.js": "c18299fad3fca2ee4d52736e3f7ce355e52bfee91ff855072002a320a418dae7",
+      "src/builders/characterAppearance.test.js": "b376d6e18ad9de849366d12c5ea89646558fa4bf2b13eb86cdeae9514ab08563",
+      "tools/art/inspect-character.mjs": "c1fd9ab6e8144f9b56fa4d96c0bfb815aef108cfe18e9ce13a2858eb190f87e8"
     },
     "exportInspection": {
       "vertices": 26416,
@@ -2644,6 +3696,153 @@
     "exportHash": "3d92a093fc6724c295fdabb456d41110a0b03fc7f72f565b42b36c4c09b00847",
     "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
     "humanAestheticAcceptance": "pending",
-    "deviceQualification": "unmeasured"
+    "deviceQualification": "unmeasured",
+    "reviewFix": {
+      "completed": "2026-10-05T13:34:42.256Z",
+      "reviewedCommit": "201021f",
+      "fallbackCommit": "9a566d1",
+      "verificationLocation": "main checkout (workflow.use_worktrees=false)",
+      "semanticSchemaVersion": 2,
+      "publishedHash": "3d92a093fc6724c295fdabb456d41110a0b03fc7f72f565b42b36c4c09b00847",
+      "sourceHash": "d657f3d906a23e344e0188b9b060ca57f7e19d860530fe0618a6dd6a1178a4f7",
+      "checks": [
+        {
+          "name": "appearance unit",
+          "command": "npx vitest run src/builders/characterAppearance.test.js",
+          "counts": "6/6",
+          "exitCode": 0,
+          "evidence": "focused command output in fixer session"
+        },
+        {
+          "name": "missing/corrupt GLB teams",
+          "command": "CI=1 npx playwright test tests/character-art.spec.js --grep 'art fallback teams' --workers=1",
+          "counts": "2/2",
+          "exitCode": 0,
+          "evidence": "focused command output in fixer session"
+        },
+        {
+          "name": "inspector",
+          "command": "node tools/art/inspect-character.mjs --self-test",
+          "counts": "12/12",
+          "exitCode": 0,
+          "log": ".planning/research/.cache/06-art/06-review-fix-inspector.log",
+          "sha256": "4259d0961a7014cca020fcfedf3d5b2e8560e4f643850f649817eca1a4627d33"
+        },
+        {
+          "name": "pipeline",
+          "command": "node tools/art/pipeline.mjs self-test",
+          "counts": "2/2",
+          "exitCode": 0,
+          "log": ".planning/research/.cache/06-art/06-review-fix-pipeline.log",
+          "sha256": "dfff4c6d39e1a0bc6ef42bcc12da095efd489ac994db632ecfcfcc220c30879b"
+        },
+        {
+          "name": "lint",
+          "command": "npm run lint",
+          "counts": null,
+          "exitCode": 0,
+          "log": ".planning/research/.cache/06-art/06-review-fix-lint.log",
+          "sha256": "c10c156dd448db83743cb685b205c978afed64b48a71559e8956a1b7e9d8c9e5"
+        },
+        {
+          "name": "root types",
+          "command": "npm run typecheck",
+          "counts": null,
+          "exitCode": 0,
+          "log": ".planning/research/.cache/06-art/06-review-fix-typecheck.log",
+          "sha256": "e9dba3f8721451b178454427e10ee32da3dc405c50f271cd5eef655e6d6f18a1"
+        },
+        {
+          "name": "MP types",
+          "command": "npm run typecheck:mp",
+          "counts": null,
+          "exitCode": 0,
+          "log": ".planning/research/.cache/06-art/06-review-fix-typecheck-mp.log",
+          "sha256": "8a50380935a5356f4fcc7cc1c6d9414a66b29dcee880619cbc24a1f3806b4ef7"
+        },
+        {
+          "name": "build",
+          "command": "npm run build",
+          "counts": null,
+          "exitCode": 0,
+          "log": ".planning/research/.cache/06-art/06-review-fix-build.log",
+          "sha256": "0ae85498634860cae3a047aac2cc1ae2a2a8bc7dcb4d72985a66923b21ee1219"
+        },
+        {
+          "name": "iteration",
+          "command": "node tools/art/pipeline.mjs iterate --demo",
+          "counts": "restored pixels equal",
+          "exitCode": 0,
+          "log": ".planning/research/.cache/06-art/06-review-fix-iteration.log",
+          "sha256": "8dac1b5ec5f398af56aff7dfa3c3c256e81d377897a2639951a980a728c14fe4"
+        },
+        {
+          "name": "independent recovery",
+          "command": "node tools/art/verify-export.mjs --iteration",
+          "counts": "schema v2 equal",
+          "exitCode": 0,
+          "log": ".planning/research/.cache/06-art/06-review-fix-independent.log",
+          "sha256": "711e5294a4df663e9acc1afe016d05e8e25e50494ab0ade8f6e28ee681740645"
+        },
+        {
+          "name": "repeat",
+          "command": "node tools/art/verify-export.mjs --repeat",
+          "counts": "schema v2 equal; byte-identical",
+          "exitCode": 0,
+          "log": ".planning/research/.cache/06-art/06-review-fix-repeat.log",
+          "sha256": "937ae635c8582dda785909b91cc75199d3e5800912cbb8ae94135972d774c351"
+        }
+      ],
+      "negativeControl": {
+        "originalFallbackAccentCount": 0,
+        "originalOpposingTeamsIdentical": true,
+        "originalDetachedBodyAccepted": true,
+        "currentDetachedBodyComparatorRejected": true,
+        "currentDetachedBodyInspectorRejected": true
+      },
+      "repeat": {
+        "reportHash": "a1e0704d2904bce47cc90056583d5eafa8ab8bb8bee8131554661e5acccaf711",
+        "scriptHashes": {
+          "build_soldier.py": "1461595dbf47907671aa0a867f742c4ee35b758636a1fcb55dc571220300f432",
+          "pipeline.mjs": "b6f0c819ef87f8ee1a10abc2be183b5d5f9d60338780a5805f769a7d5f53652d",
+          "inspect-character.mjs": "c1fd9ab6e8144f9b56fa4d96c0bfb815aef108cfe18e9ce13a2858eb190f87e8",
+          "verify-export.mjs": "66aa023a1c83209ef2ee827d838e477bb82349776964a1da8f620f99f1f40a58"
+        },
+        "outputs": [
+          ".planning\\research\\.cache\\06-art\\repeat-1kHLuM\\first.glb",
+          ".planning\\research\\.cache\\06-art\\repeat-1kHLuM\\second.glb"
+        ],
+        "comparison": {
+          "semanticSchemaVersion": 2,
+          "equal": true,
+          "byteIdentical": true,
+          "byteHashes": [
+            "3d92a093fc6724c295fdabb456d41110a0b03fc7f72f565b42b36c4c09b00847",
+            "3d92a093fc6724c295fdabb456d41110a0b03fc7f72f565b42b36c4c09b00847"
+          ],
+          "domains": {
+            "mesh": true,
+            "skin": true,
+            "materials": true,
+            "images": true,
+            "motion": true
+          },
+          "differences": []
+        }
+      },
+      "independentVerificationHash": "0348844719cb9d81e73e465086defe344f35268b8d773f47eaab69cb1782f289",
+      "attempts": [
+        {
+          "command": "node tools/art/pipeline.mjs iterate --demo",
+          "exitCode": 1,
+          "reason": "One browser sample failed restored pixel identity; retained failed attempt; fresh complete demo passed with byte-identical models and matching pixels.",
+          "log": ".planning/research/.cache/06-art/06-review-fix-iteration-failed-pixels.log",
+          "sha256": "0f1f45173c4a8c2245a736ed94d2d09a22d04985d0b7d16a9cde2e229b4e91d0"
+        }
+      ],
+      "priorFullGateLogsPreserved": true,
+      "humanAestheticAcceptance": "pending",
+      "deviceQualification": "unmeasured"
+    }
   }
 }

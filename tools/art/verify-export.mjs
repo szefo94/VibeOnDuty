@@ -145,6 +145,7 @@ export async function verifyIteration() {
   await exportSource(source, output, ['--params', params]);
   await inspectCharacter(output, { baseline: path.join(CACHE, 'baseline.glb') });
   const regenerated = await compareSemanticExports(before, output);
+  assert.equal(regenerated.semanticSchemaVersion, 2, 'Restoration includes canonical render graph');
   assert.equal(regenerated.equal, true, 'Independent restored-source semantic baseline');
   const preserved = [source, params, path.join(SOURCES, 'soldier.blend'),
     path.join(ROOT, 'tools/art/character-params.json'), path.join(ROOT, 'public/models/enemy.glb')];
@@ -214,6 +215,7 @@ export async function verifyRepeat() {
   const baseline = path.join(CACHE, 'baseline.glb');
   const checks = [await inspectCharacter(a, { baseline }), await inspectCharacter(b, { baseline })];
   const comparison = await compareSemanticExports(a, b);
+  assert.equal(comparison.semanticSchemaVersion, 2, 'Repeat includes canonical render graph');
   const report = {
     source: path.relative(ROOT, source),
     sourceHash: hash(await fs.readFile(source)),
@@ -230,7 +232,7 @@ export async function verifyRepeat() {
     checks,
     comparison,
     meaning:
-      'Geometry, bind hierarchy, material/image pixels and exact retained sampled motion compared independently of serializer metadata. Byte identity reported only when observed.',
+      'Geometry and canonical active render graph (roots, reachability, parents, mesh/skin bindings, transforms and rendering metadata), bind hierarchy, material/image pixels and exact retained sampled motion compared independently of serializer indices. Byte identity reported only when observed.',
   };
   await fs.writeFile(path.join(CACHE, 'repeat-report.json'), JSON.stringify(report, null, 2));
   if (!comparison.equal)

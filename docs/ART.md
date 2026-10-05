@@ -25,9 +25,12 @@ motion, animation FBX and weapon FBX redistribution terms remain unresolved; the
 combined GLB is **not** declared license-cleared. See the provenance ledger and
 `tools/README.md` for the exact source evidence and portable runtime trust.
 
-The inspector compares full semantic skin/motion domains with the retained
-baseline; vertex counts and pleasant screenshots cannot substitute for those
-checks. Generated rifle-ready crouch/jump aliases are still composed at runtime.
+The inspector requires the authored body/equipment in the active scene and compares
+the canonical render graph: roots, reachability, parents, mesh/skin bindings, local
+transforms and rendering metadata, using authored identities rather than serializer
+indices. Repeat exports and independent restored-source verification consume this
+mesh domain alongside full semantic skin/motion checks with the retained baseline.
+Generated rifle-ready crouch/jump aliases are still composed at runtime.
 This art pass does not retarget clips or change the hand basis, gameplay body,
 collision, map topology, authoritative damage or teams.
 

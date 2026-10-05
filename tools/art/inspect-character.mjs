@@ -181,6 +181,33 @@ function imageDomain(asset, image) {
   }
   return { width, height, channels, pixels: sha(pixels) };
 }
+// The published character contract includes these authored body/equipment nodes.
+// Checking resources alone cannot establish that they belong to the active scene.
+const REQUIRED_RENDER_NODES = ['HumanBody', 'OpenHelmet', 'ChestPlate', 'BackPlate',
+  'RaisedFabricCollar', 'ChestIdentifier', 'ShoulderPlate_l', 'ShoulderPlate_r',
+  'ForearmGuard_l', 'ForearmGuard_r', 'KneeGuard_l', 'KneeGuard_r',
+  'HelmetSidePanel-1', 'HelmetSidePanel1', 'BootSole_l', 'BootSole_r'];
+
+function sceneMembership(j, parents) {
+  if (!Array.isArray(j.scenes) || !j.scenes.length || j.scenes.length > 64 ||
+      !Number.isInteger(j.scene ?? 0) || !j.scenes[j.scene ?? 0])
+    throw Error('Invalid active scene reference');
+  for (const scene of j.scenes) {
+    if (!Array.isArray(scene.nodes) || new Set(scene.nodes).size !== scene.nodes.length ||
+        scene.nodes.some((i) => !Number.isInteger(i) || !j.nodes[i] || parents.has(i)))
+      throw Error('Invalid scene root reference');
+  }
+  const active = j.scenes[j.scene ?? 0], reachable = new Set();
+  const visit = (i) => {
+    if (reachable.has(i)) return;
+    if (!Number.isInteger(i) || !j.nodes[i]) throw Error('Invalid hierarchy reference');
+    reachable.add(i);
+    for (const child of j.nodes[i].children || []) visit(child);
+  };
+  for (const root of active.nodes) visit(root);
+  return { active, reachable };
+}
+
 function validateStructure(asset) {
   const j = asset.json;
   for (const [key, maximum] of [
@@ -210,8 +237,8 @@ function validateStructure(asset) {
   for (let i = 0; i < j.nodes.length; i++) {
     const node = j.nodes[i];
     if (
-      (node.mesh !== undefined && !j.meshes[node.mesh]) ||
-      (node.skin !== undefined && (node.mesh === undefined || !j.skins[node.skin]))
+      (node.mesh !== undefined && (!Number.isInteger(node.mesh) || !j.meshes[node.mesh])) ||
+      (node.skin !== undefined && (node.mesh === undefined || !Number.isInteger(node.skin) || !j.skins[node.skin]))
     )
       throw Error('Invalid mesh/skin node reference');
     for (const key of ['translation', 'rotation', 'scale', 'matrix'])
@@ -237,6 +264,25 @@ function validateStructure(asset) {
       at = parents.get(at);
     }
   }
+  const { reachable } = sceneMembership(j, parents);
+  for (const name of REQUIRED_RENDER_NODES) {
+    const matches = j.nodes.map((node, i) => ({ node, i })).filter(({ node }) => node.name === name);
+    if (matches.length !== 1 || !reachable.has(matches[0].i) ||
+        matches[0].node.mesh === undefined || matches[0].node.skin === undefined)
+      throw Error('Required reachable body/equipment render node: ' + name);
+  }
+  const body = j.nodes.find((node) => node.name === 'HumanBody');
+  if (j.meshes[body.mesh].name !== 'Anatomical human topology' ||
+      !body.extras?.anatomicalFace || j.skins[body.skin].name !== 'Armature')
+    throw Error('Invalid authored body mesh/skin binding');
+  for (let i = 0; i < j.nodes.length; i++)
+    if (j.nodes[i].mesh !== undefined) {
+      if (!reachable.has(i)) throw Error('Authored render node is unreachable: ' + j.nodes[i].name);
+      if (j.nodes[i].skin !== body.skin) throw Error('Invalid authored equipment skin binding');
+    }
+  for (let mesh = 0; mesh < j.meshes.length; mesh++)
+    if (!j.nodes.some((node, i) => node.mesh === mesh && reachable.has(i)))
+      throw Error('Unbound authored body/equipment mesh resource: ' + j.meshes[mesh].name);
   for (const skin of j.skins || []) {
     if (
       !skin.joints?.length ||
@@ -508,10 +554,37 @@ function semantics(asset) {
     name = (i) => (j.nodes[i]?.name || `unnamed-${i}`).normalize('NFC');
   const parents = new Map();
   j.nodes.forEach((node, i) => (node.children || []).forEach((child) => parents.set(child, i)));
+  // Names are authored stable identities, never serializer array indices. Reject
+  // ambiguous identities rather than accidentally comparing different bindings equal.
+  const identities = (entries, domain) => {
+    const names = entries.map((entry) => entry.name?.normalize('NFC'));
+    if (names.some((value) => !value) || new Set(names).size !== names.length)
+      throw Error('Missing/ambiguous semantic identity: ' + domain);
+    return names;
+  };
+  const nodeNames = identities(j.nodes, 'nodes'), meshNames = identities(j.meshes, 'meshes'),
+    skinNames = identities(j.skins, 'skins');
+  const { active, reachable } = sceneMembership(j, parents);
+  const renderGraph = {
+    activeScene: active.name?.normalize('NFC') ?? null,
+    extras: active.extras ?? null,
+    extensions: active.extensions ?? null,
+    roots: active.nodes.map((i) => nodeNames[i]).sort(),
+    nodes: j.nodes.map((node, i) => ({
+      name: nodeNames[i], reachable: reachable.has(i),
+      parent: parents.has(i) ? nodeNames[parents.get(i)] : null,
+      children: (node.children || []).map((child) => nodeNames[child]).sort(),
+      mesh: node.mesh === undefined ? null : meshNames[node.mesh],
+      skin: node.skin === undefined ? null : skinNames[node.skin],
+      matrix: node.matrix ?? null, translation: node.translation ?? [0, 0, 0],
+      rotation: node.rotation ?? [0, 0, 0, 1], scale: node.scale ?? [1, 1, 1],
+      weights: node.weights ?? null, extras: node.extras ?? null,
+      extensions: node.extensions ?? null,
+    })).sort((a, b) => a.name.localeCompare(b.name)),
+  };
   const images = (j.images || []).map((image) => imageDomain(asset, image));
   const materials = (j.materials || []).map((m) => {
     const result = structuredClone(m);
-    delete result.extras;
     function resolveTexture(object) {
       for (const [key, value] of Object.entries(object)) {
         if (key.endsWith('Texture') && value?.index !== undefined) {
@@ -532,9 +605,11 @@ function semantics(asset) {
   const mesh = j.meshes
     .map((m) => ({
       name: m.name.normalize('NFC'),
+      weights: m.weights ?? null, extras: m.extras ?? null, extensions: m.extensions ?? null,
       primitives: m.primitives.map((p) => ({
-          material: materials[p.material].name || `material-${p.material}`,
-        mode: p.mode || 4,
+        material: materials[p.material].name || `material-${p.material}`,
+        mode: p.mode ?? 4,
+        extras: p.extras ?? null, extensions: p.extensions ?? null,
         indices: p.indices === undefined ? null : accessor(asset, p.indices),
         attributes: Object.fromEntries(
           Object.entries(p.attributes)
@@ -549,7 +624,7 @@ function semantics(asset) {
       })),
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
-  const skin = j.skins.map((s) => {
+  const skin = j.skins.map((s, skinIndex) => {
     const bind = accessor(asset, s.inverseBindMatrices);
     const joints = s.joints
       .map((i, k) => ({
@@ -569,6 +644,8 @@ function semantics(asset) {
         ancestors.add(i);
       }
     return {
+      name: skinNames[skinIndex],
+      skeleton: s.skeleton === undefined ? null : name(s.skeleton),
       joints,
       ancestors: [...ancestors]
         .map((i) => ({
@@ -581,7 +658,7 @@ function semantics(asset) {
         }))
         .sort((a, b) => a.name.localeCompare(b.name)),
     };
-  });
+  }).sort((a, b) => a.name.localeCompare(b.name));
   const occurrences = new Map();
   const motion = (j.animations || [])
     .map((a) => {
@@ -607,7 +684,7 @@ function semantics(asset) {
     })
     .sort((a, b) => `${a.name}:${a.occurrence}`.localeCompare(`${b.name}:${b.occurrence}`));
   return nfc({
-    mesh,
+    mesh: { resources: mesh, renderGraph },
     skin,
     materials: materials.sort((a, b) => (a.name || '').localeCompare(b.name || '')),
     images,
@@ -662,6 +739,7 @@ export async function compareSemanticExports(first, second, options = {}) {
     if (where !== null) differences.push(where);
   }
   return {
+    semanticSchemaVersion: 2, // mesh domain includes the canonical active render graph
     equal: differences.length === 0,
     byteIdentical: a.byteHash === b.byteHash,
     byteHashes: [a.byteHash, b.byteHash],
@@ -754,18 +832,82 @@ async function main() {
       );
       await inspectCharacter(
         mutate((a) => {
-          a.json.meshes = [a.json.meshes[0]];
-          a.json.meshes[0].primitives = [a.json.meshes[0].primitives[0]];
-          a.json.materials = [a.json.materials[a.json.meshes[0].primitives[0].material]];
-          a.json.meshes[0].primitives[0].material = 0;
-          for (const node of a.json.nodes)
-            if (node.mesh > 0) {
-              delete node.mesh;
-              delete node.skin;
-            }
+          a.json.materials = [a.json.materials[0]];
+          for (const mesh of a.json.meshes) {
+            mesh.primitives = [mesh.primitives[0]];
+            mesh.primitives[0].material = 0;
+          }
         })
       );
       await inspectCharacter(original);
+    });
+    await test('active render graph rejects detached body/equipment, empty scenes and changed bindings', async () => {
+      for (const edit of [
+        (a) => { const i = a.json.nodes.findIndex((n) => n.name === 'HumanBody');
+          a.json.scenes[a.json.scene ?? 0].nodes = a.json.scenes[a.json.scene ?? 0].nodes.filter((n) => n !== i); },
+        (a) => { const i = a.json.nodes.findIndex((n) => n.name === 'OpenHelmet');
+          a.json.scenes[a.json.scene ?? 0].nodes = a.json.scenes[a.json.scene ?? 0].nodes.filter((n) => n !== i); },
+        (a) => { a.json.scene = a.json.scenes.length; a.json.scenes.push({ name: 'Empty', nodes: [] }); },
+        (a) => { a.json.nodes.find((n) => n.name === 'HumanBody').mesh = 0; },
+        (a) => { delete a.json.nodes.find((n) => n.name === 'HumanBody').skin; },
+        (a) => { delete a.json.nodes.find((n) => n.name === 'BootLace_l0').mesh;
+          delete a.json.nodes.find((n) => n.name === 'BootLace_l0').skin; },
+      ]) {
+        const candidate = mutate(edit);
+        const result = await compareSemanticExports(original, candidate);
+        assert.equal(result.equal, false);
+        assert.equal(result.domains.mesh, false, 'Render graph is part of mesh semantics');
+        await assert.rejects(() => inspectCharacter(candidate), /reachable|binding|Unbound/);
+      }
+    });
+    await test('render graph detects parent, skin, transform and rendering metadata changes', async () => {
+      for (const edit of [
+        (a) => { const body = a.json.nodes.findIndex((n) => n.name === 'HumanBody');
+          const scene = a.json.scenes[a.json.scene ?? 0];
+          scene.nodes = scene.nodes.filter((n) => n !== body);
+          a.json.nodes.push({ name: 'BodyParent', children: [body] }); scene.nodes.push(a.json.nodes.length - 1); },
+        (a) => { a.json.skins.push({ ...structuredClone(a.json.skins[0]), name: 'OtherRig' });
+          a.json.nodes.find((n) => n.name === 'HumanBody').skin = 1; },
+        (a) => { a.json.nodes.find((n) => n.name === 'HumanBody').translation = [0, 0.2, 0]; },
+        (a) => { a.json.nodes.find((n) => n.name === 'HumanBody').rotation = [0, 1, 0, 0]; },
+        (a) => { a.json.nodes.find((n) => n.name === 'HumanBody').scale = [0, 0, 0]; },
+        (a) => { a.json.nodes.find((n) => n.name === 'HumanBody').extras.artContour = false; },
+      ]) assert.equal((await compareSemanticExports(original, mutate(edit))).domains.mesh, false);
+      assert.equal((await compareSemanticExports(original, mutate((a) => {
+        a.json.materials[0].extras.artContour = false;
+      }))).domains.materials, false, 'Material rendering metadata is retained');
+    });
+    await test('inspector rejects invalid active scene and root references', async () => {
+      for (const edit of [
+        (a) => { a.json.scene = 99; },
+        (a) => { a.json.scenes[0].nodes.push(-1); },
+        (a) => { a.json.scenes[0].nodes.push(0.5); },
+        (a) => { a.json.scenes[0].nodes.push(a.json.scenes[0].nodes[0]); },
+        (a) => { a.json.scenes[0].nodes.push(a.json.skins[0].joints[0]); },
+      ]) await assert.rejects(() => inspectCharacter(mutate(edit)), /scene/);
+    });
+    await test('serializer node, scene, mesh and skin index reorder preserves semantic identities', async () => {
+      const candidate = mutate((a) => {
+        const j = a.json, reverse = (key) => {
+          const count = j[key].length; j[key].reverse(); return (i) => count - 1 - i;
+        };
+        const node = reverse('nodes'), mesh = reverse('meshes'), skin = reverse('skins');
+        for (const n of j.nodes) {
+          if (n.children) n.children = n.children.map(node).reverse();
+          if (n.mesh !== undefined) n.mesh = mesh(n.mesh);
+          if (n.skin !== undefined) n.skin = skin(n.skin);
+        }
+        for (const s of j.skins) {
+          s.joints = s.joints.map(node);
+          if (s.skeleton !== undefined) s.skeleton = node(s.skeleton);
+        }
+        for (const a of j.animations) for (const c of a.channels) c.target.node = node(c.target.node);
+        for (const s of j.scenes) s.nodes = s.nodes.map(node).reverse();
+        j.scenes.unshift({ name: 'Unused', nodes: [] }); j.scene = (j.scene ?? 0) + 1;
+      });
+      const result = await compareSemanticExports(original, candidate);
+      assert.equal(result.equal, true); assert.equal(result.byteIdentical, false);
+      await inspectCharacter(candidate);
     });
     await test('detects hierarchy cycles and invalid material image domains', async () => {
       await assert.rejects(
@@ -879,7 +1021,10 @@ async function main() {
       };
       const withImage = (image) => {
         const a = parseGLB(Buffer.from(original));
-        a.json.images = [{ mimeType: 'image/png', bufferView: a.json.bufferViews.length }];
+        // Replace one packed image without invalidating the current textured
+        // character's other material/texture references.
+        a.json.images[0] = { ...a.json.images[0], mimeType: 'image/png',
+          bufferView: a.json.bufferViews.length };
         a.json.bufferViews.push({
           buffer: 0,
           byteOffset: a.binary.length,
