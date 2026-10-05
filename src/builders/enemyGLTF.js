@@ -20,6 +20,7 @@ import { attachEnemyWeapon } from './enemyWeapon.js';
 import { attachWeapons3pToHand } from './weaponFBX.js';
 import { buildRifleMovementClips } from './rifleClips.js';
 import { preserveTemplateGeometry, disposeCharacter } from './characterResources.js';
+import { applyCharacterAppearance, tintCharacterAccents } from './characterAppearance.js';
 export { disposeCharacter as disposeEnemyMesh } from './characterResources.js';
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -410,6 +411,7 @@ export function buildEnemyMesh(wx, wz, role = 'assault') {
 
   attachSkeletonDebug(clone);
   attachEnemyWeapon(clone, role, muzzleFlash);
+  applyCharacterAppearance(clone);
 
   // Quaternius mannequin faces +Z at rotation.y=0; game convention is -Z forward.
   // Callers add facingOffset to e.mesh.rotation.y so enemies face the right direction.
@@ -464,6 +466,7 @@ export function buildPlayerMesh() {
 
   attachSkeletonDebug(clone);
   attachWeapons3pToHand(clone);
+  applyCharacterAppearance(clone);
 
   playerMesh = clone;
   playerMixer = mixer;
@@ -472,40 +475,6 @@ export function buildPlayerMesh() {
 }
 
 // ── Team tint ─────────────────────────────────────────────────────────────
-// Clones every material on the mesh so siblings are unaffected, then
-// applies an emissive tint (preserves GLTF textures). Falls back to color.
-function _disposeTinted(mesh) {
-  mesh.traverse((ch) => {
-    if (!ch.isMesh || !ch.material) return;
-    for (const m of (Array.isArray(ch.material) ? ch.material : [ch.material]))
-      if (m?.userData?._tinted || m?.userData?.characterOwned) m.dispose();
-  });
-}
-
-function _applyTint(mat, col) {
-  const c = mat.clone();
-  c.userData._tinted = true;   // marks a clone this module owns, safe to dispose
-  // Set base color for full-body recolor (multiplies with texture if present)
-  if (c.color !== undefined) c.color.set(col);
-  // Add mild emissive so team color reads in dark areas
-  if (c.emissive !== undefined) { c.emissive.set(col); c.emissiveIntensity = 0.18; }
-  return c;
-}
-
 export function tintEnemyMesh(mesh, hexColor) {
-  if (!mesh) return;
-  // Free the previous tint clones first — tintEnemyMesh runs on every spawn and every
-  // team reassignment, so without this each wave leaked a full material set per enemy
-  // (plus its compiled GPU program).
-  _disposeTinted(mesh);
-  const col = new THREE.Color(hexColor);
-  mesh.traverse((ch) => {
-    if (!ch.isMesh || !ch.material) return;
-    // Preserve array vs single to avoid breaking geometry group rendering
-    if (Array.isArray(ch.material)) {
-      ch.material = ch.material.map((m) => _applyTint(m, col));
-    } else {
-      ch.material = _applyTint(ch.material, col);
-    }
-  });
+  tintCharacterAccents(mesh, hexColor);
 }

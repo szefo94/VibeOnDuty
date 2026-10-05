@@ -15,6 +15,56 @@ test.beforeEach(async ({ page }) => {
   }
 });
 
+test('art domains: real offline and generation-owned online actors preserve protected paint', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#startbtn')).toBeEnabled({ timeout: 30000 });
+  const state = await page.evaluate(async () => {
+    const src = new URL('src/', location.href).href;
+    const g = await import(src + 'builders/enemyGLTF.js');
+    const { createRemoteActors } = await import(src + 'network/remoteActors.js');
+    const { scene } = await import(src + 'scene.js');
+    const record = (root) => {
+      const rows = [];
+      root.traverse((n) => {
+        for (const m of Array.isArray(n.material) ? n.material : [n.material]) {
+          if (m?.userData.artDomain) rows.push({ domain: m.userData.artDomain,
+            uuid: m.uuid, color: m.color?.getHex(), map: m.map?.uuid });
+        }
+      });
+      return rows;
+    };
+    const actor = g.buildEnemyMesh(0, 0);
+    const base = record(actor.mesh);
+    g.tintEnemyMesh(actor.mesh, 0x4488ff); const blue = record(actor.mesh);
+    g.tintEnemyMesh(actor.mesh, 0xff5555); const red = record(actor.mesh);
+    const remote = [];
+    const owner = createRemoteActors(scene, { create: (x, z) => {
+      const a = g.buildEnemyMesh(x, z); remote.push(a); return a;
+    }, tint: g.tintEnemyMesh, dispose: g.disposeEnemyMesh, animate: () => {} });
+    const p = { sessionId: 'remote', matchGeneration: 1, lifeGeneration: 1, x: 0, z: 0, team: 'blue' };
+    owner.syncRemoteActors({ sessionId: 'local', matchGeneration: 1, players: [p] }, 0);
+    const remoteBlue = record(remote[0].mesh);
+    owner.syncRemoteActors({ sessionId: 'local', matchGeneration: 1, players: [{ ...p, team: 'red' }] }, 0);
+    const remoteRed = record(remote[0].mesh);
+    owner.syncRemoteActors({ sessionId: 'local', matchGeneration: 1, players: [{ ...p, lifeGeneration: 2 }] }, 0);
+    owner.disposeRemoteActors();
+    g.disposeEnemyMesh(actor.mesh, actor.mixer);
+    return { base, blue, red, remoteBlue, remoteRed, stats: owner.inspect() };
+  });
+  expect(state.base.map((m) => m.domain)).toEqual(expect.arrayContaining(['skin', 'ink', 'fabric', 'weapon', 'team-accent']));
+  for (let i = 0; i < state.base.length; i++) {
+    if (state.base[i].domain === 'team-accent') {
+      expect(state.blue[i].color).toBe(0x4488ff); expect(state.red[i].color).toBe(0xff5555);
+      expect(state.blue[i].uuid).toBe(state.red[i].uuid);
+    } else { expect(state.blue[i]).toEqual(state.base[i]); expect(state.red[i]).toEqual(state.base[i]); }
+  }
+  for (let i = 0; i < state.remoteBlue.length; i++) {
+    if (state.remoteBlue[i].domain === 'team-accent') expect(state.remoteRed[i].color).toBe(0xff5555);
+    else expect(state.remoteRed[i]).toEqual(state.remoteBlue[i]);
+  }
+  expect(state.stats.created).toBe(2); expect(state.stats.disposed).toBe(2);
+});
+
 test('art tracer: anatomical face and separate fingers load through the actual game', async ({
   page,
 }) => {

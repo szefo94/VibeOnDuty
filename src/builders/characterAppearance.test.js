@@ -1,7 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
 vi.mock('./enemyAnimations.js', () => ({ detachSkeletonDebug: vi.fn() }));
-import { disposeCharacter, preserveTemplateGeometry } from './characterResources.js';
+import { disposeCharacter, preserveTemplateGeometry, registerCharacterDisposer,
+  registerCharacterTexture } from './characterResources.js';
+import { applyCharacterAppearance } from './characterAppearance.js';
 
 // Exercise the current public tint entry point without browser initialization.
 vi.mock('../scene.js', () => ({ scene: new THREE.Scene() }));
@@ -23,6 +25,25 @@ function fixture() {
 }
 
 describe('character appearance', () => {
+  it('supports one accent, node metadata, null entries and once-only owned cleanup', () => {
+    const root = new THREE.Group();
+    const material = new THREE.MeshStandardMaterial({ color: 0xb6a05b });
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(), material);
+    mesh.userData.artDomain = 'teamAccent';
+    root.add(mesh, new THREE.Mesh(new THREE.BoxGeometry(), [null]));
+    applyCharacterAppearance(root);
+    const owned = mesh.material;
+    expect(owned).not.toBe(material);
+    applyCharacterAppearance(root);
+    expect(mesh.material).toBe(owned);
+    const callback = vi.fn(), texture = new THREE.Texture();
+    const textureDispose = vi.spyOn(texture, 'dispose');
+    registerCharacterDisposer(root, callback); registerCharacterDisposer(root, callback);
+    registerCharacterTexture(root, texture); registerCharacterTexture(root, texture);
+    disposeCharacter(root); disposeCharacter(root);
+    expect(callback).toHaveBeenCalledTimes(1);
+    expect(textureDispose).toHaveBeenCalledTimes(1);
+  });
   it('changes only the designated accent and keeps material groups and maps', () => {
     const { root, materials } = fixture();
     tintEnemyMesh(root, 0x4488ff);
