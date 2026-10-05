@@ -1,7 +1,7 @@
 # VibeOnDuty — repository context
 
 Initial onboarding: 2026-09-09, source commit `dc27c6f` on `main`.
-Updated for the animation/model fixes and authoritative online M4 combat on 2026-10-03.
+Updated for authoritative online M4 combat and the editable human/comic art slice on 2026-10-05.
 Use this as a navigation guide; verify current source before acting on historical
 notes or roadmap proposals. Update relevant context when the architecture changes.
 
@@ -229,6 +229,44 @@ maps when changing lifecycle/spawning/radar behavior.
   `window.__bodyRef()`, `window.__handRef()`, and `window.__tuneWeapon3p({...})`.
 
 ## Validation and deployment
+
+Phase 6 art ownership and reproducibility:
+
+- `tools/art/sources/soldier.blend`, `character-params.json` and `build_soldier.py`
+  own the fitted anatomical human, original equipment and packed paint; `slice.blend`
+  and `build_slice.py` own the shared M4/scoped Greek Columns atlas. `pipeline.mjs`
+  uses verified portable Blender 4.5.13 LTS, reopen/semantic checks and atomic publication.
+  Read `docs/ART.md`, `tools/README.md` and `tools/art/provenance.json` before asset edits.
+- The published GLB preserves the inherited 65-joint skeleton, inverse binds and
+  48 clip occurrences exactly. CC0 body evidence does not clear inherited rig,
+  motion or weapon/animation FBX redistribution terms; these remain unresolved.
+- `characterAppearance.js` clones only designated team accents. Shared packed maps
+  and template geometry survive actor retirement; instance/ink resources retire once
+  through `characterResources.js`. Fine anatomical skin and the open collar use
+  paint only; clothing/equipment/weapon silhouettes use the skinned comic hull.
+  `comicNormal` must never replace the authored lighting normal attribute.
+- `artMaterials.js` keeps Node map/navigation imports free of browser image IO.
+  Animation-only Node GLB tests isolate image decoding; actual browser tests must
+  continue decoding and rendering the shipped packed maps.
+- `graphicsQuality.js` owns bounded Low/Medium/High DPR/shadow/ink policy and resize;
+  native menu/pause controls synchronize one persisted value. Desktop online pause
+  stays right of match controls so settings cannot intercept Leave after rematch.
+- `iterate.py` supports two inspected numeric candidate-only operations. Run its
+  demo and independent `verify-export.mjs --iteration` after changing accepted art
+  or the iteration/recovery review path; prior before/changed/restored hashes then
+  become historical. The separate capture matrix does not alter editable recovery.
+- `review.mjs --capture` owns a free loopback listener and full-pixel actual-game
+  pose/tier/measurement evidence. Freeze only its offline sample contexts and hide
+  the procedural fallback as the real loop does. Run Blender exports before browser
+  suites and run Playwright suites sequentially; their output directory is shared.
+  Headless SwiftShader measurements are not representative-device/FPS certification.
+- Agent visual assessment cannot record a human aesthetic pass. Inherited support
+  hand/barrel fitting and motion quality remain explicit limits for final review.
+
+Phase 6 final stable gates passed on 2026-10-05: lint, root and multiplayer types,
+build, **273 unit tests in 25 files**, **45 offline browser tests** and **14 production
+multiplayer tests**. `06-06-SUMMARY.md` and `06-VALIDATION.md` record current source,
+export, capture and recovery identities. Human aesthetic acceptance remains pending.
 
 After animation fixes: lint, typecheck, build, **86 unit tests in 10 files**, and **17
 Playwright tests in 3 files** passed. Build reports a JS chunk above 500 kB. Headless

@@ -2402,7 +2402,211 @@
   ],
   "finalReview": {
     "evidence": ".planning/phases/06-human-characters-and-comic-book-blender-iteration/evidence/06-review.json",
+    "evidenceHash": "3944d4c0cd0217896b6f69eb26380175a4e13baa57be35d8fca8379436bf330f",
+    "validation": {
+      "sourceHead": "a93e0f94163ce67f17d0fe286768e6c0661c7240",
+      "completed": "2026-10-05T12:55:02.821Z",
+      "environment": "CI=1; existing pinned dependencies; sequential browser suites",
+      "latest": [
+        {
+          "name": "lint",
+          "command": "npm run lint",
+          "exitCode": 0,
+          "durationMs": 1617,
+          "completed": "2026-10-05T10:20:36.435Z",
+          "log": "06-final-lint.log",
+          "counts": null,
+          "sha256": "da7d466cbc5ab4a5ad7962d6ae26069146f8cacbcc8ae3a2d89c9dbe69387475"
+        },
+        {
+          "name": "typecheck",
+          "command": "npm run typecheck",
+          "exitCode": 0,
+          "durationMs": 1496,
+          "completed": "2026-10-05T10:20:37.933Z",
+          "log": "06-final-typecheck.log",
+          "counts": null,
+          "sha256": "f56a013a797421f615e4fea31d20f301156a23591b0a729ee2ad9df8c275807e"
+        },
+        {
+          "name": "typecheck-mp",
+          "command": "npm run typecheck:mp",
+          "exitCode": 0,
+          "durationMs": 1983,
+          "completed": "2026-10-05T10:16:21.700Z",
+          "log": "06-final-typecheck-mp.log",
+          "counts": null,
+          "sha256": "7ee1a8d7299163914ef8fcb1c7953bb9862ad543f16414941e91702743972725"
+        },
+        {
+          "name": "unit",
+          "command": "npm test",
+          "exitCode": 0,
+          "durationMs": 56219,
+          "completed": "2026-10-05T10:21:34.153Z",
+          "log": "06-final-unit.log",
+          "counts": [
+            "Test Files  25 passed (25)",
+            "Tests  273 passed (273)"
+          ],
+          "sha256": "2d0dd1a7575557969bbc722070dcd42fedd16b183d9c8fe5e461c568018511ab"
+        },
+        {
+          "name": "build",
+          "command": "npm run build",
+          "exitCode": 0,
+          "durationMs": 1006,
+          "completed": "2026-10-05T10:21:35.160Z",
+          "log": "06-final-build.log",
+          "counts": null,
+          "sha256": "b14455f317e1881adf4150027e2eeafa5236fdcc361f925baf353755bb0c76cf"
+        },
+        {
+          "name": "e2e",
+          "command": "npm run test:e2e",
+          "exitCode": 0,
+          "durationMs": 573210,
+          "completed": "2026-10-05T10:31:08.371Z",
+          "log": "06-final-e2e.log",
+          "counts": [
+            "45 passed (9.5m)"
+          ],
+          "sha256": "69a66770d46cae912cd7d54996ec9b5daaaae84b431c21cc06e8a61d8e7d717e"
+        },
+        {
+          "name": "mp",
+          "command": "npm run test:mp",
+          "exitCode": 0,
+          "durationMs": 565993,
+          "completed": "2026-10-05T10:40:34.365Z",
+          "log": "06-final-mp.log",
+          "counts": [
+            "14 passed (9.4m)"
+          ],
+          "sha256": "933bddd080485db5bb541b7fb2a4a300efbe2968a517e28158ae972326ee4069"
+        }
+      ],
+      "attempts": [
+        {
+          "name": "lint",
+          "command": "npm run lint",
+          "exitCode": 0,
+          "durationMs": 1896,
+          "completed": "2026-10-05T10:16:17.686Z",
+          "log": "06-final-lint.log",
+          "counts": null,
+          "logSuperseded": true
+        },
+        {
+          "name": "typecheck",
+          "command": "npm run typecheck",
+          "exitCode": 0,
+          "durationMs": 2030,
+          "completed": "2026-10-05T10:16:19.717Z",
+          "log": "06-final-typecheck.log",
+          "counts": null,
+          "logSuperseded": true
+        },
+        {
+          "name": "typecheck-mp",
+          "command": "npm run typecheck:mp",
+          "exitCode": 0,
+          "durationMs": 1983,
+          "completed": "2026-10-05T10:16:21.700Z",
+          "log": "06-final-typecheck-mp.log",
+          "counts": null,
+          "logSuperseded": false
+        },
+        {
+          "name": "unit",
+          "command": "npm test",
+          "exitCode": 1,
+          "durationMs": 57075,
+          "completed": "2026-10-05T10:17:18.775Z",
+          "log": "06-final-unit.log",
+          "counts": [
+            "Test Files  5 failed | 20 passed (25)",
+            "Tests  238 passed | 7 skipped (245)"
+          ],
+          "logSuperseded": true
+        },
+        {
+          "name": "lint",
+          "command": "npm run lint",
+          "exitCode": 0,
+          "durationMs": 1617,
+          "completed": "2026-10-05T10:20:36.435Z",
+          "log": "06-final-lint.log",
+          "counts": null,
+          "logSuperseded": false
+        },
+        {
+          "name": "typecheck",
+          "command": "npm run typecheck",
+          "exitCode": 0,
+          "durationMs": 1496,
+          "completed": "2026-10-05T10:20:37.933Z",
+          "log": "06-final-typecheck.log",
+          "counts": null,
+          "logSuperseded": false
+        },
+        {
+          "name": "unit",
+          "command": "npm test",
+          "exitCode": 0,
+          "durationMs": 56219,
+          "completed": "2026-10-05T10:21:34.153Z",
+          "log": "06-final-unit.log",
+          "counts": [
+            "Test Files  25 passed (25)",
+            "Tests  273 passed (273)"
+          ],
+          "logSuperseded": false
+        },
+        {
+          "name": "build",
+          "command": "npm run build",
+          "exitCode": 0,
+          "durationMs": 1006,
+          "completed": "2026-10-05T10:21:35.160Z",
+          "log": "06-final-build.log",
+          "counts": null,
+          "logSuperseded": false
+        },
+        {
+          "name": "e2e",
+          "command": "npm run test:e2e",
+          "exitCode": 0,
+          "durationMs": 573210,
+          "completed": "2026-10-05T10:31:08.371Z",
+          "log": "06-final-e2e.log",
+          "counts": [
+            "45 passed (9.5m)"
+          ],
+          "logSuperseded": false
+        },
+        {
+          "name": "mp",
+          "command": "npm run test:mp",
+          "exitCode": 0,
+          "durationMs": 565993,
+          "completed": "2026-10-05T10:40:34.365Z",
+          "log": "06-final-mp.log",
+          "counts": [
+            "14 passed (9.4m)"
+          ],
+          "logSuperseded": false
+        }
+      ],
+      "repair": "Node atlas import fallback and animation-only texture isolation; repeat affected lint/root types/unit only, then remaining build/browser gates",
+      "reportHash": "c25f67c244aea57bdd6eda1850eafc005d3482ac8c4ee193bd86553d9e78dcb8",
+      "noIntentionalSkippedTests": true,
+      "humanAestheticAcceptance": "pending",
+      "phaseVerification": "ready"
+    },
     "sourceHashes": {
+      "src/artMaterials.js": "6533cc881ae4759261c5277c38eca44e0d868e50aa09c93243e82cb01cd8ddb9",
+      "src/builders/rifleClips.test.js": "25dfd8ac8defc68aaad82e20824b447bda0c7c75523bc36a3bafb9b46c017782",
       "src/builders/characterAppearance.js": "c76293f0e83160269b503f991683e8871aeeb7c2d1649de079b0427521e0b74b",
       "src/comicOutline.js": "60c152bd7d778bce021989c178aef5619f9e2ffd65368355525284c333c2954b",
       "src/builders/enemyGLTF.js": "e41711acc13222de53925d1103b8308e4a5e7071603ae3d3ad2b866a8847275b",
