@@ -58,7 +58,7 @@ This is the selected overhaul scope, delivered incrementally in the user's order
 - [ ] **ANIM-01**: Characters transition smoothly among idle, directional locomotion, sprint, slide, dive, prone, jump, and landing states while following actual simulated movement.
 - [ ] **ANIM-02**: Weapon/action animation supports ADS, firing, reload, melee, equipment use, damage, and death without broken grips, visible snapping, or unintended action overlap in first- and third-person views.
 - [ ] **ANIM-03**: Animation stays consistent with authoritative posture and aim while visual blending/root motion does not move gameplay bodies independently of simulation.
-- [ ] **ANIM-04**: A creator can import or retarget approved reusable motion onto the selected rig, regenerate runtime clips, and inspect transitions through the Blender-to-game review workflow.
+- [x] **ANIM-04**: A creator can import or retarget approved reusable motion onto the selected rig, regenerate runtime clips, and inspect transitions through the Blender-to-game review workflow.
 - [ ] **ANIM-05**: Repeated character spawn, replacement, and disposal retain shared templates and release instance-owned resources within the measured browser budget.
 
 ### Weapons and Combat Tuning
@@ -177,7 +177,7 @@ All 67 v1 requirements are assigned to exactly one roadmap phase. The initial ro
 | ANIM-01 | Phase 5 | Pending |
 | ANIM-02 | Phase 7 | Pending |
 | ANIM-03 | Phase 7 | Pending |
-| ANIM-04 | Phase 7 | Pending |
+| ANIM-04 | Phase 7 | Complete |
 | ANIM-05 | Phase 7 | Pending |
 | GUN-01 | Phase 8 | Pending |
 | GUN-02 | Phase 8 | Pending |
