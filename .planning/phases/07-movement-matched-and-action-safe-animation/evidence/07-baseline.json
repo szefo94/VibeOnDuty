@@ -1,0 +1,3288 @@
+{
+  "schemaVersion": 1,
+  "complete": true,
+  "capturedAt": "2026-10-05T20:09:53.043Z",
+  "revision": "af174d0faccf42b6ac9ac170d32627a816f4a15a",
+  "identities": {
+    "index.html": "ed86d382f34a024e41b19cdbc3d20ae14f375d7d2fb7ecdf91f72cc69fbd4256",
+    "public/models/enemy.glb": "3d92a093fc6724c295fdabb456d41110a0b03fc7f72f565b42b36c4c09b00847",
+    "public/textures/comic-slice.png": "7faae7a58bb4669af51c5081c772be671af8544681c762af54f9263995a4c31e",
+    "src/ai/difficultyAdapter.js": "8ac49dc6fa2d40e9f8c8e431d70e354826457af99207e832c8e3d88bcaf9bc30",
+    "src/ai/enemyStates.js": "5958b97ee40b481e42894edd1f8122613991275ee7411ee30f7ddbdc92cde911",
+    "src/artMaterials.js": "6533cc881ae4759261c5277c38eca44e0d868e50aa09c93243e82cb01cd8ddb9",
+    "src/astar.js": "350569201146718cec7c5257149fedf062ac1a6dff8cd351de2dc8f174362f77",
+    "src/astar.test.js": "ed67c5c592fa6c17fa4b0ad17f3310c51872ec8b91a8d919b0f9673969f63992",
+    "src/builders/assetManager.js": "4bd3f7be2842e62987cdda42e0d221d3d00dcc0fc931d06eccb764c55125a92c",
+    "src/builders/characterAppearance.js": "c76293f0e83160269b503f991683e8871aeeb7c2d1649de079b0427521e0b74b",
+    "src/builders/characterAppearance.test.js": "b376d6e18ad9de849366d12c5ea89646558fa4bf2b13eb86cdeae9514ab08563",
+    "src/builders/characterResources.js": "83dc2bff3fd004738f5f988f7b13326d0606214c6d640e705fc9dd255d5bb153",
+    "src/builders/drone.js": "c9a4326b178d09c4a92b752c7e54046ae9a58fb1b07ceac975667e49a3270e85",
+    "src/builders/enemy.js": "c18299fad3fca2ee4d52736e3f7ce355e52bfee91ff855072002a320a418dae7",
+    "src/builders/enemyAnimations.js": "1a034bb7cb3a4560c48af7383037c414256226aa18b0d91e05226e43595df2f7",
+    "src/builders/enemyAnimations.test.js": "c362279f8cbebb05659569c026f029b4b1b58420ff88a7126cbcd831a3bdc958",
+    "src/builders/enemyGLTF.js": "e41711acc13222de53925d1103b8308e4a5e7071603ae3d3ad2b866a8847275b",
+    "src/builders/enemyWeapon.js": "0682a0099957f062535614351fc1d297fe17e05799919c1aa40dfd1d08ef3d2f",
+    "src/builders/playerBody.js": "f7c4614278efa8c4fadbaef8c07b878611885168fd9c0e736a75d8aad56ae496",
+    "src/builders/rifleClips.js": "115456084fdda7b62eb21cdd9f00595de380f37220ffdd93253c8e8a0e2b8090",
+    "src/builders/rifleClips.test.js": "25dfd8ac8defc68aaad82e20824b447bda0c7c75523bc36a3bafb9b46c017782",
+    "src/builders/weapon.js": "ac294d89b99aabb9c1335caa25200df67326ac2e834b2d3bf49052198cf3e9ef",
+    "src/builders/weapon3pTransform.js": "4e7917834ffbf4c1b5eaab9d2fe8a86f63444e743d006142c3299a0fde6f378c",
+    "src/builders/weapon3pTransform.test.js": "c6cba9cf98bf64c96c5baa6382a3255e7c3f063455326edbf30471187b9d4fa3",
+    "src/builders/weaponFBX.js": "b3d1bf2360d8a1c662e345dbb6ee41baeb0609eb230df840a7dcdc104d56f3be",
+    "src/combat/damage.js": "6dab1ffddb00a50824a1b638ca558a0a069ceb2fb68654a09bd790f70d8d477f",
+    "src/combat/damage.test.js": "64cae2a2bd46cdca806d4bc9d8bd00409fe32e523a569f31016e0101a691aa0b",
+    "src/combat/shoot.js": "20db9a0e778df6d37cee2dc38fb7fa7c26c2ce7c96c26ee392dbf0c7d05217b5",
+    "src/comicOutline.js": "60c152bd7d778bce021989c178aef5619f9e2ffd65368355525284c333c2954b",
+    "src/comicOutline.test.js": "21e2cc6b048d2d17f746c1148a7097db7156aa5d08388eaf5fc8f06b603c5048",
+    "src/config.js": "e88b770a32b3a816360940db95730cc89e592cc8a9b5e1a4075c32e24b9d24f9",
+    "src/difficulty.js": "4305ca68095885c2f231359212f9f46cadbdd9e3a1b4c07f50e44f8c01de0d74",
+    "src/editor/mapEditor.js": "18973ddbfc55ec20705a9a21077ad6a067776edfa8bf32762383e1ee7a8ea8e8",
+    "src/entities/ammoDrops.js": "a9625db354027fb489ff53ce13513642afc37ca8d1cac2f80d43d99fe1fd9b63",
+    "src/entities/drone.js": "ae9e1d9cdae49ca6fc181e9baf1a02a5fcd481de8077d9e1d596a1c1e657e5dd",
+    "src/entities/enemies.js": "0e5048be8f829695b51da91a15a64898b911d55bb1ead69cba86aba54ba5e587",
+    "src/entities/enemySpawning.js": "e1de5b9d1d7f759d64b2bd669e0d27ada3bdaf5b8631391b6d93d69dd5ad1c24",
+    "src/entities/enemyUpdate.js": "81672d4049c8db59f270ea769ee245a431d0a580d60b25df58c0b072b0978f79",
+    "src/entities/entityBase.js": "a03851bbf22472847b6c62a0a1f467ec36403c1967d2b2915761eedb6a775a3e",
+    "src/entities/friendlyBots.js": "23180ea1212d847e86a0fe8f6e8ac762526a594e1302cca3de5e3edb89d58bc6",
+    "src/entities/grenades.js": "aef040f9398048700eee0fccc388b3013ebab5e3fc8095d0468fb9caa7f9ee11",
+    "src/entities/groundSync.test.js": "58c971d37dc93e9cb35df1081b41d43bcc074cdd66607b1f68938f691b8dc773",
+    "src/entities/player.js": "5fa7944b8c8e1a1fa3a1363931a6eada4deaf71829c746a41e1315ea54e7d86b",
+    "src/entities/targetDummy.js": "8151195088a2b82369a0ce23f3f50490347c5bb4a2fdac518ae59606b315e04b",
+    "src/entities/waveSystem.js": "765cb309040265d640541025d0e33f48a4690ecb8a549b2a68cd2c4e0c4f6a93",
+    "src/events.js": "fc9ec1f582eae9ca1a5ddd92f0ec0c1c1f80cc5feae6ade2dcab0ef9f2327294",
+    "src/fx/damageNumbers.js": "19d880ca7e068d89510bff3e211a190e7a868a949d9a8971295304ac0dae647e",
+    "src/fx/impacts.js": "fe2a97ff69efccf04e9b76468faad742bf91fbdc08c6479d3bfbbf77c859a2c6",
+    "src/fx/meleeRange.js": "51af6e8bc399220b02f87a92be508b69f59ac8eb919c718019387e30646ae8de",
+    "src/fx/particles.js": "2b2293763e1061f0d93c29e01c6670e5eff287d0d238d05629875b35e2cabd3d",
+    "src/fx/screenShake.js": "5ce8eb4c849019a30355d62989e517accae6fdb3917a855dc4fa5b2d5dbf214e",
+    "src/fx/tracers.js": "227cc61e0858426da38edf65f140339ffa40692a09b6298eb99e859ce7ef83ea",
+    "src/gamepad.js": "6f75ff66961b3577d2f503a63bc2f71a8ae35dcd30ebc406ab0649d4596587e8",
+    "src/graphicsQuality.js": "85bb9d014fa3e5602ca4a289caaedce16e9c70f0aaf2b68b49af44acb9f59553",
+    "src/graphicsQuality.test.js": "b739e64fd0b2cf18697386cfd8341f263131a7d53e811be9ad3ec0a73bc9cec1",
+    "src/hud/enemyBars.js": "dc8354c16798697824f93d0413907733f1d6de965620ef3ffe053122dc81aae1",
+    "src/hud/hitmarker.js": "8657c25881b61ddc06f85bc0aa31e3ce4cd563abb410325d5ad4193ee63740a5",
+    "src/hud/hud.js": "1fa17249dc1bb34feaea65d9a748c876002843fb955bb41e2ab62c56ccb8106e",
+    "src/hud/overlay.js": "b692449845a2814e8ef919fefd5f4ded64c93e5e827a8761ce8e5a6055efe07f",
+    "src/hud/radar.js": "975a1b590f47b364966921c18c3073ffa7c5fc12ed276a7d9f67ba2106823b2e",
+    "src/hud/rings.js": "5a91045bdb4f35708ed44e03b3fcc74eda5a5f02035d54838bddbef9f036052b",
+    "src/hud/sndHud.js": "aa45c6f56563e813dad6de8984e231d463ec269151137c42281d2ef4088babe6",
+    "src/input.js": "98834054bcc8a5d783d65eff61d89afe68811e49863c2324d08d5f242392879d",
+    "src/level.js": "b69b4267c55c08a5c832b1a5c316ebd5d8b0f2082999bec729c15a8d7f46dc0b",
+    "src/lighting.js": "2b16856115f16e6e07c890da8c28ff4af9f898e7cad660ddc2fdc2dbe5ec2fbb",
+    "src/loop.js": "1a42243914008ffe7ef3b590296bc52b6b5346bb8ddb794444b5b806cf3a3b0f",
+    "src/main.js": "ff462f1983893e2196983693738e928826234ae5e9328004f40ed795c2ae37c7",
+    "src/map.js": "b23d2501b0d76e8a59ce84018f2ff2aff7251919ee6a7f940978cfa293b01cb1",
+    "src/map.test.js": "bad26cef43b3822eb9a3f0f35e37d72c2f63d1514112e527f48b500bf714530f",
+    "src/maps/bunker.js": "cfa888065a9d27527ac629d97576a4fb5f00976850488f3c57cc37d8d11c0f08",
+    "src/maps/concept.js": "511277ce6047d0088a2fdc08e8276fd1564d2a91ff1ea8893f0bf5d000994422",
+    "src/maps/range.js": "a00ceb46d456b444d68342bda8c81e6006cd6ca339427bae20be4883369e7cc5",
+    "src/maps/rooftop.js": "8b041e6c51e0bc11156889772b2bfd956debbbc635fb5cb5c5c7450fd0cdbed3",
+    "src/maps/vanguard.js": "1bbe9b6316ca68740d85de80174513e13f1cc77f1f0a74255726955e879202b9",
+    "src/materials.js": "e78297505e0f5ae06f54d78a4b6b03b5c3ea9957d13e6209d9671b3ac2c63562",
+    "src/math.js": "8ed5d5bc769cc410442551c79e7196c08e457bd698127e1fb403de6f5c6bd569",
+    "src/math.test.js": "9a224b308568b1dd3727070cea8d3bde1172f24a763c2e00b697d6c9cb933bce",
+    "src/modes/buyMenu.js": "a920c94a99a21c987f1b70d48a71b7498cf25649d6fcb5d1ab1ea31dc1633908",
+    "src/modes/economy.js": "2a024a799243a1f221f0dd299574db9dc5a9d17f36e6b9c792b91fde6b10751f",
+    "src/modes/modeManager.js": "30998c3531aca7cd3492a23fa2f1fdc6ca816849510422226b8eb0e50cd18f64",
+    "src/modes/snd.js": "1553ceb66b0438655d6d39504a7e3a05ef7b13068fad7664c15b72a707f0dee9",
+    "src/modes/snd.test.js": "d33a5363aebe5ca10fe442e3dd882919cbe3b523018414f1988f299ecd764d87",
+    "src/modes/tdm.js": "0bef81555ae0ea0001a00e26fb089ff5bcd4f4bb1ce2a500e70b72116d0b83bb",
+    "src/modes/trainingRange.js": "dd75c967582b9089c946210ec695e30cd235566da07c9b09aa9a40dde7d3e1b6",
+    "src/network/onlineSession.js": "fd184546f43fe0446bb2a6bdb6a7262c65ca5fb47da805cb0e46e933f46eff5c",
+    "src/network/onlineUi.js": "2df9096e2558a42ef50c7d769f9114e853dcfa9ac22c00988883782e406577b6",
+    "src/network/onlineUi.test.js": "bc478ef3966d066cf463660fe26cdfb1b025a1243150e61c6bba96a6a8bf9605",
+    "src/network/remoteActors.js": "c5a2521d56d769952e0b76a36d278539b6a3499194e5b5893225596d2cce67cf",
+    "src/network/remoteActors.test.js": "fc8bf2fb3850364ba4cb28c2d69a35ba32007a6a0469079bdfc55bdedf8d3cf3",
+    "src/rampMath.js": "648f924feb0a86bbed75ed7c2e98ba80fbae3caa6d1a8376c8ad56e6378e31cc",
+    "src/replay/damageTracker.js": "2680e75e4e5fc57fd44f64149ba8763c032d866dd4e23196d37a211861228bc6",
+    "src/replay/killcam.js": "17a12c1e3ce558e533db9112e5b88ba3caf686b6e97b947b7d4c38295d87b27b",
+    "src/replay/killcam.test.js": "df611cc610db4f7d54f536eaf4e356c3dec0c61e0f09a47a76cbed3260883a33",
+    "src/scene.js": "c7ec6d2d52b02b66a5f1125926456617a809fe7cc77c1945c5cf8c9074713db9",
+    "src/shared/combat.js": "38d1ed184a56168ee229ae514a09e730722edd3d6e6dfc63b3f784300904bc9a",
+    "src/shared/combat.test.js": "471e697609c085c171f08af447f925b12af50c95ae77671faee5a29f03ba21f8",
+    "src/shared/maps/bunker.js": "c980d5fb53b719a37b9b899bfe50ced52afa7bebd479c7fd025d047efdb99164",
+    "src/shared/movement.js": "b436d3f1edf35b32cfdd6384b2714c54b68f74f480ad16199b0119f2c15de742",
+    "src/shared/movement.test.js": "492c9681ac190378f49c8f75c4a44d230e90b9eab80d334a0bb924c88a0f31ef",
+    "src/shared/protocol.js": "8a9f2111a27d83472364055e2b4bba6bab580075c3214b3d965775a8c1534c03",
+    "src/shared/protocol.test.js": "808a8a992885592833adf61c4f31cbf5916f53cf482310f48016c0c4f843d764",
+    "src/shared/tdmRules.js": "4e3f42bbe138e2272ae41f134a38fc98ddf8b976f329f7cfd10967877d86d00b",
+    "src/shared/tdmRules.test.js": "a174662bfe7258c2a67b8f2dad02e1f5fb5f6bd1d8e61f43eb58e856902b1b1d",
+    "src/shared/tdmSimulation.js": "342f04851921e1c616ebf223e11d06fcc44a3dd4d9e626dffabff43ee87c7286",
+    "src/shared/world.js": "11efd5fed3423ce7f8ffa2c27a9953b3cfaaffb8e40bc8975c1b88145f68e189",
+    "src/shared/world.test.js": "372a4556f44f43e80344276fcb06d4009e776e4939af18774cd04414f96f92c8",
+    "src/tiles.js": "f5f1f02d4474a6a250419246d0853da1370f025bcecfe63de7791c3f15a2e1f4",
+    "src/tiles.test.js": "57e1e79f4f733123496b6338d782c1ae235f940c0b7e424736db9cd32d913109",
+    "src/touch.js": "1defa68747f8d5c0125ce2ce3feb8b7ee603fdc0cab7d26b932a77a8a21e9ef1",
+    "src/utils/los.js": "4242e3739e2f763c1eba8918097a1bee56fbe82e30a8271dacbfbfdcf4131291",
+    "src/version.js": "8e29534e9782846f15339431c564d9dd9c28268f956bdd047348ceee9f423bc1",
+    "style.css": "dfdab9ecec09398f77115dda98052377faf05b69d328fa6677ef6317ec9c51ab",
+    "tools/art/build_soldier.py": "1461595dbf47907671aa0a867f742c4ee35b758636a1fcb55dc571220300f432",
+    "tools/art/character-params.json": "2b74289e18fd68cacece69af7fde7fe694e5fb6f6d5912ac412dc3c2899eb236",
+    "tools/art/provenance.json": "60b7f4ee3ef29253253cfbc102f57f998442a1c5f8e7fc99fcfd19bb4e3968b7",
+    "tools/art/sources/soldier.blend": "d657f3d906a23e344e0188b9b060ca57f7e19d860530fe0618a6dd6a1178a4f7",
+    "captureSampler": "a5b7c998315b49aa2c81070820edb06591636dd90cf268a6eddc48258addb5b9"
+  },
+  "samples": [
+    {
+      "run": 1,
+      "browser": "147.0.7727.15",
+      "sourceIdentitySha256": "5e34f928033247b119e2a4f55531d5b8a5c7cfd3c006a9a2382030de77f50494",
+      "restored": true,
+      "tier": "low",
+      "actorCount": 1,
+      "human": true,
+      "packedMaps": 9,
+      "keeperIntact": true,
+      "sharedDisposals": 0,
+      "movingPoseCount": 211,
+      "sequence": [
+        {
+          "frame": 0,
+          "clip": "idle",
+          "simulationTime": 0,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0000.png",
+          "sha256": "5998691c756f5285f835f76604d68bc29bc33de951607d8652b56c1c27e3d689"
+        },
+        {
+          "frame": 1,
+          "clip": "idle",
+          "simulationTime": 0.05,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0001.png",
+          "sha256": "16c3425abf40e56559e014b6282420e4625b4ce5c17d34602cf00621a580280a"
+        },
+        {
+          "frame": 2,
+          "clip": "idle",
+          "simulationTime": 0.1,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0002.png",
+          "sha256": "a6ce77d0130967aaae35200c65c3ecd66970abb6cfa7f6325b681d07c05267da"
+        },
+        {
+          "frame": 3,
+          "clip": "idle",
+          "simulationTime": 0.15000000000000002,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0003.png",
+          "sha256": "b1d48cf3dbe401fd2c8a42a05400b32c7672701e8fed52658d81f272d24d9483"
+        },
+        {
+          "frame": 4,
+          "clip": "idle",
+          "simulationTime": 0.2,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0004.png",
+          "sha256": "1c4d0a761587242e4410b2ed282a6ef05bc0f2b5b685c3588da762cfb4d0104c"
+        },
+        {
+          "frame": 5,
+          "clip": "idle",
+          "simulationTime": 0.25,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0005.png",
+          "sha256": "8366e70291423f14c766c0c1a5d4cab30f8d52db98707b1f544080c987b28a0d"
+        },
+        {
+          "frame": 6,
+          "clip": "idle",
+          "simulationTime": 0.30000000000000004,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0006.png",
+          "sha256": "7484dc76a7806d5ba17cd84bc51cc33c38a38b42d45859952494c1cc3366f906"
+        },
+        {
+          "frame": 7,
+          "clip": "idle",
+          "simulationTime": 0.35000000000000003,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0007.png",
+          "sha256": "eaeb08e8dab5df094ae7664972fe0a3b9a0c4c6c221f7b6f5ae556aeb935142b"
+        },
+        {
+          "frame": 8,
+          "clip": "walk",
+          "simulationTime": 0.4,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0008.png",
+          "sha256": "9154f75d2798e2fe038d3f09806f3d05fb0886e002c3737cb9587695656cb303"
+        },
+        {
+          "frame": 9,
+          "clip": "walk",
+          "simulationTime": 0.45,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0009.png",
+          "sha256": "68e28d8678e1eeb56814f75231491dbd6fdc971d0a3276cece60eba433b3432e"
+        },
+        {
+          "frame": 10,
+          "clip": "walk",
+          "simulationTime": 0.5,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0010.png",
+          "sha256": "f5619a34fca0ddb9beb10263b2188593a21e6f397707e7cc262404b79c8440c8"
+        },
+        {
+          "frame": 11,
+          "clip": "walk",
+          "simulationTime": 0.55,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0011.png",
+          "sha256": "7b468cef84d2a2acd13f2e60e60974d3134cfd4aa52dedf64f265dad244b1c64"
+        },
+        {
+          "frame": 12,
+          "clip": "walk",
+          "simulationTime": 0.6000000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0012.png",
+          "sha256": "8fb6f6be528b108a3308f045a8fa9bf912e1fbc5efc16c4c62c55f6c5623de68"
+        },
+        {
+          "frame": 13,
+          "clip": "walk",
+          "simulationTime": 0.65,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0013.png",
+          "sha256": "2719aef1f3960116364f524bfdabab42e283a1be1b6121231cddb410572d22a2"
+        },
+        {
+          "frame": 14,
+          "clip": "walk",
+          "simulationTime": 0.7000000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0014.png",
+          "sha256": "95e8f65a31184b364b9092897f4002f6b8ca300fa05dd56fd8f3bcd178c4c5ba"
+        },
+        {
+          "frame": 15,
+          "clip": "walk",
+          "simulationTime": 0.75,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0015.png",
+          "sha256": "35fdb613f16fd6f43e0afb78e4495c173e1ed3cadd69cdca37bbd4caf8221186"
+        },
+        {
+          "frame": 16,
+          "clip": "walk",
+          "simulationTime": 0.8,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0016.png",
+          "sha256": "e7d36eb6bf44b24525e3cf72da41840fb587fa01e80c46f0d63a2835efa0783c"
+        },
+        {
+          "frame": 17,
+          "clip": "walk",
+          "simulationTime": 0.8500000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0017.png",
+          "sha256": "273046382f1b8bc74d3727a119325b2947166615cde0cd8e88dc2dd5e245131e"
+        },
+        {
+          "frame": 18,
+          "clip": "walk",
+          "simulationTime": 0.9,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0018.png",
+          "sha256": "1432ca34e166d93449ae83dc6d00e0789474823929e6304e22a2a18263d83e5c"
+        },
+        {
+          "frame": 19,
+          "clip": "walk",
+          "simulationTime": 0.9500000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0019.png",
+          "sha256": "5e6927cec20313203d09dc5f9214222075b3302df20dda4eae1a098ace05e0bf"
+        },
+        {
+          "frame": 20,
+          "clip": "walk",
+          "simulationTime": 1,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0020.png",
+          "sha256": "730d7ae615e0a8d9eefcc2fb51a3aef28f1af569b3a62ad454edbe0513a07907"
+        },
+        {
+          "frame": 21,
+          "clip": "walk",
+          "simulationTime": 1.05,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0021.png",
+          "sha256": "43a15bd73d56f48ec7b2316be4e1d395836c73a11e8a3dc20dc616451d096ed3"
+        },
+        {
+          "frame": 22,
+          "clip": "walk",
+          "simulationTime": 1.1,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0022.png",
+          "sha256": "ce094463eb32ce6258a063e1c27c11bb0f8fadf3eb6a175b5bd586cd6e6961cb"
+        },
+        {
+          "frame": 23,
+          "clip": "walk",
+          "simulationTime": 1.1500000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0023.png",
+          "sha256": "d43305044b70150abb1cddce554824261a0d212f76d037cfe8b0ae0a67318ecb"
+        },
+        {
+          "frame": 24,
+          "clip": "walk",
+          "simulationTime": 1.2000000000000002,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0024.png",
+          "sha256": "c2573986c2d3a5bc3153101c8a454d5da0b7aaae216b3bd9cf123a0734f523b7"
+        },
+        {
+          "frame": 25,
+          "clip": "walk",
+          "simulationTime": 1.25,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0025.png",
+          "sha256": "7aab3546f7cbfe11784eece0e548bf29dd88fbbdcfa19ece3e65107c786bbf52"
+        },
+        {
+          "frame": 26,
+          "clip": "walk",
+          "simulationTime": 1.3,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0026.png",
+          "sha256": "cfa977841f9aea2ff0227878f79e6719a35fa48460a1f80e6e21fcdfe8cbe071"
+        },
+        {
+          "frame": 27,
+          "clip": "walk",
+          "simulationTime": 1.35,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0027.png",
+          "sha256": "9e24feb23b8a70e5deba4ca7599bea84cce78c3e0020469b343e29149849291a"
+        },
+        {
+          "frame": 28,
+          "clip": "walk",
+          "simulationTime": 1.4000000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0028.png",
+          "sha256": "4004dce69e2df8840e367d5020fe1bdc6570146b72848f6217a35b6c8d56d6fb"
+        },
+        {
+          "frame": 29,
+          "clip": "walk",
+          "simulationTime": 1.4500000000000002,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0029.png",
+          "sha256": "694aaa5bee3bb1fba264d70155e3d78095547dd910cc240a97dbacf5281ea58a"
+        },
+        {
+          "frame": 30,
+          "clip": "walk",
+          "simulationTime": 1.5,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0030.png",
+          "sha256": "f669a810407ef3037787ca6e8bb88ca774274e5af1d58ebc45bec35138aef9bb"
+        },
+        {
+          "frame": 31,
+          "clip": "walk",
+          "simulationTime": 1.55,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0031.png",
+          "sha256": "4ed68fff4878e239136370c3c59871964e18d7aa1cce1c5fdee335a3cc9060f1"
+        },
+        {
+          "frame": 32,
+          "clip": "walk_back",
+          "simulationTime": 1.6,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0032.png",
+          "sha256": "8e112786060100787d1b70537c478b49f197e0456f3deca063662a866386275d"
+        },
+        {
+          "frame": 33,
+          "clip": "walk_back",
+          "simulationTime": 1.6500000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0033.png",
+          "sha256": "c9ea4bbe012e210ee8c65ba3346bba1ff0340c03c9efb444b87eef55cf593686"
+        },
+        {
+          "frame": 34,
+          "clip": "walk_back",
+          "simulationTime": 1.7000000000000002,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0034.png",
+          "sha256": "2572b65274a117c00d7a5b865911a1e663913fd26faa3d388aea86c141ab6d1b"
+        },
+        {
+          "frame": 35,
+          "clip": "walk_back",
+          "simulationTime": 1.75,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0035.png",
+          "sha256": "0d8a471bc3d8874c5af754c950de151a19dbc2c3851918eed0052142eb3e7d5d"
+        },
+        {
+          "frame": 36,
+          "clip": "walk_back",
+          "simulationTime": 1.8,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0036.png",
+          "sha256": "bd753b11230b5486dd9349fc32476089b9024c0a3a24a9502d57dad8e1f27c2d"
+        },
+        {
+          "frame": 37,
+          "clip": "walk_back",
+          "simulationTime": 1.85,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0037.png",
+          "sha256": "abfe379eae9574c5b464f5533742866fe550850c6a750e93214dd602dd9e3452"
+        },
+        {
+          "frame": 38,
+          "clip": "walk_back",
+          "simulationTime": 1.9000000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0038.png",
+          "sha256": "21a8d090efd0b4c4b3d0c68fdfbd6d846d1b5b68a361778abc3e0dd4f6027278"
+        },
+        {
+          "frame": 39,
+          "clip": "walk_back",
+          "simulationTime": 1.9500000000000002,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0039.png",
+          "sha256": "d38ba758d5b3cecbd03e7e25eea355e33627d83925a1188e7231827844a26b5d"
+        },
+        {
+          "frame": 40,
+          "clip": "walk_back",
+          "simulationTime": 2,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0040.png",
+          "sha256": "26a7aa4197e069acaa9700e4b5e56f6d6840fdb2dd8e3439ec45983dd8b9e1cf"
+        },
+        {
+          "frame": 41,
+          "clip": "walk_back",
+          "simulationTime": 2.0500000000000003,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0041.png",
+          "sha256": "755660d2d5ba4e74f4fb4c93d5c93aca7ab6830c2ff7c4db2e89fab20d5dcc68"
+        },
+        {
+          "frame": 42,
+          "clip": "walk_back",
+          "simulationTime": 2.1,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0042.png",
+          "sha256": "51a6b9b51bb41e9a1d850e937030ace1ddfc03ffaa5412f5e28f48b4b7711a06"
+        },
+        {
+          "frame": 43,
+          "clip": "walk_back",
+          "simulationTime": 2.15,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0043.png",
+          "sha256": "de0ab42ae90da115f6d02fd464852dc61beac585a045c8a20733ef00b5907a4a"
+        },
+        {
+          "frame": 44,
+          "clip": "walk_back",
+          "simulationTime": 2.2,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0044.png",
+          "sha256": "5f040afdc78f3362ba9c6344d101f49e0e5da6a7ded47df2b2df7c2fc8b3830a"
+        },
+        {
+          "frame": 45,
+          "clip": "walk_back",
+          "simulationTime": 2.25,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0045.png",
+          "sha256": "4a2fbecf5f6dc485598188796b20870a814c4da0a76cba6d371eb6e2164bd9a6"
+        },
+        {
+          "frame": 46,
+          "clip": "walk_back",
+          "simulationTime": 2.3000000000000003,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0046.png",
+          "sha256": "59596d1affcb1f63ed0f01a23d11fe41d296b7f5db392ed3ef2372cb9a9ca123"
+        },
+        {
+          "frame": 47,
+          "clip": "walk_back",
+          "simulationTime": 2.35,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0047.png",
+          "sha256": "43bc3f2f971af39a4e3890c000444df4b8fd73fb5cc5129565b443046fb94205"
+        },
+        {
+          "frame": 48,
+          "clip": "walk_back",
+          "simulationTime": 2.4000000000000004,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0048.png",
+          "sha256": "d4b1a970cda41e314724d31d7f0133350e2c27f44a4ce2d5ec9d7e001e8a3d11"
+        },
+        {
+          "frame": 49,
+          "clip": "walk_back",
+          "simulationTime": 2.45,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0049.png",
+          "sha256": "834a09cffcc358a3be663eca397c8bbe5392df311a06597769ad434a55dccdd8"
+        },
+        {
+          "frame": 50,
+          "clip": "walk_back",
+          "simulationTime": 2.5,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0050.png",
+          "sha256": "7f52abae26e558a8d39a701043867f0b17a2c08e1fd874e7c177aed0d3a9ef33"
+        },
+        {
+          "frame": 51,
+          "clip": "walk_back",
+          "simulationTime": 2.5500000000000003,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0051.png",
+          "sha256": "eb08c5603609d2892e9deb93eb43b5ae3b1755cf4a3ec3eb226131946b3ea7ba"
+        },
+        {
+          "frame": 52,
+          "clip": "walk_back",
+          "simulationTime": 2.6,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0052.png",
+          "sha256": "a0891073454be5264aa4179ca0c0e4d339e1d6ccbe1a5a6602a72b273d71a41a"
+        },
+        {
+          "frame": 53,
+          "clip": "walk_back",
+          "simulationTime": 2.6500000000000004,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0053.png",
+          "sha256": "6dfa96707f03fd280ccd3dd570e4135c2297e9cff7c09b440ac98b86948321c2"
+        },
+        {
+          "frame": 54,
+          "clip": "strafe_l",
+          "simulationTime": 2.7,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0054.png",
+          "sha256": "41100bbdca85d8d1f5040250dcb0fe285ed385dbd7946b16aa8264e481999c3e"
+        },
+        {
+          "frame": 55,
+          "clip": "strafe_l",
+          "simulationTime": 2.75,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0055.png",
+          "sha256": "76bad8a769f3e9512d21afc429a4bc56adcf7ee659ad490be1d95c1f7445665c"
+        },
+        {
+          "frame": 56,
+          "clip": "strafe_l",
+          "simulationTime": 2.8000000000000003,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0056.png",
+          "sha256": "772df373421e28e535eb4f6d15836497579cbb68366722307f7ad1e4b945cfbe"
+        },
+        {
+          "frame": 57,
+          "clip": "strafe_l",
+          "simulationTime": 2.85,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0057.png",
+          "sha256": "8cbd2ad7867424d6bc83c21036699a562b17bcb324ef7dde54cae3ef797edb1a"
+        },
+        {
+          "frame": 58,
+          "clip": "strafe_l",
+          "simulationTime": 2.9000000000000004,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0058.png",
+          "sha256": "31e3e328b724e55343ce827881be2c3dff0ddfabb4cf22e3f56f4ecf0b60543e"
+        },
+        {
+          "frame": 59,
+          "clip": "strafe_l",
+          "simulationTime": 2.95,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0059.png",
+          "sha256": "d3041c871953598aefbe9c2e0af6179e9a1b7dbcdea4a92f4804acab5e8b92c3"
+        },
+        {
+          "frame": 60,
+          "clip": "strafe_l",
+          "simulationTime": 3,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0060.png",
+          "sha256": "264ec291934409ebadd1ff65de79fe2bd46c89991befeb8b814302827ad1daa1"
+        },
+        {
+          "frame": 61,
+          "clip": "strafe_l",
+          "simulationTime": 3.0500000000000003,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0061.png",
+          "sha256": "ba3b9486b542baab58e778b45207afc888feb40459788612d1b4bf287a428af1"
+        },
+        {
+          "frame": 62,
+          "clip": "strafe_l",
+          "simulationTime": 3.1,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0062.png",
+          "sha256": "5dd85ec55708636aa528d1f9be8000e9edf4afe42267407a2a6839c74524358d"
+        },
+        {
+          "frame": 63,
+          "clip": "strafe_l",
+          "simulationTime": 3.1500000000000004,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0063.png",
+          "sha256": "6d42d470cb469416f8e274eb55072eb34eb16290ef1df0b3f723f16ad447c5a8"
+        },
+        {
+          "frame": 64,
+          "clip": "strafe_l",
+          "simulationTime": 3.2,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0064.png",
+          "sha256": "8c821cd034bf4813d0d76de846ed930839aa4b99031795bdbcd0ef21e82a4297"
+        },
+        {
+          "frame": 65,
+          "clip": "strafe_l",
+          "simulationTime": 3.25,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0065.png",
+          "sha256": "ea1501eb8aac001e17af7e8fdb7263d570ec0f16c420832f3feb1ad1fc330343"
+        },
+        {
+          "frame": 66,
+          "clip": "strafe_l",
+          "simulationTime": 3.3000000000000003,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0066.png",
+          "sha256": "5323cee67b941faed97db139c5a05736dd4b7dcbcf70f2ab1498b8d9bab0331c"
+        },
+        {
+          "frame": 67,
+          "clip": "strafe_l",
+          "simulationTime": 3.35,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0067.png",
+          "sha256": "863ef6545b90e295a8a849960416c2a17dc16f3ef70030d0d29f0236dab4a47c"
+        },
+        {
+          "frame": 68,
+          "clip": "strafe_l",
+          "simulationTime": 3.4000000000000004,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0068.png",
+          "sha256": "b2096a7d7b97d525fa55aa6b1de6476b4d8ee8a1c10cfcb0bdbc932d5b186b51"
+        },
+        {
+          "frame": 69,
+          "clip": "strafe_l",
+          "simulationTime": 3.45,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0069.png",
+          "sha256": "0936a6f067a89bb7c66ab2ec52adf6b24c190297aadc0997f5e9d749284522a3"
+        },
+        {
+          "frame": 70,
+          "clip": "strafe_l",
+          "simulationTime": 3.5,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0070.png",
+          "sha256": "661264c2ede06e38441a5df7a609e82bb9f17de1aef172af5e6c0a29c46d04ed"
+        },
+        {
+          "frame": 71,
+          "clip": "strafe_l",
+          "simulationTime": 3.5500000000000003,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0071.png",
+          "sha256": "29e5a4a9a8e549c7af7f85f7a5ddae967bdc9347b7cfc0b9c2e320b5c9d19463"
+        },
+        {
+          "frame": 72,
+          "clip": "strafe_l",
+          "simulationTime": 3.6,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0072.png",
+          "sha256": "12c6622b0f195e8ad3abb3bb3414f697233aa08ba72b96ea43a22ae294120500"
+        },
+        {
+          "frame": 73,
+          "clip": "strafe_l",
+          "simulationTime": 3.6500000000000004,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0073.png",
+          "sha256": "83329d82f0c36e5e41708e3890b6fd249ee378f16a4c6b2d79d783dfe55827a2"
+        },
+        {
+          "frame": 74,
+          "clip": "strafe_r",
+          "simulationTime": 3.7,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0074.png",
+          "sha256": "cb1bfee1e33e7000d36d858db39c94b37018ea94e15b50862acd74e01d56cad9"
+        },
+        {
+          "frame": 75,
+          "clip": "strafe_r",
+          "simulationTime": 3.75,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0075.png",
+          "sha256": "369aa1c4c9982a3387d8c3dc0ffc9c771008f289b723dc0f7ec5f8ebd4bdb50c"
+        },
+        {
+          "frame": 76,
+          "clip": "strafe_r",
+          "simulationTime": 3.8000000000000003,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0076.png",
+          "sha256": "2fd679fff9177c88252ba32c9fafb803f60630e89fe9c31893933cab65facbd2"
+        },
+        {
+          "frame": 77,
+          "clip": "strafe_r",
+          "simulationTime": 3.85,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0077.png",
+          "sha256": "5d8ab332d2d161c97ef0280a77f80e1b723fef5691cc16736685638c7d1c890f"
+        },
+        {
+          "frame": 78,
+          "clip": "strafe_r",
+          "simulationTime": 3.9000000000000004,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0078.png",
+          "sha256": "4c53b14e0db0bec080b7639b32836a77112cdcfa9ade66786b478b53d1d9893c"
+        },
+        {
+          "frame": 79,
+          "clip": "strafe_r",
+          "simulationTime": 3.95,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0079.png",
+          "sha256": "a6fecb82a634d8e1c800d1c855a7e2e815d7ec85c3113cae1693f8cae5a393ac"
+        },
+        {
+          "frame": 80,
+          "clip": "strafe_r",
+          "simulationTime": 4,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0080.png",
+          "sha256": "bdaab8150bfcf834c51a9a5677aeb9dc7f3d14713ff6b79968dabe56829155ed"
+        },
+        {
+          "frame": 81,
+          "clip": "strafe_r",
+          "simulationTime": 4.05,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0081.png",
+          "sha256": "23124b2850d873de430280a1d500433683ba789dcf8d73bf383f98325b1faf27"
+        },
+        {
+          "frame": 82,
+          "clip": "strafe_r",
+          "simulationTime": 4.1000000000000005,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0082.png",
+          "sha256": "0581f995775959e8a8b21e63c4a0312ba181eaf0b13354c41e2394b6d431808f"
+        },
+        {
+          "frame": 83,
+          "clip": "strafe_r",
+          "simulationTime": 4.15,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0083.png",
+          "sha256": "a3a0ac2c7b073fab45ba616b5c3f3cf48dcfd5c9532a014ca158e29cf5871626"
+        },
+        {
+          "frame": 84,
+          "clip": "strafe_r",
+          "simulationTime": 4.2,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0084.png",
+          "sha256": "eaef74e545697eef9b31dd24ff8354a16cea0bce0afd8971f430760695f52f08"
+        },
+        {
+          "frame": 85,
+          "clip": "strafe_r",
+          "simulationTime": 4.25,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0085.png",
+          "sha256": "a3b78d0709eb3add8414e5e5ab66d7cda94df21839fb434a2400ca8b78ffb195"
+        },
+        {
+          "frame": 86,
+          "clip": "strafe_r",
+          "simulationTime": 4.3,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0086.png",
+          "sha256": "db635cb038699e5c00a48bb31ba2f8d808d2208f7671634790d737068c28e724"
+        },
+        {
+          "frame": 87,
+          "clip": "strafe_r",
+          "simulationTime": 4.3500000000000005,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0087.png",
+          "sha256": "68648d0819f38b202317c1efe070aafdc76ae75278c4127b2b9cd27f8528dbdb"
+        },
+        {
+          "frame": 88,
+          "clip": "strafe_r",
+          "simulationTime": 4.4,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0088.png",
+          "sha256": "14dd438734e6323b8096a66b61cae7d1e3cfbbe4f58f1dab90aa1b1febfc0fcf"
+        },
+        {
+          "frame": 89,
+          "clip": "strafe_r",
+          "simulationTime": 4.45,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0089.png",
+          "sha256": "ee3cb4fc6ab81fffd25f1e1dcea08622fdab8670a36345bd8fc1c602ff4e79df"
+        },
+        {
+          "frame": 90,
+          "clip": "strafe_r",
+          "simulationTime": 4.5,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0090.png",
+          "sha256": "9072c2aff0620910598be52d5bbae2de62d4dc8917ee2aad04d6f4a7e054f230"
+        },
+        {
+          "frame": 91,
+          "clip": "strafe_r",
+          "simulationTime": 4.55,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0091.png",
+          "sha256": "8f1c1771668664a1bd052627bd125216d59894a5a48c32d551f34dbb62993a21"
+        },
+        {
+          "frame": 92,
+          "clip": "strafe_r",
+          "simulationTime": 4.6000000000000005,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0092.png",
+          "sha256": "41f11b93374aa927e603b9df2b3a322d3cf3494f64284a33c789dc4844f621a4"
+        },
+        {
+          "frame": 93,
+          "clip": "strafe_r",
+          "simulationTime": 4.65,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0093.png",
+          "sha256": "a4bfd99a7f2feeed7b3550dfa4d0be0faed76713ab3f058b9812ee81bd0386fa"
+        },
+        {
+          "frame": 94,
+          "clip": "run",
+          "simulationTime": 4.7,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0094.png",
+          "sha256": "6c07c249c91125ee25f225dd8cf67e9c027dbb7315765bb0cf24101e6fe26905"
+        },
+        {
+          "frame": 95,
+          "clip": "run",
+          "simulationTime": 4.75,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0095.png",
+          "sha256": "e0b1d111522058cea686adfe394140c3c22c87f5c2e83b9bd71b486cefa1aae5"
+        },
+        {
+          "frame": 96,
+          "clip": "run",
+          "simulationTime": 4.800000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0096.png",
+          "sha256": "8c2156f758559d89cf9af312d366315c2bfddf1c8feaf76ec746b63df06300d3"
+        },
+        {
+          "frame": 97,
+          "clip": "run",
+          "simulationTime": 4.8500000000000005,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0097.png",
+          "sha256": "d4d4ab3285c216cb115fc7e7444cc3ea886470c6eee2c01b58cf7ca0f4aec173"
+        },
+        {
+          "frame": 98,
+          "clip": "run",
+          "simulationTime": 4.9,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0098.png",
+          "sha256": "d7445c8312886f9d19beee6d3cf5e529e40f777f10346ae070917c1593396559"
+        },
+        {
+          "frame": 99,
+          "clip": "run",
+          "simulationTime": 4.95,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0099.png",
+          "sha256": "8d329b996bf083dd13fce4ecb6ef895319ccb05cc0cdd5c1124ee24b8e38f1da"
+        },
+        {
+          "frame": 100,
+          "clip": "run",
+          "simulationTime": 5,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0100.png",
+          "sha256": "5d741ff9fb8d13e09838e8ad5b8eb18bc3edef5094540b24388ce8532707ae39"
+        },
+        {
+          "frame": 101,
+          "clip": "run",
+          "simulationTime": 5.050000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0101.png",
+          "sha256": "90c54cdb30e3fb3ad65e96e40e0b737d74f183d1ec6eaa51f534a804f65de30b"
+        },
+        {
+          "frame": 102,
+          "clip": "run",
+          "simulationTime": 5.1000000000000005,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0102.png",
+          "sha256": "1575fa777d7b7c455672a8deb00ab83badc9a1ec753f668de8ff202bd99dd8d6"
+        },
+        {
+          "frame": 103,
+          "clip": "run",
+          "simulationTime": 5.15,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0103.png",
+          "sha256": "107065f9bb5c2d3f96340337f33b1ebf685d5964a6b2f6dd5e909946ff671f38"
+        },
+        {
+          "frame": 104,
+          "clip": "run",
+          "simulationTime": 5.2,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0104.png",
+          "sha256": "7b04f5e64698644845addb24a6adf16590bec81a9e9ede72dd2b934f91f68342"
+        },
+        {
+          "frame": 105,
+          "clip": "run",
+          "simulationTime": 5.25,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0105.png",
+          "sha256": "03634decd492d07721ce7e18902ec63578117284722ba28646dfe497d3b8ab20"
+        },
+        {
+          "frame": 106,
+          "clip": "run",
+          "simulationTime": 5.300000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0106.png",
+          "sha256": "4e94edc783af75a5e6790a7333cb8f58e70cba595d85a0e37d2d0e4d5f1eaafc"
+        },
+        {
+          "frame": 107,
+          "clip": "run",
+          "simulationTime": 5.3500000000000005,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0107.png",
+          "sha256": "f118254865535bdcf894a2d07aab3f67142d37ac65e5b935ef7502f97c02f5d8"
+        },
+        {
+          "frame": 108,
+          "clip": "run",
+          "simulationTime": 5.4,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0108.png",
+          "sha256": "d09589cda08a3bb1477e3db4a6cacbc8f72fe5533d790a5ef508be0dddb62033"
+        },
+        {
+          "frame": 109,
+          "clip": "run",
+          "simulationTime": 5.45,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0109.png",
+          "sha256": "ed5270f8e1c81c065a9b3ce1e63dadd4ec2efed9a078720fda18c43a85b3ecfb"
+        },
+        {
+          "frame": 110,
+          "clip": "run",
+          "simulationTime": 5.5,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0110.png",
+          "sha256": "eaa55395f92cf271f08718a2eb6eac38b2250b49a683f468b7e5f9995fc92917"
+        },
+        {
+          "frame": 111,
+          "clip": "run",
+          "simulationTime": 5.550000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0111.png",
+          "sha256": "a389f4172b0ffe414eea220fb8d4e165867c1ba094eb2bb7e37f9cb40a896f20"
+        },
+        {
+          "frame": 112,
+          "clip": "run",
+          "simulationTime": 5.6000000000000005,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0112.png",
+          "sha256": "a75f5c6e8f8586284236680c193507cb8b26cb0fb919da21a81f94dfc016d9bf"
+        },
+        {
+          "frame": 113,
+          "clip": "run",
+          "simulationTime": 5.65,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0113.png",
+          "sha256": "d452ca65c92d278c1c088dde5e852a643f8e86a1588c7241eca9201bd20179af"
+        },
+        {
+          "frame": 114,
+          "clip": "run",
+          "simulationTime": 5.7,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0114.png",
+          "sha256": "cf610c8310cec3978431f194056780c98306b8519e52c44b0781a78943e8428f"
+        },
+        {
+          "frame": 115,
+          "clip": "run",
+          "simulationTime": 5.75,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0115.png",
+          "sha256": "79906a6f851ccbaa8821d9280a25f0e1624f824cb2eaf86100ef2c57ceb1c4a6"
+        },
+        {
+          "frame": 116,
+          "clip": "crouch",
+          "simulationTime": 5.800000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0116.png",
+          "sha256": "b0068d57cefcf984c211dd5c6e804db7b5a14a66121c55434c71b849673213fc"
+        },
+        {
+          "frame": 117,
+          "clip": "crouch",
+          "simulationTime": 5.8500000000000005,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0117.png",
+          "sha256": "7cb23e3bdbab108546fc49f1f88caea24fba5c3c73d34b17d0742e68e72c7166"
+        },
+        {
+          "frame": 118,
+          "clip": "crouch",
+          "simulationTime": 5.9,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0118.png",
+          "sha256": "a1b8ea3dd78280326544c2563e35674dbf2a08d0d8c9c4ee8bada78102bedc3e"
+        },
+        {
+          "frame": 119,
+          "clip": "crouch",
+          "simulationTime": 5.95,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0119.png",
+          "sha256": "5a0dbe61973b4e9b5e325d2184fae32738663c52a5ddd21177a0e502effdcaa9"
+        },
+        {
+          "frame": 120,
+          "clip": "crouch",
+          "simulationTime": 6,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0120.png",
+          "sha256": "ecc9f876ab33a4de3f47ffa15b8952e46839f32dd60caa3d9b901c1807dbd6b1"
+        },
+        {
+          "frame": 121,
+          "clip": "crouch",
+          "simulationTime": 6.050000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0121.png",
+          "sha256": "80eaa9a84ef18751669427a994e1ab32c598279af4d1e84dd55850188a6919d7"
+        },
+        {
+          "frame": 122,
+          "clip": "crouch",
+          "simulationTime": 6.1000000000000005,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0122.png",
+          "sha256": "df61c9a0169d7b673374fde37ccf1d55b7ed952320b6411977436a935588f6f7"
+        },
+        {
+          "frame": 123,
+          "clip": "crouch",
+          "simulationTime": 6.15,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0123.png",
+          "sha256": "0a7a83d630addafa16f30258c6c208285a3ea5da1d49d0eefdd0cfaedc720024"
+        },
+        {
+          "frame": 124,
+          "clip": "crouch",
+          "simulationTime": 6.2,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0124.png",
+          "sha256": "ccbd910edf30da50d97a947bbbf434b951c1c4245793a06837222e56319d32d4"
+        },
+        {
+          "frame": 125,
+          "clip": "crouch",
+          "simulationTime": 6.25,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0125.png",
+          "sha256": "ef3d9d3131a5ededc6eb8f4e8f16376504299fc72d6554cf6eeb19548b86085b"
+        },
+        {
+          "frame": 126,
+          "clip": "crouch_walk",
+          "simulationTime": 6.300000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0126.png",
+          "sha256": "12e2da6e9274fc5a916a23fb73ecc02588c7e2b553bb0a570f294f2a31d39b7a"
+        },
+        {
+          "frame": 127,
+          "clip": "crouch_walk",
+          "simulationTime": 6.3500000000000005,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0127.png",
+          "sha256": "eb6d3d21192b13a7613c3b5de85aaaa4a261dd2c5408dcf876c69b06fd572e9f"
+        },
+        {
+          "frame": 128,
+          "clip": "crouch_walk",
+          "simulationTime": 6.4,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0128.png",
+          "sha256": "3d05120ec5026cf2b041618c9ddde4b6380acafa60dcf60814a3b03c1fd49da0"
+        },
+        {
+          "frame": 129,
+          "clip": "crouch_walk",
+          "simulationTime": 6.45,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0129.png",
+          "sha256": "ce22202a5a9fc6cb77f416e204388ee117476bcacb93218ce32a5ab53f64440c"
+        },
+        {
+          "frame": 130,
+          "clip": "crouch_walk",
+          "simulationTime": 6.5,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0130.png",
+          "sha256": "0d8b1810ccd5069fc08909174014ba73bf1de23920f986a470f9b342de494690"
+        },
+        {
+          "frame": 131,
+          "clip": "crouch_walk",
+          "simulationTime": 6.550000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0131.png",
+          "sha256": "1c8b4e3447c7d7094ab7536d2adbf651dddd5303790c6a17da058d76110fa1e9"
+        },
+        {
+          "frame": 132,
+          "clip": "crouch_walk",
+          "simulationTime": 6.6000000000000005,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0132.png",
+          "sha256": "fc5f10652cdc351cda310026f3d9daa717b350f08a1e6e0a56622f9b2413b8f4"
+        },
+        {
+          "frame": 133,
+          "clip": "crouch_walk",
+          "simulationTime": 6.65,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0133.png",
+          "sha256": "58f353a80ad0c5cd11ea561cf08c7453e809f4cc755737375a377bfb28018a11"
+        },
+        {
+          "frame": 134,
+          "clip": "crouch_walk",
+          "simulationTime": 6.7,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0134.png",
+          "sha256": "78e03afea6e68e1ac77882941812ac263293236a853cb5a30410d698433b272d"
+        },
+        {
+          "frame": 135,
+          "clip": "crouch_walk",
+          "simulationTime": 6.75,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0135.png",
+          "sha256": "673e231a70749d1492021ca48fae9c4fc73fbdbea6f1e9c2d722db7e7fbbdccf"
+        },
+        {
+          "frame": 136,
+          "clip": "crouch_walk",
+          "simulationTime": 6.800000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0136.png",
+          "sha256": "61b7dadc0f6a084e284329bf6899079454ad76ebd8fd622a508ef3f76626c9d1"
+        },
+        {
+          "frame": 137,
+          "clip": "crouch_walk",
+          "simulationTime": 6.8500000000000005,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0137.png",
+          "sha256": "5eda2ed5e3e5f6d335ad67bde34d06c992ed7f82b0b92d0e795d08f350760db7"
+        },
+        {
+          "frame": 138,
+          "clip": "crouch_walk",
+          "simulationTime": 6.9,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0138.png",
+          "sha256": "1c5275822c7c15ba4f445f9743a2035ac222760059560dbdad6264d9a1a2009d"
+        },
+        {
+          "frame": 139,
+          "clip": "crouch_walk",
+          "simulationTime": 6.95,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0139.png",
+          "sha256": "002c0de75e0cd4c4f24845eed732c50bc378effda69ea45b93d9a4224e597da9"
+        },
+        {
+          "frame": 140,
+          "clip": "crouch_walk",
+          "simulationTime": 7,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0140.png",
+          "sha256": "4acdd8839849eb6f61ce52d5435fcecf430c9b9208c52251f80c3273eebcb2a9"
+        },
+        {
+          "frame": 141,
+          "clip": "crouch_walk",
+          "simulationTime": 7.050000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0141.png",
+          "sha256": "4ab37a7e0ccc4d474e18a71f7b0ce5bdcc01b6a6b295b04d1c917a880f3f06f6"
+        },
+        {
+          "frame": 142,
+          "clip": "crouch_walk",
+          "simulationTime": 7.1000000000000005,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0142.png",
+          "sha256": "26576bd2c29c6d8bb9b628db9e32e14bf8f8fb571a94555652abdb145eb949e4"
+        },
+        {
+          "frame": 143,
+          "clip": "crouch_walk",
+          "simulationTime": 7.15,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0143.png",
+          "sha256": "27ce65b49b2ece9176dc229a4ba8f7c1d35d1b0960f000e73accdb12e1321157"
+        },
+        {
+          "frame": 144,
+          "clip": "crouch_walk",
+          "simulationTime": 7.2,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0144.png",
+          "sha256": "309877b666ea64fad911baead006a6e3470b71fbd4be11ed693d58d0368cf49b"
+        },
+        {
+          "frame": 145,
+          "clip": "crouch_walk",
+          "simulationTime": 7.25,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0145.png",
+          "sha256": "9bac4069c2c808aa99c5276ad8195b33df8b091c12795995e21fce1c711265cd"
+        },
+        {
+          "frame": 146,
+          "clip": "crouch_walk",
+          "simulationTime": 7.300000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0146.png",
+          "sha256": "992f3abf74cde2e33f15b725be9fa37a06dfc8978c53c63c43eebe209cf77106"
+        },
+        {
+          "frame": 147,
+          "clip": "crouch_walk",
+          "simulationTime": 7.3500000000000005,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0147.png",
+          "sha256": "717ba2b839c881a18668a7e4f9e3c081498ca703e3d3f32e4c3cb8638636c2ac"
+        },
+        {
+          "frame": 148,
+          "clip": "jump_start",
+          "simulationTime": 7.4,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0148.png",
+          "sha256": "be62b64d446a3ba7f1ff7d85cf18bbbf21767ea83587a6926d3e7eb195c4066e"
+        },
+        {
+          "frame": 149,
+          "clip": "jump_start",
+          "simulationTime": 7.45,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0149.png",
+          "sha256": "493ec2a3aa17a518a9c3371b469a474e9c9ad6a34bb328f6f4a6adbbb1674474"
+        },
+        {
+          "frame": 150,
+          "clip": "jump_start",
+          "simulationTime": 7.5,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0150.png",
+          "sha256": "003390b017c2ec32af4c7ba8ae24e3b02e651f77b34e62226b8d7215158eacda"
+        },
+        {
+          "frame": 151,
+          "clip": "jump_start",
+          "simulationTime": 7.550000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0151.png",
+          "sha256": "2e23861af28b2668dd1e78e0a66c9d7cfb4928052947bec7d8a68b6df1fd6856"
+        },
+        {
+          "frame": 152,
+          "clip": "jump_loop",
+          "simulationTime": 7.6000000000000005,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0152.png",
+          "sha256": "a7a1c89e9996148461b8dec5d9209aa4920d0e9a063a436cd80e88384ecdd761"
+        },
+        {
+          "frame": 153,
+          "clip": "jump_loop",
+          "simulationTime": 7.65,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0153.png",
+          "sha256": "23872538a2c66538b47d009f6cb772e868f42d53ebca25abb49268433fe4c234"
+        },
+        {
+          "frame": 154,
+          "clip": "jump_loop",
+          "simulationTime": 7.7,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0154.png",
+          "sha256": "b1b69de25ef8dd2b59249fc2b0d0913acfbc7042a16f6d982d92bf4a254fad01"
+        },
+        {
+          "frame": 155,
+          "clip": "jump_loop",
+          "simulationTime": 7.75,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0155.png",
+          "sha256": "d266586c2258ab2e86d21455977cf1c1930b07360558d868124bb7ddb65d8a13"
+        },
+        {
+          "frame": 156,
+          "clip": "jump_loop",
+          "simulationTime": 7.800000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0156.png",
+          "sha256": "ae839ba89ec8e437d729be87533ecb03f19d281dd58f8dbd8967e22cbf90aa78"
+        },
+        {
+          "frame": 157,
+          "clip": "jump_loop",
+          "simulationTime": 7.8500000000000005,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0157.png",
+          "sha256": "cd8b8cb2d16bdf2e0c1c1f87e295c7ba66713094f1661f2c9ac4190de37a7682"
+        },
+        {
+          "frame": 158,
+          "clip": "jump_loop",
+          "simulationTime": 7.9,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0158.png",
+          "sha256": "ad347badcd9e15e2811caf6afe05c06c30b381af0b4152c235de824a459e30cb"
+        },
+        {
+          "frame": 159,
+          "clip": "jump_loop",
+          "simulationTime": 7.95,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0159.png",
+          "sha256": "e0f925f0213cf5c9fcf5bedcc833e7c34265b9c6e2c062ba96f8b45bf161270d"
+        },
+        {
+          "frame": 160,
+          "clip": "jump_loop",
+          "simulationTime": 8,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0160.png",
+          "sha256": "4d160046e4d41586e48cf64cc5a8fd9f1dc992a12c94ad4e9c5be08c01cb2f78"
+        },
+        {
+          "frame": 161,
+          "clip": "jump_loop",
+          "simulationTime": 8.05,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0161.png",
+          "sha256": "065f5951cf19b30c0d0a77b5e6b9865972e387bfa41ef249e28443f6279e3bb2"
+        },
+        {
+          "frame": 162,
+          "clip": "jump_loop",
+          "simulationTime": 8.1,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0162.png",
+          "sha256": "1fa52840497ac4361ac68cb75aaa7722dedf0964b7fb7f48022548977c4e8502"
+        },
+        {
+          "frame": 163,
+          "clip": "jump_loop",
+          "simulationTime": 8.15,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0163.png",
+          "sha256": "6cf7972f84cd8fbd8ec1742556fd040d7547717b3d3635ce45d9a09adfa21f8b"
+        },
+        {
+          "frame": 164,
+          "clip": "jump_loop",
+          "simulationTime": 8.200000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0164.png",
+          "sha256": "e3c2fc5deb41d450d630c56ec4f21508e35700dc1f6d86bcbfbbad7f63910cae"
+        },
+        {
+          "frame": 165,
+          "clip": "jump_loop",
+          "simulationTime": 8.25,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0165.png",
+          "sha256": "979c231b4fcf96822306bcd66993fd834d1cf862f127fe64dcf04cfb0d602314"
+        },
+        {
+          "frame": 166,
+          "clip": "jump_land",
+          "simulationTime": 8.3,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0166.png",
+          "sha256": "0d1dcd1b479662b577b1a491656ef9f9d0284b9300c4c3289e251830b8427198"
+        },
+        {
+          "frame": 167,
+          "clip": "jump_land",
+          "simulationTime": 8.35,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0167.png",
+          "sha256": "245e7b39868637c78b1599ee946276bd7841c7273734546aad98bae8368f420e"
+        },
+        {
+          "frame": 168,
+          "clip": "jump_land",
+          "simulationTime": 8.4,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0168.png",
+          "sha256": "9fba7fe5be33b5958fd43f4c830f6c05ef6e958740334047835d3ac3a07be104"
+        },
+        {
+          "frame": 169,
+          "clip": "jump_land",
+          "simulationTime": 8.450000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0169.png",
+          "sha256": "4e5d90b6e56fb1a6891541055b5de32ab56992356a36e993dde25e432251092d"
+        },
+        {
+          "frame": 170,
+          "clip": "reload",
+          "simulationTime": 8.5,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0170.png",
+          "sha256": "33a1870d03e727f9262e8aecda4b73e2a263cc75da0a95fcd2b5e031abb297d5"
+        },
+        {
+          "frame": 171,
+          "clip": "reload",
+          "simulationTime": 8.55,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0171.png",
+          "sha256": "f980524c540d0417228ec713afd4be717ffb209066762aaa2ca8fbc352dcdae9"
+        },
+        {
+          "frame": 172,
+          "clip": "reload",
+          "simulationTime": 8.6,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0172.png",
+          "sha256": "2f8308342cb2017cd2bc4fc7e44bdbd107e9743195922c3b5596b2748b952b7e"
+        },
+        {
+          "frame": 173,
+          "clip": "reload",
+          "simulationTime": 8.65,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0173.png",
+          "sha256": "8f026c3a4ca9264cc555bb22b22cdb81553921942c69b56e3f9b65bad195cc6e"
+        },
+        {
+          "frame": 174,
+          "clip": "reload",
+          "simulationTime": 8.700000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0174.png",
+          "sha256": "b93830e19e0fe55e67d8dd22b2d88255a36cd6a12212c019000fee78c85d4864"
+        },
+        {
+          "frame": 175,
+          "clip": "reload",
+          "simulationTime": 8.75,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0175.png",
+          "sha256": "d0f8149c0ad8a7c387529eac3a4d590ece1082f638e4e68a15fbff785458ba55"
+        },
+        {
+          "frame": 176,
+          "clip": "reload",
+          "simulationTime": 8.8,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0176.png",
+          "sha256": "4233cea4b9c005f2acabab4cfe980dad49981326de9a4544d27f05c447028702"
+        },
+        {
+          "frame": 177,
+          "clip": "reload",
+          "simulationTime": 8.85,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0177.png",
+          "sha256": "32ef7128dc5f338aef16ebbf5a30acc332d7237fee8c111422297283f564e1ef"
+        },
+        {
+          "frame": 178,
+          "clip": "reload",
+          "simulationTime": 8.9,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0178.png",
+          "sha256": "6d8c1b70d3c09c2301cb9eee9cb9bd664b47e74c19b7ae53f54ede939469b41a"
+        },
+        {
+          "frame": 179,
+          "clip": "reload",
+          "simulationTime": 8.950000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0179.png",
+          "sha256": "4d6426299e4e0a88a1142d2f39a3d74dcf85312346d100e734c92ddff402fd98"
+        },
+        {
+          "frame": 180,
+          "clip": "reload",
+          "simulationTime": 9,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0180.png",
+          "sha256": "ab5ead6fa4b9b95f799d1d2f203658aead2d5a378d0db0e9d6cba43ce1c94607"
+        },
+        {
+          "frame": 181,
+          "clip": "reload",
+          "simulationTime": 9.05,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0181.png",
+          "sha256": "621fa1e734e615d9ac420997dec19cbb1b1d31386392323a99a9f20408352240"
+        },
+        {
+          "frame": 182,
+          "clip": "reload",
+          "simulationTime": 9.1,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0182.png",
+          "sha256": "e6fcb44b50b77a7fbe73282416a61e6a6c425d26bab324a1e93143cff5891bc8"
+        },
+        {
+          "frame": 183,
+          "clip": "reload",
+          "simulationTime": 9.15,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0183.png",
+          "sha256": "b86a146e9b2352d50d9b1255482e2ddd8fd66e20419f81b1ea4ad46ed3b65ec2"
+        },
+        {
+          "frame": 184,
+          "clip": "reload",
+          "simulationTime": 9.200000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0184.png",
+          "sha256": "829b035b8a62495d1fbef4ff5305f678f358f28e7dfc2f67704a9dd117946abc"
+        },
+        {
+          "frame": 185,
+          "clip": "reload",
+          "simulationTime": 9.25,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0185.png",
+          "sha256": "438be874883fac44b0ff7794896d5c50633614d4c1b0b0d3de1ce248d16557a3"
+        },
+        {
+          "frame": 186,
+          "clip": "reload",
+          "simulationTime": 9.3,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0186.png",
+          "sha256": "bc41790e357d26136cfcb198acee533ec212b3462739cc1f6c9559bbb56b2695"
+        },
+        {
+          "frame": 187,
+          "clip": "reload",
+          "simulationTime": 9.35,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0187.png",
+          "sha256": "db48392f4e1ee0feabb25dd8320f7e19b1dc34b6fd88bff703a87e7ea4981c4d"
+        },
+        {
+          "frame": 188,
+          "clip": "reload",
+          "simulationTime": 9.4,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0188.png",
+          "sha256": "5996052cd81953b5c97db65025d7c0de4bd56a665d919d90259dc7c646a13949"
+        },
+        {
+          "frame": 189,
+          "clip": "reload",
+          "simulationTime": 9.450000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0189.png",
+          "sha256": "1726fdf9f8902bd48bcd031d339b2cbc0dc9b441d2bfadb528e04d56b5acfeb2"
+        },
+        {
+          "frame": 190,
+          "clip": "reload",
+          "simulationTime": 9.5,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0190.png",
+          "sha256": "8c378c5d9f69326495a42e9529e703ded7f9a2a558d10144767febc4cdcb3eae"
+        },
+        {
+          "frame": 191,
+          "clip": "reload",
+          "simulationTime": 9.55,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0191.png",
+          "sha256": "f63f6e8b417e7459336bfa2a612a46f78424595ff627bbf14210891e9c918e3e"
+        },
+        {
+          "frame": 192,
+          "clip": "reload",
+          "simulationTime": 9.600000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0192.png",
+          "sha256": "847e3c7ecc904c035ed86b043f3d6ac29d4ea5bba5a45c950675f4022108d1ff"
+        },
+        {
+          "frame": 193,
+          "clip": "reload",
+          "simulationTime": 9.65,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0193.png",
+          "sha256": "a7683e0008a745b0b79ae240c0c501aef6955972d9f04ccb70d63debc92128f9"
+        },
+        {
+          "frame": 194,
+          "clip": "reload",
+          "simulationTime": 9.700000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0194.png",
+          "sha256": "0bc5416c7b709d9b41bb9527e05f4fdc530ca82df3c92a7f3e6f35b3f95225c3"
+        },
+        {
+          "frame": 195,
+          "clip": "reload",
+          "simulationTime": 9.75,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0195.png",
+          "sha256": "745c1418dffcb6cc86c76a84c389eecb36f0181eaf01ebc43520826d292ca262"
+        },
+        {
+          "frame": 196,
+          "clip": "reload",
+          "simulationTime": 9.8,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0196.png",
+          "sha256": "1e75b367a63ca9d3cde536800a8b4f0acd44f24774d227c8571cfbc31fe11919"
+        },
+        {
+          "frame": 197,
+          "clip": "reload",
+          "simulationTime": 9.850000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0197.png",
+          "sha256": "60fe16aabe58a9331f4dca506728af8efa099646320503a1e78af5adc99bc724"
+        },
+        {
+          "frame": 198,
+          "clip": "reload",
+          "simulationTime": 9.9,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0198.png",
+          "sha256": "b437d1aef8efcb6bf3adfb1100f2caed315791739dc633dcd0669da8f40c1ceb"
+        },
+        {
+          "frame": 199,
+          "clip": "reload",
+          "simulationTime": 9.950000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0199.png",
+          "sha256": "c2babca721bfdcf27015f153483fbee5c7894a8eabea6c340e51b8f273c636d4"
+        },
+        {
+          "frame": 200,
+          "clip": "reload",
+          "simulationTime": 10,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0200.png",
+          "sha256": "69bf9b374682900ac820070bacdf064cf84cb4b9bff274308d06f50c91c0c0c5"
+        },
+        {
+          "frame": 201,
+          "clip": "reload",
+          "simulationTime": 10.05,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0201.png",
+          "sha256": "1ccc85b13415aab5952910b478dc811b399499f91e7ed725014854e35874ecfc"
+        },
+        {
+          "frame": 202,
+          "clip": "reload",
+          "simulationTime": 10.100000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0202.png",
+          "sha256": "3b7764ae89bc7899c4700747970d93d9e1339e1ccf2c2b000e0e9050c5b6e994"
+        },
+        {
+          "frame": 203,
+          "clip": "reload",
+          "simulationTime": 10.15,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0203.png",
+          "sha256": "4ea706119e4d6cff8481624b5b11b329955d004ba30bc613ccd8d85ba01535c4"
+        },
+        {
+          "frame": 204,
+          "clip": "reload",
+          "simulationTime": 10.200000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0204.png",
+          "sha256": "46346e182ad7b9dad3c6971659051e5b22f79a5a2cffbca5ee79c980f8ec4795"
+        },
+        {
+          "frame": 205,
+          "clip": "reload",
+          "simulationTime": 10.25,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0205.png",
+          "sha256": "9172b98cc4c39c37ffaef6eac110f3f0622c9c8ccb949f5788e018dc9e31e033"
+        },
+        {
+          "frame": 206,
+          "clip": "idle",
+          "simulationTime": 10.3,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0206.png",
+          "sha256": "8c33b87efca4269a0964ba36b302d7682c8f084e597d6f90e682a6d76de4e193"
+        },
+        {
+          "frame": 207,
+          "clip": "idle",
+          "simulationTime": 10.350000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0207.png",
+          "sha256": "ccc37add14d68957964b7926d7ff0350e1f5d0786827c3bc65d468bbb4af56ff"
+        },
+        {
+          "frame": 208,
+          "clip": "idle",
+          "simulationTime": 10.4,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0208.png",
+          "sha256": "6f123df2d93f3d60babe9ed16d4bb523fd0aabdccb4c8472ab1f4bd9eb59e773"
+        },
+        {
+          "frame": 209,
+          "clip": "idle",
+          "simulationTime": 10.450000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0209.png",
+          "sha256": "5c1acca349b747f7a0ab8b59d1fb23ef292d7c07c59788c21152b588676ccc04"
+        },
+        {
+          "frame": 210,
+          "clip": "idle",
+          "simulationTime": 10.5,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0210.png",
+          "sha256": "29989a8974281b50ae4ddeb134f9c06a591d221e777578204b64bb80390f6b47"
+        },
+        {
+          "frame": 211,
+          "clip": "idle",
+          "simulationTime": 10.55,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0211.png",
+          "sha256": "322a1b7b45cae7b15c0ff22c0602a915087d49d444dc4ab0dbf6317a5eab20c8"
+        },
+        {
+          "frame": 212,
+          "clip": "idle",
+          "simulationTime": 10.600000000000001,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0212.png",
+          "sha256": "f9d811186c6f694e2a088a602b10628fe735c624cf106d6d7daa81dad5db81a0"
+        },
+        {
+          "frame": 213,
+          "clip": "idle",
+          "simulationTime": 10.65,
+          "image": ".planning/research/.cache/06-art/animation-baseline/run-0-low-1-0213.png",
+          "sha256": "ae2f493b9897fd7dbf0cf74fd81160488bf0b839e2ade89fbb558da096946742"
+        }
+      ],
+      "transitions": [
+        "idle",
+        "walk",
+        "walk_back",
+        "strafe_l",
+        "strafe_r",
+        "run",
+        "crouch",
+        "crouch_walk",
+        "jump_start",
+        "jump_loop",
+        "jump_land",
+        "reload",
+        "idle"
+      ],
+      "timings": {
+        "frameIntervalMs": {
+          "median": 168.5,
+          "p95": 176.29999999701977,
+          "min": 1.1000000014901161,
+          "max": 5116.79999999702
+        },
+        "mixerMs": {
+          "median": 0.10000000149011612,
+          "p95": 0.20000000298023224,
+          "min": 0,
+          "max": 4.299999997019768
+        },
+        "inertiaMs": {
+          "median": 0,
+          "p95": 0.10000000149011612,
+          "min": 0,
+          "max": 0.20000000298023224
+        },
+        "correctionMs": {
+          "median": 0,
+          "p95": 0.10000000149011612,
+          "min": 0,
+          "max": 0.4000000059604645
+        },
+        "renderMs": {
+          "median": 1.2000000029802322,
+          "p95": 1.5,
+          "min": 0.6000000014901161,
+          "max": 8.799999997019768
+        }
+      },
+      "frameCount": 214,
+      "warmupFrames": 12,
+      "simulationStepSeconds": 0.05,
+      "durationMs": 81224.09999999404,
+      "viewport": [
+        1280,
+        960
+      ],
+      "dpr": 1,
+      "renderer": "WebKit WebGL",
+      "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "resourceSamples": [
+        {
+          "geometries": 75,
+          "textures": 59,
+          "programs": 10
+        },
+        {
+          "geometries": 75,
+          "textures": 59,
+          "programs": 10
+        },
+        {
+          "geometries": 75,
+          "textures": 59,
+          "programs": 10
+        },
+        {
+          "geometries": 75,
+          "textures": 59,
+          "programs": 10
+        },
+        {
+          "geometries": 75,
+          "textures": 59,
+          "programs": 10
+        },
+        {
+          "geometries": 75,
+          "textures": 59,
+          "programs": 10
+        },
+        {
+          "geometries": 75,
+          "textures": 59,
+          "programs": 10
+        },
+        {
+          "geometries": 75,
+          "textures": 59,
+          "programs": 10
+        }
+      ],
+      "ownership": {
+        "sharedGeometries": 51,
+        "sharedMaps": 9,
+        "actorGeometries": 13,
+        "actorSkeletons": 51,
+        "actorMixers": 1,
+        "listeners": 60,
+        "mixerListeners": 0,
+        "callbacks": 0,
+        "props": 1
+      },
+      "afterRetirement": {
+        "listeners": 0,
+        "callbacks": 0,
+        "props": 0,
+        "actors": 0,
+        "activeBindings": 0,
+        "resources": {
+          "geometries": 70,
+          "textures": 8,
+          "programs": 9
+        }
+      }
+    },
+    {
+      "run": 1,
+      "browser": "147.0.7727.15",
+      "sourceIdentitySha256": "5e34f928033247b119e2a4f55531d5b8a5c7cfd3c006a9a2382030de77f50494",
+      "restored": true,
+      "tier": "low",
+      "actorCount": 8,
+      "human": true,
+      "packedMaps": 9,
+      "keeperIntact": true,
+      "sharedDisposals": 0,
+      "movingPoseCount": 211,
+      "sequence": [],
+      "transitions": [
+        "idle",
+        "walk",
+        "walk_back",
+        "strafe_l",
+        "strafe_r",
+        "run",
+        "crouch",
+        "crouch_walk",
+        "jump_start",
+        "jump_loop",
+        "jump_land",
+        "reload",
+        "idle"
+      ],
+      "timings": {
+        "frameIntervalMs": {
+          "median": 414.5,
+          "p95": 434.8999999985099,
+          "min": 8,
+          "max": 11999.5
+        },
+        "mixerMs": {
+          "median": 0.19999999552965164,
+          "p95": 0.30000000447034836,
+          "min": 0,
+          "max": 0.5
+        },
+        "inertiaMs": {
+          "median": 0,
+          "p95": 0.19999999552965164,
+          "min": 0,
+          "max": 0.4000000059604645
+        },
+        "correctionMs": {
+          "median": 0,
+          "p95": 0.10000000149011612,
+          "min": 0,
+          "max": 0.6000000014901161
+        },
+        "renderMs": {
+          "median": 4.5999999940395355,
+          "p95": 4.899999998509884,
+          "min": 4.100000001490116,
+          "max": 7.100000001490116
+        }
+      },
+      "frameCount": 214,
+      "warmupFrames": 12,
+      "simulationStepSeconds": 0.05,
+      "durationMs": 100525.30000000447,
+      "viewport": [
+        1280,
+        960
+      ],
+      "dpr": 1,
+      "renderer": "WebKit WebGL",
+      "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "resourceSamples": [
+        {
+          "geometries": 110,
+          "textures": 416,
+          "programs": 10
+        },
+        {
+          "geometries": 110,
+          "textures": 416,
+          "programs": 10
+        },
+        {
+          "geometries": 110,
+          "textures": 416,
+          "programs": 10
+        },
+        {
+          "geometries": 110,
+          "textures": 416,
+          "programs": 10
+        },
+        {
+          "geometries": 110,
+          "textures": 416,
+          "programs": 10
+        },
+        {
+          "geometries": 110,
+          "textures": 416,
+          "programs": 10
+        },
+        {
+          "geometries": 110,
+          "textures": 416,
+          "programs": 10
+        },
+        {
+          "geometries": 110,
+          "textures": 416,
+          "programs": 10
+        }
+      ],
+      "ownership": {
+        "sharedGeometries": 51,
+        "sharedMaps": 9,
+        "actorGeometries": 104,
+        "actorSkeletons": 408,
+        "actorMixers": 8,
+        "listeners": 60,
+        "mixerListeners": 0,
+        "callbacks": 0,
+        "props": 8
+      },
+      "afterRetirement": {
+        "listeners": 0,
+        "callbacks": 0,
+        "props": 0,
+        "actors": 0,
+        "activeBindings": 0,
+        "resources": {
+          "geometries": 70,
+          "textures": 8,
+          "programs": 9
+        }
+      }
+    },
+    {
+      "run": 1,
+      "browser": "147.0.7727.15",
+      "sourceIdentitySha256": "5e34f928033247b119e2a4f55531d5b8a5c7cfd3c006a9a2382030de77f50494",
+      "restored": true,
+      "tier": "medium",
+      "actorCount": 1,
+      "human": true,
+      "packedMaps": 9,
+      "keeperIntact": true,
+      "sharedDisposals": 0,
+      "movingPoseCount": 211,
+      "sequence": [],
+      "transitions": [
+        "idle",
+        "walk",
+        "walk_back",
+        "strafe_l",
+        "strafe_r",
+        "run",
+        "crouch",
+        "crouch_walk",
+        "jump_start",
+        "jump_loop",
+        "jump_land",
+        "reload",
+        "idle"
+      ],
+      "timings": {
+        "frameIntervalMs": {
+          "median": 190.5,
+          "p95": 198.5,
+          "min": 3.6999999955296516,
+          "max": 5680.9000000059605
+        },
+        "mixerMs": {
+          "median": 0,
+          "p95": 0.10000000149011612,
+          "min": 0,
+          "max": 0.19999999552965164
+        },
+        "inertiaMs": {
+          "median": 0,
+          "p95": 0,
+          "min": 0,
+          "max": 0.10000000149011612
+        },
+        "correctionMs": {
+          "median": 0,
+          "p95": 0.10000000149011612,
+          "min": 0,
+          "max": 0.19999999552965164
+        },
+        "renderMs": {
+          "median": 2.3000000044703484,
+          "p95": 3.399999998509884,
+          "min": 2.0999999940395355,
+          "max": 5.300000004470348
+        }
+      },
+      "frameCount": 214,
+      "warmupFrames": 12,
+      "simulationStepSeconds": 0.05,
+      "durationMs": 46458,
+      "viewport": [
+        1280,
+        960
+      ],
+      "dpr": 1,
+      "renderer": "WebKit WebGL",
+      "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "resourceSamples": [
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        },
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        },
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        },
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        },
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        },
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        },
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        },
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        }
+      ],
+      "ownership": {
+        "sharedGeometries": 51,
+        "sharedMaps": 9,
+        "actorGeometries": 13,
+        "actorSkeletons": 51,
+        "actorMixers": 1,
+        "listeners": 60,
+        "mixerListeners": 0,
+        "callbacks": 0,
+        "props": 1
+      },
+      "afterRetirement": {
+        "listeners": 0,
+        "callbacks": 0,
+        "props": 0,
+        "actors": 0,
+        "activeBindings": 0,
+        "resources": {
+          "geometries": 138,
+          "textures": 9,
+          "programs": 11
+        }
+      }
+    },
+    {
+      "run": 1,
+      "browser": "147.0.7727.15",
+      "sourceIdentitySha256": "5e34f928033247b119e2a4f55531d5b8a5c7cfd3c006a9a2382030de77f50494",
+      "restored": true,
+      "tier": "medium",
+      "actorCount": 8,
+      "human": true,
+      "packedMaps": 9,
+      "keeperIntact": true,
+      "sharedDisposals": 0,
+      "movingPoseCount": 211,
+      "sequence": [],
+      "transitions": [
+        "idle",
+        "walk",
+        "walk_back",
+        "strafe_l",
+        "strafe_r",
+        "run",
+        "crouch",
+        "crouch_walk",
+        "jump_start",
+        "jump_loop",
+        "jump_land",
+        "reload",
+        "idle"
+      ],
+      "timings": {
+        "frameIntervalMs": {
+          "median": 485.59999999403954,
+          "p95": 502.6000000014901,
+          "min": 10.5,
+          "max": 14056.10000000149
+        },
+        "mixerMs": {
+          "median": 0.19999999552965164,
+          "p95": 0.30000000447034836,
+          "min": 0.09999999403953552,
+          "max": 0.6000000014901161
+        },
+        "inertiaMs": {
+          "median": 0,
+          "p95": 0.10000000149011612,
+          "min": 0,
+          "max": 0.30000000447034836
+        },
+        "correctionMs": {
+          "median": 0,
+          "p95": 0.10000000149011612,
+          "min": 0,
+          "max": 0.6999999955296516
+        },
+        "renderMs": {
+          "median": 8.600000001490116,
+          "p95": 9.699999995529652,
+          "min": 7.800000004470348,
+          "max": 16.100000001490116
+        }
+      },
+      "frameCount": 214,
+      "warmupFrames": 12,
+      "simulationStepSeconds": 0.05,
+      "durationMs": 118260.89999999851,
+      "viewport": [
+        1280,
+        960
+      ],
+      "dpr": 1,
+      "renderer": "WebKit WebGL",
+      "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "resourceSamples": [
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        },
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        },
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        },
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        },
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        },
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        },
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        },
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        }
+      ],
+      "ownership": {
+        "sharedGeometries": 51,
+        "sharedMaps": 9,
+        "actorGeometries": 104,
+        "actorSkeletons": 408,
+        "actorMixers": 8,
+        "listeners": 60,
+        "mixerListeners": 0,
+        "callbacks": 0,
+        "props": 8
+      },
+      "afterRetirement": {
+        "listeners": 0,
+        "callbacks": 0,
+        "props": 0,
+        "actors": 0,
+        "activeBindings": 0,
+        "resources": {
+          "geometries": 138,
+          "textures": 9,
+          "programs": 11
+        }
+      }
+    },
+    {
+      "run": 1,
+      "browser": "147.0.7727.15",
+      "sourceIdentitySha256": "5e34f928033247b119e2a4f55531d5b8a5c7cfd3c006a9a2382030de77f50494",
+      "restored": true,
+      "tier": "high",
+      "actorCount": 1,
+      "human": true,
+      "packedMaps": 9,
+      "keeperIntact": true,
+      "sharedDisposals": 0,
+      "movingPoseCount": 211,
+      "sequence": [],
+      "transitions": [
+        "idle",
+        "walk",
+        "walk_back",
+        "strafe_l",
+        "strafe_r",
+        "run",
+        "crouch",
+        "crouch_walk",
+        "jump_start",
+        "jump_loop",
+        "jump_land",
+        "reload",
+        "idle"
+      ],
+      "timings": {
+        "frameIntervalMs": {
+          "median": 192,
+          "p95": 203,
+          "min": 2.399999998509884,
+          "max": 5871.9000000059605
+        },
+        "mixerMs": {
+          "median": 0,
+          "p95": 0.10000000149011612,
+          "min": 0,
+          "max": 0.20000000298023224
+        },
+        "inertiaMs": {
+          "median": 0,
+          "p95": 0,
+          "min": 0,
+          "max": 0.10000000149011612
+        },
+        "correctionMs": {
+          "median": 0,
+          "p95": 0.10000000149011612,
+          "min": 0,
+          "max": 0.10000000149011612
+        },
+        "renderMs": {
+          "median": 2.399999998509884,
+          "p95": 2.8000000044703484,
+          "min": 2.1999999955296516,
+          "max": 5.300000004470348
+        }
+      },
+      "frameCount": 214,
+      "warmupFrames": 12,
+      "simulationStepSeconds": 0.05,
+      "durationMs": 47062.89999999851,
+      "viewport": [
+        1280,
+        960
+      ],
+      "dpr": 1,
+      "renderer": "WebKit WebGL",
+      "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "resourceSamples": [
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        },
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        },
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        },
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        },
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        },
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        },
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        },
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        }
+      ],
+      "ownership": {
+        "sharedGeometries": 51,
+        "sharedMaps": 9,
+        "actorGeometries": 13,
+        "actorSkeletons": 51,
+        "actorMixers": 1,
+        "listeners": 60,
+        "mixerListeners": 0,
+        "callbacks": 0,
+        "props": 1
+      },
+      "afterRetirement": {
+        "listeners": 0,
+        "callbacks": 0,
+        "props": 0,
+        "actors": 0,
+        "activeBindings": 0,
+        "resources": {
+          "geometries": 138,
+          "textures": 9,
+          "programs": 11
+        }
+      }
+    },
+    {
+      "run": 1,
+      "browser": "147.0.7727.15",
+      "sourceIdentitySha256": "5e34f928033247b119e2a4f55531d5b8a5c7cfd3c006a9a2382030de77f50494",
+      "restored": true,
+      "tier": "high",
+      "actorCount": 8,
+      "human": true,
+      "packedMaps": 9,
+      "keeperIntact": true,
+      "sharedDisposals": 0,
+      "movingPoseCount": 211,
+      "sequence": [],
+      "transitions": [
+        "idle",
+        "walk",
+        "walk_back",
+        "strafe_l",
+        "strafe_r",
+        "run",
+        "crouch",
+        "crouch_walk",
+        "jump_start",
+        "jump_loop",
+        "jump_land",
+        "reload",
+        "idle"
+      ],
+      "timings": {
+        "frameIntervalMs": {
+          "median": 486.69999999552965,
+          "p95": 503.69999999552965,
+          "min": 16,
+          "max": 13818.90000000596
+        },
+        "mixerMs": {
+          "median": 0.20000000298023224,
+          "p95": 0.30000000447034836,
+          "min": 0,
+          "max": 0.5
+        },
+        "inertiaMs": {
+          "median": 0,
+          "p95": 0.10000000149011612,
+          "min": 0,
+          "max": 0.4000000059604645
+        },
+        "correctionMs": {
+          "median": 0,
+          "p95": 0.10000000149011612,
+          "min": 0,
+          "max": 0.6000000014901161
+        },
+        "renderMs": {
+          "median": 8.700000002980232,
+          "p95": 9.600000001490116,
+          "min": 8.200000002980232,
+          "max": 15.600000001490116
+        }
+      },
+      "frameCount": 214,
+      "warmupFrames": 12,
+      "simulationStepSeconds": 0.05,
+      "durationMs": 117972.70000000298,
+      "viewport": [
+        1280,
+        960
+      ],
+      "dpr": 1,
+      "renderer": "WebKit WebGL",
+      "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "resourceSamples": [
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        },
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        },
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        },
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        },
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        },
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        },
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        },
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        }
+      ],
+      "ownership": {
+        "sharedGeometries": 51,
+        "sharedMaps": 9,
+        "actorGeometries": 104,
+        "actorSkeletons": 408,
+        "actorMixers": 8,
+        "listeners": 60,
+        "mixerListeners": 0,
+        "callbacks": 0,
+        "props": 8
+      },
+      "afterRetirement": {
+        "listeners": 0,
+        "callbacks": 0,
+        "props": 0,
+        "actors": 0,
+        "activeBindings": 0,
+        "resources": {
+          "geometries": 138,
+          "textures": 9,
+          "programs": 11
+        }
+      }
+    },
+    {
+      "run": 2,
+      "browser": "147.0.7727.15",
+      "sourceIdentitySha256": "5e34f928033247b119e2a4f55531d5b8a5c7cfd3c006a9a2382030de77f50494",
+      "restored": true,
+      "tier": "low",
+      "actorCount": 1,
+      "human": true,
+      "packedMaps": 9,
+      "keeperIntact": true,
+      "sharedDisposals": 0,
+      "movingPoseCount": 211,
+      "sequence": [],
+      "transitions": [
+        "idle",
+        "walk",
+        "walk_back",
+        "strafe_l",
+        "strafe_r",
+        "run",
+        "crouch",
+        "crouch_walk",
+        "jump_start",
+        "jump_loop",
+        "jump_land",
+        "reload",
+        "idle"
+      ],
+      "timings": {
+        "frameIntervalMs": {
+          "median": 177.19999999552965,
+          "p95": 187.19999999552965,
+          "min": 1.1000000014901161,
+          "max": 5680.60000000149
+        },
+        "mixerMs": {
+          "median": 0,
+          "p95": 0.10000000149011612,
+          "min": 0,
+          "max": 0.20000000298023224
+        },
+        "inertiaMs": {
+          "median": 0,
+          "p95": 0.10000000149011612,
+          "min": 0,
+          "max": 0.20000000298023224
+        },
+        "correctionMs": {
+          "median": 0,
+          "p95": 0.10000000149011612,
+          "min": 0,
+          "max": 0.5
+        },
+        "renderMs": {
+          "median": 1.2000000029802322,
+          "p95": 1.6000000014901161,
+          "min": 0.6000000014901161,
+          "max": 7.299999997019768
+        }
+      },
+      "frameCount": 214,
+      "warmupFrames": 12,
+      "simulationStepSeconds": 0.05,
+      "durationMs": 43774.79999999702,
+      "viewport": [
+        1280,
+        960
+      ],
+      "dpr": 1,
+      "renderer": "WebKit WebGL",
+      "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "resourceSamples": [
+        {
+          "geometries": 75,
+          "textures": 59,
+          "programs": 10
+        },
+        {
+          "geometries": 75,
+          "textures": 59,
+          "programs": 10
+        },
+        {
+          "geometries": 75,
+          "textures": 59,
+          "programs": 10
+        },
+        {
+          "geometries": 75,
+          "textures": 59,
+          "programs": 10
+        },
+        {
+          "geometries": 75,
+          "textures": 59,
+          "programs": 10
+        },
+        {
+          "geometries": 75,
+          "textures": 59,
+          "programs": 10
+        },
+        {
+          "geometries": 75,
+          "textures": 59,
+          "programs": 10
+        },
+        {
+          "geometries": 75,
+          "textures": 59,
+          "programs": 10
+        }
+      ],
+      "ownership": {
+        "sharedGeometries": 51,
+        "sharedMaps": 9,
+        "actorGeometries": 13,
+        "actorSkeletons": 51,
+        "actorMixers": 1,
+        "listeners": 60,
+        "mixerListeners": 0,
+        "callbacks": 0,
+        "props": 1
+      },
+      "afterRetirement": {
+        "listeners": 0,
+        "callbacks": 0,
+        "props": 0,
+        "actors": 0,
+        "activeBindings": 0,
+        "resources": {
+          "geometries": 70,
+          "textures": 8,
+          "programs": 9
+        }
+      }
+    },
+    {
+      "run": 2,
+      "browser": "147.0.7727.15",
+      "sourceIdentitySha256": "5e34f928033247b119e2a4f55531d5b8a5c7cfd3c006a9a2382030de77f50494",
+      "restored": true,
+      "tier": "low",
+      "actorCount": 8,
+      "human": true,
+      "packedMaps": 9,
+      "keeperIntact": true,
+      "sharedDisposals": 0,
+      "movingPoseCount": 211,
+      "sequence": [],
+      "transitions": [
+        "idle",
+        "walk",
+        "walk_back",
+        "strafe_l",
+        "strafe_r",
+        "run",
+        "crouch",
+        "crouch_walk",
+        "jump_start",
+        "jump_loop",
+        "jump_land",
+        "reload",
+        "idle"
+      ],
+      "timings": {
+        "frameIntervalMs": {
+          "median": 420,
+          "p95": 434.3999999985099,
+          "min": 7.800000004470348,
+          "max": 12212
+        },
+        "mixerMs": {
+          "median": 0.20000000298023224,
+          "p95": 0.30000000447034836,
+          "min": 0,
+          "max": 1
+        },
+        "inertiaMs": {
+          "median": 0,
+          "p95": 0.10000000149011612,
+          "min": 0,
+          "max": 0.30000000447034836
+        },
+        "correctionMs": {
+          "median": 0,
+          "p95": 0.10000000149011612,
+          "min": 0,
+          "max": 0.8999999985098839
+        },
+        "renderMs": {
+          "median": 4.600000001490116,
+          "p95": 5.199999995529652,
+          "min": 4,
+          "max": 7
+        }
+      },
+      "frameCount": 214,
+      "warmupFrames": 12,
+      "simulationStepSeconds": 0.05,
+      "durationMs": 101820.5,
+      "viewport": [
+        1280,
+        960
+      ],
+      "dpr": 1,
+      "renderer": "WebKit WebGL",
+      "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "resourceSamples": [
+        {
+          "geometries": 110,
+          "textures": 416,
+          "programs": 10
+        },
+        {
+          "geometries": 110,
+          "textures": 416,
+          "programs": 10
+        },
+        {
+          "geometries": 110,
+          "textures": 416,
+          "programs": 10
+        },
+        {
+          "geometries": 110,
+          "textures": 416,
+          "programs": 10
+        },
+        {
+          "geometries": 110,
+          "textures": 416,
+          "programs": 10
+        },
+        {
+          "geometries": 110,
+          "textures": 416,
+          "programs": 10
+        },
+        {
+          "geometries": 110,
+          "textures": 416,
+          "programs": 10
+        },
+        {
+          "geometries": 110,
+          "textures": 416,
+          "programs": 10
+        }
+      ],
+      "ownership": {
+        "sharedGeometries": 51,
+        "sharedMaps": 9,
+        "actorGeometries": 104,
+        "actorSkeletons": 408,
+        "actorMixers": 8,
+        "listeners": 60,
+        "mixerListeners": 0,
+        "callbacks": 0,
+        "props": 8
+      },
+      "afterRetirement": {
+        "listeners": 0,
+        "callbacks": 0,
+        "props": 0,
+        "actors": 0,
+        "activeBindings": 0,
+        "resources": {
+          "geometries": 70,
+          "textures": 8,
+          "programs": 9
+        }
+      }
+    },
+    {
+      "run": 2,
+      "browser": "147.0.7727.15",
+      "sourceIdentitySha256": "5e34f928033247b119e2a4f55531d5b8a5c7cfd3c006a9a2382030de77f50494",
+      "restored": true,
+      "tier": "medium",
+      "actorCount": 1,
+      "human": true,
+      "packedMaps": 9,
+      "keeperIntact": true,
+      "sharedDisposals": 0,
+      "movingPoseCount": 211,
+      "sequence": [],
+      "transitions": [
+        "idle",
+        "walk",
+        "walk_back",
+        "strafe_l",
+        "strafe_r",
+        "run",
+        "crouch",
+        "crouch_walk",
+        "jump_start",
+        "jump_loop",
+        "jump_land",
+        "reload",
+        "idle"
+      ],
+      "timings": {
+        "frameIntervalMs": {
+          "median": 189.20000000298023,
+          "p95": 199.39999999850988,
+          "min": 3.5,
+          "max": 5648.5
+        },
+        "mixerMs": {
+          "median": 0,
+          "p95": 0.10000000149011612,
+          "min": 0,
+          "max": 0.20000000298023224
+        },
+        "inertiaMs": {
+          "median": 0,
+          "p95": 0,
+          "min": 0,
+          "max": 0.10000000149011612
+        },
+        "correctionMs": {
+          "median": 0,
+          "p95": 0.10000000149011612,
+          "min": 0,
+          "max": 0.20000000298023224
+        },
+        "renderMs": {
+          "median": 2.5,
+          "p95": 3,
+          "min": 2.1999999955296516,
+          "max": 7.100000001490116
+        }
+      },
+      "frameCount": 214,
+      "warmupFrames": 12,
+      "simulationStepSeconds": 0.05,
+      "durationMs": 46284,
+      "viewport": [
+        1280,
+        960
+      ],
+      "dpr": 1,
+      "renderer": "WebKit WebGL",
+      "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "resourceSamples": [
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        },
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        },
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        },
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        },
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        },
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        },
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        },
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        }
+      ],
+      "ownership": {
+        "sharedGeometries": 51,
+        "sharedMaps": 9,
+        "actorGeometries": 13,
+        "actorSkeletons": 51,
+        "actorMixers": 1,
+        "listeners": 60,
+        "mixerListeners": 0,
+        "callbacks": 0,
+        "props": 1
+      },
+      "afterRetirement": {
+        "listeners": 0,
+        "callbacks": 0,
+        "props": 0,
+        "actors": 0,
+        "activeBindings": 0,
+        "resources": {
+          "geometries": 138,
+          "textures": 9,
+          "programs": 11
+        }
+      }
+    },
+    {
+      "run": 2,
+      "browser": "147.0.7727.15",
+      "sourceIdentitySha256": "5e34f928033247b119e2a4f55531d5b8a5c7cfd3c006a9a2382030de77f50494",
+      "restored": true,
+      "tier": "medium",
+      "actorCount": 8,
+      "human": true,
+      "packedMaps": 9,
+      "keeperIntact": true,
+      "sharedDisposals": 0,
+      "movingPoseCount": 211,
+      "sequence": [],
+      "transitions": [
+        "idle",
+        "walk",
+        "walk_back",
+        "strafe_l",
+        "strafe_r",
+        "run",
+        "crouch",
+        "crouch_walk",
+        "jump_start",
+        "jump_loop",
+        "jump_land",
+        "reload",
+        "idle"
+      ],
+      "timings": {
+        "frameIntervalMs": {
+          "median": 486.30000000447035,
+          "p95": 510.40000000596046,
+          "min": 9.399999998509884,
+          "max": 13949.70000000298
+        },
+        "mixerMs": {
+          "median": 0.20000000298023224,
+          "p95": 0.30000000447034836,
+          "min": 0,
+          "max": 0.5999999940395355
+        },
+        "inertiaMs": {
+          "median": 0,
+          "p95": 0.19999999552965164,
+          "min": 0,
+          "max": 0.3999999985098839
+        },
+        "correctionMs": {
+          "median": 0,
+          "p95": 0.10000000149011612,
+          "min": 0,
+          "max": 0.5999999940395355
+        },
+        "renderMs": {
+          "median": 8.600000001490116,
+          "p95": 9.399999998509884,
+          "min": 8,
+          "max": 16.100000001490116
+        }
+      },
+      "frameCount": 214,
+      "warmupFrames": 12,
+      "simulationStepSeconds": 0.05,
+      "durationMs": 118075.39999999851,
+      "viewport": [
+        1280,
+        960
+      ],
+      "dpr": 1,
+      "renderer": "WebKit WebGL",
+      "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "resourceSamples": [
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        },
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        },
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        },
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        },
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        },
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        },
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        },
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        }
+      ],
+      "ownership": {
+        "sharedGeometries": 51,
+        "sharedMaps": 9,
+        "actorGeometries": 104,
+        "actorSkeletons": 408,
+        "actorMixers": 8,
+        "listeners": 60,
+        "mixerListeners": 0,
+        "callbacks": 0,
+        "props": 8
+      },
+      "afterRetirement": {
+        "listeners": 0,
+        "callbacks": 0,
+        "props": 0,
+        "actors": 0,
+        "activeBindings": 0,
+        "resources": {
+          "geometries": 138,
+          "textures": 9,
+          "programs": 11
+        }
+      }
+    },
+    {
+      "run": 2,
+      "browser": "147.0.7727.15",
+      "sourceIdentitySha256": "5e34f928033247b119e2a4f55531d5b8a5c7cfd3c006a9a2382030de77f50494",
+      "restored": true,
+      "tier": "high",
+      "actorCount": 1,
+      "human": true,
+      "packedMaps": 9,
+      "keeperIntact": true,
+      "sharedDisposals": 0,
+      "movingPoseCount": 211,
+      "sequence": [],
+      "transitions": [
+        "idle",
+        "walk",
+        "walk_back",
+        "strafe_l",
+        "strafe_r",
+        "run",
+        "crouch",
+        "crouch_walk",
+        "jump_start",
+        "jump_loop",
+        "jump_land",
+        "reload",
+        "idle"
+      ],
+      "timings": {
+        "frameIntervalMs": {
+          "median": 190.20000000298023,
+          "p95": 198.90000000596046,
+          "min": 8.200000002980232,
+          "max": 5588.89999999851
+        },
+        "mixerMs": {
+          "median": 0,
+          "p95": 0.10000000149011612,
+          "min": 0,
+          "max": 0.10000000149011612
+        },
+        "inertiaMs": {
+          "median": 0,
+          "p95": 0,
+          "min": 0,
+          "max": 0.20000000298023224
+        },
+        "correctionMs": {
+          "median": 0,
+          "p95": 0.10000000149011612,
+          "min": 0,
+          "max": 0.20000000298023224
+        },
+        "renderMs": {
+          "median": 2.4000000059604645,
+          "p95": 2.7999999970197678,
+          "min": 2.1999999955296516,
+          "max": 7.799999997019768
+        }
+      },
+      "frameCount": 214,
+      "warmupFrames": 12,
+      "simulationStepSeconds": 0.05,
+      "durationMs": 46346,
+      "viewport": [
+        1280,
+        960
+      ],
+      "dpr": 1,
+      "renderer": "WebKit WebGL",
+      "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "resourceSamples": [
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        },
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        },
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        },
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        },
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        },
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        },
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        },
+        {
+          "geometries": 143,
+          "textures": 60,
+          "programs": 16
+        }
+      ],
+      "ownership": {
+        "sharedGeometries": 51,
+        "sharedMaps": 9,
+        "actorGeometries": 13,
+        "actorSkeletons": 51,
+        "actorMixers": 1,
+        "listeners": 60,
+        "mixerListeners": 0,
+        "callbacks": 0,
+        "props": 1
+      },
+      "afterRetirement": {
+        "listeners": 0,
+        "callbacks": 0,
+        "props": 0,
+        "actors": 0,
+        "activeBindings": 0,
+        "resources": {
+          "geometries": 138,
+          "textures": 9,
+          "programs": 11
+        }
+      }
+    },
+    {
+      "run": 2,
+      "browser": "147.0.7727.15",
+      "sourceIdentitySha256": "5e34f928033247b119e2a4f55531d5b8a5c7cfd3c006a9a2382030de77f50494",
+      "restored": true,
+      "tier": "high",
+      "actorCount": 8,
+      "human": true,
+      "packedMaps": 9,
+      "keeperIntact": true,
+      "sharedDisposals": 0,
+      "movingPoseCount": 211,
+      "sequence": [],
+      "transitions": [
+        "idle",
+        "walk",
+        "walk_back",
+        "strafe_l",
+        "strafe_r",
+        "run",
+        "crouch",
+        "crouch_walk",
+        "jump_start",
+        "jump_loop",
+        "jump_land",
+        "reload",
+        "idle"
+      ],
+      "timings": {
+        "frameIntervalMs": {
+          "median": 485.20000000298023,
+          "p95": 510.29999999701977,
+          "min": 9.800000004470348,
+          "max": 13908.39999999851
+        },
+        "mixerMs": {
+          "median": 0.20000000298023224,
+          "p95": 0.3999999985098839,
+          "min": 0,
+          "max": 0.5
+        },
+        "inertiaMs": {
+          "median": 0,
+          "p95": 0.20000000298023224,
+          "min": 0,
+          "max": 0.5
+        },
+        "correctionMs": {
+          "median": 0,
+          "p95": 0.10000000149011612,
+          "min": 0,
+          "max": 0.6000000014901161
+        },
+        "renderMs": {
+          "median": 8.600000001490116,
+          "p95": 10.100000001490116,
+          "min": 7.899999998509884,
+          "max": 13.799999997019768
+        }
+      },
+      "frameCount": 214,
+      "warmupFrames": 12,
+      "simulationStepSeconds": 0.05,
+      "durationMs": 118084.19999999553,
+      "viewport": [
+        1280,
+        960
+      ],
+      "dpr": 1,
+      "renderer": "WebKit WebGL",
+      "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "resourceSamples": [
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        },
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        },
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        },
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        },
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        },
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        },
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        },
+        {
+          "geometries": 178,
+          "textures": 417,
+          "programs": 16
+        }
+      ],
+      "ownership": {
+        "sharedGeometries": 51,
+        "sharedMaps": 9,
+        "actorGeometries": 104,
+        "actorSkeletons": 408,
+        "actorMixers": 8,
+        "listeners": 60,
+        "mixerListeners": 0,
+        "callbacks": 0,
+        "props": 8
+      },
+      "afterRetirement": {
+        "listeners": 0,
+        "callbacks": 0,
+        "props": 0,
+        "actors": 0,
+        "activeBindings": 0,
+        "resources": {
+          "geometries": 138,
+          "textures": 9,
+          "programs": 11
+        }
+      }
+    }
+  ],
+  "cleanup": {
+    "browserClosed": true,
+    "serverClosed": true
+  },
+  "durationMs": 991331,
+  "device": {
+    "hostname": "DESKTOP-NUH2KOI",
+    "os": "Windows_NT",
+    "release": "10.0.19045",
+    "arch": "x64",
+    "cpu": "AMD Ryzen 5 5600 6-Core Processor              ",
+    "node": "v24.19.0",
+    "browser": "147.0.7727.15",
+    "rendererClass": "software"
+  },
+  "certification": false,
+  "humanMotionAcceptance": "pending",
+  "limits": "Controlled actual Training Range loaded scene, retained rig and current transitions; fixed 20 Hz simulation clock, native RAF pacing, 214 measured frames per profile, 12 warmup frames and 8 clone loops. PNG encoding is a separate playback, excluded from timings. Browser timer quantization may report zero for short components. Synchronous GPU completion includes rendering; no input/network/whole-game FPS certification. Full-pixel continuous sequence belongs to run 1 low/1. No phone, integrated GPU, gaming GPU, Pi or 60 FPS qualification."
+}

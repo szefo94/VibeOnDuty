@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createServer as createPortProbe } from 'node:net';
+import os from 'node:os';
 import { chromium } from '@playwright/test';
 import { createServer } from 'vite';
 import { ROOT, CACHE, hash, iterationPath } from './pipeline.mjs';
@@ -380,7 +381,318 @@ async function reviewPort() {
   });
 }
 
+const ANIMATION_EVIDENCE = path.join(ROOT,
+  '.planning/phases/07-movement-matched-and-action-safe-animation/evidence');
+
+async function animationIdentities() {
+  const names = ['index.html', 'style.css', 'public/models/enemy.glb',
+    'public/textures/comic-slice.png', 'tools/art/provenance.json',
+    'tools/art/sources/soldier.blend', 'tools/art/character-params.json', 'tools/art/build_soldier.py'];
+  async function collect(directory) {
+    for (const entry of await fs.readdir(path.join(ROOT, directory), { withFileTypes: true })) {
+      const name = directory + '/' + entry.name;
+      if (entry.isDirectory()) await collect(name);
+      else if (entry.name.endsWith('.js')) names.push(name);
+    }
+  }
+  await collect('src');
+  const identities = {};
+  for (const name of names.sort()) identities[name] = hash(await fs.readFile(path.join(ROOT, name)));
+  identities.captureSampler = hash(sampleAnimationPage.toString());
+  return identities;
+}
+
+// Controlled moving playback in the loaded current game. Hold only this browser's
+// offline game RAF; use the retained native RAF for paced, continuous rendered samples.
+// This measures animation + actual scene rendering, not input/network/gameplay FPS.
+async function sampleAnimationPage(page, specification) {
+  return page.evaluate(async ({ tier, actorCount, captureFrames, failAt }) => {
+    const src = new URL('src/', location.href).href;
+    const g = await import(src + 'builders/enemyGLTF.js');
+    const a = await import(src + 'builders/enemyAnimations.js');
+    const { scene, camera, renderer } = await import(src + 'scene.js');
+    const { playerBody } = await import(src + 'builders/playerBody.js');
+    const { wpn, weapon3p } = await import(src + 'builders/weapon.js');
+    const ink = await import(src + 'comicOutline.js');
+    const quality = await import(src + 'graphicsQuality.js');
+    const { getMode } = await import(src + 'modes/modeManager.js');
+    const T = window.__THREE;
+    if (getMode()?.name !== 'range' || !g.playerMesh?.getObjectByName('HumanBody'))
+      throw Error('Actual enabled Training Range human missing');
+    const saved = { position: camera.position.clone(), quaternion: camera.quaternion.clone(),
+      fov: camera.fov, tier: quality.getGraphicsQuality(), autoReset: renderer.info.autoReset };
+    const borrowed = [g.playerMesh, playerBody, wpn, weapon3p].map(node => [node, node.visible]);
+    const actors = [], shared = new Set(), maps = new Set(), ownedGeometry = new Set();
+    let sharedDisposals = 0, callbacks = 0, restored = false;
+    const watches = [], sequence = [], poseSignatures = new Set(), resourceSamples = [];
+    const timings = { frameIntervalMs: [], mixerMs: [], inertiaMs: [], correctionMs: [], renderMs: [] };
+    const transitions = [ ['idle', 0.4], ['walk', 1.2], ['walk_back', 1.1],
+      ['strafe_l', 1.0], ['strafe_r', 1.0], ['run', 1.1], ['crouch', 0.5],
+      ['crouch_walk', 1.1], ['jump_start', 0.2], ['jump_loop', 0.7],
+      ['jump_land', 0.2], ['reload', 1.8], ['idle', 0.4] ];
+    const dt = 1 / 20;
+    const costs = () => ({ ...renderer.info.memory, programs: renderer.info.programs.length });
+    const build = index => {
+      const actor = g.buildEnemyMesh(saved.position.x + (index % 4 - 1.5) * 0.75,
+        saved.position.z + Math.floor(index / 4) * 0.8);
+      if (!actor?.mesh.getObjectByName('HumanBody')) throw Error('Real cloned human missing');
+      actor.mesh.position.y = saved.position.y - 1.7;
+      actor._bones = [];
+      actor.mesh.traverse(node => { if (node.isBone) actor._bones.push(node); });
+      actor.currentClip = 'idle'; actor.mesh.rotation.y = 0;
+      scene.add(actor.mesh); return actor;
+    };
+    const render = () => { renderer.info.reset(); ink.renderComicScene(renderer, scene, camera);
+      renderer.getContext().finish(); };
+    let failure, keeperIntact = false, packedMaps = 0, ownership, afterRetirement;
+    const wallStart = performance.now();
+    try {
+      for (const [node] of borrowed) node.visible = false;
+      quality.setGraphicsQuality(tier); quality.applyGraphicsQuality(renderer, 1);
+      renderer.setSize(1280, 960); renderer.info.autoReset = false;
+      camera.position.set(saved.position.x + 2.4, saved.position.y + 0.3, saved.position.z + 5);
+      camera.fov = 44; camera.lookAt(saved.position.x, saved.position.y - 0.65, saved.position.z);
+      camera.updateProjectionMatrix();
+      for (let i = 0; i < actorCount; i++) actors.push(build(i));
+      actors[0].mesh.traverse(node => {
+        if (node.isSkinnedMesh) shared.add(node.geometry);
+        for (const material of Array.isArray(node.material) ? node.material : [node.material])
+          for (const texture of [material?.map, material?.normalMap]) if (texture) maps.add(texture);
+      });
+      for (const resource of [...shared, ...maps]) {
+        const listener = () => sharedDisposals++;
+        resource.addEventListener('dispose', listener); watches.push([resource, listener]);
+      }
+      packedMaps = [...maps].filter(map => map.image?.width > 0).length;
+      if (!packedMaps) throw Error('Normal packed map decoding missing');
+      for (const actor of actors) actor.mesh.traverse(node => {
+        if (node.geometry && !shared.has(node.geometry)) ownedGeometry.add(node.geometry);
+      });
+      // Warm deterministic clone/ink programs, retaining all measured actors as keepers.
+      for (let cycle = 0; cycle < 8; cycle++) {
+        const temporary = build(actorCount);
+        g.tintEnemyMesh(temporary.mesh, cycle % 2 ? 0xff5555 : 0x4488ff);
+        temporary.mixer.update(0.2); render();
+        g.disposeEnemyMesh(temporary.mesh, temporary.mixer); render();
+        resourceSamples.push(costs());
+      }
+      keeperIntact = actors.every(actor => {
+        let intact = true;
+        actor.mesh.traverse(node => { if (node.isSkinnedMesh)
+          intact &&= node.geometry.attributes.position.count > 0 &&
+            node.skeleton.boneTexture?.image?.data.length > 0; });
+        return intact;
+      });
+      for (let i = 0; i < 12; i++) { for (const actor of actors) actor.mixer.update(dt); render(); }
+      // Record media in a separate playback so PNG encoding cannot skew repeat dispersion.
+      for (const mediaPass of captureFrames ? [false, true] : [false]) {
+      for (const actor of actors) {
+        actor.mixer.stopAllAction(); actor.mixer.setTime(0);
+        actor.currentClip = null; actor._inLocoMode = false;
+      }
+      let previous = performance.now(), frame = 0;
+      for (const [clip, seconds] of transitions) {
+        for (let step = 0; step < Math.ceil(seconds / dt); step++) {
+          callbacks++;
+          await new Promise(resolve => window.__baselineRaf(() => { callbacks--; resolve(); }));
+          const begin = performance.now();
+          let start = begin;
+          for (const actor of actors) {
+            if (['idle', 'walk', 'run', 'strafe_l', 'strafe_r'].includes(clip)) {
+              a.enterLocoMode(actor);
+              a.setLocoWeights(actor.actions, clip === 'idle' ? 0 : clip === 'run' ? 1 : 0.45,
+                clip === 'strafe_l' ? -1 : clip === 'strafe_r' ? 1 : 0);
+            } else {
+              a.exitLocoMode(actor); a.crossfade(actor, clip, 0.2);
+              if (['reload', 'jump_start', 'jump_land'].includes(clip))
+                a.fitActionDuration(actor.actions[clip], seconds);
+            }
+          }
+          if (!mediaPass) timings.correctionMs.push(performance.now() - start);
+          start = performance.now();
+          for (const actor of actors) actor.mixer.update(dt);
+          if (!mediaPass) timings.mixerMs.push(performance.now() - start);
+          start = performance.now();
+          for (const actor of actors) a.tickInertia(actor, dt);
+          if (!mediaPass) timings.inertiaMs.push(performance.now() - start);
+          start = performance.now(); render();
+          if (!mediaPass) timings.renderMs.push(performance.now() - start);
+          const end = performance.now();
+          if (!mediaPass) timings.frameIntervalMs.push(end - previous);
+          const bone = actors[0].mesh.getObjectByName('calf_l') || actors[0]._bones.at(-1);
+          poseSignatures.add(bone.quaternion.toArray().map(n => n.toFixed(4)).join(','));
+          if (mediaPass) sequence.push({ frame, clip, simulationTime: frame * dt,
+            image: renderer.domElement.toDataURL('image/png') });
+          // Exclude evidence encoding from the next measured frame interval in both repeats.
+          previous = performance.now();
+          frame++;
+          if (failAt === 'render' && frame === 2) throw Error('Injected animation capture failure');
+        }
+      }
+      }
+      ownership = { sharedGeometries: shared.size, sharedMaps: maps.size,
+        actorGeometries: ownedGeometry.size, actorSkeletons: actors.reduce((count, actor) => {
+          const skeletons = new Set(); actor.mesh.traverse(n => { if (n.skeleton) skeletons.add(n.skeleton); });
+          return count + skeletons.size;
+        }, 0), actorMixers: actors.length, listeners: watches.length,
+        mixerListeners: actors.reduce((count, actor) => count + Object.values(
+          actor.mixer._listeners ?? {}).reduce((n, listeners) => n + listeners.length, 0), 0),
+        callbacks, props: actors.filter(actor => actor.mesh.getObjectByName('enemyWeaponMount')).length };
+    } catch (error) { failure = error.message; }
+    finally {
+      for (const actor of actors) g.disposeEnemyMesh(actor.mesh, actor.mixer);
+      for (const [resource, listener] of watches) resource.removeEventListener('dispose', listener);
+      afterRetirement = { listeners: watches.filter(([resource, listener]) =>
+        resource.hasEventListener('dispose', listener)).length, callbacks,
+        props: actors.filter(actor => actor.mesh.parent &&
+          actor.mesh.getObjectByName('enemyWeaponMount')).length,
+        actors: actors.filter(actor => actor.mesh.parent !== null).length,
+        activeBindings: actors.reduce((count, actor) => count + actor.mixer.stats.bindings.inUse, 0),
+        resources: costs() };
+      camera.position.copy(saved.position); camera.quaternion.copy(saved.quaternion);
+      camera.fov = saved.fov; camera.updateProjectionMatrix();
+      for (const [node, visible] of borrowed) node.visible = visible;
+      quality.setGraphicsQuality(saved.tier); quality.applyGraphicsQuality(renderer, 1);
+      renderer.info.autoReset = saved.autoReset;
+      restored = camera.position.equals(saved.position) && camera.quaternion.equals(saved.quaternion) &&
+        borrowed.every(([node, visible]) => node.visible === visible);
+    }
+    const summarize = values => {
+      const sorted = [...values].sort((x,y) => x-y);
+      return { median: sorted[Math.floor(sorted.length / 2)],
+        p95: sorted[Math.ceil(sorted.length * 0.95) - 1], min: sorted[0], max: sorted.at(-1) };
+    };
+    const gl = renderer.getContext(), debug = gl.getExtension('WEBGL_debug_renderer_info');
+    return { failure, restored, tier, actorCount, human: true, packedMaps,
+      keeperIntact, sharedDisposals, movingPoseCount: poseSignatures.size, sequence,
+      transitions: transitions.map(([clip]) => clip), timings: Object.fromEntries(
+        Object.entries(timings).map(([name, values]) => [name, summarize(values)])),
+      frameCount: timings.mixerMs.length, warmupFrames: 12, simulationStepSeconds: dt,
+      durationMs: performance.now() - wallStart, viewport: [1280, 960], dpr: renderer.getPixelRatio(),
+      renderer: gl.getParameter(gl.RENDERER), gpu: debug ? gl.getParameter(debug.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER),
+      resourceSamples, ownership, afterRetirement };
+  }, specification);
+}
+
+export async function captureAnimationBaseline({ smoke = false, failAt, onOwner, onCleanup, signal } = {}) {
+  signal?.throwIfAborted();
+  assert.ok(!failAt || failAt === 'render', 'Only bounded render failure injection is supported');
+  const baseDirectory = path.join(CACHE, smoke ? 'animation-smoke' : 'animation-baseline');
+  const directory = path.join(baseDirectory, `capture-${Date.now()}-${process.pid}`);
+  await iterationPath([CACHE], directory);
+  await fs.mkdir(directory, { recursive: true });
+  const reportPath = smoke ? path.join(baseDirectory, 'report.json') : path.join(ANIMATION_EVIDENCE, '07-baseline.json');
+  const identities = await animationIdentities(), start = Date.now();
+  const revision = (await promisify(execFile)('git', ['-c', 'safe.directory=' + ROOT,
+    'rev-parse', 'HEAD'], { cwd: ROOT, windowsHide: true })).stdout.trim();
+  const port = await reviewPort();
+  const server = await createServer({ root: ROOT, base: '/', cacheDir: path.join(directory, 'vite-cache'),
+    server: { host: '127.0.0.1', port, strictPort: true, open: false, hmr: false,
+      watch: { ignored: ['**/.planning/**', '**/tools/art/sources/**'] } } });
+  let browser;
+  const samples = [], cleanup = { browserClosed: false, serverClosed: false };
+  try {
+    await server.listen(port);
+    const url = `http://127.0.0.1:${server.httpServer.address().port}/`;
+    onOwner?.({ url, reportPath });
+    signal?.throwIfAborted();
+    browser = await chromium.launch({ headless: true, args: ['--use-gl=swiftshader'] });
+    for (let run = 0; run < (smoke ? 1 : 2); run++) {
+      const context = await browser.newContext({ viewport: { width: 1280, height: 960 }, deviceScaleFactor: 1 });
+      try {
+        await context.addInitScript(() => {
+          window.__baselineRaf = window.requestAnimationFrame.bind(window);
+          window.requestAnimationFrame = () => 0;
+          HTMLCanvasElement.prototype.requestPointerLock = () => {};
+          let seed = 67245;
+          Math.random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
+        });
+        const page = await context.newPage(), errors = [];
+        const abort = () => { void page.close().catch(() => {}); };
+        signal?.addEventListener('abort', abort, { once: true });
+        context.once('close', () => signal?.removeEventListener('abort', abort));
+        page.setDefaultTimeout(45000); page.on('pageerror', error => errors.push(error.message));
+        await page.goto(url);
+        await page.waitForFunction(() => !document.getElementById('range-startbtn').disabled,
+          null, { polling: 100 });
+        await page.locator('#range-startbtn').click();
+        for (const tier of smoke ? ['low'] : ['low', 'medium', 'high']) {
+          for (const actorCount of smoke ? [1] : [1, 8]) {
+            signal?.throwIfAborted();
+            let timeout;
+            let sample;
+            try {
+              sample = await Promise.race([
+                sampleAnimationPage(page, { tier, actorCount, failAt,
+                  captureFrames: run === 0 && tier === 'low' && actorCount === 1 }),
+                new Promise((_resolve, reject) => {
+                  timeout = setTimeout(() => reject(Error('Animation sample exceeded 180 seconds')), 180000);
+                }),
+              ]);
+            } finally { clearTimeout(timeout); }
+            assert.equal(sample.restored, true, 'Camera/borrowed visibility must restore even on failure');
+            assert.ok(!sample.failure, sample.failure);
+            assert.equal(sample.sharedDisposals, 0, 'Retirement must preserve shared geometry/maps');
+            assert.equal(sample.keeperIntact, true);
+            assert.ok(sample.movingPoseCount > 10, 'Real bones must move');
+            for (const timing of Object.values(sample.timings))
+              assert.ok(Number.isFinite(timing.median) && Number.isFinite(timing.p95), 'Finite timings');
+            assert.equal(sample.afterRetirement.listeners, 0);
+            assert.equal(sample.afterRetirement.callbacks, 0);
+            assert.equal(sample.afterRetirement.activeBindings, 0);
+            for (const resource of sample.resourceSamples.slice(4))
+              assert.deepEqual(resource, sample.resourceSamples[3], 'Warmed deterministic clone plateau');
+            for (const frame of sample.sequence) {
+              const bytes = Buffer.from(frame.image.split(',')[1], 'base64');
+              const filename = `run-${run}-${tier}-${actorCount}-${String(frame.frame).padStart(4, '0')}.png`;
+              await fs.writeFile(path.join(directory, filename), bytes);
+              frame.image = path.relative(ROOT, path.join(directory, filename)).replaceAll('\\', '/');
+              frame.sha256 = hash(bytes);
+            }
+            samples.push({ run: run + 1, browser: browser.version(),
+              sourceIdentitySha256: hash(JSON.stringify(identities)), ...sample });
+            console.log(`Animation baseline run ${run + 1}: ${tier}/${actorCount} (${sample.frameCount} moving frames)`);
+          }
+        }
+        assert.deepEqual(errors, []);
+      } finally { await context.close(); }
+    }
+    assert.deepEqual(await animationIdentities(), identities, 'Source changed during capture');
+    signal?.throwIfAborted();
+  } finally {
+    try { if (browser) { await browser.close(); cleanup.browserClosed = true; } }
+    finally { await server.close(); cleanup.serverClosed = true; onCleanup?.(cleanup); }
+  }
+  const report = { schemaVersion: 1, complete: !smoke, capturedAt: new Date().toISOString(),
+    revision, identities, samples, cleanup, durationMs: Date.now() - start,
+    device: { hostname: os.hostname(), os: os.type(), release: os.release(), arch: process.arch,
+      cpu: os.cpus()[0]?.model, node: process.version, browser: browser.version(),
+      rendererClass: samples.every(s => /swiftshader|software/i.test(s.gpu)) ? 'software' : 'physical-or-unidentified' },
+    certification: false, humanMotionAcceptance: 'pending',
+    limits: 'Controlled actual Training Range loaded scene, retained rig and current transitions; fixed 20 Hz simulation clock, native RAF pacing, 214 measured frames per profile, 12 warmup frames and 8 clone loops. PNG encoding is a separate playback, excluded from timings. Browser timer quantization may report zero for short components. Synchronous GPU completion includes rendering; no input/network/whole-game FPS certification. Full-pixel continuous sequence belongs to run 1 low/1. No phone, integrated GPU, gaming GPU, Pi or 60 FPS qualification.' };
+  await fs.mkdir(path.dirname(reportPath), { recursive: true });
+  // Atomic publication only after every sample, identity and cleanup check succeeded.
+  const temporary = reportPath + '.tmp';
+  await fs.writeFile(temporary, JSON.stringify(report, null, 2) + '\n');
+  await fs.rename(temporary, reportPath);
+  console.log(JSON.stringify({ report: reportPath, complete: report.complete }));
+  return report;
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  if (!process.argv.includes('--capture')) throw Error('Use --capture for actual gameplay review');
-  captureGameplay().catch((error) => { console.error(error); process.exitCode = 1; });
+  const args = process.argv.slice(2);
+  let operation;
+  if (args.length === 1 && args[0] === '--capture') operation = captureGameplay;
+  else if (args[0] === '--animation-baseline' && (args.length === 1 ||
+    (args.length === 2 && args[1] === '--smoke'))) {
+    operation = async () => {
+      const controller = new AbortController();
+      const abort = () => controller.abort(Error('Animation capture canceled'));
+      process.once('SIGINT', abort); process.once('SIGTERM', abort);
+      try { return await captureAnimationBaseline({ smoke: args[1] === '--smoke', signal: controller.signal }); }
+      finally { process.removeListener('SIGINT', abort); process.removeListener('SIGTERM', abort); }
+    };
+  }
+  else throw Error('Use --capture or --animation-baseline [--smoke]');
+  operation().catch(error => { console.error(error); process.exitCode = 1; });
 }
