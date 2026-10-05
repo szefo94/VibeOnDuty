@@ -1,178 +1,176 @@
 ---
 phase: 06-human-characters-and-comic-book-blender-iteration
-reviewed: 2026-10-05T13:12:45Z
-reviewed_commit: 9d2445397a1bc5fd77402eb6f3f78649468f08e4
-diff_base: 8bef7d22a51533cecb1826bb5bd1fe62bb902a95
+reviewed: 2026-10-05T13:39:00Z
+reviewed_commit: 675b746985d20c104ccf9f9a3831010a33df5c09
+diff_base: 201021f
 depth: standard
-files_reviewed: 34
+review_mode: targeted_fix_rereview
+initial_reviewed_commit: 9d2445397a1bc5fd77402eb6f3f78649468f08e4
+initial_review_commit: 201021f
+initial_files_reviewed: 34
+files_reviewed: 8
 files_reviewed_list:
-  - .gitignore
-  - AGENTS.md
   - docs/ART.md
-  - index.html
-  - src/artMaterials.js
-  - src/builders/characterAppearance.js
   - src/builders/characterAppearance.test.js
-  - src/builders/characterResources.js
-  - src/builders/enemyGLTF.js
-  - src/builders/enemyWeapon.js
-  - src/builders/rifleClips.test.js
-  - src/builders/weapon.js
-  - src/comicOutline.js
-  - src/comicOutline.test.js
-  - src/graphicsQuality.js
-  - src/graphicsQuality.test.js
-  - src/loop.js
-  - src/main.js
-  - src/maps/bunker.js
-  - src/scene.js
-  - style.css
+  - src/builders/enemy.js
   - tests/character-art.spec.js
-  - tests/multiplayer.spec.js
   - tools/README.md
-  - tools/art/.gitattributes
-  - tools/art/build_slice.py
-  - tools/art/build_soldier.py
-  - tools/art/character-params.json
   - tools/art/inspect-character.mjs
-  - tools/art/iterate.py
-  - tools/art/pipeline.mjs
   - tools/art/provenance.json
-  - tools/art/review.mjs
   - tools/art/verify-export.mjs
 findings:
-  critical: 2
+  critical: 0
   warning: 0
   info: 0
-  total: 2
-status: issues_found
+  total: 0
+resolved_findings:
+  - id: CR-01
+    original_classification: BLOCKER
+    fix_commit: 9a566d115d81e7aa7b861ec488b8f12c74738827
+    status: resolved
+  - id: CR-02
+    original_classification: BLOCKER
+    fix_commit: 0010cfec6166990840005dbcfa8835f72b5e489f
+    status: resolved
+status: clean
 ---
 
 # Phase 6: Code Review Report
 
-**Reviewed:** 2026-10-05T13:12:45Z
-**Depth:** standard
-**Files Reviewed:** 34
-**Status:** issues_found
+**Reviewed:** 2026-10-05T13:39:00Z
+
+**Depth:** standard, targeted fix re-review
+
+**Files Reviewed:** 8
+
+**Status:** clean — both original blockers resolved; zero remaining findings.
 
 ## Summary
 
-Reviewed the complete Phase 6 textual change scope from `e0570d8^` through
-`9d24453`, with all six implementation summaries and relevant runtime callers as
-context. Binary Blender/GLB/PNG assets and retained third-party OBJ/license input
-were excluded from the textual file count; the published GLB was parsed for the
-semantic-check reproduction. Planning artifacts were context only. No structural
-pre-pass or external-reviewer evidence was supplied.
+Re-reviewed only the two original BLOCKER findings after fixes `9a566d1` and
+`0010cfe`, at current HEAD `675b746`. Read the fix report, all eight changed
+textual source/test/documentation files and relevant existing appearance/resource
+callers. The original review in `201021f` covered 34 Phase 6 textual files at
+`9d24453`; that broader review was not repeated. The file list above records the
+actual targeted re-review scope. Planning evidence was supporting context, not
+a source file in that count. No structural pre-pass or external evidence lane
+was supplied.
 
-Two reproducible correctness defects remain: team identification fails for the
-procedural recovery path, and export equivalence can pass when the body is absent
-from the active scene. Both findings concern introduced code. Existing inherited
-grip limitations, unresolved redistribution terms, pending human aesthetic
-acceptance and unmeasured representative-device performance are documented limits,
-not newly discovered implementation findings.
-
-The previously completed full gates were not rerun. Focused, read-only Node
-experiments confirmed the findings using current source and in-memory GLB
-mutations. No implementation, configuration or state files were modified, and no
-commit was made.
+No remaining issues found in the reviewed fixes. The original fallback-color and
+detached-body reproductions now pass their corrected contracts. Focused inspector
+regressions pass **12/12**, with no skips. Current retained independent recovery and
+repeat evidence uses semantic schema 2 and matching source/tool/export identities.
+No implementation/configuration/state files were modified and no commit was made.
 
 ## Narrative Findings (AI reviewer)
 
-## Critical Issues
+No open BLOCKER or WARNING findings remain in this targeted re-review.
 
-### CR-01: Procedural fallback loses all team colors
+## Resolved Historical Findings
 
-**Classification:** BLOCKER
-**File:** `C:/Programowanie/VibeOnDuty/src/builders/characterAppearance.js:32-33`
-**Related:** `C:/Programowanie/VibeOnDuty/src/builders/characterAppearance.js:49-54`;
-`C:/Programowanie/VibeOnDuty/src/builders/enemyGLTF.js:478-479`;
-`C:/Programowanie/VibeOnDuty/src/builders/enemyGLTF.js:329-336`;
-`C:/Programowanie/VibeOnDuty/src/builders/enemy.js:5-12`;
-`C:/Programowanie/VibeOnDuty/src/network/remoteActors.js:57-60`.
+### Resolved original finding CR-01: Procedural fallback loses all team colors
 
-**Issue:** The public `tintEnemyMesh()` now delegates exclusively to the semantic
-accent allowlist. The procedural actor returned when the GLB HEAD/GET fails, is
-corrupt, or lacks required clips has no `artDomain` metadata on any material/node.
-Consequently its accent collection is empty and every requested team assignment
-is a no-op. Red/blue online actors and friendly/hostile offline S&D/TDM bots retain
-the same green appearance. This regresses the prior public tint behavior in the
-explicitly supported playable asset-recovery path, removing its visual team cue
-while friendly fire remains enabled.
+**Original classification:** BLOCKER.
 
-**Evidence:** Loaded the actual `buildEnemy()` implementation into an isolated
-Node harness, substituting only its browser scene/material imports, and passed
-two independently built actors through the current `tintCharacterAccents()` with
-`0x4488ff` and `0xff5555`. Result:
+**Original location:** `C:/Programowanie/VibeOnDuty/src/builders/characterAppearance.js:32-33`.
 
-```json
-{"blueUnchanged":true,"redBlueIdentical":true,"accentCount":0}
-```
+**Fix:** `9a566d115d81e7aa7b861ec488b8f12c74738827`.
 
-The existing fallback browser tests enter Training Range and check playable
-geometry/controls; they do not assign or compare opposing fallback teams.
+**Current status:** resolved.
 
-**Fix:** Give designated procedural clothing/helmet parts explicit
-`team-accent` metadata, or implement a dedicated procedural tint policy before
-delegating to the GLB accent policy. Keep skin/weapons protected and clone/reuse
-owned materials so tinting one procedural actor does not recolor its sibling.
-Add a missing/corrupt-GLB team-mode regression that verifies distinct opposing
-colors, repeated reassignment and sibling-safe retirement.
+The actual procedural builder now tags three uniform materials and the helmet as
+designated team accents; skin and weapons retain protected domains. The existing
+appearance owner clones those shared accents per actor, reuses them on reassignment
+and retires only actor-owned resources. Read the new actual-builder unit regression
+and both missing/corrupt-GLB browser regressions, including opposing offline teams,
+remote-owner assignments and sibling-safe retirement.
 
-### CR-02: Export equivalence omits whether authored meshes actually render
-
-**Classification:** BLOCKER
-**File:** `C:/Programowanie/VibeOnDuty/tools/art/inspect-character.mjs:532-551`
-**Related:** `C:/Programowanie/VibeOnDuty/tools/art/inspect-character.mjs:609-615`;
-`C:/Programowanie/VibeOnDuty/tools/art/inspect-character.mjs:184-252`;
-`C:/Programowanie/VibeOnDuty/tools/art/verify-export.mjs:148-163`;
-`C:/Programowanie/VibeOnDuty/tools/art/verify-export.mjs:213-214`.
-
-**Issue:** `semantics()` compares the mesh resource table and skin joint hierarchy,
-but never records the active scene, scene roots, authored render-node reachability
-or each render node's mesh/skin association. `validateStructure()` likewise does
-not require the authored body to be reachable from the active scene. A GLB can
-therefore retain every geometry/material/image/skin/motion resource yet omit the
-human from rendering, and still pass both inspection and semantic equality. The
-repeat/restored-source gates consume this false equality as a successful recovery
-check. In particular the independently regenerated recovery output is compared
-semantically without a fresh rendered comparison of that output.
-
-**Evidence:** Parsed the current shipped `enemy.glb`, removed only the `HumanBody`
-node index from `json.scenes[json.scene || 0].nodes`, and encoded a candidate in
-memory. The original body's mesh/skin resources and inherited rig were untouched.
-Both current checks accepted it:
+Repeated the original isolated Node reproduction using the current actual builder
+and current `tintCharacterAccents()`; only browser scene/material imports were
+substituted. Result:
 
 ```json
 {
-  "humanRemovedFromActiveScene": true,
-  "comparison": {
-    "equal": true,
-    "byteIdentical": false,
-    "domains": {
-      "mesh": true, "skin": true, "materials": true,
-      "images": true, "motion": true
-    },
-    "differences": []
-  },
-  "inspectionPassed": true
+  "accentCount": 4,
+  "opposingColorsCorrect": true,
+  "reassignmentReusesOwned": true,
+  "templatesUnchanged": true,
+  "protectedShared": true
 }
 ```
 
-`inspectionPassed` used the retained original compatibility baseline, so exact
-inherited rig/motion checks did not detect the missing rendered body either.
+The fixer's focused 6-test appearance suite and two fallback-team browser tests
+are recorded as passing in the fix report. Those browser tests were not repeated
+during this source review.
 
-**Fix:** Extend the semantic mesh domain with a canonical active render graph:
-active scene roots, reachable authored node identities, parent relationships and
-resolved mesh/skin bindings, plus relevant transforms and rendering metadata.
-Use stable semantic identities so harmless serializer index changes still compare
-equal. Validate scene/root references and require the expected body/equipment to
-be reachable in the inspector. Add negative comparator/inspection tests that
-detach `HumanBody`, alter a node's mesh binding or select an empty scene, alongside
-a positive serializer-reordering test. Ensure repeat and independent recovery
-verification consume the extended comparison.
+### Resolved original finding CR-02: Export equivalence omits whether authored meshes actually render
+
+**Original classification:** BLOCKER.
+
+**Original location:** `C:/Programowanie/VibeOnDuty/tools/art/inspect-character.mjs:532-551` at the original reviewed revision.
+
+**Fix:** `0010cfec6166990840005dbcfa8835f72b5e489f`.
+
+**Current status:** resolved.
+
+The semantic mesh domain now includes the canonical active render graph:
+scene roots, authored identities, reachability, parent/child relationships,
+resolved mesh/skin bindings, local transforms, morph weights and rendering
+metadata. The inspector validates scene references and requires the authored
+body/equipment to be reachable and bound to the expected rig. Repeat and independent
+restored-source verification explicitly consume semantic schema 2.
+
+Repeated the exact original in-memory reproduction: removed only the `HumanBody`
+node index from the current shipped GLB's active scene roots. Current comparison
+reports `equal:false`, `domains.mesh:false` and a
+`mesh.renderGraph.nodes.51.reachable` difference. Current inspection rejects it
+with `Required reachable body/equipment render node: HumanBody`. Unmodified current
+publication still passes inspection against the original compatibility baseline.
+
+Re-ran `node tools/art/inspect-character.mjs --self-test`: **12 passed**, zero
+failures/skips. These include body/equipment detachment, empty active scenes,
+binding/parent/transform/rendering-metadata changes and positive serializer
+node/mesh/skin/scene reordering. Read the schema-2 assertions in both verification
+callers.
+
+The fix report's `requires human verification` label marks the semantic-algorithm
+change under its fixer contract. Adversarial source review, the original negative
+reproduction, focused regressions and current fresh-Blender evidence close the
+code-correctness finding. It is not an unresolved behavior or an assertion of
+human visual/aesthetic acceptance.
+
+## Verification Evidence and Limits
+
+Checked **35 retained identities** across successful/failed command logs, current
+inspector/verifier/build/pipeline/review/iteration scripts, published GLB, editable
+source, repeat and independent reports, retained demonstration files and independent
+regenerated output. **Zero hash mismatches.** The retained restored, independent
+regenerated and repeat outputs compare equal under schema 2 and are byte-identical
+to the accepted publication:
+
+`3d92a093fc6724c295fdabb456d41110a0b03fc7f72f565b42b36c4c09b00847`.
+
+One extra iteration attempt failed restored browser pixel identity despite
+byte-identical model exports. Its failed log and exit code 1 remain recorded in
+`evidence/06-review.json`; it is not passing evidence. The later retained complete
+demo reports restored pixel equality, and its independent recovery/repeat artifacts
+and current tool hashes match. This review does not establish the cause of the
+observed pixel-capture flake.
+
+No full unit/offline/multiplayer suite or Blender export was repeated in this
+targeted re-review. Earlier full gates remain historical evidence at their recorded
+source revision; focused fix gates and fresh Blender outputs are separately
+identified by the fix report and current evidence.
+
+Human aesthetic acceptance remains **pending**. Inherited support-hand/barrel
+fitting, motion quality and unresolved redistribution terms remain documented
+limits. Headless SwiftShader checks establish no representative-device/FPS
+qualification. These scope limits are separate from the two resolved code defects.
 
 ---
 
-_Reviewed: 2026-10-05T13:12:45Z_
+_Reviewed: 2026-10-05T13:39:00Z_
+
 _Reviewer: gsd-code-reviewer_
-_Depth: standard_
+
+_Depth: standard, targeted fix re-review_

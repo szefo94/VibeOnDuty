@@ -1,7 +1,7 @@
 ---
 phase: "06"
 slug: human-characters-and-comic-book-blender-iteration
-status: automated-complete-human-review-pending
+status: validated
 nyquist_compliant: true
 wave_0_complete: true
 created: "2026-10-04"
@@ -148,3 +148,31 @@ for phase verification. Human subjective acceptance remains pending, including
 proportions, face, grips, paint, armor facets and contour judgment. Inherited
 support-hand/barrel fitting, first-person box-based M4 geometry, motion and
 rig/FBX licensing limits remain explicit. No later phase has started.
+
+## Validation Audit 2026-10-05
+
+All 15 planned tasks have executed automated coverage or explicitly declared
+human judgment. ART-01 through ART-04 have behavioural technical coverage; their
+shared human acceptance is still pending. No additional automated coverage gaps
+were found, so validate-phase's no-gap branch required no new auditor/tests.
+
+| Metric | Count |
+| --- | --- |
+| Planned tasks mapped | 15 |
+| Automated gaps found / escalated | 0 / 0 |
+| Code review blockers fixed | 2 / 2 |
+| Remaining independent code review findings | 0 |
+
+Post-review checks supplement the historical stable full gates above: actual
+procedural appearance 6/6, missing/corrupt-GLB opposing teams 2/2, inspector 12/12,
+pipeline 2/2, fresh schema 2 Blender repeat/demo/independent recovery, lint, both
+type checks and build passed. See `06-REVIEW-FIX.md` and current provenance/evidence
+for exact tool hashes and executed recovery directory. The historical 273/45/14
+full-suite results were preserved; they are not relabelled as runs after the
+review fixes. Current schema 2 includes active scene reachability, mesh/skin
+bindings, transforms and rendering metadata. Published GLB remains `3d92a093…`.
+
+One pixel-capture attempt failed despite byte-identical exports; its retained log
+and the subsequent complete successful runs are distinguished in evidence.
+`nyquist_compliant: true` describes technical coverage, not human acceptance or
+representative-device/FPS certification.
