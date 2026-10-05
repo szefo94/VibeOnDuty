@@ -9,6 +9,28 @@ import { startMpFixture } from './helpers/mpServer.js';
 
 const qualityKey = 'vod_graphics_quality_v1';
 
+test('art review: real gameplay capture command records the full pose and measured tier matrix', async () => {
+  test.setTimeout(300000);
+  await promisify(execFile)(process.execPath, ['tools/art/review.mjs', '--capture'], {
+    windowsHide: true, timeout: 280000,
+  });
+  const report = await readFile('.planning/research/.cache/06-art/final-review/report.json', 'utf8')
+    .then(JSON.parse).catch(() => null);
+  expect(report, 'Capture must produce current real-game pose and measurement evidence').not.toBeNull();
+  expect(report.frames.length).toBeGreaterThanOrEqual(30);
+  expect(report.measurements.map((sample) => sample.tier)).toEqual(['low', 'medium', 'high']);
+  for (const sample of report.measurements) {
+    expect(sample.frames).toBeGreaterThanOrEqual(30);
+    expect(sample.p95Ms).toBeGreaterThan(0);
+    expect(sample.actorCount).toBeGreaterThan(0);
+  }
+  for (const frame of report.frames) {
+    expect(frame.dimensions).toEqual([1280, 960]);
+    expect(frame.sha256).toMatch(/^[a-f0-9]{64}$/);
+  }
+  expect(report.cleanup).toBe('owned browser and loopback server closed');
+});
+
 test.describe('tier resize policy', () => {
   test.use({ deviceScaleFactor: 3 });
   test('art quality resize: changing DPR and resizing always reapplies the current cap', async ({ page }) => {
