@@ -14,6 +14,12 @@ let atlas = null;
 let state = 'idle';
 
 function atlasRegion(region) {
+  // Map definitions are also consumed by DOM-free navigation/world tests. Their
+  // surface metadata needs materials, while image IO belongs to the browser.
+  if (typeof document === 'undefined') {
+    state = 'nonbrowser';
+    return null;
+  }
   if (!atlas) {
     state = 'loading';
     atlas = new THREE.TextureLoader().load(

@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -9,7 +9,20 @@ import { WEAPON3P_ROT } from './weapon3pTransform.js';
 let gltf, armed;
 beforeAll(async () => {
   const data = readFileSync(new URL('../../public/models/enemy.glb', import.meta.url));
-  gltf = await new GLTFLoader().parseAsync(data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength), '');
+  // These tests exercise actual rig/animation buffers. Image decoding is covered
+  // by the browser art tests; Node has no Image/DOM for the shipped packed paint.
+  vi.stubGlobal('self', globalThis);
+  const images = vi.spyOn(THREE.TextureLoader.prototype, 'load').mockImplementation((_url, onLoad) => {
+    const texture = new THREE.Texture();
+    queueMicrotask(() => onLoad(texture));
+    return texture;
+  });
+  try {
+    gltf = await new GLTFLoader().parseAsync(data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength), '');
+  } finally {
+    images.mockRestore();
+    vi.unstubAllGlobals();
+  }
   armed = buildRifleMovementClips(gltf.scene, gltf.animations);
 });
 
