@@ -65,9 +65,9 @@
     }
   ],
   "next": {
-    "command": "$gsd-discuss-phase 7",
-    "label": "Discuss movement-matched and action-safe animation",
-    "reason": "Phase 6 accepted and complete; follow selected order 7 then 5"
+    "command": "$gsd-plan-phase 7",
+    "label": "Research and plan the confirmed animation choices",
+    "reason": "All three Phase 7 discussion areas complete; context and sprint/reload carry-forward saved"
   },
-  "updated_at": "2026-10-05T14:44:31.027Z"
+  "updated_at": "2026-10-05T15:22:14.223Z"
 }
