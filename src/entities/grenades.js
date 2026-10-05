@@ -7,31 +7,30 @@ import { mm } from '../materials.js';
 import { grenadeFalloff, grenadeEntityDamage, grenadePlayerDamage } from '../combat/damage.js';
 import { spawnGrenadeParticles, spawnSmokeCloud } from '../fx/particles.js';
 import { triggerScreenShake } from '../fx/screenShake.js';
-import { player } from './player.js';
+import { player, beginPlayerAction, tickPlayerActions, cancelPlayerActions } from './player.js';
 import { enemies, killEnemy, triggerDeath } from './enemies.js';
 import { alertEnemy } from '../ai/enemyStates.js';
 import { activeDrone, killDrone } from './drone.js';
 import { showStatus, triggerHitFlash, updateHUD } from '../hud/overlay.js';
 
 export const grenades = [];
-let pendingThrow = false;
 const grenMat = mm(0x2a4a1a, 0.6, 0.4),
   grenPinMat = mm(0xcccc44, 0.3, 0.8);
 
 export function tryThrowGrenade() {
   if (player.dead || player.throwingNade || player.energy < GRENADE_ENERGY_COST) return;
+  if (!beginPlayerAction('throw', GRENADE_THROW_DUR, [{
+    at: GRENADE_THROW_DUR * GRENADE_RELEASE_FRACTION, run: releaseGrenade,
+  }])) return;
   player.energy = 0;
   player.throwingNade = true;
   player.throwTimer = GRENADE_THROW_DUR;
-  pendingThrow = true;
   document.getElementById('energy-label').textContent = 'ENERGY: 0%';
   showStatus('GRENADE!');
 }
 
 export function cancelGrenadeThrow() {
-  pendingThrow = false;
-  player.throwingNade = false;
-  player.throwTimer = 0;
+  cancelPlayerActions('throw-canceled');
 }
 on('player:died', cancelGrenadeThrow);
 on('snd:configure', cancelGrenadeThrow);
@@ -55,14 +54,7 @@ function releaseGrenade() {
 }
 
 export function tickGrenades(dt) {
-  if (player.throwingNade) {
-    player.throwTimer = Math.max(0, player.throwTimer - dt);
-    if (pendingThrow && player.throwTimer <= GRENADE_THROW_DUR * (1 - GRENADE_RELEASE_FRACTION)) {
-      pendingThrow = false;
-      releaseGrenade();
-    }
-    if (player.throwTimer === 0) player.throwingNade = false;
-  }
+  tickPlayerActions(dt);
   for (let i = grenades.length - 1; i >= 0; i--) {
     const g = grenades[i];
     if (g.exploded) {

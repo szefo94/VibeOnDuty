@@ -11,6 +11,9 @@ import { tickGrenades } from './grenades.js';
 import { updateHUD, showMsg, showStatus } from '../hud/overlay.js';
 import { tickHitMarker } from '../hud/hitmarker.js';
 import { tryShoot, tickBullets, updateWeapon, coolSpray, bobT } from '../combat/shoot.js';
+import { createActionLifecycle } from './actionLifecycle.js';
+import { getMode } from '../modes/modeManager.js';
+import { on } from '../events.js';
 
 /** @type {import('../../types/entities').Player} */
 export const player = /** @type {any} */ ({
@@ -60,8 +63,60 @@ export const visited = Array.from({ length: MAP_H }, () => new Uint8Array(MAP_W)
 
 const _euler = new THREE.Euler(0, 0, 0, 'YXZ');
 
+export const playerActions = createActionLifecycle();
+let offlineGuard = () => true;
+let actionWeapon, actionMode, reloadWeapon, reloadMode;
+export function setOfflineActionGuard(guard) { offlineGuard = guard; }
+export function canUseOfflineActions() { return !player.dead && offlineGuard(); }
+
+export function cancelReload() {
+  player.reloading = false;
+  reloadWeapon = reloadMode = undefined;
+  player.reloadTimer = player.reloadTotal = 0;
+  document.getElementById('reloadwrap').style.display = 'none';
+}
+
+export function cancelPlayerActions(reason = 'retired') {
+  playerActions.cancel(reason);
+  cancelReload();
+  player.throwingNade = player.punching = player.aiming = player.holdBreath = false;
+  player.throwTimer = player.aimT = 0;
+}
+on('player:died', () => cancelPlayerActions('death'));
+on('snd:configure', () => cancelPlayerActions('round'));
+
+export function beginPlayerAction(kind, duration, markers) {
+  if (!canUseOfflineActions() || !playerActions.begin(kind, playerActions.generation, duration, markers))
+    return false;
+  cancelReload();
+  player.aiming = player.holdBreath = false;
+  player.aimT = 0;
+  actionWeapon = player.weapon;
+  actionMode = getMode();
+  return true;
+}
+
+export function tickPlayerActions(dt) {
+  if (!canUseOfflineActions() || (!playerActions.canAim &&
+      (actionWeapon !== player.weapon || actionMode !== getMode())) ||
+      (player.reloading && reloadWeapon !== undefined &&
+        (reloadWeapon !== player.weapon || reloadMode !== getMode()))) {
+    cancelPlayerActions('replacement');
+    return;
+  }
+  const exclusive = !playerActions.canAim;
+  playerActions.tick(dt);
+  if (exclusive) player.aiming = player.holdBreath = false;
+  const phase = playerActions.presentation;
+  player.throwingNade = phase.kind === 'throw';
+  player.throwTimer = player.throwingNade ? phase.duration - phase.elapsed : 0;
+  player.punching = phase.kind === 'melee';
+}
+
 export function startReload() {
-  if (player.reloading || player.reserve <= 0) return;
+  if (!canUseOfflineActions() || !playerActions.canReload || player.reloading || player.reserve <= 0) return;
+  reloadWeapon = player.weapon;
+  reloadMode = getMode();
   player.reloading = true;
   player.reloadTotal = WEAPONS[player.weapon].reload;
   player.reloadTimer = player.reloadTotal;
@@ -71,6 +126,7 @@ export function startReload() {
 
 export function updatePlayer(dt) {
   if (player.dead) return;
+  if (!playerActions.canAim) player.aiming = player.holdBreath = false;
   if ((mouseHeld || keys['TouchFire']) && locked) tryShoot();
   if (player.slowTimer > 0) player.slowTimer = Math.max(0, player.slowTimer - dt);
 
