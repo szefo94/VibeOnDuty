@@ -31,7 +31,7 @@
     {
       "number": "6",
       "name": "Human Characters and Comic-Book Blender Iteration",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "number": "7",
@@ -69,5 +69,5 @@
     "label": "Advance to the next step",
     "reason": "Phase 6 of 12 · 8% · executing"
   },
-  "updated_at": "2026-10-04T18:05:51.729Z"
+  "updated_at": "2026-10-05T07:43:01.507Z"
 }
