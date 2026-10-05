@@ -7,10 +7,12 @@ import { applyCharacterAppearance } from './characterAppearance.js';
 
 // Exercise the current public tint entry point without browser initialization.
 vi.mock('../scene.js', () => ({ scene: new THREE.Scene() }));
-vi.mock('./enemy.js', () => ({ buildEnemy: vi.fn() }));
+vi.mock('../materials.js', () => ({ mm: (color, roughness, metalness = 0) =>
+  new THREE.MeshStandardMaterial({ color, roughness, metalness }) }));
 vi.mock('./enemyWeapon.js', () => ({ attachEnemyWeapon: vi.fn() }));
 vi.mock('./weaponFBX.js', () => ({ attachWeapons3pToHand: vi.fn() }));
 import { tintEnemyMesh } from './enemyGLTF.js';
+import { buildEnemy } from './enemy.js';
 
 function fixture() {
   const root = new THREE.Group();
@@ -25,6 +27,33 @@ function fixture() {
 }
 
 describe('character appearance', () => {
+  it('tints actual fallback clothing independently, reuses accents and retires only owned resources', () => {
+    const blue = buildEnemy(0, 0).mesh, red = buildEnemy(1, 0).mesh;
+    const templates = blue.children.map((node) => node.material);
+    const colors = templates.map((material) => material.color.getHex());
+    const sharedDispose = templates.map((material) => vi.spyOn(material, 'dispose'));
+    tintEnemyMesh(blue, 0x4488ff); tintEnemyMesh(red, 0xff5555);
+    const owned = blue.children.map((node) => node.material);
+    const accents = owned.filter((material) => material.userData.artDomain === 'team-accent');
+    expect(new Set(accents).size).toBe(4);
+    for (let i = 0; i < owned.length; i++) {
+      if (templates[i].userData.artDomain === 'team-accent') {
+        expect(owned[i]).not.toBe(templates[i]);
+        expect(owned[i].color.getHex()).toBe(0x4488ff);
+        expect(red.children[i].material.color.getHex()).toBe(0xff5555);
+      } else expect(owned[i]).toBe(templates[i]);
+    }
+    tintEnemyMesh(blue, 0xff5555); tintEnemyMesh(blue, null); tintEnemyMesh(blue, 0x4488ff);
+    expect(blue.children.map((node) => node.material)).toEqual(owned);
+    expect(templates.map((material) => material.color.getHex())).toEqual(colors);
+    const ownedDispose = [...new Set(accents)].map((material) => vi.spyOn(material, 'dispose'));
+    const sibling = red.children.map((node) => [node.material, node.material.color.getHex()]);
+    disposeCharacter(blue); disposeCharacter(blue);
+    for (const spy of ownedDispose) expect(spy).toHaveBeenCalledTimes(1);
+    for (let i = 0; i < 33; i++) expect(sharedDispose[i]).not.toHaveBeenCalled();
+    expect(red.children.map((node) => [node.material, node.material.color.getHex()])).toEqual(sibling);
+    disposeCharacter(red);
+  });
   it('supports one accent, node metadata, null entries and once-only owned cleanup', () => {
     const root = new THREE.Group();
     const material = new THREE.MeshStandardMaterial({ color: 0xb6a05b });

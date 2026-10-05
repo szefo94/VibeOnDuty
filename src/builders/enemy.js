@@ -13,6 +13,13 @@ const mGunE = mm(0x0f0f0f, 0.3, 0.8),
   mGunEW = mm(0x1a1410, 0.58, 0.1),
   mGunEM = mm(0x222222, 0.4, 0.5);
 
+// Shared fallback templates follow the same explicit accent allowlist as the GLB.
+// Appearance clones only these materials per actor; skin and weapons stay shared.
+for (const material of [mUnif, mUnifD, mUnifL, mHelm])
+  material.userData.artDomain = 'team-accent';
+mSkin.userData.artDomain = 'skin';
+for (const material of [mGunE, mGunEW, mGunEM]) material.userData.artDomain = 'weapon';
+
 export function buildEnemy(wx, wz) {
   const g = new THREE.Group();
   const p = (geo, mat, x, y, z) => {

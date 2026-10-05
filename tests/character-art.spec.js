@@ -202,6 +202,69 @@ test('art fallback: loading settles into a playable detailed-character failure',
   })).toBe(true);
 });
 
+for (const [kind, status, body] of [['missing GLB', 404, ''], ['corrupt GLB', 200, 'broken GLB']]) {
+  test(`art fallback teams: ${kind} preserves opposing colors and sibling retirement`, async ({ page }) => {
+    await page.route('**/models/enemy.glb', (route) => route.fulfill({
+      status, body, contentType: 'model/gltf-binary',
+    }));
+    await readyForArt(page);
+    await page.evaluate(() => { HTMLCanvasElement.prototype.requestPointerLock = () => {}; });
+    await page.locator('#tdm-startbtn').click();
+    const state = await page.evaluate(async () => {
+      const src = new URL('src/', location.href).href;
+      const g = await import(src + 'builders/enemyGLTF.js');
+      const { enemies } = await import(src + 'entities/enemies.js');
+      const { scene } = await import(src + 'scene.js');
+      const { createRemoteActors } = await import(src + 'network/remoteActors.js');
+      const record = (mesh) => mesh.children.filter((n) => n.material).map((n) => ({
+        domain: n.material.userData.artDomain ?? null, color: n.material.color.getHex(),
+        uuid: n.material.uuid,
+      }));
+      const offline = enemies.map((e) => ({ team: e.sndTeam, materials: record(e.mesh) }));
+      const built = [];
+      const owner = createRemoteActors(scene, { create: (x, z) => {
+        const actor = g.buildEnemyMesh(x, z); built.push(actor); return actor;
+      }, tint: g.tintEnemyMesh, dispose: g.disposeEnemyMesh, animate: () => {} });
+      const blue = { sessionId: 'blue', lifeGeneration: 1, x: 0, z: 0, team: 'blue' };
+      const red = { ...blue, sessionId: 'red', x: 1, team: 'red' };
+      const sync = (players) => owner.syncRemoteActors({ sessionId: 'local', matchGeneration: 1, players }, 0);
+      sync([blue, red]);
+      const before = built.map((actor) => record(actor.mesh));
+      sync([{ ...blue, team: 'red' }, red]); sync([blue, red]);
+      const reassigned = record(built[0].mesh);
+      let ownedDisposed = 0, sharedDisposed = 0;
+      const materials = new Set(built[0].mesh.children.map((n) => n.material));
+      for (const material of materials) material.addEventListener('dispose', () => {
+        if (material.userData.characterOwned) ownedDisposed++; else sharedDisposed++;
+      });
+      sync([red]); g.disposeEnemyMesh(built[0].mesh, built[0].mixer);
+      const sibling = record(built[1].mesh);
+      const disposed = { ownedDisposed, sharedDisposed };
+      owner.disposeRemoteActors();
+      return { loaded: g.usingGLTF, offline, before, reassigned, sibling, disposed };
+    });
+    expect(state.loaded).toBe(false);
+    expect(new Set(state.offline.map((actor) => actor.team))).toEqual(new Set(['friend', 'enemy']));
+    for (const actor of state.offline) {
+      const accents = actor.materials.filter((m) => m.domain === 'team-accent');
+      expect(accents.length).toBeGreaterThan(0);
+      for (const accent of accents) expect(accent.color).toBe(actor.team === 'friend' ? 0x00bb44 : 0xcc2200);
+    }
+    for (const [index, color] of [[0, 0x4488ff], [1, 0xff5555]]) {
+      const accents = state.before[index].filter((m) => m.domain === 'team-accent');
+      expect(accents.length).toBeGreaterThan(0);
+      for (const accent of accents) expect(accent.color).toBe(color);
+    }
+    expect(state.reassigned).toEqual(state.before[0]);
+    expect(state.sibling).toEqual(state.before[1]);
+    expect(state.disposed).toEqual({ ownedDisposed: 5, sharedDisposed: 0 }); // four accents + flash
+    for (let i = 0; i < state.before[0].length; i++) {
+      if (['skin', 'weapon'].includes(state.before[0][i].domain))
+        expect(state.before[0][i]).toEqual(state.before[1][i]);
+    }
+  });
+}
+
 for (const [kind, pattern, status, body, detailed] of [
   ['corrupt GLB', '**/models/enemy.glb', 200, 'broken GLB', false],
   ['missing image', '**/textures/comic-slice.png', 404, '', true],
