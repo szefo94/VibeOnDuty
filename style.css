@@ -68,15 +68,16 @@ body{background:#000;overflow:hidden;font-family:'Courier New',monospace}
 #character-asset-status h2{font-size:20px;font-weight:700;line-height:1.2;margin-bottom:8px}
 #character-asset-status p+p{margin-top:8px}
 #character-asset-status[hidden]{display:none}
-@media(max-width:480px){#overlay h1{font-size:32px;letter-spacing:4px;overflow-wrap:anywhere}#pause-title{font-size:20px;letter-spacing:1px}}
 #pause-title{font-size:36px;letter-spacing:10px;color:#e8c84a;text-shadow:0 0 30px rgba(232,200,74,0.35)}
 .graphics-quality{margin:16px;max-width:320px;width:calc(100% - 32px);color:#ddd;font:14px/1.5 'Courier New',monospace;text-align:left;flex-shrink:0}
+#overlay .graphics-quality{max-width:320px;margin:16px auto}
 .graphics-quality label{display:block;margin-bottom:8px;font-size:16px;font-weight:700}
 .graphics-quality select{width:min(320px,100%);min-height:44px;padding:8px 16px;border:1px solid #e8c84a;background:#111;color:#ddd;font:700 16px/1.5 'Courier New',monospace}
 .graphics-quality select:hover{border-color:#ddd}
 .graphics-quality select:focus-visible{outline:3px solid #fff;outline-offset:4px}
 .graphics-quality p{margin-top:8px;overflow-wrap:anywhere}
 #overlay h1{font-size:52px;letter-spacing:12px;color:#e8c84a;margin-bottom:4px;text-shadow:0 0 40px rgba(232,200,74,0.4)}
+@media(max-width:480px){#overlay h1{font-size:32px;letter-spacing:4px;overflow-wrap:anywhere}#pause-title{font-size:20px;letter-spacing:1px}}
 #overlay .sub{font-size:11px;color:#555;letter-spacing:5px;margin-bottom:30px}
 .ctrl-row{display:flex;gap:18px;margin-bottom:22px;flex-wrap:wrap;justify-content:center;max-width:700px}
 .ctrl{text-align:center}

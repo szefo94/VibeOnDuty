@@ -525,9 +525,9 @@ playerBody.add(weapon3p);
   }
   _startBtn.textContent          = 'INCURSION';
   _sndStartBtn.textContent       = 'S&D — START';
-  _tdmStartBtn.textContent       = 'TEAM DEATHMATCH';
+  _tdmStartBtn.textContent       = '[ TEAM DEATHMATCH ]';
   _adaptiveStartBtn.textContent  = 'ADAPTIVE';
-  _rangeStartBtn.textContent     = 'TRAINING RANGE';
+  _rangeStartBtn.textContent     = '[ TRAINING RANGE ]';
   _editorStartBtn.textContent    = 'MAP EDITOR';
   _startBtn.disabled           = false;
   _sndStartBtn.disabled        = false;
