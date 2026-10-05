@@ -8,10 +8,90 @@ import { createServer } from 'node:net';
 
 const qualityKey = 'vod_graphics_quality_v1';
 
+test.describe('tier resize policy', () => {
+  test.use({ deviceScaleFactor: 3 });
+  test('art quality resize: changing DPR and resizing always reapplies the current cap', async ({ page }) => {
+    await readyForArt(page);
+    for (const [tier, cap] of [['low', 1], ['medium', 1.5], ['high', 2]]) {
+      await page.locator('#graphics-quality-menu').selectOption(tier);
+      for (const dpr of [0.8, 3, 1.25]) {
+        const state = await page.evaluate(async (dpr) => {
+          Object.defineProperty(window, 'devicePixelRatio', { value: dpr, configurable: true });
+          window.dispatchEvent(new Event('resize'));
+          const { renderer } = await import(new URL('src/scene.js', location.href).href);
+          const { sunLight } = await import(new URL('src/lighting.js', location.href).href);
+          return { ratio: renderer.getPixelRatio(), width: renderer.domElement.width,
+            shadows: renderer.shadowMap.enabled, type: renderer.shadowMap.type,
+            shadowSize: sunLight.shadow.mapSize.toArray(), viewport: innerWidth };
+        }, dpr);
+        expect(state.ratio).toBe(Math.min(dpr, cap));
+        expect(state.width).toBe(Math.floor(state.viewport * Math.min(dpr, cap)));
+        expect(state.shadows).toBe(tier !== 'low');
+        expect(state.shadowSize).toEqual([2048, 2048]);
+        expect(state.type).toBe(2); // PCFSoftShadowMap, r160.
+      }
+    }
+    await page.setViewportSize({ width: 640, height: 480 });
+    expect(await page.evaluate(async () => {
+      const { renderer } = await import(new URL('src/scene.js', location.href).href);
+      return renderer.getPixelRatio();
+    })).toBe(1.25);
+  });
+});
+
 async function readyForArt(page) {
   await page.goto('/');
   await expect(page.locator('#range-startbtn')).toBeEnabled({ timeout: 30000 });
 }
+
+test('art quality resize: live and future real rigs share bounded passes and keep painted maps', async ({ page }) => {
+  test.setTimeout(120000);
+  await setupComicReview(page);
+  const result = await page.evaluate(async () => {
+    const { g, ink, T, actor, scene, renderer, camera } = window.__comicReview;
+    const { createGraphicsQuality } = await import(new URL('src/graphicsQuality.js', location.href).href);
+    const { ambientLight, sunLight, fillLight } = await import(new URL('src/lighting.js', location.href).href);
+    for (const child of [...scene.children]) if (child.isLight) scene.remove(child);
+    scene.add(ambientLight.clone(), sunLight.clone(), fillLight.clone());
+    renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+    const policy = createGraphicsQuality({ storage: () => null });
+    const painted = [];
+    actor.mesh.traverse((n) => { for (const m of Array.isArray(n.material) ? n.material : [n.material])
+      if (m?.map) painted.push({ n, m, map: m.map }); });
+    const original = renderer.render; let passes = 0;
+    renderer.render = function (...args) { passes++; return original.apply(this, args); };
+    const samples = [], captures = [];
+    for (let cycle = 0; cycle < 8; cycle++) {
+      policy.setGraphicsQuality('low'); policy.applyGraphicsQuality(renderer, 1);
+      const future = g.buildEnemyMesh(1, 0); scene.add(future.mesh); future.mixer.update(0.4);
+      g.tintEnemyMesh(future.mesh, 0xff5555); g.tintEnemyMesh(actor.mesh, 0x4488ff);
+      for (const tier of ['low', 'medium', 'high', 'medium']) {
+        policy.setGraphicsQuality(tier); policy.applyGraphicsQuality(renderer, 1);
+        passes = 0; ink.renderComicScene(renderer, scene, camera);
+        if (cycle === 0) {
+          captures.push({ tier, passes, image: renderer.domElement.toDataURL('image/png') });
+        }
+        if (passes !== (tier === 'low' ? 1 : 2)) throw new Error('Duplicate or missing contour pass');
+      }
+      g.disposeEnemyMesh(future.mesh, future.mixer);
+      ink.renderComicScene(renderer, scene, camera);
+      samples.push({ ...renderer.info.memory, programs: renderer.info.programs.length });
+    }
+    const intact = painted.every(({ n, m, map }) => (Array.isArray(n.material) ? n.material : [n.material]).includes(m) && m.map === map);
+    const details = { renderer: renderer.getContext().getParameter(renderer.getContext().RENDERER),
+      viewport: [1280, 960], dpr: 1, exposure: renderer.toneMappingExposure };
+    renderer.render = original;
+    g.disposeEnemyMesh(actor.mesh, actor.mixer); ink.disposeComicOwner(renderer); renderer.dispose();
+    return { samples, captures, intact, details };
+  });
+  expect(result.intact).toBe(true);
+  for (const sample of result.samples.slice(3)) expect(sample).toEqual(result.samples[2]);
+  for (const capture of result.captures) {
+    await writeFile(`.planning/research/.cache/06-art/04-quality-${capture.tier}.png`, Buffer.from(capture.image.split(',')[1], 'base64'));
+    delete capture.image;
+  }
+  await writeFile('.planning/research/.cache/06-art/04-quality-resources.json', JSON.stringify(result, null, 2));
+});
 
 test('art quality: defaults and invalid saved values use Medium', async ({ page }) => {
   await page.addInitScript((key) => localStorage.setItem(key, 'HIGH'), qualityKey);
