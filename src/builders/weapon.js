@@ -2,12 +2,15 @@ import * as THREE from 'three';
 import { WEAPON3P_BARREL_SHIFT } from './weapon3pTransform.js';
 import { mm } from '../materials.js';
 import { scene, camera } from '../scene.js';
+import { makeIllustratedMaterial } from '../artMaterials.js';
 
 const mGun  = mm(0x181818, 0.30, 0.85);
 const mGun2 = mm(0x221810, 0.60, 0.20);
 const mGunW = mm(0x2a1a0a, 0.50, 0.05);
 const mGunL = mm(0x2a3a1a, 0.55, 0.30); // AWP stock green
 const mGunS = mm(0x1a1a22, 0.25, 0.90); // scope glass
+const m4Metal = makeIllustratedMaterial('metal');
+const m4Polymer = makeIllustratedMaterial('polymer');
 
 // ── Outer group — position/rotation driven by updateWeapon() ─────────
 export const wpn = new THREE.Group();
@@ -42,6 +45,9 @@ mk(_w1.m4, box(0.034, 0.092, 0.037), mGun2, 0,     -0.074,   0.06);
 mk(_w1.m4, box(0.027, 0.058, 0.036), mGun2, 0,     -0.060,  -0.04);
 brl(_w1.m4, 0.009, 0.009, 0.36, 0, 0.012, -0.33);
 brl(_w1.m4, 0.013, 0.013, 0.04, 0, 0.012, -0.51); // muzzle device
+_w1.m4.traverse((node) => {
+  if (node.isMesh) node.material = node.material === mGun ? m4Metal : m4Polymer;
+});
 
 // P90 — procedural fallback; FBX replaces children if loaded
 _w1.p90 = new THREE.Group();
@@ -93,6 +99,9 @@ _w3.m4 = new THREE.Group();
 b3(_w3.m4, box(0.060, 0.060, 0.44), mGun,  0, 0,     0);
 b3(_w3.m4, box(0.050, 0.070, 0.19), mGunW, 0, 0,  0.23); // stock
 r3(_w3.m4, 0.010, 0.010, 0.36,      0, 0.010, -0.35);
+_w3.m4.traverse((node) => {
+  if (node.isMesh) node.material = node.material === mGun ? m4Metal : m4Polymer;
+});
 
 // P90 (3p)
 _w3.p90 = new THREE.Group();

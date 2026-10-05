@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { readFile } from 'node:fs/promises';
+import { readFile, mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { execFile, spawn } from 'node:child_process';
+import { promisify } from 'node:util';
+import { createServer } from 'node:net';
 
 test.beforeEach(async ({ page }) => {
   if (process.env.VOD_ART_CANDIDATE) {
@@ -222,3 +227,153 @@ test('art soldier: fitted painted equipment survives actual gameplay pose sampli
   }
 });
 
+test('art slice: shared illustrated M4 and scoped Greek Columns slots load in the game', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#range-startbtn')).toBeEnabled({ timeout: 30000 });
+  await page.locator('#range-startbtn').click();
+  const result = await page.evaluate(async () => {
+    const src = new URL('src/', location.href).href;
+    const { wpn, weapon3p } = await import(src + 'builders/weapon.js');
+    const { buildEnemyWeapon3p } = await import(src + 'builders/enemyWeapon.js');
+    const { bunkerMapDef } = await import(src + 'maps/bunker.js');
+    const { matWall } = await import(src + 'materials.js');
+    const guns = [wpn.children.find((n) => n.isGroup && n.visible),
+      weapon3p.children.find((n) => n.visible), buildEnemyWeapon3p('assault')];
+    const maps = [], domains = [];
+    guns.forEach((gun) => gun.traverse((node) => {
+      if (!node.isMesh) return;
+      maps.push(node.material.map);
+      domains.push(node.material.userData.artDomain);
+    }));
+    await new Promise((resolve, reject) => {
+      let retries = 0;
+      const poll = () => {
+        if (maps.every((map) => map?.image?.width === 1024)) resolve();
+        else if (++retries > 100) reject(new Error('Atlas not loaded'));
+        else setTimeout(poll, 30);
+      };
+      poll();
+    });
+    return {
+      domains, shared: maps.every((map) => map.source === maps[0].source),
+      image: maps[0].image.src, colorSpace: maps[0].colorSpace,
+      stone: Object.values(bunkerMapDef.materials).map((m) => ({ domain: m.userData.artDomain,
+        ready: m.map?.image?.width === 1024, region: m.userData.atlasRegion })),
+      scoped: bunkerMapDef.materials.wall !== matWall && !matWall.userData.artDomain,
+    };
+  });
+  expect(result.domains.every((domain) => domain === 'weapon')).toBe(true);
+  expect(result.shared).toBe(true);
+  expect(result.image).toContain('/textures/comic-slice.png');
+  expect(result.colorSpace).toBe('srgb');
+  expect(result.stone.every((m) => m.ready && m.domain === 'stone')).toBe(true);
+  expect(result.scoped).toBe(true);
+  await page.keyboard.press('v');
+  await page.screenshot({ path: '.planning/research/.cache/06-art/slice-range.png' });
+});
+
+test('art slice: missing paint preserves usable shaded materials and weapon geometry', async ({ page }) => {
+  await page.route('**/textures/comic-slice.png', (route) => route.abort());
+  await page.goto('/');
+  await expect(page.locator('#startbtn')).toBeEnabled({ timeout: 30000 });
+  const state = await page.evaluate(async () => {
+    const src = new URL('src/', location.href).href;
+    const { makeIllustratedMaterial } = await import(src + 'artMaterials.js');
+    const { buildEnemyWeapon3p } = await import(src + 'builders/enemyWeapon.js');
+    const { bunkerMapDef } = await import(src + 'maps/bunker.js');
+    const material = makeIllustratedMaterial('metal');
+    return { map: material.map, type: material.type, color: material.color.getHex(),
+      failed: material.userData.paintState, meshes: buildEnemyWeapon3p('assault').children.length,
+      stones: Object.values(bunkerMapDef.materials).every((m) => m.map === null && m.color.getHex() > 0) };
+  });
+  expect(state.map).toBeNull();
+  expect(state.type).toBe('MeshStandardMaterial');
+  expect(state.color).toBeGreaterThan(0);
+  expect(state.failed).toBe('failed');
+  expect(state.meshes).toBe(4);
+  expect(state.stones).toBe(true);
+});
+
+test('art slice: TDM builds painted Greek Columns structural walls and floors without world changes', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 960 });
+  await page.goto('/');
+  await expect(page.locator('#tdm-startbtn')).toBeEnabled({ timeout: 30000 });
+  await page.locator('.map-card[data-map="bunker"]').click();
+  await page.locator('#tdm-startbtn').click();
+  const result = await page.evaluate(async () => {
+    const src = new URL('src/', location.href).href;
+    const { scene, camera, renderer } = await import(src + 'scene.js');
+    const { bunkerMapDef } = await import(src + 'maps/bunker.js');
+    const { bunkerData } = await import(src + 'shared/maps/bunker.js');
+    const { getMode } = await import(src + 'modes/modeManager.js');
+    const surfaces = [], structures = [];
+    scene.traverse((n) => {
+      if (!n.isMesh) return;
+      const stone = (Array.isArray(n.material) ? n.material : [n.material]).filter((m) => m?.userData.artDomain === 'stone');
+      if (!stone.length) return;
+      surfaces.push(...stone.map((m) => m.map?.image?.width === 1024));
+      if (n.geometry.type === 'BoxGeometry') structures.push(n.geometry.parameters.width);
+    });
+    camera.position.set(34, 3.2, 36); camera.lookAt(46, 2, 40); renderer.render(scene, camera);
+    return { mode: getMode()?.name, surfaces, structures,
+      world: bunkerMapDef.tiles === bunkerData.tiles && bunkerMapDef.heightmap === bunkerData.heightmap &&
+        bunkerMapDef.spawnPlayer === bunkerData.spawnPlayer && bunkerMapDef.spawnAttacker === bunkerData.spawnAttacker &&
+        bunkerMapDef.spawnDefender === bunkerData.spawnDefender };
+  });
+  expect(result.mode).toBe('tdm');
+  expect(result.surfaces.length).toBeGreaterThan(100);
+  expect(result.surfaces.every(Boolean)).toBe(true);
+  expect(result.structures.length).toBeGreaterThan(0);
+  expect(result.world).toBe(true);
+  await page.locator('canvas').first().screenshot({ path: '.planning/research/.cache/06-art/slice-greek-columns.png' });
+});
+
+test('art slice: base-prefixed production build resolves the painted assets', async ({ page }) => {
+  test.setTimeout(90000);
+  const directory = await mkdtemp(path.join(tmpdir(), 'vod-art-prefix-'));
+  const vite = path.resolve('node_modules/vite/bin/vite.js');
+  const env = { ...process.env, PUBLIC_BASE: '/art-prefix/' };
+  let server;
+  try {
+    await promisify(execFile)(process.execPath, [vite, 'build', '--outDir', directory], { env, windowsHide: true });
+    const port = await new Promise((resolve) => {
+      const probe = createServer();
+      probe.listen(0, '127.0.0.1', () => { const port = probe.address().port; probe.close(() => resolve(port)); });
+    });
+    server = spawn(process.execPath, [vite, 'preview', '--outDir', directory,
+      '--host', '127.0.0.1', '--port', String(port), '--strictPort'], { env, windowsHide: true });
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('Owned prefix preview did not start')), 15000);
+      server.once('error', reject);
+      server.stdout.on('data', (data) => { if (data.toString().includes('Local:')) { clearTimeout(timer); resolve(); } });
+      server.once('exit', (code) => { if (code) { clearTimeout(timer); reject(new Error('Preview exited')); } });
+    });
+    const base = `http://127.0.0.1:${port}/art-prefix/`;
+    const failed = [];
+    page.on('requestfailed', (request) => { if (request.method() === 'GET' && (request.url().includes('/models/') || request.url().includes('/textures/'))) failed.push(request.url() + ' ' + request.failure()?.errorText); });
+    await page.goto(base);
+    await expect(page.locator('#range-startbtn')).toBeEnabled({ timeout: 30000 });
+    expect(await page.evaluate(() => !!window.__bodyRef()?.getObjectByName('HumanBody'))).toBe(true);
+    await page.locator('#range-startbtn').click();
+    await page.keyboard.press('v');
+    await page.waitForFunction(() => {
+      const maps = [];
+      window.__bodyRef()?.traverse((n) => {
+        for (const m of Array.isArray(n.material) ? n.material : [n.material])
+          if (m?.userData.artDomain === 'weapon') maps.push(m.map);
+      });
+      return maps.length > 0 && maps.every((map) => map?.image?.src.includes('/art-prefix/textures/comic-slice.png'));
+    });
+    expect(failed).toEqual([]);
+    expect((await page.request.get(base + 'textures/comic-slice.png')).ok()).toBe(true);
+    await page.screenshot({ path: '.planning/research/.cache/06-art/slice-prefix-production.png' });
+  } finally {
+    if (server && server.exitCode === null) {
+      const exited = new Promise((resolve) => server.once('exit', resolve));
+      server.kill(); await exited;
+    }
+    const relative = path.relative(tmpdir(), directory);
+    if (relative.startsWith('vod-art-prefix-') && !relative.includes(path.sep))
+      await rm(directory, { recursive: true, force: true });
+  }
+});

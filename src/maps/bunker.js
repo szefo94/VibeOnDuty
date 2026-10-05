@@ -3,6 +3,7 @@ import { CELL } from '../config.js';
 import { bunkerData } from '../shared/maps/bunker.js';
 export { H1, H2 } from '../shared/maps/bunker.js';
 import { mm, matFloor, matWall, matWallD, matWallT, matCrack, matTrim, matRamp } from '../materials.js';
+import { illustratedClone } from '../artMaterials.js';
 
 
 void mm;
@@ -18,13 +19,13 @@ export const bunkerMapDef = {
   skyColor: 0x7ca8c8,
   showRubble: true,
   materials: {
-    floor:    matFloor,
-    wall:     matWall,
-    wallDark: matWallD,
-    wallTop:  matWallT,
-    crack:    matCrack,
-    trim:     matTrim,
-    ramp:     matRamp,
+    floor:    illustratedClone(matFloor, 'stoneFloor'),
+    wall:     illustratedClone(matWall, 'stoneWall', { contour: true }),
+    wallDark: illustratedClone(matWallD, 'stoneWall', { contour: true }),
+    wallTop:  illustratedClone(matWallT, 'stoneWall', { contour: true }),
+    crack:    illustratedClone(matCrack, 'stoneWall'),
+    trim:     illustratedClone(matTrim, 'stoneWall', { contour: true }),
+    ramp:     illustratedClone(matRamp, 'stoneFloor'),
   },
   buildExtras(scene, torchLights) {
     [

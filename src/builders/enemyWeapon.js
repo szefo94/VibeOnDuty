@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import { WEAPON3P_ROT, WEAPON3P_GRIP, WEAPON3P_BARREL_SHIFT } from './weapon3pTransform.js';
 import { preserveTemplateGeometry } from './characterResources.js';
+import { makeIllustratedMaterial } from '../artMaterials.js';
 
 // ── Tuning ────────────────────────────────────────────────────────────────────
 const TARGET_LENGTH = 0.17; // pistol longest axis in Three.js world units (~17 cm)
@@ -89,6 +90,8 @@ export async function tryLoadPistolFBX() {
 const _eGun  = new THREE.MeshStandardMaterial({ color: 0x1a1c1e, roughness: 0.35, metalness: 0.85 });
 const _eGun2 = new THREE.MeshStandardMaterial({ color: 0x201810, roughness: 0.70, metalness: 0.20 });
 const _eScope= new THREE.MeshStandardMaterial({ color: 0x0e1218, roughness: 0.18, metalness: 0.80 });
+const _m4Metal = makeIllustratedMaterial('metal');
+const _m4Polymer = makeIllustratedMaterial('polymer');
 
 function _mesh(geo, mat, x, y, z, rx = 0) {
   const m = new THREE.Mesh(geo, mat);
@@ -126,6 +129,9 @@ export function buildEnemyWeapon3p(role = 'assault') {
       g.add(_mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.30, 6), _eGun, 0, 0.010, -0.28, P2));
       break;
   }
+  if (role === 'assault') g.traverse(node => {
+    if (node.isMesh) node.material = node.material === _eGun ? _m4Metal : _m4Polymer;
+  });
   return g;
 }
 
