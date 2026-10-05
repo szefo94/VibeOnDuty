@@ -16,6 +16,7 @@ export function characterOwner(node) {
 export function applyCharacterAppearance(root) {
   if (!root || appearances.has(root)) return;
   const accents = new Map();
+  const anatomicalBody = !!root.getObjectByName('HumanBody');
   root.traverse((node) => {
     if (!node.isMesh || !node.material) return;
     owners.set(node, root);
@@ -23,6 +24,11 @@ export function applyCharacterAppearance(root) {
     // hull. Leave it in the paint pass to avoid blacking out the visible neckline.
     if (node.name === 'RaisedFabricCollar') node.userData.artContour = false;
     const assign = (material) => {
+      // Concave anatomical eyes/fingers can expose the backface hull inside their
+      // lit surface when bent. Keep those fine forms in the paint pass; clothing,
+      // equipment and weapons still carry the actor silhouette.
+      if (material && anatomicalBody && characterDomain(node, material) === 'skin')
+        material.userData.artContour = false;
       if (!material || !['team-accent', 'teamAccent'].includes(characterDomain(node, material)))
         return material;
       let entry = accents.get(material);

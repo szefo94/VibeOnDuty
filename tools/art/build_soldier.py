@@ -110,7 +110,7 @@ def paint(m, domain, color):
     pixels[:, :, :3] = np.clip(np.array(color)[None, None, :] * value[:, :, None], 0, 1)
     if domain == 'skin':
         # UV-aware soft neckline transition avoids a polygon-shaped skin boundary.
-        blend = np.clip((y * FIT['stature'] - 1.51) / 0.055, 0, 1)
+        blend = np.clip((y * FIT['stature'] - 1.49) / 0.075, 0, 1)
         blend = blend * blend * (3 - 2 * blend)
         pixels[:, :, :3] = pixels[:, :, :3] * blend[:, :, None] + np.array((0.188, 0.224, 0.251))[None, None, :] * (1-blend[:, :, None])
     image = bpy.data.images.new('Paint_' + domain, width=size, height=size)
@@ -277,7 +277,10 @@ def build():
         source_height = sum(verts[body_indices[i]].z for i in poly.vertices) / len(poly.vertices)
         neck_face = max(abs(verts[body_indices[i]].x) for i in poly.vertices) < 0.12
         hand_face = all(weights[i][0][0].startswith(('hand_', 'thumb_', 'index_', 'middle_', 'ring_', 'pinky_')) for i in poly.vertices)
-        poly.material_index = 0 if source_height > head_source.z + 0.03 or (source_height > head_source.z - 0.10 and neck_face) or hand_face else 1
+        # Extend the skin domain below the visible neckline. Its UV color fades
+        # to fabric before this boundary so a triangle's material edge cannot
+        # draw an angular skin seam above the collar.
+        poly.material_index = 0 if source_height > head_source.z + 0.03 or (source_height > head_source.z - 0.20 and neck_face) or hand_face else 1
     attach(obj, arm, 'HumanBody', weights)
     # Cylinder projection avoids disconnected face-color islands at the neck.
     uv = mesh.uv_layers.new(name='PaintUV')
@@ -310,15 +313,31 @@ def build():
     def surface_plate(name, front, bottom, top, bone):
         points, quads = [], []
         rows, columns = 8, 8
+        torso_surface = [p for p in fitted if 0.9 < p.z < 1.6 and abs(p.x) < 0.22
+                         and (p.y < 0 if front else p.y > 0)]
         for r in range(rows + 1):
             z = bottom + r / rows * (top-bottom)
             width = 0.135 * (0.82 if r == rows else 1)
             for c in range(columns + 1):
                 x = -width + c / columns * width * 2
-                # Smooth tailored curvature; nearest-body samples at each grid point
-                # created noisy ridges that looked like disconnected scraps when posed.
-                y = (-0.116 if front else 0.118) + (0.020 if front else -0.020) * (x/0.135)**2
+                # Fit depth to the actual body, then smooth the grid below. Raw
+                # nearest-vertex depths produced ridges; a fixed-depth shell
+                # instead clips or hovers when the torso's blend weights move it.
+                nearby = sorted(torso_surface, key=lambda p: (p.x-x)**2 + (p.z-z)**2)[:8]
+                gains = [1/max((p.x-x)**2 + (p.z-z)**2, 0.00001) for p in nearby]
+                y = sum(p.y*gain for p, gain in zip(nearby, gains))/sum(gains)
+                y += -0.015 if front else 0.015
                 points.append((x, y, z))
+        for _ in range(3):
+            smooth = []
+            for r in range(rows+1):
+                for c in range(columns+1):
+                    i = r*(columns+1)+c
+                    neighbors = [points[rr*(columns+1)+cc][1]
+                                 for rr,cc in [(r,c),(max(0,r-1),c),(min(rows,r+1),c),
+                                               (r,max(0,c-1)),(r,min(columns,c+1))]]
+                    smooth.append((points[i][0],sum(neighbors)/len(neighbors),points[i][2]))
+            points = smooth
         for r in range(rows):
             for c in range(columns):
                 a = r * (columns+1) + c
@@ -338,7 +357,23 @@ def build():
         solid.thickness = 0.009
         bpy.context.view_layer.objects.active = plate
         bpy.ops.object.modifier_apply(modifier=solid.name)
-        attach(plate, arm, name, [[(bone, 1)] for v in plate.data.vertices])
+        # The carrier follows the fitted torso's existing blend weights. A rigid
+        # single-spine assignment leaves its outer rows hovering in armed/bent
+        # poses. Keep the smooth authored surface; sample only weights, not shape.
+        torso = [(p, weights[i]) for i, p in enumerate(fitted)
+                 if 0.9 < p.z < 1.6 and abs(p.x) < 0.22]
+        plate_weights = []
+        for v in plate.data.vertices:
+            nearby = sorted(torso, key=lambda sample: (sample[0] - v.co).length_squared)[:4]
+            combined = {}
+            for p, pairs in nearby:
+                gain = 1 / max((p - v.co).length_squared, 0.000001)
+                for name_, weight in pairs:
+                    combined[name_] = combined.get(name_, 0) + weight * gain
+            strongest = sorted(combined.items(), key=lambda pair: -pair[1])[:4]
+            total = sum(weight for _, weight in strongest)
+            plate_weights.append([(name_, weight / total) for name_, weight in strongest])
+        attach(plate, arm, name, plate_weights)
         return points
     chest_points = surface_plate('ChestPlate', True, 1.315, 1.425, 'spine_03')
     surface_plate('BackPlate', False, 1.315, 1.425, 'spine_03')
@@ -368,6 +403,8 @@ def build():
         data = bpy.data.meshes.new(name)
         data.from_pydata(vertices, [], faces)
         data.update()
+        for poly in data.polygons:
+            poly.use_smooth = True
         o = bpy.data.objects.new(name, data)
         bpy.context.collection.objects.link(o)
         data.materials.append(mat)

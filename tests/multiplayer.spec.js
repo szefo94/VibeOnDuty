@@ -115,6 +115,10 @@ for (const path of ['score', 'time'])
       await expect.poll(async () => (await snapshot(a)).players.length).toBe(2);
       const first = await snapshot(a),
         targetId = (await snapshot(b)).sessionId;
+      if (path === 'score') {
+        expectHumanArt(await humanArtState(a));
+        expectHumanArt(await humanArtState(b));
+      }
       const own = (s, id) => s.players.find((p) => p.sessionId === id);
       if (path === 'score') {
         await aimAt(a, null);
@@ -159,6 +163,8 @@ for (const path of ['score', 'time'])
         await expect(b.locator('#mp-team-rejection')).toContainText('teams must stay balanced');
         for (const page of [a, b]) expect(own(await snapshot(page), targetId).team).toBe('red');
         await expect.poll(async () => own(await snapshot(b), targetId).lifeGeneration).toBe(2);
+        expectHumanArt(await humanArtState(a));
+        expectHumanArt(await humanArtState(b));
         await expect
           .poll(() => b.evaluate(() => window.__lifecycleSeen().freshInventory))
           .toBe(true);
@@ -289,6 +295,7 @@ for (const path of ['score', 'time'])
           expect(s.remoteActors).toHaveLength(1);
           const remote = s.players.find(p => p.sessionId !== s.sessionId);
           expect(s.remoteActors[0]).toMatchObject({ lifeGeneration: remote.lifeGeneration, skinned: true, armed: true });
+          expectHumanArt(await humanArtState(page));
         }
         await expect(page.locator('#mp-results')).toBeHidden();
       }
@@ -298,7 +305,12 @@ for (const path of ['score', 'time'])
       await expect.poll(() => a.evaluate(() => !!document.pointerLockElement)).toBe(true);
       await a.screenshot({path:test.info().outputPath(`rematch-${path}.png`)});
       for (const page of [a, b]) {
+        await focusControls(page);
         await page.evaluate(() => document.exitPointerLock());
+        await expect(page.locator('#pause-menu')).toBeVisible();
+        const pause = await page.locator('#pause-menu').boundingBox();
+        const controls = await page.locator('#mp-match-controls').boundingBox();
+        expect(pause.x).toBeGreaterThanOrEqual(controls.x + controls.width + 8);
         await page.locator('#mp-match-leave').click();
         await expect(page.locator('#overlay')).toBeVisible();
         await expect(page.locator('#kills-num')).toHaveText('0');
@@ -629,6 +641,54 @@ test('errors: unavailable join and disconnected session offer visible top Retry 
   } finally { try { await context.close(); } finally { await fixture.stop(); } }
 });
 
+// Read only existing real-rig debug references. Event listeners observe disposal;
+// this does not add a production mutation API or alter authoritative snapshots.
+async function humanArtState(page) {
+  return page.evaluate(() => {
+    const player = window.__bodyRef();
+    let scene = player;
+    while (scene?.parent) scene = scene.parent;
+    if (!scene?.isScene) throw Error('Actual scene reference missing');
+    let playerRoot = player;
+    while (playerRoot.parent && playerRoot.parent !== scene) playerRoot = playerRoot.parent;
+    const state = window.__artLifetime ??= { watched: new WeakSet(), sharedDisposals: 0 };
+    const roots = [];
+    for (const root of scene.children) {
+      if (!root.getObjectByName('HumanBody')) continue;
+      const domains = [], accents = [], shared = [];
+      root.traverse((n) => {
+        for (const m of Array.isArray(n.material) ? n.material : [n.material]) {
+          if (!m) continue;
+          const domain = m.userData.artDomain ?? n.userData.artDomain ?? n.parent?.userData.artDomain;
+          if (!['skin', 'fabric', 'armor', 'team-accent', 'teamAccent'].includes(domain)) continue;
+          domains.push(domain);
+          if (m.map) {
+            shared.push({ uuid: m.map.uuid, width: m.map.image.width, domain });
+            if (!state.watched.has(m.map)) {
+              state.watched.add(m.map);
+              m.map.addEventListener('dispose', () => { state.sharedDisposals++; });
+            }
+          }
+          if (['team-accent', 'teamAccent'].includes(domain)) accents.push({ owned: m.userData.characterOwned, color: m.color.getHexString() });
+        }
+      });
+      roots.push({ uuid: root.uuid, player: root === playerRoot, domains: [...new Set(domains)], accents, shared });
+    }
+    return { roots, sharedDisposals: state.sharedDisposals };
+  });
+}
+
+function expectHumanArt(state) {
+  expect(state.sharedDisposals).toBe(0);
+  for (const actor of state.roots) {
+    expect(actor.domains).toEqual(expect.arrayContaining(['skin', 'fabric', 'armor', 'team-accent']));
+    expect(actor.shared.length).toBeGreaterThan(0);
+    expect(actor.shared.every((map) => map.width === 512)).toBe(true);
+    expect(actor.accents.length).toBeGreaterThan(0);
+    expect(actor.accents.every((m) => m.owned && ['4488ff', 'ff5555', 'ffffff'].includes(m.color))).toBe(true);
+  }
+}
+
 test('resources: repeated leave and rejoin preserve real template clones and stabilize allocations', async ({ browser }) => {
   test.setTimeout(120000);
   const fixture = await startMpFixture(), contexts=[];
@@ -643,11 +703,18 @@ test('resources: repeated leave and rejoin preserve real template clones and sta
       expect(s.usingGLTF).toBe(true);
       expect(s.remoteActors[0]).toMatchObject({skinned:true,armed:true});
       expect(s.remoteResourceCounts.created-s.remoteResourceCounts.disposed).toBe(1);
+      const art = await humanArtState(a);
+      expectHumanArt(art);
+      expect(art.roots.filter((root) => !root.player)).toHaveLength(1);
+      const keeper = (await humanArtState(b)).roots.find((root) => root.player);
       counts.push(s.renderMemory);
       await a.evaluate(()=>document.exitPointerLock());
       await a.locator('#mp-match-leave').click();
       await expect.poll(async()=> (await snapshot(b)).remoteActorCount).toBe(0);
       expect(await snapshot(a)).toMatchObject({remoteActorCount:0,inputHandlerCount:0});
+      const surviving = await humanArtState(b);
+      expectHumanArt(surviving);
+      expect(surviving.roots.find((root) => root.player).shared).toEqual(keeper.shared);
       await a.locator('#mp-join-btn').click();
       await expect.poll(async()=> (await snapshot(a)).sessionId).toBeTruthy();
     }

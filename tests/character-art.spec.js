@@ -27,6 +27,7 @@ test('art review: real gameplay capture command records the full pose and measur
   for (const frame of report.frames) {
     expect(frame.dimensions).toEqual([1280, 960]);
     expect(frame.sha256).toMatch(/^[a-f0-9]{64}$/);
+    expect(frame.fallbackVisible).toBe(false);
   }
   expect(report.cleanup).toBe('owned browser and loopback server closed');
 });

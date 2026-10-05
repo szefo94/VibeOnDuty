@@ -95,6 +95,7 @@ body{background:#000;overflow:hidden;font-family:'Courier New',monospace}
 #mp-match-controls{position:fixed;left:12px;bottom:76px;max-width:min(360px,calc(100% - 24px));max-height:calc(100% - 92px);overflow:auto;z-index:120}
 #pause-menu[data-online="true"]{max-width:calc(100% - 24px);padding:24px}
 #pause-menu[data-online="true"] #pause-title{font-size:16px;letter-spacing:2px}
+@media(min-width:768px){#pause-menu[data-online="true"]{left:auto;right:12px;transform:translateY(-50%);width:min(400px,calc(100% - 396px))}}
 #pause-online-hint{color:#ddd;font:14px/1.4 'Courier New',monospace;margin-top:8px}
 #mp-error-banner[hidden],#mp-match-controls[hidden],#mp-results[hidden],#mp-resume[hidden]{display:none}
 #mp-error-banner strong,#mp-result-title{font-size:16px;color:#e8c84a}
