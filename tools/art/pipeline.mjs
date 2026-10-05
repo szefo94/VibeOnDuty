@@ -247,6 +247,143 @@ export async function refreshProvenance() {
   };
   await fs.writeFile(filename, JSON.stringify(ledger, null, 2) + '\n');
 }
+export const ITERATION_OPERATIONS = Object.freeze({
+  'helmet-cheek-guard-offset': [-0.025, 0.025],
+  'accent-paint-gain': [0.4, 1.3],
+});
+// Iteration refuses every linked component, even links pointing inside an owned root.
+export async function iterationPath(roots, target) {
+  if (typeof target !== 'string' || !target || target.includes('\0'))
+    throw Error('Invalid iteration path');
+  const absolute = path.resolve(target);
+  if (!roots.some((root) => {
+    const relative = path.relative(root, absolute);
+    return relative !== '' && !relative.startsWith('..') && !path.isAbsolute(relative);
+  })) throw Error('Iteration path escapes owned root');
+  let current = absolute;
+  while (true) {
+    try {
+      if ((await fs.lstat(current)).isSymbolicLink()) throw Error('Linked iteration path');
+    } catch (error) { if (error.code !== 'ENOENT') throw error; }
+    const parent = path.dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  return absolute;
+}
+export async function validateIteration({ source, params, request, out }) {
+  const inputs = [await iterationPath([SOURCES, CACHE], source),
+    await iterationPath([path.join(ROOT, 'tools/art'), CACHE], params),
+    await iterationPath([CACHE], request)];
+  const output = await iterationPath([CACHE], out);
+  if (!inputs[0].endsWith('.blend') || !inputs[1].endsWith('.json') ||
+    !inputs[2].endsWith('.json') || !output.endsWith('.blend')) throw Error('Iteration extension');
+  for (const filename of inputs) {
+    const stat = await fs.stat(filename);
+    if (!stat.isFile() || stat.size > (filename.endsWith('.blend') ? 64000000 : 64000))
+      throw Error('Iteration input bound');
+  }
+  for (const filename of [output, output + '.params.json', output + '.operation.json']) {
+    await iterationPath([CACHE], filename);
+    if (inputs.some((input) => input.toLowerCase() === filename.toLowerCase()))
+      throw Error('Iteration output aliases input');
+    await fs.access(filename).then(() => { throw Error('Iteration output already exists'); },
+      (error) => { if (error.code !== 'ENOENT') throw error; });
+  }
+  const requestText = await fs.readFile(inputs[2], 'utf8');
+  const keys = new Set();
+  // Fixed schema keys are unique across both levels; decode escaped JSON keys too.
+  for (const match of requestText.matchAll(/"((?:\\.|[^"\\])*)"\s*:/g)) {
+    const key = JSON.parse('"' + match[1] + '"');
+    if (keys.has(key)) throw Error('Duplicate iteration request key');
+    keys.add(key);
+  }
+  const data = JSON.parse(requestText);
+  if (!data || Object.keys(data).sort().join(',') !== 'operations,schemaVersion' ||
+    data.schemaVersion !== 1 || !data.operations || Array.isArray(data.operations) ||
+    typeof data.operations !== 'object' || !Object.keys(data.operations).length)
+    throw Error('Invalid iteration request schema');
+  for (const [name, value] of Object.entries(data.operations)) {
+    const range = Object.hasOwn(ITERATION_OPERATIONS, name) && ITERATION_OPERATIONS[name];
+    if (!range || typeof value !== 'number' || !Number.isFinite(value) ||
+      value < range[0] || value > range[1]) throw Error('Unknown/out-of-range iteration operation');
+  }
+  const parameters = JSON.parse(await fs.readFile(inputs[1], 'utf8'));
+  if (parameters.schemaVersion !== 1) throw Error('Invalid authoring parameters');
+  return { source: inputs[0], params: inputs[1], request: inputs[2], out: output, data };
+}
+export async function applyIteration(options, validateOnly = false) {
+  const checked = await validateIteration(options);
+  if (validateOnly) return checked;
+  const exe = await bootstrap();
+  await run(exe, ['--background', '--factory-startup', '--disable-autoexec',
+    '--python-exit-code', '1', '--python', path.join(ROOT, 'tools/art/iterate.py'), '--',
+    '--source', checked.source, '--params', checked.params, '--request', checked.request,
+    '--out', checked.out]);
+  return checked;
+}
+export async function iterationDemo() {
+  await fs.mkdir(CACHE, { recursive: true });
+  const directory = await fs.mkdtemp(path.join(CACHE, 'iteration-'));
+  const source = path.join(SOURCES, 'soldier.blend');
+  const params = path.join(ROOT, 'tools/art/character-params.json');
+  const published = path.join(ROOT, 'public/models/enemy.glb');
+  const beforeInputs = { source: hash(await fs.readFile(source)),
+    params: hash(await fs.readFile(params)), published: hash(await fs.readFile(published)) };
+  const baselineSource = path.join(directory, 'baseline.blend');
+  const baselineParams = path.join(directory, 'baseline.params.json');
+  await fs.copyFile(source, baselineSource);
+  await fs.copyFile(params, baselineParams);
+  const before = path.join(directory, 'before.glb');
+  await exportSource(baselineSource, before, ['--params', baselineParams]);
+  const request = path.join(directory, 'request.json');
+  await fs.writeFile(request, JSON.stringify({ schemaVersion: 1,
+    operations: { 'helmet-cheek-guard-offset': 0.022, 'accent-paint-gain': 0.55 } }, null, 2));
+  const changedSource = path.join(directory, 'changed.blend');
+  await applyIteration({ source: baselineSource, params: baselineParams, request, out: changedSource });
+  const changed = path.join(directory, 'changed.glb');
+  await exportSource(changedSource, changed, ['--params', changedSource + '.params.json']);
+  // Recover editable working files from separately retained source/parameters, then REOPEN.
+  const restoredSource = path.join(directory, 'restored.blend');
+  const restoredParams = path.join(directory, 'restored.params.json');
+  await fs.copyFile(baselineSource, restoredSource);
+  await fs.copyFile(baselineParams, restoredParams);
+  const restored = path.join(directory, 'restored.glb');
+  await exportSource(restoredSource, restored, ['--params', restoredParams]);
+  const { compareSemanticExports, inspectCharacter } = await import('./inspect-character.mjs');
+  const edited = await compareSemanticExports(before, changed);
+  const recovered = await compareSemanticExports(before, restored);
+  assert.equal(edited.equal, false, 'Edit must change semantic output');
+  assert.equal(edited.domains.mesh, false, 'Cheek guard edit must change geometry');
+  assert.equal(edited.domains.images, false, 'Accent edit must change painted pixels');
+  assert.equal(edited.domains.skin, true); assert.equal(edited.domains.motion, true);
+  assert.equal(recovered.equal, true, 'Restored source must regenerate baseline semantics');
+  const publishedComparison = await compareSemanticExports(published, before);
+  assert.equal(publishedComparison.equal, true, 'Accepted editable source must match published asset');
+  for (const candidate of [before, changed, restored])
+    await inspectCharacter(candidate, { baseline: path.join(CACHE, 'baseline.glb') });
+  const { reviewIteration } = await import('./review.mjs');
+  const review = await reviewIteration(directory, { before, changed, restored });
+  assert.equal(hash(await fs.readFile(source)), beforeInputs.source);
+  assert.equal(hash(await fs.readFile(params)), beforeInputs.params);
+  assert.equal(hash(await fs.readFile(published)), beforeInputs.published);
+  const scripts = ['iterate.py', 'pipeline.mjs', 'review.mjs', 'build_soldier.py', 'inspect-character.mjs'];
+  const report = { schemaVersion: 1, directory: path.relative(ROOT, directory),
+    beforeInputs, operations: JSON.parse(await fs.readFile(request)),
+    runtime: { version: '4.5.13 LTS', archiveHash: PIN.sha256, buildHash: 'daeeeca98fb0',
+      executableHash: hash(await fs.readFile(await bootstrap())) },
+    scriptHashes: Object.fromEntries(await Promise.all(scripts.map(async (name) =>
+      [name, hash(await fs.readFile(path.join(ROOT, 'tools/art', name)))]))),
+    files: Object.fromEntries(await Promise.all([baselineSource, baselineParams, request, before,
+      changedSource, changedSource + '.params.json', changedSource + '.operation.json', changed,
+      restoredSource, restoredParams, restored].map(async (filename) =>
+      [path.basename(filename), hash(await fs.readFile(filename))]))),
+    edited, recovered, publishedComparison, review, publishedAssetsUnchanged: true };
+  await fs.writeFile(path.join(directory, 'report.json'), JSON.stringify(report, null, 2));
+  await fs.writeFile(path.join(CACHE, 'iteration-report.json'), JSON.stringify(report, null, 2));
+  console.log(JSON.stringify(report, null, 2));
+  return report;
+}
 async function selfTest() {
   await fs.mkdir(CACHE, { recursive: true });
   const { test } = await import('node:test');
@@ -262,6 +399,39 @@ async function selfTest() {
     assert.equal(accepted, true, 'Reviewed bounded operation must validate successfully');
     await assert.rejects(fs.access(path.join(directory, 'changed.blend')),
       'Validation must not create editable output');
+  });
+  await test('iteration rejects unknown/range/path/link requests without changing retained inputs', async () => {
+    const directory = await fs.mkdtemp(path.join(CACHE, 'iteration-negative-'));
+    const source = path.join(SOURCES, 'soldier.blend');
+    const params = path.join(ROOT, 'tools/art/character-params.json');
+    const before = [hash(await fs.readFile(source)), hash(await fs.readFile(params))];
+    const request = path.join(directory, 'request.json');
+    const out = path.join(directory, 'candidate.blend');
+    const options = { source, params, request, out };
+    for (const operations of [{ unknown: 1 }, { 'accent-paint-gain': 1.31 },
+      { 'helmet-cheek-guard-offset': -0.026 }, { 'accent-paint-gain': '0.8' },
+      { 'accent-paint-gain': null }, { 'accent-paint-gain': true }, {}]) {
+      await fs.writeFile(request, JSON.stringify({ schemaVersion: 1, operations }));
+      await assert.rejects(applyIteration(options));
+    }
+    await fs.writeFile(request, '{"schemaVersion":1,"operations":{"accent-paint-gain":1e999}}');
+    await assert.rejects(applyIteration(options));
+    await fs.writeFile(request, '{"schemaVersion":1,"operations":{"accent-paint-gain":0.8,"accent-paint-gain":0.9}}');
+    await assert.rejects(applyIteration(options));
+    await fs.writeFile(request, JSON.stringify({ schemaVersion: 1,
+      operations: { 'accent-paint-gain': 0.8 }, script: 'untrusted' }));
+    await assert.rejects(applyIteration(options));
+    await fs.writeFile(request, JSON.stringify({ schemaVersion: 1, operations: { 'accent-paint-gain': 0.8 } }));
+    await assert.rejects(applyIteration({ ...options, out: path.join(CACHE, '../outside.blend') }));
+    await assert.rejects(applyIteration({ ...options, out: source }));
+    await assert.rejects(applyIteration({ ...options, source: path.join(ROOT, 'AGENTS.md') }));
+    const link = path.join(directory, 'linked');
+    await fs.symlink(directory, link, process.platform === 'win32' ? 'junction' : 'dir');
+    await assert.rejects(applyIteration({ ...options, out: path.join(link, 'candidate.blend') }));
+    await fs.unlink(link);
+    await assert.rejects(fs.access(out));
+    assert.deepEqual([hash(await fs.readFile(source)), hash(await fs.readFile(params))], before);
+    console.log('Unknown, finite/range/type, escape, alias and real link negatives rejected before Blender');
   });
   assert.throws(() => owned(CACHE, path.join(CACHE, '../outside')));
   assert.throws(() => zipEntries(Buffer.alloc(0), CACHE));
@@ -326,6 +496,15 @@ async function main() {
   const command = process.argv[2],
     args = process.argv.slice(3);
   if (command === 'self-test') return selfTest();
+  if (command === 'iterate') {
+    if (args.length === 1 && args[0] === '--demo') return iterationDemo();
+    const validateOnly = args[0] === '--validate';
+    const fields = validateOnly ? args.slice(1) : args;
+    if (fields.length !== 8 || fields[0] !== '--source' || fields[2] !== '--params' ||
+      fields[4] !== '--request' || fields[6] !== '--out') throw Error('Invalid iterate arguments');
+    return applyIteration({ source: path.resolve(ROOT, fields[1]), params: path.resolve(ROOT, fields[3]),
+      request: path.resolve(ROOT, fields[5]), out: path.resolve(ROOT, fields[7]) }, validateOnly);
+  }
   if (!['bootstrap', 'build', 'build-slice', 'probe', 'export'].includes(command))
     throw Error('Unknown operation');
   if (
