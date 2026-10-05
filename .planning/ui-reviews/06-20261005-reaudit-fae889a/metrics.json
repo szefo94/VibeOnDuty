@@ -1,0 +1,237 @@
+[
+  {
+    "name": "desktop",
+    "width": 1440,
+    "height": 900,
+    "title": {
+      "size": "52px",
+      "tracking": "12px",
+      "rect": {
+        "x": 460.765625,
+        "y": 101.21875,
+        "width": 518.46875,
+        "height": 59,
+        "top": 101.21875,
+        "right": 979.234375,
+        "bottom": 160.21875,
+        "left": 460.765625
+      }
+    },
+    "control": {
+      "size": "16px",
+      "weight": "700",
+      "height": 44,
+      "width": 320
+    },
+    "qualityRect": {
+      "x": 560,
+      "y": 551.21875,
+      "width": 320,
+      "height": 134,
+      "top": 551.21875,
+      "right": 880,
+      "bottom": 685.21875,
+      "left": 560
+    },
+    "scrollHeight": 900,
+    "clientHeight": 900,
+    "rangeLabel": "[ TRAINING RANGE ]",
+    "tdmLabel": "[ TEAM DEATHMATCH ]",
+    "offlinePause": {
+      "size": "36px",
+      "tracking": "10px"
+    },
+    "onlinePause": {
+      "size": "16px",
+      "tracking": "2px"
+    }
+  },
+  {
+    "name": "mobile",
+    "width": 375,
+    "height": 812,
+    "title": {
+      "size": "32px",
+      "tracking": "4px",
+      "rect": {
+        "x": 48.28125,
+        "y": 24,
+        "width": 278.4375,
+        "height": 37,
+        "top": 24,
+        "right": 326.71875,
+        "bottom": 61,
+        "left": 48.28125
+      }
+    },
+    "control": {
+      "size": "16px",
+      "weight": "700",
+      "height": 44,
+      "width": 311
+    },
+    "qualityRect": {
+      "x": 32,
+      "y": 1473,
+      "width": 311,
+      "height": 134,
+      "top": 1473,
+      "right": 343,
+      "bottom": 1607,
+      "left": 32
+    },
+    "scrollHeight": 1812,
+    "clientHeight": 812,
+    "rangeLabel": "[ TRAINING RANGE ]",
+    "tdmLabel": "[ TEAM DEATHMATCH ]",
+    "offlinePause": {
+      "size": "20px",
+      "tracking": "1px"
+    },
+    "onlinePause": {
+      "size": "16px",
+      "tracking": "2px"
+    }
+  },
+  {
+    "name": "tablet",
+    "width": 768,
+    "height": 1024,
+    "title": {
+      "size": "52px",
+      "tracking": "12px",
+      "rect": {
+        "x": 124.765625,
+        "y": 24,
+        "width": 518.46875,
+        "height": 59,
+        "top": 24,
+        "right": 643.234375,
+        "bottom": 83,
+        "left": 124.765625
+      }
+    },
+    "control": {
+      "size": "16px",
+      "weight": "700",
+      "height": 44,
+      "width": 320
+    },
+    "qualityRect": {
+      "x": 224,
+      "y": 833,
+      "width": 320,
+      "height": 134,
+      "top": 833,
+      "right": 544,
+      "bottom": 967,
+      "left": 224
+    },
+    "scrollHeight": 1105,
+    "clientHeight": 1024,
+    "rangeLabel": "[ TRAINING RANGE ]",
+    "tdmLabel": "[ TEAM DEATHMATCH ]",
+    "offlinePause": {
+      "size": "36px",
+      "tracking": "10px"
+    },
+    "onlinePause": {
+      "size": "16px",
+      "tracking": "2px"
+    }
+  },
+  {
+    "name": "compact",
+    "width": 320,
+    "height": 568,
+    "title": {
+      "size": "32px",
+      "tracking": "4px",
+      "rect": {
+        "x": 20.78125,
+        "y": 24,
+        "width": 278.4375,
+        "height": 37,
+        "top": 24,
+        "right": 299.21875,
+        "bottom": 61,
+        "left": 20.78125
+      }
+    },
+    "control": {
+      "size": "16px",
+      "weight": "700",
+      "height": 44,
+      "width": 256
+    },
+    "qualityRect": {
+      "x": 32,
+      "y": 1529,
+      "width": 256,
+      "height": 155,
+      "top": 1529,
+      "right": 288,
+      "bottom": 1684,
+      "left": 32
+    },
+    "scrollHeight": 1911,
+    "clientHeight": 568,
+    "rangeLabel": "[ TRAINING RANGE ]",
+    "tdmLabel": "[ TEAM DEATHMATCH ]",
+    "offlinePause": {
+      "size": "20px",
+      "tracking": "1px"
+    },
+    "onlinePause": {
+      "size": "16px",
+      "tracking": "2px"
+    }
+  },
+  {
+    "name": "landscape",
+    "width": 568,
+    "height": 320,
+    "title": {
+      "size": "52px",
+      "tracking": "12px",
+      "rect": {
+        "x": 24.765625,
+        "y": 24,
+        "width": 518.46875,
+        "height": 59,
+        "top": 24,
+        "right": 543.234375,
+        "bottom": 83,
+        "left": 24.765625
+      }
+    },
+    "control": {
+      "size": "16px",
+      "weight": "700",
+      "height": 44,
+      "width": 320
+    },
+    "qualityRect": {
+      "x": 124,
+      "y": 833,
+      "width": 320,
+      "height": 134,
+      "top": 833,
+      "right": 444,
+      "bottom": 967,
+      "left": 124
+    },
+    "scrollHeight": 1105,
+    "clientHeight": 320,
+    "rangeLabel": "[ TRAINING RANGE ]",
+    "tdmLabel": "[ TEAM DEATHMATCH ]",
+    "offlinePause": {
+      "size": "36px",
+      "tracking": "10px"
+    },
+    "onlinePause": {
+      "size": "16px",
+      "tracking": "2px"
+    }
+  }
+]

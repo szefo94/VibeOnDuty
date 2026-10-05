@@ -176,3 +176,11 @@ One pixel-capture attempt failed despite byte-identical exports; its retained lo
 and the subsequent complete successful runs are distinguished in evidence.
 `nyquist_compliant: true` describes technical coverage, not human acceptance or
 representative-device/FPS certification.
+
+Final UI correction `fae889a` passed three existing compact browser cases and
+scoped main-module lint. A fresh five-viewport re-audit scores 22/24: group width,
+centering, compact/offline/online title sizes and exact settled mode labels match.
+Only character/grip/weapon visual judgment remains. Independent phase verification
+confirms 121 evidence identities, five focused behavior checks, no failed technical
+truths and no unverified transition invariants. Two actual human checks are persisted
+in `06-UAT.md`; no human pass is inferred from automation or delegated execution.

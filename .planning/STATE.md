@@ -2,12 +2,12 @@
 gsd_state_version: "1.0"
 current_phase: 6
 current_phase_name: Human Characters and Comic-Book Blender Iteration
-status: ready_for_verification
-stopped_at: Completed 06-06-PLAN.md; all six implementations ready for verification; human aesthetic acceptance pending
-last_updated: "2026-10-05T13:01:25.231Z"
+status: awaiting_human_verification
+stopped_at: Phase 6 technical verification complete; two human visual checks saved in 06-UAT.md
+last_updated: "2026-10-05T14:24:22.898Z"
 last_activity: 2026-10-05
-last_activity_desc: All six Phase 6 implementations delivered with reviewed current-source art and seven passing stable gates; human acceptance pending
-state_head: 16e1b237604cc4ff94e81226f892ba506a0e6e20
+last_activity_desc: Phase 6 independently verified with zero technical gaps, clean code review and corrected UI; two visual judgments pending
+state_head: 515dff5b8726c5a16805def72515115d80a8203d
 progress:
   total_phases: 12
   completed_phases: 1
@@ -27,12 +27,12 @@ See: .planning/PROJECT.md (updated 2026-10-04)
 
 ## Current Position
 
-Phase: 6 (Human Characters and Comic-Book Blender Iteration) — READY FOR VERIFICATION
+Phase: 6 (Human Characters and Comic-Book Blender Iteration) — AWAITING HUMAN VERIFICATION
 Plan: 6 of 6
-Status: All six implementations complete — phase verification and human aesthetic acceptance pending
+Status: All six implementations and technical verification complete; two human visual checks pending in 06-UAT.md
 Next action: $gsd-verify-work 6 — inspect the delivered running character and matched evidence for proportions, face, grips, paint and contours. Global ART requirements remain pending; do not advance Phase 7 before Phase 6 verification.
 Roadmap review: User revised remaining order to6 → 7 → 5 → 2 → 3 → 4 → 8 → 9 → 10 → 11 → 12; Phase1 remains complete.
-Last activity: 2026-10-05 — Completed 06-06: corrected retained art source, 58 full-pixel gameplay frames / 67 PNGs, independent current-source restoration, 273 unit / 45 offline browser / 14 production multiplayer tests and all seven final gates pass; human aesthetic acceptance remains pending
+Last activity: 2026-10-05 — Independent verification: 18/23 truths, zero failed technical truths or untested transitions; 121 hashes match. Both code-review blockers fixed and re-reviewed clean, UI 22/24 after layout/copy corrections. Historical full gates 273 unit / 45 browser / 14 multiplayer retained; all affected post-review checks passed. Two subjective checks remain.
 
 Routing: Follow the selected order rather than numeric next-phase suggestions. After Phase7 select5; after5 select2; after4 select8. Phases2–5 and7–12 remain pending, with no skipped phase marked complete.
 
@@ -137,13 +137,16 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-10-05T13:01:25.163Z
-Stopped at: Completed 06-06-PLAN.md; all six implementations ready for verification; human aesthetic acceptance pending
-Resume file: None
+Last session: 2026-10-05T14:24:22.898Z
+Stopped at: Phase 6 technical verification complete; two human visual checks saved in 06-UAT.md
+Resume file: .planning/phases/06-human-characters-and-comic-book-blender-iteration/06-UAT.md
 
-Review server: https://192.168.0.16:2567 — default rules, owned Node PID35084,
-attached exec session99002. HTTPS health and game verified; the user passed the
-two-window browser trust/gesture check. See01-UAT.md and ignored01-review-server.json for ownership/setup.
-The earlier Phase 1 temporary git.allow_default_branch_commits override was restored.
-The current Phase 6 approved override and milestone lock remain root-owned and
-were excluded from executor staging; the root controls their eventual restoration.
+Review game: http://127.0.0.1:5173/VibeOnDuty/ — local Vite preview for the final
+visual checks. Owned process details are retained in ignored
+.planning/research/.cache/06-review-game.json; start/health are checked at closeout.
+The earlier Phase 1 HTTPS review server is historical and was not listening at
+this closeout; its prior user trust checks remain in 01-UAT.md.
+Temporary Phase 6 default-branch/worktree overrides are restored to their original
+absence and the root-owned milestone claim is released after this closeout commit.
+Next command: $gsd-verify-work 6. Do not complete Phase 6 or advance to Phase 7
+until actual human appearance judgments are recorded.

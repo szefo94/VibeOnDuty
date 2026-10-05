@@ -65,9 +65,9 @@
     }
   ],
   "next": {
-    "command": "/gsd:progress --next",
-    "label": "Advance to the next step (verify)",
-    "reason": "Phase 6 of 12 · 8% · ready to verify"
+    "command": "$gsd-verify-work 6",
+    "label": "Review the delivered Phase 6 appearance",
+    "reason": "All six implementations and technical checks complete; two human visual judgments pending"
   },
-  "updated_at": "2026-10-05T13:01:22.454Z"
+  "updated_at": "2026-10-05T14:24:22.898Z"
 }
