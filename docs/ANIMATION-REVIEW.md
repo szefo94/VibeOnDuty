@@ -1,5 +1,84 @@
 # Animation and model review
 
+## Phase 7 pre-tuning moving baseline — 2026-10-05
+
+The current accepted soldier now has two independently loaded moving Training Range
+measurement runs, at Low/Medium/High with one and eight actual cloned assault actors.
+The ordinary enabled Range entry loads the shipped GLB and packed maps. The controlled
+offline fixture holds its gameplay loop and advances current ready, forward/backward,
+strafe, run, crouch, jump/landing and reload transitions through the existing animation
+helpers. Roots stay fixed: these samples measure animation and rendering, not input,
+collision, combat or movement-matched foot contact. Current hand/weapon limitations
+remain visible; no new first-person hands or physical reloads are asserted here.
+
+Run these gates sequentially:
+
+```powershell
+npm run test:e2e -- tests/animation-baseline.spec.js --workers=1
+node tools/art/review.mjs --animation-baseline
+node tools/art/review.mjs --animation-budget
+```
+
+The full baseline took **991.331 seconds**. Each profile contains 214 timed frames
+with a 50ms simulation step, native animation-frame pacing, synchronous GPU completion,
+12 warmup frames and eight deterministic clone/retirement loops. A separate 214-frame
+1280×960 PNG playback preserves full-pixel continuous motion; encoding is excluded from
+measurement. Its relative paths and SHA256 identities are in the baseline report, while
+the large media stays under the ignored owned cache. Future capture attempts use separate
+directories. A failed/canceled attempt preserves existing reports and media and cannot
+publish passing evidence. The fixture restores borrowed camera/visibility, releases
+owned browsers/listeners, and demonstrates an unrelated HTTP listener survives failure.
+
+The named device is **DESKTOP-NUH2KOI**, Windows 10.0.19045 x64, AMD Ryzen 5 5600,
+Node 24.19.0 and Chromium 147.0.7727.15. WebGL is ANGLE Vulkan **SwiftShader**, with
+1280×960 viewport and DPR 1 for every tier. These are software-rendering measurements;
+they do not qualify a phone, integrated GPU, gaming GPU, Raspberry Pi or 60 FPS gameplay.
+Browser timer quantization can report zero for short components. The first captured
+scene retains the authored Range lighting rather than inventing a brighter review setup.
+
+Canonical evidence:
+
+- [Moving baseline](../.planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-baseline.json): twelve profiles, renderer/device, source/export/provenance identities and full-pixel media references.
+- [Pre-tuning budget](../.planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-budget.json): six matched tier/count envelopes and exact retirement/resource decisions.
+
+Baseline SHA256: `177686a0759ca5b7dc4311e2a6e4bdba15b6c9a844546d51ad1690c00b1b0b20`.
+Published GLB SHA256: `3d92a093fc6724c295fdabb456d41110a0b03fc7f72f565b42b36c4c09b00847`.
+
+For each component/statistic, the upper bound is the larger repeat value plus its
+absolute repeat dispersion. The JSON retains unrounded measurements. Candidate checks
+must match device/browser/renderer, viewport/DPR, tier, actor count, transition clock and
+warmup. The pre-tuning budget is immutable: `--animation-budget` rejects stale source,
+truncated/nonfinite samples, missing/stale media and changed existing decisions.
+Candidate overruns require optimization or a separately justified matched remeasurement;
+do not silently widen the envelope or overwrite the canonical baseline with a candidate.
+
+Recorded upper bounds in milliseconds; G/T/P are warmed geometry/texture/program counts:
+
+| Tier | Actors | Frame median | Frame p95 | Mixer p95 | Inertia p95 | Selection p95 | Render p95 | G/T/P |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Low | 1 | 185.900 | 198.100 | 0.300 | 0.100 | 0.100 | 1.700 | 75/59/10 |
+| Low | 8 | 425.500 | 435.400 | 0.300 | 0.300 | 0.100 | 5.500 | 110/416/10 |
+| Medium | 1 | 191.800 | 200.300 | 0.100 | 0.000 | 0.100 | 3.800 | 143/60/16 |
+| Medium | 8 | 487.000 | 518.200 | 0.300 | 0.300 | 0.100 | 10.000 | 178/417/16 |
+| High | 1 | 193.800 | 207.100 | 0.100 | 0.000 | 0.100 | 2.800 | 143/60/16 |
+| High | 8 | 488.200 | 516.900 | 0.500 | 0.300 | 0.100 | 10.600 | 178/417/16 |
+
+Frame intervals include native browser/compositor pacing. Selection is the existing
+clip/weight bookkeeping, named `correctionMs` in JSON; it measures no new contact IK.
+Render-call/GPU-finish time is recorded separately from total paced frame intervals.
+
+Owned listeners, frame callbacks, props, scene actors and active mixer bindings return
+to the measured zero baseline. A live keeper survives replacements without shared map
+or geometry disposal; deterministic warmed clone loops plateau. The whole-scene exact
+counts here apply to this seeded Range fixture. Randomized map rubble remains outside
+exact whole-map geometry equality.
+
+Torso/hand contact, planted turns, camera comfort, ADS settle and natural motion still
+require current continuous moving review and explicit human acceptance. Phase 6's art
+acceptance remains recorded separately. UI-SPEC bob/sway starting bounds are cosmetic
+design prescriptions, separate from this cost envelope. Inherited asset terms are
+unchanged by the measurements.
+
 Original audit: 2026-09-09 against `dc27c6f`. The findings below describe that
 pre-fix snapshot; the current working tree includes the following repairs.
 

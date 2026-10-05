@@ -679,10 +679,119 @@ export async function captureAnimationBaseline({ smoke = false, failAt, onOwner,
   return report;
 }
 
+const TIMING_COMPONENTS = ['frameIntervalMs', 'mixerMs', 'inertiaMs', 'correctionMs', 'renderMs'];
+
+export function validateAnimationBaseline(report, identities) {
+  assert.equal(report.complete, true, 'Incomplete animation baseline');
+  assert.equal(report.schemaVersion, 1, 'Unsupported baseline schema');
+  assert.equal(report.certification, false, 'Baseline must not claim device certification');
+  assert.deepEqual(report.identities, identities, 'Stale source/export identities');
+  assert.deepEqual(report.cleanup, { browserClosed: true, serverClosed: true });
+  assert.equal(report.samples.length, 12, 'Truncated baseline profile matrix');
+  const expectedIdentity = hash(JSON.stringify(identities));
+  const groups = [];
+  for (const tier of ['low', 'medium', 'high']) {
+    for (const actorCount of [1, 8]) {
+      const samples = report.samples.filter(sample => sample.tier === tier && sample.actorCount === actorCount);
+      assert.equal(samples.length, 2, 'Exactly two matched repetitions required');
+      assert.deepEqual(samples.map(sample => sample.run).sort(), [1, 2]);
+      for (const sample of samples) {
+        assert.equal(sample.sourceIdentitySha256, expectedIdentity, 'Stale sample identity');
+        assert.equal(sample.failure, undefined, 'Failed sample cannot pass');
+        assert.ok(sample.human && sample.packedMaps > 0 && sample.keeperIntact && sample.restored);
+        assert.equal(sample.sharedDisposals, 0);
+        assert.equal(sample.frameCount, 214, 'Truncated moving sample');
+        assert.ok(Number.isFinite(sample.durationMs) && sample.durationMs > 0);
+        assert.ok(sample.gpu && sample.renderer && sample.browser);
+        assert.equal(sample.browser, report.device.browser);
+        assert.deepEqual(sample.viewport, [1280, 960]);
+        assert.equal(sample.dpr, 1);
+        for (const name of TIMING_COMPONENTS) {
+          for (const stat of ['median', 'p95', 'min', 'max'])
+            assert.ok(Number.isFinite(sample.timings[name]?.[stat]) && sample.timings[name][stat] >= 0,
+              'Missing/nonfinite numeric timing bound');
+          assert.ok(sample.timings[name].p95 >= sample.timings[name].median);
+        }
+        assert.equal(sample.resourceSamples.length, 8);
+        for (const plateau of sample.resourceSamples.slice(4))
+          assert.deepEqual(plateau, sample.resourceSamples[3], 'Non-plateauing deterministic clone loop');
+        for (const name of ['listeners', 'callbacks', 'props', 'actors', 'activeBindings'])
+          assert.equal(sample.afterRetirement[name], 0, 'Owned resource did not retire: ' + name);
+      }
+      assert.equal(samples[0].gpu, samples[1].gpu, 'Unmatched renderer');
+      assert.deepEqual(samples[0].ownership, samples[1].ownership, 'Unmatched actor ownership');
+      assert.deepEqual(samples[0].resourceSamples.at(-1), samples[1].resourceSamples.at(-1), 'Unmatched plateau');
+      assert.deepEqual(samples[0].afterRetirement, samples[1].afterRetirement, 'Unmatched retired resources');
+      groups.push({ tier, actorCount, samples });
+    }
+  }
+  const media = report.samples.find(sample => sample.sequence.length > 0);
+  assert.ok(media && media.sequence.length === media.frameCount, 'Truncated continuous media sequence');
+  for (const frame of media.sequence) {
+    assert.match(frame.sha256, /^[a-f0-9]{64}$/);
+    assert.ok(frame.image.startsWith('.planning/research/.cache/06-art/animation-baseline/'));
+  }
+  return groups;
+}
+
+export async function recordAnimationBudget() {
+  const baselinePath = path.join(ANIMATION_EVIDENCE, '07-baseline.json');
+  const budgetPath = path.join(ANIMATION_EVIDENCE, '07-budget.json');
+  const bytes = await fs.readFile(baselinePath);
+  const baseline = JSON.parse(bytes);
+  const groups = validateAnimationBaseline(baseline, await animationIdentities());
+  const baselineSha256 = hash(bytes);
+  // Verify retained full-pixel evidence, not just JSON references.
+  for (const sample of baseline.samples) for (const frame of sample.sequence) {
+    const filename = await iterationPath([CACHE], path.join(ROOT, frame.image));
+    assert.equal(hash(await fs.readFile(filename)), frame.sha256, 'Missing/stale media identity');
+  }
+  const profiles = groups.map(({ tier, actorCount, samples }) => {
+    const timings = {};
+    for (const name of TIMING_COMPONENTS) {
+      const first = samples[0].timings[name], second = samples[1].timings[name];
+      const medianDispersionMs = Math.abs(first.median - second.median);
+      const p95DispersionMs = Math.abs(first.p95 - second.p95);
+      timings[name] = { baselineMedianMs: [first.median, second.median],
+        baselineP95Ms: [first.p95, second.p95], medianDispersionMs, p95DispersionMs,
+        medianUpperMs: Math.max(first.median, second.median) + medianDispersionMs,
+        p95UpperMs: Math.max(first.p95, second.p95) + p95DispersionMs };
+    }
+    return { tier, actorCount, viewport: samples[0].viewport, dpr: samples[0].dpr,
+      gpu: samples[0].gpu, measuredFramesPerRun: samples.map(sample => sample.frameCount),
+      durationMsPerRun: samples.map(sample => sample.durationMs), timings,
+      maximumRepeatDispersionMs: Math.max(...Object.values(timings).flatMap(
+        timing => [timing.medianDispersionMs, timing.p95DispersionMs])),
+      warmedPlateau: samples[0].resourceSamples.at(-1),
+      actorOwnership: samples[0].ownership, returnToBaseline: samples[0].afterRetirement };
+  });
+  const decision = { schemaVersion: 1, baselineSha256,
+    baselineCapturedAt: baseline.capturedAt, baselineRevision: baseline.revision,
+    identities: baseline.identities, device: baseline.device, profiles, certification: false,
+    comparisonPolicy: 'Matched device/browser/renderer/viewport/DPR/tier/count, same paced warmed sample clock and clone loop. Each numeric upper bound is the larger observed repeat value plus the absolute repeat dispersion for that statistic. Zero/short components remain browser-timer-limited observations. Candidate overruns require optimization or explicitly justified matched remeasurement; never silently widen this decision.',
+    ownershipPolicy: 'Owned listeners, callbacks, active mixer bindings, props and actors return to measured zero; actor-owned/shared counts and warmed deterministic clone plateaus match each profile. Shared geometry/maps survive retirement. Randomized map rubble is outside exact whole-scene geometry equality.',
+    motionPolicy: 'Torso, hand contact, planted turns, camera comfort and all aesthetics still require current continuous moving review and human acceptance. UI-SPEC bob/sway starting bounds are separate from this measured cost decision.',
+    limits: baseline.limits };
+  const existing = await fs.readFile(budgetPath, 'utf8').catch(error => {
+    if (error.code === 'ENOENT') return null;
+    throw error;
+  });
+  if (existing) {
+    assert.deepEqual(JSON.parse(existing), decision,
+      'Pre-tuning budget is immutable; stale baseline or changed limits require a justified separate decision');
+  } else {
+    await fs.writeFile(budgetPath + '.tmp', JSON.stringify(decision, null, 2) + '\n');
+    await fs.rename(budgetPath + '.tmp', budgetPath);
+  }
+  console.log(JSON.stringify({ budget: budgetPath, baselineSha256, profiles: profiles.length }));
+  return decision;
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
   let operation;
   if (args.length === 1 && args[0] === '--capture') operation = captureGameplay;
+  else if (args.length === 1 && args[0] === '--animation-budget') operation = recordAnimationBudget;
   else if (args[0] === '--animation-baseline' && (args.length === 1 ||
     (args.length === 2 && args[1] === '--smoke'))) {
     operation = async () => {
@@ -693,6 +802,6 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       finally { process.removeListener('SIGINT', abort); process.removeListener('SIGTERM', abort); }
     };
   }
-  else throw Error('Use --capture or --animation-baseline [--smoke]');
+  else throw Error('Use --capture, --animation-baseline [--smoke] or --animation-budget');
   operation().catch(error => { console.error(error); process.exitCode = 1; });
 }

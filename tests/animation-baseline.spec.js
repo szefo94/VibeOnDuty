@@ -4,11 +4,27 @@ import { promisify } from 'node:util';
 import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
-import { captureAnimationBaseline } from '../tools/art/review.mjs';
+import { captureAnimationBaseline, validateAnimationBaseline } from '../tools/art/review.mjs';
 
 const readOptionalReport = filename => readFile(filename, 'utf8').catch(error => {
   if (error.code === 'ENOENT') return null;
   throw error;
+});
+
+test('budget rejects stale, incomplete, nonfinite and truncated moving evidence', async () => {
+  const baseline = JSON.parse(await readFile(
+    '.planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-baseline.json', 'utf8'));
+  expect(validateAnimationBaseline(baseline, baseline.identities)).toHaveLength(6);
+  expect(() => validateAnimationBaseline(baseline,
+    { ...baseline.identities, 'src/main.js': '0'.repeat(64) })).toThrow('Stale source/export identities');
+  const incomplete = structuredClone(baseline); incomplete.complete = false;
+  expect(() => validateAnimationBaseline(incomplete, baseline.identities)).toThrow('Incomplete');
+  const nonfinite = structuredClone(baseline); nonfinite.samples[0].timings.mixerMs.p95 = Infinity;
+  expect(() => validateAnimationBaseline(nonfinite, baseline.identities)).toThrow('nonfinite');
+  const truncated = structuredClone(baseline); truncated.samples.pop();
+  expect(() => validateAnimationBaseline(truncated, baseline.identities)).toThrow('Truncated');
+  const media = structuredClone(baseline); media.samples[0].sequence.pop();
+  expect(() => validateAnimationBaseline(media, baseline.identities)).toThrow('Truncated');
 });
 
 test('baseline CLI records actual moving assets with renderer and cleanup evidence', async () => {
