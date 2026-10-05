@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 6
 current_phase_name: Human Characters and Comic-Book Blender Iteration
 status: executing
-stopped_at: Completed 06-02-PLAN.md; continuing 06-03 outlines and semantic appearance
-last_updated: "2026-10-05T07:43:02.762Z"
-last_activity: 2026-10-04
-last_activity_desc: Completed Phase 6 plan 01 anatomical authoring pipeline
-state_head: c1106b8c34bf3d2c827de05616952d480945028f
+stopped_at: Completed 06-03-PLAN.md; continuing 06-04 graphics quality
+last_updated: "2026-10-05T08:09:31.037Z"
+last_activity: 2026-10-05
+last_activity_desc: Completed Phase 6 plan 03 protected appearance and skinned comic ink
+state_head: 3c59ef7a3094ded677344f387f38892267a49736
 progress:
   total_phases: 12
   completed_phases: 1
   total_plans: 13
-  completed_plans: 9
+  completed_plans: 10
   percent: 8
 ---
 
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-10-04)
 ## Current Position
 
 Phase: 6 (Human Characters and Comic-Book Blender Iteration) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
-Next action: $gsd-execute-phase 6 — continue 06-02 armor and painted slice authoring within the authorized Phase 6 run. Human aesthetic review follows all six plans.
+Next action: $gsd-execute-phase 6 — continue 06-04 graphics quality within the authorized Phase 6 run. Human aesthetic review follows all six plans.
 Roadmap review: User revised remaining order to6 → 7 → 5 → 2 → 3 → 4 → 8 → 9 → 10 → 11 → 12; Phase1 remains complete.
-Last activity: 2026-10-04 — Completed 06-01 with editable anatomical human, exact compatibility preservation and passing focused checks
+Last activity: 2026-10-05 — Completed 06-03 with protected team accents, inspected skinned contours, 15 focused unit tests and five real-browser cases passing
 
 Routing: Follow the selected order rather than numeric next-phase suggestions. After Phase7 select5; after5 select2; after4 select8. Phases2–5 and7–12 remain pending, with no skipped phase marked complete.
 
@@ -67,6 +67,7 @@ Progress: [█░░░░░░░░░] 8%
 | Phase 01 P05 | 42min | 2 tasks | 21 files |
 | Phase 01 P07 | 520min | 3 tasks | 47 files |
 | Phase 06 P01 | 42min | 3 tasks | 14 files |
+| Phase 06 P03 | 23min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -99,6 +100,8 @@ Full decisions are recorded in PROJECT.md.
 - [Phase 01]: Final247 unit/19 offline/14 MP gates pass after code/UI fixes. Independent source verification and11/11 decisions are preserved; five human UAT passes canonicalize verification to passed and close all five shared requirements.
 - [Phase 06]: Fit the CC0 anatomical body to the current skeleton and preserve exact inherited skin and motion domains through a render-data merge.
 - [Phase 06]: Keep asset-specific CC0 evidence separate from unresolved inherited rig/motion/weapon redistribution evidence; no combined asset clearance.
+- [Phase 06]: Only designated team accents are actor-owned tint clones; protected painted domains and shared maps retain base appearance.
+- [Phase 06]: Selective r160 skinned hull ink uses shared geometry and outline-only normals, explicit disposal and finally-state/eye restoration; open collar shell stays in the paint pass.
 
 ### Pending Todos
 
@@ -124,9 +127,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-10-05T07:43:02.693Z
-Stopped at: Completed 06-02-PLAN.md; continuing 06-03 outlines and semantic appearance
-Resume file: .planning/phases/06-human-characters-and-comic-book-blender-iteration/06-03-PLAN.md
+Last session: 2026-10-05T08:09:30.962Z
+Stopped at: Completed 06-03-PLAN.md; continuing 06-04 graphics quality
+Resume file: .planning/phases/06-human-characters-and-comic-book-blender-iteration/06-04-PLAN.md
 
 Review server: https://192.168.0.16:2567 — default rules, owned Node PID35084,
 attached exec session99002. HTTPS health and game verified; the user passed the
