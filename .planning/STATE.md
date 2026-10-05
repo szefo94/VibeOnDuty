@@ -2,17 +2,17 @@
 gsd_state_version: "1.0"
 current_phase: 7
 current_phase_name: Movement-Matched and Action-Safe Animation
-status: Executing Phase 7 — plan 07-01 baseline and measured budget
-stopped_at: Phase 7 execution started; running 07-01 baseline
-last_updated: "2026-10-05T19:41:41.579Z"
+status: executing
+stopped_at: Completed 07-01-PLAN.md
+last_updated: "2026-10-05T20:18:54.199Z"
 last_activity: 2026-10-05
 last_activity_desc: Phase 7 research, UI contract and ten plans complete; independent checker passed after one revision, 4/4 requirements and 11/11 decisions covered. Runtime and human motion acceptance remain pending.
-state_head: 902ae5eee342166394d0cc966e95d88fecf28032
+state_head: e423fb5d0cbcc4067fbe3d6ea6f49952bf5b3fb5
 progress:
   total_phases: 12
   completed_phases: 2
   total_plans: 23
-  completed_plans: 13
+  completed_plans: 14
   percent: 17
 ---
 
@@ -28,8 +28,8 @@ See: .planning/PROJECT.md (updated 2026-10-05)
 ## Current Position
 
 Phase: 7 (Movement-Matched and Action-Safe Animation) — READY TO EXECUTE
-Plan: 1 of 10 — 07-01
-Status: Executing Phase 7 — plan 07-01 baseline and measured budget
+Plan: 2 of 10 — 07-01
+Status: Ready to execute
 Next action: $gsd-execute-phase 7 — execute the ten independently checked animation plans; Phase 5 follows Phase 7.
 Roadmap review: User revised remaining order to6 → 7 → 5 → 2 → 3 → 4 → 8 → 9 → 10 → 11 → 12; Phase1 remains complete.
 Last activity: 2026-10-05 — Phase 7 research, UI contract and ten plans complete; independent checker passed after one revision, 4/4 requirements and 11/11 decisions covered. Runtime and human motion acceptance remain pending.
@@ -72,6 +72,7 @@ Progress: [██░░░░░░░░] 17%
 | Phase 06 P04 | 21min | 3 tasks | 7 files |
 | Phase 06 P05 | 27min | 2 tasks | 6 files |
 | Phase 06 P06 | approximately 229min wall time including usage-limit interruption | 2 tasks | 16 files |
+| Phase 07 P01 | 34min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -112,6 +113,9 @@ Full decisions are recorded in PROJECT.md.
 - [Phase 06]: Separately retained editable source/parameters are reopened through fresh pinned Blender; independent semantic exports and matched actual-game pixels prove baseline recovery.
 - [Phase 06]: Corrected introduced collar/carrier/skin ink defects within retained art sources; exact inherited rig/motion and hand basis preserved.
 - [Phase 06]: All seven stable gates pass: 273 unit, 45 offline browser and 14 production multiplayer tests. Short SwiftShader samples qualify no representative hardware/FPS; human aesthetic acceptance remains pending.
+- [Phase 07]: Keep moving Range software-renderer evidence separate from gameplay FPS and human motion acceptance.
+- [Phase 07]: Lock numeric upper bounds at larger repeat value plus measured dispersion; candidate overruns need optimization or a justified separate remeasurement.
+- [Phase 07]: Per-attempt media and atomic evidence preserve earlier reports; owned counters retire to zero and shared templates survive.
 
 ### Pending Todos
 
@@ -137,9 +141,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-10-05T19:41:41.449Z
-Stopped at: Phase 7 execution started; running 07-01 baseline
-Resume file: .planning/phases/07-movement-matched-and-action-safe-animation/07-01-PLAN.md
+Last session: 2026-10-05T20:18:54.075Z
+Stopped at: Completed 07-01-PLAN.md
+Resume file: None
 
 User passed both Phase 6 visual checks with "pass all tests and proceed".
 Canonical 06-VERIFICATION.md is passed; ART-01 through ART-04 are complete.
