@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "source": "tools/art/sources/motion.blend",
+  "sourceHash": "d8f6c2315f2661254256f22f049d1c8cf0826c3cab304db41663ad4a45e8303d",
+  "baselineHash": "3d92a093fc6724c295fdabb456d41110a0b03fc7f72f565b42b36c4c09b00847",
+  "targetJoints": 65,
+  "actions": [
+    {
+      "id": "original_walk",
+      "clip": "vod_walk_forward",
+      "donorAction": "OriginalWalk",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        31
+      ],
+      "fps": 30,
+      "loop": true,
+      "cycleDisplacement": 2.4,
+      "markers": {
+        "leftContact": 0,
+        "rightContact": 0.5
+      },
+      "torsoLimit": 0.7
+    }
+  ]
+}
