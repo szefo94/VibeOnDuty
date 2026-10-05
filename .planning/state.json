@@ -65,9 +65,9 @@
     }
   ],
   "next": {
-    "command": "$gsd-plan-phase 7",
-    "label": "Research and plan the confirmed animation choices",
-    "reason": "All three Phase 7 discussion areas complete; context and sprint/reload carry-forward saved"
+    "command": "$gsd-execute-phase 7",
+    "label": "Execute the verified animation plans",
+    "reason": "Ten plans, twenty-two tasks, nine waves; independent checker and all fifteen coverage items pass. Phase 5 follows Phase 7."
   },
-  "updated_at": "2026-10-05T15:22:14.223Z"
+  "updated_at": "2026-10-05T19:39:01.932Z"
 }
