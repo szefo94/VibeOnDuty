@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 import { CELL, PLAYER_H } from './config.js';
+import { applyGraphicsQuality } from './graphicsQuality.js';
 
 const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+applyGraphicsQuality(renderer);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
@@ -21,6 +22,7 @@ const hudCtx = hudCanvas.getContext('2d');
 function rsz() {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
+  applyGraphicsQuality(renderer);
   renderer.setSize(innerWidth, innerHeight);
   hudCanvas.width = innerWidth;
   hudCanvas.height = innerHeight;
