@@ -110,11 +110,11 @@ Both intentional RED runs were persisted in `.planning/research/.cache/07-02-red
 - Original motion candidate: `e5f1dfb8c45ba1d4492297d4818c3188efccc46cb23f6bcd6b2e48fcae221ddb`.
 - Changed recovery candidate: `e03424e3d8e072415cfd50502f9e3255ee2d7989169ee797fda5d6e9750ec689`.
 - Restored source hash equals saved donor exactly; changed editable source hash is `bf17f8e0249a712225af30e34a955fd2538d89ed3ae92943602b958eeb617b82`.
-- Candidate report: `07-motion/candidate-zogPAp/report.json`; latest report SHA256 `9b68e5ab50ca9c62ba59c93f2513ad793ca377b756506e1016654c869e8b8cc6`.
-- Repeat: `07-motion/repeat-WkM71s/report.json`, SHA256 `00f1a8cd65345c2a2df9cff7efaf5fa9eddeae22ee95543afea396c4959adcbb`.
-- Recovery: `07-motion/recovery-FNPgIR/report.json`, SHA256 `7699a66472b21c6e1c6c02c2638702c33984045dba8fbe8883d7a8561cec90f8`.
-- Independent verification: `07-motion/independent-17c3RQ/report.json`, SHA256 `55e1f4cd5b9b7fea8980dfa2d1736bea0b30aaba10ccfa35a1658373a7e46393`.
-- Source suppression/rejections: `07-motion/script-suppression-cvJYXk/report.json`, SHA256 `68defec40d77ae6a9ab5c5f22c6e06fd2ab576a0aa582aadb0950ad0326fa59c`.
+- Candidate report: `.planning/research/.cache/07-motion/candidate-zogPAp/report.json`; latest report SHA256 `9b68e5ab50ca9c62ba59c93f2513ad793ca377b756506e1016654c869e8b8cc6`.
+- Repeat: `.planning/research/.cache/07-motion/repeat-WkM71s/report.json`, SHA256 `00f1a8cd65345c2a2df9cff7efaf5fa9eddeae22ee95543afea396c4959adcbb`.
+- Recovery: `.planning/research/.cache/07-motion/recovery-FNPgIR/report.json`, SHA256 `7699a66472b21c6e1c6c02c2638702c33984045dba8fbe8883d7a8561cec90f8`.
+- Independent verification: `.planning/research/.cache/07-motion/independent-17c3RQ/report.json`, SHA256 `55e1f4cd5b9b7fea8980dfa2d1736bea0b30aaba10ccfa35a1658373a7e46393`.
+- Source suppression/rejections: `.planning/research/.cache/07-motion/script-suppression-cvJYXk/report.json`, SHA256 `68defec40d77ae6a9ab5c5f22c6e06fd2ab576a0aa582aadb0950ad0326fa59c`.
 - Paths above are under ignored `.planning/research/.cache/`; per-attempt artifacts remain separately retained. Final command logs are `07-02-tests.log`, `07-02-inspector.log`, `07-02-self-test.log`, `07-02-repeat.log`, `07-02-recovery.log`, `07-02-independent.log` and `07-02-final-candidate.log`.
 - Canonical07-baseline.json and07-budget.json were read and remain unchanged; no baseline capture or browser suite was rerun.
 
@@ -144,4 +144,3 @@ Both intentional RED runs were persisted in `.planning/research/.cache/07-02-red
 ## Self-Check: PASSED
 
 All eight deliverable files exist. All four task commits exist. Both task verification sets pass; accepted runtime/baseline/budget publication is unchanged.
-
