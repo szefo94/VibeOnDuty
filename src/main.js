@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { initVersionStamp } from './version.js';
 import { MOUSE_SENS, MAX_AMMO, MAX_HP, PLAYER_H, WEAPONS } from './config.js';
-import { camera } from './scene.js';
+import { camera, renderer } from './scene.js';
+import { getGraphicsQuality, setGraphicsQuality, applyGraphicsQuality } from './graphicsQuality.js';
 import { debugLines } from './level.js';
 import { locked, gameRunning, setGameRunning, setLocked } from './input.js';
 import { initTouch, isTouchDevice } from './touch.js';
@@ -41,6 +42,42 @@ import { initEditor, openEditor, mapDefFromB64 } from './editor/mapEditor.js';
 import { adaptStart, adaptStop } from './ai/difficultyAdapter.js';
 
 initVersionStamp();
+
+const qualityHelp = {
+  low: 'Fewer effects for smoother play.',
+  medium: 'Balanced detail and performance.',
+  high: 'Extra outlines and higher resolution.',
+};
+const qualityControls = ['menu', 'pause'].map((place) => ({
+  select: document.getElementById(`graphics-quality-${place}`),
+  help: document.getElementById(`graphics-quality-${place}-help`),
+  status: document.getElementById(`graphics-quality-${place}-status`),
+}));
+
+function syncGraphicsQuality(saved = true) {
+  const quality = getGraphicsQuality();
+  const label = quality[0].toUpperCase() + quality.slice(1);
+  for (const control of qualityControls) {
+    control.select.value = quality;
+    control.help.textContent = qualityHelp[quality];
+    control.status.textContent = saved ? `Graphics quality: ${label}.` :
+      'Quality changed for this session. Your browser could not save the setting.';
+  }
+  applyGraphicsQuality(renderer);
+}
+
+function onGraphicsQualityChange(event) {
+  const { saved } = setGraphicsQuality(event.currentTarget.value);
+  syncGraphicsQuality(saved);
+}
+
+// Preserve native select keys instead of letting gameplay prevent their defaults.
+function onGraphicsQualityKey(event) { event.stopPropagation(); }
+for (const { select } of qualityControls) {
+  select.addEventListener('change', onGraphicsQualityChange);
+  select.addEventListener('keydown', onGraphicsQualityKey);
+}
+syncGraphicsQuality();
 // Console hook for diagnosing animation transitions on any build, deployed included.
 window.__animDebug = setAnimDebug;
 

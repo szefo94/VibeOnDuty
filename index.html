@@ -161,6 +161,14 @@
     <button id="range-startbtn">[ TRAINING RANGE ]</button>
     <button id="editor-startbtn">[ MAP EDITOR ]</button>
   </div>
+  <div class="graphics-quality">
+    <label for="graphics-quality-menu">Graphics quality</label>
+    <select id="graphics-quality-menu" aria-describedby="graphics-quality-menu-help">
+      <option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option>
+    </select>
+    <p id="graphics-quality-menu-help">Balanced detail and performance.</p>
+    <p id="graphics-quality-menu-status" role="status" aria-live="polite"></p>
+  </div>
   <p id="mp-actions">Online: M4 · WASD move · Shift sprint · Space jump · Ctrl/C crouch · mouse fire/look · right mouse aim · R reload.<br>Other weapons, melee, grenades, slide, dive, lean, dance, shop and drones are unavailable in this slice.</p>
 </div>
 
@@ -172,6 +180,14 @@
     <button id="pause-resume-btn">[ RESUME ]</button>
     <button id="pause-mainmenu-btn">[ MAIN MENU ]</button>
     <button id="mp-leave-btn" hidden>Leave Online TDM</button>
+  </div>
+  <div class="graphics-quality">
+    <label for="graphics-quality-pause">Graphics quality</label>
+    <select id="graphics-quality-pause" aria-describedby="graphics-quality-pause-help">
+      <option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option>
+    </select>
+    <p id="graphics-quality-pause-help">Balanced detail and performance.</p>
+    <p id="graphics-quality-pause-status" role="status" aria-live="polite"></p>
   </div>
 </div>
 
