@@ -6,7 +6,7 @@ Deliver the full selected v1 scope in the user's revised order: the completed mu
 
 **Granularity:** fine
 **Project mode:** mvp
-**Roadmap status:** Accepted on2026-10-03; Phase1 completed on2026-10-04 with7/7 plans,5/5 human UAT checks and all five shared requirements accepted. On2026-10-04 the user prioritized Phase6, then7, then5. All six Phase6 implementations are delivered with seven passing stable gates; phase verification and human aesthetic acceptance remain pending. Phases7/5 and2–4 have not started.
+**Roadmap status:** Accepted on2026-10-03; Phase1 completed on2026-10-04 with7/7 plans,5/5 human UAT checks and all five shared requirements accepted. On2026-10-04 the user prioritized Phase6, then7, then5. Phase6 completed on2026-10-05 with6/6 plans, seven passing stable gates, clean technical verification and2/2 explicit human visual passes. Phase7 discussion is next; Phases5 and2–4 remain pending.
 
 **Execution order:** 1 (complete) → 6 → 7 → 5 → 2 → 3 → 4 → 8 → 9 → 10 → 11 → 12. Phase numbers remain stable identifiers. Follow this order when updating the current phase or choosing a next action; numeric next-phase suggestions from tooling do not override it.
 
@@ -23,7 +23,7 @@ Integer phases identify the planned work. Decimal phases are reserved for later 
 - [ ] **Phase 3: Bomb, Flag, and Hardpoint Matches** - Players can complete all five selected multiplayer modes with authoritative objectives and consistent outcomes.
 - [ ] **Phase 4: Bot-Filled Matches on Measured Pi Hosting** - An operator can host the five modes on identified Raspberry Pi hardware and offer only measured human/bot capacities.
 - [ ] **Phase 5: Omnimovement with Reliable Body and Camera Collision** - Players use the selected directional movement on every input device while bodies, aim, and cameras remain consistent with the world and server.
-- [ ] **Phase 6: Human Characters and Comic-Book Blender Iteration** - Players see an accepted human character and comic-book visual slice that creators can reproduce and improve through Blender.
+- [x] **Phase 6: Human Characters and Comic-Book Blender Iteration** - Players see an accepted human character and comic-book visual slice that creators can reproduce and improve through Blender. (completed 2026-10-05)
 - [ ] **Phase 7: Movement-Matched and Action-Safe Animation** - Human characters move and act smoothly in first- and third-person views while staying aligned with authoritative gameplay.
 - [ ] **Phase 8: Distinct Weapons and Authoritative Fast Combat** - Players fight with a small distinct rifle/SMG roster, readable aiming and recoil, fast kills, regeneration, and consistent projectile rules.
 - [ ] **Phase 9: Live Loadouts, Attachments, and Durable Unlocks** - Players earn legal weapon options, build and preview loadouts, and retain their choices and progress across sessions.
@@ -161,7 +161,7 @@ Plans:
 3. A creator changes a model or material using the verified Blender automation path, exports it reproducibly, and compares the result in-game before acceptance.
 4. A creator performs an LLM-assisted Blender change through an available documented integration or script workflow, inspects the change, and restores the prior editable source version.
 
-**Plans:** 6/6 implementations delivered; technical verification complete, two human visual checks pending
+**Plans:** 6/6 complete; canonical verification passed and both human visual checks accepted on 2026-10-05
 - [x] 06-01-PLAN.md
 - [x] 06-02-PLAN.md
 - [x] 06-03-PLAN.md
@@ -316,7 +316,7 @@ Armor plates remain future longer-mode scope. Monetization and generic authentic
 | 3. Bomb, Flag, and Hardpoint Matches | 0/TBD | Not started | - |
 | 4. Bot-Filled Matches on Measured Pi Hosting | 0/TBD | Not started | - |
 | 5. Omnimovement with Reliable Body and Camera Collision | 0/TBD | Not started | - |
-| 6. Human Characters and Comic-Book Blender Iteration | 6/6 | Implementation ready; verification pending | - |
+| 6. Human Characters and Comic-Book Blender Iteration | 6/6 | Complete    | 2026-10-05 |
 | 7. Movement-Matched and Action-Safe Animation | 0/TBD | Not started | - |
 | 8. Distinct Weapons and Authoritative Fast Combat | 0/TBD | Not started | - |
 | 9. Live Loadouts, Attachments, and Durable Unlocks | 0/TBD | Not started | - |

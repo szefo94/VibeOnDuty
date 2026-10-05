@@ -2,7 +2,7 @@
 phase: 06-human-characters-and-comic-book-blender-iteration
 verified: 2026-10-05T14:06:51Z
 source_head: 515dff5b8726c5a16805def72515115d80a8203d
-status: human_needed
+status: passed
 score: 18/23 must-haves verified
 roadmap_score: 2/4
 behavior_unverified: 0
@@ -66,6 +66,7 @@ covered_files:
   - tools/art/sources/slice.blend
   - tools/art/sources/soldier.blend
   - tools/art/verify-export.mjs
+
 covered_digest: "v2:sha256:776ed3c85996bb1cb5071e6bec84875676a2649681b1e82612c0ea037daee56d"
 human_verification:
   - test: "Inspect the human and current M4 grips in Training Range and Greek Columns TDM, using V for third person and near/far views while walking, crouching, jumping and reloading."

@@ -48,10 +48,10 @@ This is the selected overhaul scope, delivered incrementally in the user's order
 
 ### Human Models, Comic-Book Art, and Blender Workflow
 
-- [ ] **ART-01**: Players see accepted humanlike character proportions, silhouettes, and weapon grips in the running game, with editable sources and asset-specific provenance retained.
-- [ ] **ART-02**: Players see the chosen comic-book look through illustrated textures, stylized lighting, and scalable outlines on a representative character/weapon/environment slice.
-- [ ] **ART-03**: A creator can iterate a model/material through the verified Blender automation workflow, export it reproducibly, and review the result in-game before accepting it.
-- [ ] **ART-04**: A creator can use LLM-assisted Blender operations through a documented available integration or script workflow, with inspectable changes and a recoverable prior source version.
+- [x] **ART-01**: Players see accepted humanlike character proportions, silhouettes, and weapon grips in the running game, with editable sources and asset-specific provenance retained.
+- [x] **ART-02**: Players see the chosen comic-book look through illustrated textures, stylized lighting, and scalable outlines on a representative character/weapon/environment slice.
+- [x] **ART-03**: A creator can iterate a model/material through the verified Blender automation workflow, export it reproducibly, and review the result in-game before accepting it.
+- [x] **ART-04**: A creator can use LLM-assisted Blender operations through a documented available integration or script workflow, with inspectable changes and a recoverable prior source version.
 
 ### Animation
 
@@ -170,10 +170,10 @@ All 67 v1 requirements are assigned to exactly one roadmap phase. The initial ro
 | MOVE-04 | Phase 5 | Pending |
 | MOVE-05 | Phase 5 | Pending |
 | MOVE-06 | Phase 5 | Pending |
-| ART-01 | Phase 6 | Pending |
-| ART-02 | Phase 6 | Pending |
-| ART-03 | Phase 6 | Pending |
-| ART-04 | Phase 6 | Pending |
+| ART-01 | Phase 6 | Complete |
+| ART-02 | Phase 6 | Complete |
+| ART-03 | Phase 6 | Complete |
+| ART-04 | Phase 6 | Complete |
 | ANIM-01 | Phase 5 | Pending |
 | ANIM-02 | Phase 7 | Pending |
 | ANIM-03 | Phase 7 | Pending |

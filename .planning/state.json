@@ -31,7 +31,7 @@
     {
       "number": "6",
       "name": "Human Characters and Comic-Book Blender Iteration",
-      "status": "in_progress"
+      "status": "complete"
     },
     {
       "number": "7",
@@ -65,9 +65,9 @@
     }
   ],
   "next": {
-    "command": "$gsd-verify-work 6",
-    "label": "Review the delivered Phase 6 appearance",
-    "reason": "All six implementations and technical checks complete; two human visual judgments pending"
+    "command": "$gsd-discuss-phase 7",
+    "label": "Discuss movement-matched and action-safe animation",
+    "reason": "Phase 6 accepted and complete; follow selected order 7 then 5"
   },
-  "updated_at": "2026-10-05T14:24:22.898Z"
+  "updated_at": "2026-10-05T14:44:31.027Z"
 }

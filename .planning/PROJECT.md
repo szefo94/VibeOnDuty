@@ -30,6 +30,14 @@ The following capabilities passed automated verification and human UAT on
 - ✓ MODE-01: Shared team assignment, respawns, match results and automatic same-settings rematch — Phase 1.
 - ✓ HOST-03: Console server startup with port, bind host, advertised address and self-signed testing TLS, plus documented help and errors — Phase 1.
 
+The following Phase 6 capabilities passed technical verification and explicit
+human visual acceptance on 2026-10-05:
+
+- ✓ ART-01: Human-proportioned soldier with editable sources and asset-specific provenance — Phase 6.
+- ✓ ART-02: Painted character, M4 and Greek Columns slice with scalable comic outlines — Phase 6.
+- ✓ ART-03: Reproducible Blender export and actual-game comparison workflow — Phase 6.
+- ✓ ART-04: Bounded LLM-authored Blender edits with inspectable changes and verified editable-source restoration — Phase 6.
+
 ### Active
 
 - [ ] Extend the accepted dedicated-server slice with multiplayer lobbies and responsive netcode before the later movement and content overhaul.
@@ -39,8 +47,8 @@ The following capabilities passed automated verification and human UAT on
 - [ ] Support Raspberry Pi server hosting, initially considering a Pi 5 with 4 GB RAM or a Raspberry Pi configuration with 16 GB RAM; establish measured capacity rather than assuming all configurations sustain 24 slots.
 - [ ] After multiplayer, implement Call of Duty-inspired omnimovement; define its exact sprint, slide, dive, prone, and directional-transition behavior during movement-phase discussion.
 - [ ] Repair elevation, jumping, body collision, and camera clearance so players cannot enter terrain, jump through it, or see through walls when pressed against them.
-- [ ] Revamp character animation, potentially replacing the existing pipeline, and upgrade models to more believable human anatomy while retaining the comic-book art direction.
-- [ ] Develop models, animation, materials, and environments iteratively using Blender automation and LLM-assisted creation, with repeated in-game visual review.
+- [ ] Revamp character animation, potentially replacing the existing motion pipeline, on the accepted Phase 6 human soldier and comic art direction.
+- [ ] Extend the accepted Blender/LLM-assisted model and material workflow to animation and later environments, with repeated in-game review.
 - [ ] Research reusable character rigs and motion assets and produce smooth transitions, consistent weapon grips, and movement-matched animation.
 - [ ] Deliver fast kills, regenerating health, aiming down sights, headshots, recoil, bullet travel, and penetration through selected surfaces.
 - [ ] Offer a small initial selection of weapons, including multiple rifles and SMGs, followed by progressive weapon and attachment unlocks.
@@ -72,7 +80,7 @@ The following capabilities passed automated verification and human UAT on
 
 ### Workflow Defaults
 
-Project initialization uses reversible proposed defaults while no alternative preferences have been supplied: autonomous routine steps, fine-grained phases, independent work in parallel, tracked planning documents, research/plan checking/verification enabled, full instructions, and the current session model. These preferences can be revised with `$gsd-settings`. The 12-phase roadmap is accepted; Phase1 is complete and the user's revised next step is Phase6 discussion. Automatic advancement is disabled.
+Project initialization uses reversible proposed defaults while no alternative preferences have been supplied: autonomous routine steps, fine-grained phases, independent work in parallel, tracked planning documents, research/plan checking/verification enabled, full instructions, and the current session model. These preferences can be revised with `$gsd-settings`. The 12-phase roadmap is accepted; Phase1 is complete and Phase6 is complete and the next step is Phase7 discussion. Automatic advancement is disabled.
 
 ### User-Selected Delivery Order
 
@@ -115,7 +123,7 @@ This order was explicitly revised by the user on2026-10-04 to prioritize6 → 7 
 |----------|-----------|---------|
 | Browser delivery with phones, integrated graphics, and gaming PCs | User wants cross-platform access and 60 FPS | Pending implementation and device measurements |
 | Call of Duty-inspired omnimovement | User-selected combat and movement reference | Pending detailed movement definition |
-| Borderlands-inspired comic-book art | User-selected look: drawings over humanlike 3D models | Pending visual prototype and Blender iterations |
+| Borderlands-inspired comic-book art | User-selected look: drawings over humanlike 3D models | Phase 6 technical and human acceptance passed for the soldier/M4/Greek Columns slice; broader content and device measurements remain |
 | Dedicated server with server hit recognition | User wants multiplayer and server-owned combat outcomes | Validated for two-human M4 TDM in Phase 1; later responsiveness/capacity work remains |
 | Same-origin operator game link with CLI-configured testing TLS | One deployed server is the selected entry point; bind and advertised addresses have separate purposes | Phase 1 automated and human acceptance passed; self-signed trust remains a testing exception |
 | Server-owned simulation and recipient-private hit feedback | Client intents must not award trusted outcomes; only the shooter receives detailed confirmation | Validated in Phase 1; 30 Hz simulation and 20 Hz patches are slice defaults |
@@ -125,7 +133,7 @@ This order was explicitly revised by the user on2026-10-04 to prioritize6 → 7 
 | Fast kills, health regen, ADS, headshots, recoil, bullet travel, and penetration | Explicit combat selection | Pending balancing and authoritative combat implementation |
 | Progressive weapon/attachment availability | Explicit loadout/progression choice | Pending identity, persistence, and unlock design |
 | Combined modular, extrusion, sculpting, and prompt-assisted editor | User wants a new flexible map workflow alongside the existing editor | Pending authoring format and tooling research |
-| Models → animation → omnimovement after the multiplayer foundation | User explicitly changed the next priorities on2026-10-04 | Phase6 → Phase7 → Phase5 next; Phases2–4 remain pending afterward; final ANIM-01 acceptance is in Phase5 |
+| Models → animation → omnimovement after the multiplayer foundation | User explicitly changed the next priorities on2026-10-04 | Phase6 complete; Phase7 → Phase5 next; Phases2–4 remain pending afterward; final ANIM-01 acceptance is in Phase5 |
 | Armor plates deferred | User reserves them for future longer modes | Deferred |
 
 ## Evolution
@@ -137,4 +145,4 @@ After each phase transition, move verified requirements to Validated, move inval
 After each milestone, review every section, check the Core Value, reconsider deferred items, and update the current technical and player context.
 
 ---
-*Last updated: 2026-10-04 after the user prioritized Phase6, then7, then5 following accepted Phase1.*
+*Last updated: 2026-10-05 after Phase6 technical and explicit human acceptance; moving to Phase7, then5.*
