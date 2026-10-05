@@ -249,6 +249,20 @@ export async function refreshProvenance() {
 }
 async function selfTest() {
   await fs.mkdir(CACHE, { recursive: true });
+  const { test } = await import('node:test');
+  await test('bounded iteration accepts only the versioned reviewed edit before mutation', async () => {
+    const directory = await fs.mkdtemp(path.join(CACHE, 'iteration-test-'));
+    const request = path.join(directory, 'request.json');
+    await fs.writeFile(request, JSON.stringify({ schemaVersion: 1,
+      operations: { 'helmet-cheek-guard-offset': 0.018, 'accent-paint-gain': 0.7 } }));
+    const accepted = await promisify(execFile)(process.execPath, [fileURLToPath(import.meta.url),
+      'iterate', '--validate', '--source', path.join(SOURCES, 'soldier.blend'),
+      '--params', path.join(ROOT, 'tools/art/character-params.json'), '--request', request,
+      '--out', path.join(directory, 'changed.blend')]).then(() => true, () => false);
+    assert.equal(accepted, true, 'Reviewed bounded operation must validate successfully');
+    await assert.rejects(fs.access(path.join(directory, 'changed.blend')),
+      'Validation must not create editable output');
+  });
   assert.throws(() => owned(CACHE, path.join(CACHE, '../outside')));
   assert.throws(() => zipEntries(Buffer.alloc(0), CACHE));
   assert.throws(() => zipEntries(Buffer.from('corrupt'), CACHE));
