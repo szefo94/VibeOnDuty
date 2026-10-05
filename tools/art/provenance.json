@@ -147,7 +147,7 @@
     },
     {
       "path": "tools/art/pipeline.mjs",
-      "sha256": "a01c021f75ba76e44a7ccc17e1e508ca0e6baf7fc1b2d059a934d5bbc3ff3067",
+      "sha256": "b6f0c819ef87f8ee1a10abc2be183b5d5f9d60338780a5805f769a7d5f53652d",
       "role": "original-authoring-script",
       "source": "repository:tools/art/pipeline.mjs",
       "terms": "Newly authored project contribution. Does not alter inherited asset terms.",
@@ -178,5 +178,139 @@
   "parameters": {
     "path": "tools/art/character-params.json",
     "sha256": "2b74289e18fd68cacece69af7fde7fe694e5fb6f6d5912ac412dc3c2899eb236"
+  },
+  "iteration": {
+    "schemaVersion": 1,
+    "disposition": "demonstrated-offline-candidate-restored",
+    "demonstration": ".planning\\research\\.cache\\06-art\\iteration-Bx4Di0",
+    "operations": {
+      "schemaVersion": 1,
+      "operations": {
+        "helmet-cheek-guard-offset": 0.022,
+        "accent-paint-gain": 0.55
+      }
+    },
+    "runtime": {
+      "version": "4.5.13 LTS",
+      "archiveHash": "b5fdf800ce65fa2f209e8f68d02667e4d720fa1c42f247c72d1882ab04decba6",
+      "buildHash": "daeeeca98fb0",
+      "executableHash": "339c3879999f619ffeb3ff4b53966853153e2e2547d79048ed2886f1826d1306"
+    },
+    "scriptHashes": {
+      "iterate.py": "205d8e0b346b6a6f0ea745c31a586ff10d45c37fd3b483667c4d48cc384df672",
+      "pipeline.mjs": "b6f0c819ef87f8ee1a10abc2be183b5d5f9d60338780a5805f769a7d5f53652d",
+      "review.mjs": "05f747a0992ccb1abd602ab509857c2a14ac1ae4b221a305b7c8f207759088b6",
+      "build_soldier.py": "0911a17c79f0230aaa448a726ecad682c2d5f76a2ee80ac8fc88119fd2fa4eda",
+      "inspect-character.mjs": "f0cd8726f12e891454b2aca5d730c6023b9dd23e04a5eaf78f4870b36f17a1b3",
+      "verify-export.mjs": "b0455a49d4919d5b23bf389c9bb46b598a2ea9ed271b4fda0861cc12330ac919"
+    },
+    "acceptedInputHashes": {
+      "source": "b90305086f1710a2bf40ffc571cc1d0736694ad3e6b9a86245e5bf9a53afa042",
+      "params": "2b74289e18fd68cacece69af7fde7fe694e5fb6f6d5912ac412dc3c2899eb236",
+      "published": "a2449b048c5a48bb92bb3c1c0cf66209bf669679e24d60932b7934425e287705"
+    },
+    "artifactHashes": {
+      "baseline.blend": "b90305086f1710a2bf40ffc571cc1d0736694ad3e6b9a86245e5bf9a53afa042",
+      "baseline.params.json": "2b74289e18fd68cacece69af7fde7fe694e5fb6f6d5912ac412dc3c2899eb236",
+      "request.json": "b9b6b586251e09aa05352ab6ff0ff713ab6528dfed38405cd5f089b851d1d85f",
+      "before.glb": "a2449b048c5a48bb92bb3c1c0cf66209bf669679e24d60932b7934425e287705",
+      "changed.blend": "69eef114226d5cdd5e4966ebef8f5024a27487477279c4a64a48761f2ebfe49e",
+      "changed.blend.params.json": "925672550f5e41654c9c02e5977155828afa8b97da1612e634e3882527c26ac7",
+      "changed.blend.operation.json": "ab575e374dd9be09a00618c5f3172b4cfc01db1ac805127b18d5512bbec422f5",
+      "changed.glb": "956f1908d8c65beec2a5689a299310fe225611fc088effd6327095f616b0e052",
+      "restored.blend": "b90305086f1710a2bf40ffc571cc1d0736694ad3e6b9a86245e5bf9a53afa042",
+      "restored.params.json": "2b74289e18fd68cacece69af7fde7fe694e5fb6f6d5912ac412dc3c2899eb236",
+      "restored.glb": "a2449b048c5a48bb92bb3c1c0cf66209bf669679e24d60932b7934425e287705"
+    },
+    "changedDomains": {
+      "editedNodes": [
+        "HelmetSidePanel-1",
+        "HelmetSidePanel1"
+      ],
+      "editedImages": [
+        "Paint_team-accent"
+      ],
+      "protectedGeometry": true,
+      "protectedPaintAndMaterials": true,
+      "exactPanelOffset": 0.022
+    },
+    "restoredSemanticComparison": {
+      "equal": true,
+      "byteIdentical": true,
+      "byteHashes": [
+        "a2449b048c5a48bb92bb3c1c0cf66209bf669679e24d60932b7934425e287705",
+        "a2449b048c5a48bb92bb3c1c0cf66209bf669679e24d60932b7934425e287705"
+      ],
+      "domains": {
+        "mesh": true,
+        "skin": true,
+        "materials": true,
+        "images": true,
+        "motion": true
+      },
+      "differences": []
+    },
+    "gameCaptures": {
+      "before": {
+        "image": "before-game.png",
+        "modelHash": "a2449b048c5a48bb92bb3c1c0cf66209bf669679e24d60932b7934425e287705",
+        "imageHash": "c02cf361831a9444abd94764db1c4a0f1969e619110bb4bb402296a97b7a2d66",
+        "pixelHash": "7ba254f40818ced6b5701e1b984486feee2db1d2ea1d7806054791c9904212e9"
+      },
+      "changed": {
+        "image": "changed-game.png",
+        "modelHash": "956f1908d8c65beec2a5689a299310fe225611fc088effd6327095f616b0e052",
+        "imageHash": "dc2fb7d87f5f8a43e262e6673120ec5610218e12070ceb269696ff26bc0f8af3",
+        "pixelHash": "018c3017920feaf6b7d98455ad3c193fbc2f2214fbc82a55a1b37cfa04b473ae"
+      },
+      "restored": {
+        "image": "restored-game.png",
+        "modelHash": "a2449b048c5a48bb92bb3c1c0cf66209bf669679e24d60932b7934425e287705",
+        "imageHash": "c02cf361831a9444abd94764db1c4a0f1969e619110bb4bb402296a97b7a2d66",
+        "pixelHash": "7ba254f40818ced6b5701e1b984486feee2db1d2ea1d7806054791c9904212e9"
+      }
+    },
+    "matchedSettings": {
+      "camera": {
+        "position": [
+          0.5123943803439922,
+          1.5369086972174666,
+          1.118006822859969
+        ],
+        "target": [
+          -0.10760561965600782,
+          1.4419086972174666,
+          0.06800682285996906
+        ],
+        "fov": 24
+      },
+      "pose": {
+        "action": "idle",
+        "time": 0.4
+      },
+      "viewport": [
+        1280,
+        960
+      ],
+      "dpr": 1,
+      "exposure": 1.05,
+      "quality": "medium",
+      "renderer": "WebKit WebGL"
+    },
+    "independentVerification": {
+      "reportHash": "3060dcb496989708854d7eab109cf9a2ff75091a48c552c8fcf45148648c96ad",
+      "regeneratedOutput": ".planning\\research\\.cache\\06-art\\iteration-Bx4Di0\\independent-gjaoTZ\\regenerated.glb",
+      "regeneratedHash": "a2449b048c5a48bb92bb3c1c0cf66209bf669679e24d60932b7934425e287705",
+      "rejected": [
+        "unknown-operation",
+        "out-of-range",
+        "path-escape",
+        "real-linked-output"
+      ],
+      "inputsUnchanged": true
+    },
+    "publishedAssetsUnchanged": true,
+    "humanAestheticAcceptance": "pending-end-of-phase",
+    "deviceQualification": "unmeasured"
   }
 }
