@@ -406,10 +406,13 @@ async function animationIdentities() {
 // offline game RAF; use the retained native RAF for paced, continuous rendered samples.
 // This measures animation + actual scene rendering, not input/network/gameplay FPS.
 async function sampleAnimationPage(page, specification) {
-  return page.evaluate(async ({ tier, actorCount, captureFrames, failAt }) => {
+  return page.evaluate(async ({ tier, actorCount, captureFrames, failAt, candidate, renderedView }) => {
     const src = new URL('src/', location.href).href;
     const g = await import(src + 'builders/enemyGLTF.js');
     const a = await import(src + 'builders/enemyAnimations.js');
+    const fp = candidate ? await import(src + 'builders/firstPersonRig.js') : null;
+    const handling = candidate ? await import(src + 'builders/weaponHandling.js') : null;
+    const resources = candidate ? await import(src + 'builders/characterResources.js') : null;
     const { scene, camera, renderer } = await import(src + 'scene.js');
     const { playerBody } = await import(src + 'builders/playerBody.js');
     const { wpn, weapon3p } = await import(src + 'builders/weapon.js');
@@ -423,9 +426,13 @@ async function sampleAnimationPage(page, specification) {
       fov: camera.fov, tier: quality.getGraphicsQuality(), autoReset: renderer.info.autoReset };
     const borrowed = [g.playerMesh, playerBody, wpn, weapon3p].map(node => [node, node.visible]);
     const actors = [], shared = new Set(), maps = new Set(), ownedGeometry = new Set();
+    let view = null;
+    const viewDraws={arms:0,body:0,weapon:0},viewCallbacks=[];
+    let viewEvidence=null;
     let sharedDisposals = 0, callbacks = 0, restored = false;
     const watches = [], sequence = [], poseSignatures = new Set(), resourceSamples = [];
     const timings = { frameIntervalMs: [], mixerMs: [], inertiaMs: [], correctionMs: [], renderMs: [] };
+    if(candidate)for(const name of ['selectionMs','coreCorrectionMs','viewMs'])timings[name]=[];
     const transitions = [ ['idle', 0.4], ['walk', 1.2], ['walk_back', 1.1],
       ['strafe_l', 1.0], ['strafe_r', 1.0], ['run', 1.1], ['crouch', 0.5],
       ['crouch_walk', 1.1], ['jump_start', 0.2], ['jump_loop', 0.7],
@@ -442,8 +449,20 @@ async function sampleAnimationPage(page, specification) {
       actor.currentClip = 'idle'; actor.mesh.rotation.y = 0;
       scene.add(actor.mesh); return actor;
     };
-    const render = () => { renderer.info.reset(); ink.renderComicScene(renderer, scene, camera);
+    const render = () => { renderer.info.reset();
+      if(renderedView&&view?.weapon)fp.renderFirstPersonRig(view,{weapon:wpn,firstPerson:true,active:true},()=>ink.renderComicScene(renderer,scene,camera));
+      else ink.renderComicScene(renderer, scene, camera);
       renderer.getContext().finish(); };
+    const watchView=()=>{if(!renderedView||viewCallbacks.length||!view?.weapon)return;
+      for(const [kind,root]of [['arms',view.arms],['body',view.body],['weapon',view.weapon]])root.traverse(node=>{
+        if(!node.isMesh)return;const original=node.onBeforeRender;
+        node.onBeforeRender=function(...args){const geometry=args[3],material=args[4],group=args[5];
+          if(args[2]===camera&&material.visible!==false&&material.colorWrite!==false&&material.opacity>0&&
+            (group?.count??geometry.index?.count??geometry.attributes.position.count)>0)viewDraws[kind]++;
+          original.apply(this,args);};
+        viewCallbacks.push([node,original]);
+      });
+    };
     let failure, keeperIntact = false, packedMaps = 0, ownership, afterRetirement;
     const wallStart = performance.now();
     try {
@@ -454,6 +473,21 @@ async function sampleAnimationPage(page, specification) {
       camera.fov = 44; camera.lookAt(saved.position.x, saved.position.y - 0.65, saved.position.z);
       camera.updateProjectionMatrix();
       for (let i = 0; i < actorCount; i++) actors.push(build(i));
+      if (candidate) {
+        view = fp.createFirstPersonRig({ source: actors[0].mesh });
+        scene.add(view.arms, view.body);
+        if(renderedView) {
+          camera.position.copy(actors[0].mesh.position).add(new T.Vector3(0,1.65,0));
+          camera.quaternion.setFromEuler(new T.Euler(-1.3,Math.PI,0,'YXZ'));
+          camera.fov=75;camera.updateProjectionMatrix();
+          a.tickPresentation(actors[0],{identity:'0',generation:'candidate',sampleTimeSeconds:0,
+            position:{x:0,y:1.65,z:0},bodyYaw:-Math.PI,aimYaw:-Math.PI,pitch:-1.1,weapon:'m4',alive:true,onGround:true,
+            action:{kind:'ready'}},1/20);
+          const sourceRoot=actors[0].mesh.getObjectByName('enemyWeaponMount')?.children[0];
+          fp.updateFirstPersonRig(view,{pose:actors[0].presentation,camera,weapon:wpn,thirdPerson:false,
+            rawCorrections:handling.getWeaponHandling(sourceRoot)?.corrections??[]});watchView();
+        }
+      }
       actors[0].mesh.traverse(node => {
         if (node.isSkinnedMesh) shared.add(node.geometry);
         for (const material of Array.isArray(node.material) ? node.material : [node.material])
@@ -480,7 +514,9 @@ async function sampleAnimationPage(page, specification) {
         let intact = true;
         actor.mesh.traverse(node => { if (node.isSkinnedMesh)
           intact &&= node.geometry.attributes.position.count > 0 &&
-            node.skeleton.boneTexture?.image?.data.length > 0; });
+            (renderedView&&actor===actors[0]&&!node.skeleton.boneTexture
+              ? node.skeleton.bones.length===65&&node.skeleton.boneInverses.length===65
+              : node.skeleton.boneTexture?.image?.data.length > 0); });
         return intact;
       });
       for (let i = 0; i < 12; i++) { for (const actor of actors) actor.mixer.update(dt); render(); }
@@ -491,12 +527,43 @@ async function sampleAnimationPage(page, specification) {
         actor.currentClip = null; actor._inLocoMode = false;
       }
       let previous = performance.now(), frame = 0;
+      const path = actors.map(() => ({ x: 0, z: 0 }));
       for (const [clip, seconds] of transitions) {
         for (let step = 0; step < Math.ceil(seconds / dt); step++) {
           callbacks++;
           await new Promise(resolve => window.__baselineRaf(() => { callbacks--; resolve(); }));
           const begin = performance.now();
           let start = begin;
+          if (candidate) {
+            let mixerMs=0,inertiaMs=0,correctionMs=0,selectionMs=0,coreCorrectionMs=0;
+            for (const [index, actor] of actors.entries()) {
+              const speed = clip === 'run' ? 9 : ['walk','walk_back','strafe_l','strafe_r'].includes(clip) ? 6 : clip === 'crouch_walk' ? 4.32 : 0;
+              const facing=renderedView?-1:1;
+              path[index].x += facing*(clip === 'strafe_l' ? -1 : clip === 'strafe_r' ? 1 : 0)*speed*dt;
+              path[index].z += facing*(clip === 'walk_back' ? 1 : ['walk','run','crouch_walk'].includes(clip) ? -1 : 0)*speed*dt;
+              const prepared=performance.now();
+              a.tickPresentation(actor,{identity:String(index),generation:'candidate',sampleTimeSeconds:frame*dt,
+                position:{x:path[index].x,y:1.65,z:path[index].z},bodyYaw:renderedView?-Math.PI:0,aimYaw:renderedView?-Math.PI:0,pitch:renderedView?-1.1:0,alive:true,
+                crouching:clip.startsWith('crouch'),onGround:!['jump_start','jump_loop'].includes(clip),
+                verticalVelocity:clip==='jump_start'?5:0,sprinting:clip==='run',weapon:'m4',
+                action:clip==='reload'?{kind:'reload',total:1.8,remaining:Math.max(0,1.8-step*dt)}:{kind:'ready'}},dt,false);
+              const selected=performance.now()-prepared;correctionMs+=selected;selectionMs+=selected;
+              const costs={};a.finishPresentation(actor,dt,costs);
+              mixerMs+=costs.mixerMs;inertiaMs+=costs.inertiaMs;correctionMs+=costs.correctionMs;
+              coreCorrectionMs+=costs.correctionMs;
+            }
+            const fitted=performance.now();
+            const eyeHeight=actors[0].presentation.crouching ? .85 : 1.65;
+            if(renderedView)camera.position.copy(actors[0].mesh.position).add(new T.Vector3(0,eyeHeight,0));
+            const root=actors[0].mesh.getObjectByName('enemyWeaponMount')?.children[0];
+            const sourceHandling=handling.getWeaponHandling(root);
+            fp.updateFirstPersonRig(view,{pose:actors[0].presentation,camera,weapon:wpn,thirdPerson:!renderedView,dt,eyeHeight,
+              spineQuaternion:actors[0]._presentationCorrection?.get(actors[0].mesh.getObjectByName('spine_03')),
+              rawCorrections:sourceHandling?.corrections??[]});
+            watchView();const viewMs=performance.now()-fitted;correctionMs+=viewMs;
+            if(!mediaPass){timings.mixerMs.push(mixerMs);timings.inertiaMs.push(inertiaMs);timings.correctionMs.push(correctionMs);
+              timings.selectionMs.push(selectionMs);timings.coreCorrectionMs.push(coreCorrectionMs);timings.viewMs.push(viewMs);}
+          } else {
           for (const actor of actors) {
             if (['idle', 'walk', 'run', 'strafe_l', 'strafe_r'].includes(clip)) {
               a.enterLocoMode(actor);
@@ -515,6 +582,7 @@ async function sampleAnimationPage(page, specification) {
           start = performance.now();
           for (const actor of actors) a.tickInertia(actor, dt);
           if (!mediaPass) timings.inertiaMs.push(performance.now() - start);
+          }
           start = performance.now(); render();
           if (!mediaPass) timings.renderMs.push(performance.now() - start);
           const end = performance.now();
@@ -523,6 +591,22 @@ async function sampleAnimationPage(page, specification) {
           poseSignatures.add(bone.quaternion.toArray().map(n => n.toFixed(4)).join(','));
           if (mediaPass) sequence.push({ frame, clip, simulationTime: frame * dt,
             image: renderer.domElement.toDataURL('image/png') });
+          if(renderedView&&[0,100,180].includes(frame)) {
+            const reachesScene=root=>{for(let node=root;node;node=node.parent)if(node===scene)return true;return false;};
+            const skeletons=new Set();for(const root of [view.arms,view.body])root.traverse(node=>{if(node.skeleton)skeletons.add(node.skeleton);});
+            viewEvidence={draws:{...viewDraws},attached:[view.arms,view.body,view.weapon].every(reachesScene),
+              allocatedBoneTextures:[...skeletons].filter(s=>s.boneTexture?.image?.data.length>0).length,
+              selectedVisibleMeshes:[view.arms,view.body].map(root=>{let count=0;root.traverse(n=>{if(n.isMesh&&n.visible&&n.geometry.userData.selectedTriangles>0)count++;});return count;}),
+              cameraEye:camera.position.toArray(),cameraPitch:-1.3,fov:camera.fov,drawCalls:renderer.info.render.calls};
+            viewEvidence.sourceRoot=actors[0].mesh.position.toArray();
+            viewEvidence.cameraYaw=new T.Euler().setFromQuaternion(camera.quaternion,'YXZ').y;
+            viewEvidence.eyeHeight=camera.position.y-actors[0].mesh.position.y;
+            viewEvidence.sourceScale=actors[0].mesh.scale.toArray();
+            viewEvidence.sourceActorCount=actors.length;viewEvidence.proxyEntityCount=1;
+            viewEvidence.cameraColocatedXZ=camera.position.x===actors[0].mesh.position.x&&camera.position.z===actors[0].mesh.position.z;
+            if(!viewEvidence.attached||viewEvidence.allocatedBoneTextures!==2||!Object.values(viewDraws).every(n=>n>0))throw Error('Essential view was not actually drawn');
+            sequence.push({frame,clip,simulationTime:frame*dt,viewEvidence,image:renderer.domElement.toDataURL('image/png')});
+          }
           // Exclude evidence encoding from the next measured frame interval in both repeats.
           previous = performance.now();
           frame++;
@@ -538,8 +622,22 @@ async function sampleAnimationPage(page, specification) {
         mixerListeners: actors.reduce((count, actor) => count + Object.values(
           actor.mixer._listeners ?? {}).reduce((n, listeners) => n + listeners.length, 0), 0),
         callbacks, props: actors.filter(actor => actor.mesh.getObjectByName('enemyWeaponMount')).length };
+      if(view) {
+        const geometry=new Set(),skeletons=new Set(),textures=new Set(),materials=new Set();
+        for(const root of [view.arms,view.body,view.weapon].filter(Boolean))root.traverse(node=>{
+          if(node.geometry)geometry.add(node.geometry);if(node.skeleton)skeletons.add(node.skeleton);
+          for(const material of Array.isArray(node.material)?node.material:[node.material])if(material){
+            if(material.userData.characterOwned||material.userData._tinted)materials.add(material);
+            for(const texture of [material.map,material.normalMap])if(texture)textures.add(texture);
+          }
+        });
+        ownership.view={geometries:geometry.size,skeletons:skeletons.size,sharedMaps:textures.size,
+          ownedMaterials:materials.size,mixers:0,sourceCallbacks:resources.inspectCharacterResources(actors[0].mesh).callbacks};
+      }
     } catch (error) { failure = error.message; }
     finally {
+      for(const [node,callback]of viewCallbacks)node.onBeforeRender=callback;
+      if(view) fp.disposeFirstPersonRig(view);
       for (const actor of actors) g.disposeEnemyMesh(actor.mesh, actor.mixer);
       for (const [resource, listener] of watches) resource.removeEventListener('dispose', listener);
       afterRetirement = { listeners: watches.filter(([resource, listener]) =>
@@ -570,18 +668,19 @@ async function sampleAnimationPage(page, specification) {
       frameCount: timings.mixerMs.length, warmupFrames: 12, simulationStepSeconds: dt,
       durationMs: performance.now() - wallStart, viewport: [1280, 960], dpr: renderer.getPixelRatio(),
       renderer: gl.getParameter(gl.RENDERER), gpu: debug ? gl.getParameter(debug.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER),
-      resourceSamples, ownership, afterRetirement };
+      renderScope:renderedView?'source-eye-down-view-replaces-source-0':'external-third-person-core',
+      viewEvidence, resourceSamples, ownership, afterRetirement };
   }, specification);
 }
 
-export async function captureAnimationBaseline({ smoke = false, failAt, onOwner, onCleanup, signal } = {}) {
+export async function captureAnimationBaseline({ smoke = false, failAt, onOwner, onCleanup, signal, candidate = false, renderedView = candidate } = {}) {
   signal?.throwIfAborted();
   assert.ok(!failAt || failAt === 'render', 'Only bounded render failure injection is supported');
-  const baseDirectory = path.join(CACHE, smoke ? 'animation-smoke' : 'animation-baseline');
+  const baseDirectory = path.join(CACHE, candidate ? 'animation-candidate' : smoke ? 'animation-smoke' : 'animation-baseline');
   const directory = path.join(baseDirectory, `capture-${Date.now()}-${process.pid}`);
   await iterationPath([CACHE], directory);
   await fs.mkdir(directory, { recursive: true });
-  const reportPath = smoke ? path.join(baseDirectory, 'report.json') : path.join(ANIMATION_EVIDENCE, '07-baseline.json');
+  const reportPath = candidate ? path.join(baseDirectory,smoke?'07-09-view-smoke.json':'07-09-candidate.json') : smoke ? path.join(baseDirectory, 'report.json') : path.join(ANIMATION_EVIDENCE, '07-baseline.json');
   const identities = await animationIdentities(), start = Date.now();
   const revision = (await promisify(execFile)('git', ['-c', 'safe.directory=' + ROOT,
     'rev-parse', 'HEAD'], { cwd: ROOT, windowsHide: true })).stdout.trim();
@@ -623,8 +722,8 @@ export async function captureAnimationBaseline({ smoke = false, failAt, onOwner,
             let sample;
             try {
               sample = await Promise.race([
-                sampleAnimationPage(page, { tier, actorCount, failAt,
-                  captureFrames: run === 0 && tier === 'low' && actorCount === 1 }),
+                sampleAnimationPage(page, { tier, actorCount, failAt, candidate, renderedView,
+                  captureFrames: !candidate && run === 0 && tier === 'low' && actorCount === 1 }),
                 new Promise((_resolve, reject) => {
                   timeout = setTimeout(() => reject(Error('Animation sample exceeded 180 seconds')), 180000);
                 }),
@@ -651,7 +750,11 @@ export async function captureAnimationBaseline({ smoke = false, failAt, onOwner,
             }
             samples.push({ run: run + 1, browser: browser.version(),
               sourceIdentitySha256: hash(JSON.stringify(identities)), ...sample });
-            console.log(`Animation baseline run ${run + 1}: ${tier}/${actorCount} (${sample.frameCount} moving frames)`);
+            if(candidate) {
+              await fs.writeFile(path.join(directory,`run-${run+1}-${tier}-${actorCount}-metrics.json`),JSON.stringify(samples.at(-1),null,2)+'\n');
+              console.log(JSON.stringify({candidateProfile:`${run+1}/${tier}/${actorCount}`,timings:sample.timings,plateau:sample.resourceSamples[3]}));
+            }
+            console.log(`Animation ${candidate?'candidate':'baseline'} run ${run + 1}: ${tier}/${actorCount} (${sample.frameCount} moving frames)`);
           }
         }
         assert.deepEqual(errors, []);
@@ -670,6 +773,13 @@ export async function captureAnimationBaseline({ smoke = false, failAt, onOwner,
       rendererClass: samples.every(s => /swiftshader|software/i.test(s.gpu)) ? 'software' : 'physical-or-unidentified' },
     certification: false, humanMotionAcceptance: 'pending',
     limits: 'Controlled actual Training Range loaded scene, retained rig and current transitions; fixed 20 Hz simulation clock, native RAF pacing, 214 measured frames per profile, 12 warmup frames and 8 clone loops. PNG encoding is a separate playback, excluded from timings. Browser timer quantization may report zero for short components. Synchronous GPU completion includes rendering; no input/network/whole-game FPS certification. Full-pixel continuous sequence belongs to run 1 low/1. No phone, integrated GPU, gaming GPU, Pi or 60 FPS qualification.' };
+  if(candidate) {
+    const baselineBytes=await fs.readFile(path.join(ANIMATION_EVIDENCE,'07-baseline.json'));
+    const budget=JSON.parse(await fs.readFile(path.join(ANIMATION_EVIDENCE,'07-budget.json'),'utf8'));
+    report.baselineSha256=hash(baselineBytes);
+    report.comparison=smoke?{matched:false,budgetPass:false,reason:'Incomplete smoke proof only'}:compareAnimationCandidate(report,budget);
+    report.limits+=' Candidate uses current phase-driven masks/handling and one essential local view, replacing source0 visually. All source roots/layout/scales stay fixed; the full view uses source0 eye plus1.65m standing/.85m crouched,75deg FOV and down-look1.3rad with source torso pitch clamped1.1rad. This camera/workload is not comparable to the external3P baseline frame improvement; old absolute frame-limit flags remain explicit. Selection, source correction and view copying/fitting are separately measured. Required moving charging geometry adds1/actor; numeric legacy overruns are never widened.';
+  }
   await fs.mkdir(path.dirname(reportPath), { recursive: true });
   // Atomic publication only after every sample, identity and cleanup check succeeded.
   const temporary = reportPath + '.tmp';
@@ -680,6 +790,51 @@ export async function captureAnimationBaseline({ smoke = false, failAt, onOwner,
 }
 
 const TIMING_COMPONENTS = ['frameIntervalMs', 'mixerMs', 'inertiaMs', 'correctionMs', 'renderMs'];
+
+export function compareAnimationCandidate(report,budget) {
+  assert.equal(report.complete,true,'Incomplete candidate');
+  assert.equal(report.baselineSha256,budget.baselineSha256,'Wrong baseline identity');
+  assert.deepEqual(report.device,budget.device,'Unmatched device/browser');
+  assert.equal(report.samples.length,12,'Truncated candidate matrix');
+  const seen=new Set(),overruns=[],resourceChanges=[];
+  const scopes=new Set(report.samples.map(sample=>sample.renderScope));
+  assert.equal(scopes.size,1,'Mixed candidate camera/workload scopes');
+  assert.ok([undefined,'external-third-person-core','source-eye-down-view-replaces-source-0'].includes([...scopes][0]),'Unknown candidate camera/workload scope');
+  const fullView=report.samples.every(sample=>sample.renderScope==='source-eye-down-view-replaces-source-0');
+  for(const sample of report.samples) {
+    const key=`${sample.run}/${sample.tier}/${sample.actorCount}`;
+    assert.ok(!seen.has(key),'Duplicate candidate profile');seen.add(key);
+    assert.ok([1,2].includes(sample.run),'Unknown candidate run');
+    const profile=budget.profiles.find(p=>p.tier===sample.tier&&p.actorCount===sample.actorCount);
+    assert.ok(profile,'Unknown candidate profile');
+    assert.deepEqual(sample.viewport,profile.viewport,'Unmatched viewport');
+    assert.equal(sample.dpr,profile.dpr,'Unmatched DPR');assert.equal(sample.gpu,profile.gpu,'Unmatched renderer');
+    assert.equal(sample.frameCount,214,'Truncated timed frames');
+    assert.equal(sample.warmupFrames,12);assert.equal(sample.simulationStepSeconds,1/20);
+    assert.equal(sample.resourceSamples.length,8);assert.equal(sample.sharedDisposals,0);
+    for(const entry of sample.resourceSamples.slice(4))assert.deepEqual(entry,sample.resourceSamples[3],'Unstable candidate plateau');
+    for(const name of TIMING_COMPONENTS)for(const stat of ['median','p95']) {
+      const actual=sample.timings[name]?.[stat],upper=profile.timings[name][`${stat}UpperMs`];
+      assert.ok(Number.isFinite(upper)&&upper>=0,'Missing numeric fixed envelope');
+      assert.ok(Number.isFinite(actual)&&actual>=0,'Nonfinite candidate timing');
+      if(actual>upper+1e-7)overruns.push({run:sample.run,tier:sample.tier,actorCount:sample.actorCount,component:name,stat,actualMs:actual,upperMs:upper});
+    }
+    for(const name of ['geometries','textures','programs']){
+      const actual=sample.resourceSamples[3][name],baseline=profile.warmedPlateau[name];
+      if(actual!==baseline)resourceChanges.push({run:sample.run,tier:sample.tier,actorCount:sample.actorCount,resource:name,actual,baseline});
+    }
+    for(const name of ['listeners','callbacks','props','actors','activeBindings'])assert.equal(sample.afterRetirement[name],0,'Owned retirement failed');
+    if(fullView){assert.ok(sample.viewEvidence?.attached,'Detached view');assert.equal(sample.viewEvidence.allocatedBoneTextures,2,'View skeletons never drawn');
+      assert.ok(Object.values(sample.viewEvidence.draws).every(count=>count>0),'View draw callbacks missing');assert.equal(sample.sequence.length,3,'View pixels missing');
+      assert.equal(sample.viewEvidence.sourceActorCount,sample.actorCount);assert.equal(sample.viewEvidence.proxyEntityCount,1);
+      assert.equal(sample.viewEvidence.cameraColocatedXZ,true);assert.equal(sample.viewEvidence.fov,75);
+      assert.ok(sample.viewEvidence.selectedVisibleMeshes.every(count=>count>0),'Empty essential view groups');}
+  }
+  return {matched:!fullView,legacyBudgetPass:!fullView&&overruns.length===0&&resourceChanges.length===0,
+    budgetPass:!fullView&&overruns.length===0&&resourceChanges.length===0,
+    cameraWorkloadComparable:!fullView,reason:fullView?'Actual source-eye essential view differs from external baseline camera/workload':null,
+    absoluteFrameLimitFlags:overruns.filter(entry=>entry.component==='frameIntervalMs'),overruns,resourceChanges,certification:false};
+}
 
 export function validateAnimationBaseline(report, identities) {
   assert.equal(report.complete, true, 'Incomplete animation baseline');
@@ -792,6 +947,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   let operation;
   if (args.length === 1 && args[0] === '--capture') operation = captureGameplay;
   else if (args.length === 1 && args[0] === '--animation-budget') operation = recordAnimationBudget;
+  else if(args[0]==='--animation-candidate'&&(args.length===1||args.length===2&&args[1]==='--smoke'))operation=()=>captureAnimationBaseline({candidate:true,smoke:args[1]==='--smoke'});
   else if (args[0] === '--animation-baseline' && (args.length === 1 ||
     (args.length === 2 && args[1] === '--smoke'))) {
     operation = async () => {

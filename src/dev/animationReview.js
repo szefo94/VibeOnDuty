@@ -226,7 +226,12 @@ export function createAnimationReviewOwner({ createActor, suspend = () => {}, re
       actor.update(phase, false, dt); if (phase === 1) { playing = false; announce(); }
     } },
     render() { if (opened && actor && state==='ready') { try { actor.render(); } catch { playing = false; state = 'error'; announce(); } } },
-    close(focus = true) { if (!opened) return; ++generation; opened = false; playing = false; retire(); state = 'closed'; restore(focus); announce(); },
+    close(focus = true) {
+      if (!opened) return;
+      ++generation; opened = false; playing = false;
+      try { retire(); }
+      finally { state = 'closed'; restore(focus); announce(); }
+    },
     getFrozenDebug: snapshot,
     getStatus:statusSnapshot,
   };

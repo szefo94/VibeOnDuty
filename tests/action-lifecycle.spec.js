@@ -149,7 +149,7 @@ test('melee: repeated input rejects throw, fire and reload without queuing', asy
 });
 
 for (const route of ['weapon', 'menu', 'mode', 'round', 'respawn', 'buy-reset', 'buy-same',
-  'editor-open', 'editor-playtest', 'editor-exit', 'online-entry']) {
+  'editor-open', 'editor-playtest', 'editor-exit', 'online-entry', 'online-api-entry', 'online-api-retirement']) {
   test(`retirement: ${route} invalidates pending action before replacement`, async ({ page }) => {
     const result = await page.evaluate(async route => {
       const { p, input, src } = window.actionProbe;
@@ -190,6 +190,8 @@ for (const route of ['weapon', 'menu', 'mode', 'round', 'respawn', 'buy-reset', 
       else if (route === 'editor-playtest') document.getElementById('ed-playtest').click();
       else if (route === 'editor-exit') editor.exitEditorPreview();
       else if (route === 'online-entry') document.getElementById('mp-join-btn').click();
+      else if (route === 'online-api-entry') void (await import(src + 'network/onlineSession.js')).joinOnline();
+      else if (route === 'online-api-retirement') await (await import(src + 'network/onlineSession.js')).leaveOnline();
       input.setGameRunning(false);
       const immediate = p.playerActions.presentation;
       p.tickPlayerActions(2);

@@ -656,7 +656,7 @@ async function bindOfflineAttackProbe(page) {
   });
 }
 
-for (const kind of ['combat', 'authority', 'feedback']) test(`${kind}: real M4 cover, ammo, reload and private hit outcomes agree${kind === 'authority' ? ' after forged offline outcomes' : ''}`, async ({ browser }) => {
+for (const kind of ['combat', 'authority', 'feedback']) test(`${kind==='feedback'?'animation authority: ':''}${kind}: real M4 cover, ammo, reload and private hit outcomes agree${kind === 'authority' ? ' after forged offline outcomes' : ''}`, async ({ browser }) => {
   const authority = kind === 'authority';
   test.setTimeout(240000);
   const fixture = await startMpFixture({ env: { VOD_COMBAT_SEED: '7' } });
@@ -758,7 +758,7 @@ for (const kind of ['combat', 'authority', 'feedback']) test(`${kind}: real M4 c
   }
 });
 
-test('errors: unavailable join and disconnected session offer visible top Retry and Return', async ({ browser }) => {
+test('animation retirement: errors: unavailable join and disconnected session offer visible top Retry and Return', async ({ browser }) => {
   test.setTimeout(120000);
   const fixture = await startMpFixture();
   const context = await browser.newContext({viewport:{width:800,height:600},deviceScaleFactor:0.25});

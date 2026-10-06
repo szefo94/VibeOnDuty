@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { createPresentationHistory, normalizePresentation, samplePresentation } from './animationPresentation.js';
 import { getWeaponHandling, restoreWeaponHandlingBones, updateWeaponHandling } from './weaponHandling.js';
 import { WEAPONS } from '../config.js';
+import { registerCharacterDisposer } from './characterResources.js';
 
 // ── Additive breathing clips ──────────────────────────────────────────────
 // Procedural rig: target the arm-swing meshes with a slow sine oscillation.
@@ -417,6 +418,7 @@ function correctPresentationBones(e, pose) {
 export function tickPresentation(e, raw, dt, updateMixer = true) {
   restoreWeaponHandlingBones(actorHandling(e));
   if (e._presentationMixer !== e.mixer) {
+    e._releasePresentation?.();
     if (e._presentationMixer) { e._bonesInit = false; e._bones = []; }
     e._presentationMixer = e.mixer;
     e._presentationMasks = new Map();
@@ -425,6 +427,12 @@ export function tickPresentation(e, raw, dt, updateMixer = true) {
     e._presentationKey = null;
     e._presentationDamageRemaining = 0;
     e._inertia = null;
+    e._releasePresentation = registerCharacterDisposer(e.mesh, () => {
+      e._presentationMasks?.clear(); e._presentationCorrection?.clear(); e._presentationActive?.clear();
+      e._presentationHistory = null; e._presentationMixer = null; e._presentationKey = null;
+      e._bones = []; e._bonesInit = false; e._inertia = null; e.presentation = null;
+      e._releasePresentation = null;
+    });
   }
   collectPresentationBones(e);
   e._presentationHistory ??= createPresentationHistory();
@@ -494,12 +502,24 @@ export function tickPresentation(e, raw, dt, updateMixer = true) {
   if (updateMixer) finishPresentation(e, dt);
   return pose;
 }
-export function finishPresentation(e, dt) {
+export function finishPresentation(e, dt, measurement = null) {
+  // Optional offline measurement; the production path reads no timer and owns no clock.
+  const clock = () => measurement ? performance.now() : 0;
+  let start = clock();
   restorePresentationCorrection(e);
+  const restored = clock();
   e.mixer?.update(dt);
+  const mixed = clock();
   if (e.presentation) correctPresentationBones(e, e.presentation);
+  const corrected = clock();
   _tickInertia(e, dt);
+  const inertial = clock();
   if (e.presentation) updateWeaponHandling(actorHandling(e), e.presentation);
+  if (measurement) {
+    measurement.mixerMs = mixed - restored;
+    measurement.inertiaMs = inertial - corrected;
+    measurement.correctionMs = restored - start + corrected - mixed + clock() - inertial;
+  }
 }
 function actorHandling(e) {
   const root = e.mesh?.getObjectByName('enemyWeaponMount')?.children[0];
