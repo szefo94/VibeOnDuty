@@ -3,6 +3,12 @@ import assert from 'node:assert/strict';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { parseGLB, encodeGLB, accessor } from './inspect-character.mjs';
+import { run } from './pipeline.mjs';
+
+test('owned subprocess deadline rejects a still-running child instead of reporting completion', async () => {
+  await assert.rejects(run(process.execPath, ['-e', 'setTimeout(() => {}, 300)'], process.env,
+    { timeoutMs: 20 }), /Process timeout/);
+});
 
 const api = await import('./motion-pipeline.mjs').catch(() => ({}));
 const inspector = await import('./inspect-character.mjs');
