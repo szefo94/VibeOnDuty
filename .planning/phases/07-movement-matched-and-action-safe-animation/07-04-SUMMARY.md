@@ -82,7 +82,7 @@ status: complete
 
 Plan closeout metadata is committed separately from these measured task commits.
 
-## Verification and TDD Gate Compliance
+## Checks Run and TDD Gate Compliance
 
 - Task 1 retained RED record `.planning/research/.cache/07-04-throw-red.json` describes actual reload/ADS and ammo failures; its existing RED/GREEN history is preserved. The prior executor verified the throw tracer end to end twice (4/4, 24.7s and 24.2s), as reported in the continuation handoff. Current full runs cover all four throw cases again.
 - Task 2 actual-browser RED: **4 intended assertion failures**. Before the fix, ADS/reload remained active, reload awarded ammo 3→30 at all three deadlines, no hit occurred at the simulation marker, and the old wall-clock callback produced `deadHits=1` after real death. `.planning/research/.cache/07-04-melee-red.json` passed `check tdd-red-evidence` with `RED_EVIDENCE_OK` before the RED commit and implementation.
