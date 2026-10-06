@@ -330,6 +330,62 @@ async function snapshot(page) {
   return page.evaluate(() => window.__mpDebug());
 }
 
+test('animation retirement: two real M4 clients reload, die and render a fresh life', async ({ browser }) => {
+  test.setTimeout(240000);
+  const fixture = await startMpFixture({ testSettings: { killLimit: 50, matchSeconds: 180,
+    respawnSeconds: 3, friendlyFire: .25 }, env: { VOD_COMBAT_SEED: '7' } });
+  const contexts = [];
+  try {
+    for (let i = 0; i < 2; i++) contexts.push(await browser.newContext({
+      viewport: { width: 800, height: 600 }, deviceScaleFactor: .25 }));
+    const [a,b] = await Promise.all(contexts.map(c => c.newPage()));
+    for (const page of [a,b]) {
+      await page.goto(fixture.url);
+      await expect(page.locator('#mp-join-btn')).toBeEnabled({ timeout: 60000 });
+      await page.locator('#mp-join-btn').click();
+      await expect.poll(async () => (await snapshot(page)).sessionId).toBeTruthy();
+    }
+    await expect.poll(async () => (await snapshot(a)).players.length).toBe(2);
+    const first = await snapshot(a), targetId = (await snapshot(b)).sessionId;
+    await aimAt(a, null);
+    for (const [x,z] of [[62,46],[62,22],[34,22],[34,46]]) await walkTo(a, first.sessionId, x,z);
+    await aimAt(a,targetId);
+    // Observation only: preserve transient actual schema and sampled pose together.
+    await a.evaluate(targetId => {
+      const seen = { reload: null, death: null, fresh: null };
+      window.__animationSeen = () => structuredClone(seen);
+      window.__animationTimer = setInterval(() => {
+        const s = window.__mpDebug(), p = s.players.find(p => p.sessionId === targetId);
+        const actor = s.remoteActors.find(p => p.sessionId === targetId);
+        if (!p || !actor) return;
+        if (p.reloadRemaining > 0 && !seen.reload) seen.reload = { p,actor,tick:s.currentTick };
+        if (!p.alive) seen.death = { p,actor,tick:s.currentTick };
+        if (p.lifeGeneration > 1 && p.alive) seen.fresh = { p,actor,tick:s.currentTick };
+      },10);
+    },targetId);
+    await focusControls(b);
+    await b.mouse.click(400,300);
+    await expect.poll(async () => (await snapshot(b)).players.find(p=>p.sessionId===targetId).ammo).toBeLessThan(30);
+    await b.keyboard.press('KeyR');
+    await expect.poll(() => a.evaluate(() => !!window.__animationSeen().reload)).toBe(true);
+    await focusControls(a); await a.mouse.down();
+    try { await expect.poll(async () => (await snapshot(b)).players.find(p=>p.sessionId===targetId).alive).toBe(false); }
+    finally { await a.mouse.up(); }
+    await expect.poll(() => a.evaluate(() => !!window.__animationSeen().fresh), { timeout: 12000 }).toBe(true);
+    const seen = await a.evaluate(() => { clearInterval(window.__animationTimer); return window.__animationSeen(); });
+    expect(seen.reload.actor.pose.upper).toBe('reload');
+    expect(seen.reload.actor.pose.phase).toBeCloseTo(1-seen.reload.p.reloadRemaining/1.8,5);
+    expect(seen.death.actor.clip).toBe('death');
+    expect(seen.death.actor.pose.deathDirectionSource).toBe('body-heading-fallback');
+    expect(seen.death.actor.pose.settled).toBe(true);
+    expect(seen.fresh.p).toMatchObject({ alive:true, ammo:30,reserve:90,health:100,reloadRemaining:0 });
+    expect(seen.fresh.actor.pose).toMatchObject({ upper:'ready',settled:false,phase:0 });
+    expect(seen.fresh.actor.lifeGeneration).toBe(seen.fresh.p.lifeGeneration);
+    expectHumanArt(await humanArtState(a)); expectHumanArt(await humanArtState(b));
+    await a.screenshot({ path:test.info().outputPath('animation-fresh-life.png') });
+  } finally { try { await Promise.all(contexts.map(c=>c.close())); } finally { await fixture.stop(); } }
+});
+
 async function focusControls(page) {
   await page.bringToFront();
   if (!(await page.evaluate(() => !!document.pointerLockElement))) {
