@@ -19,7 +19,7 @@ import { buildEnemyMixer, attachSkeletonDebug, buildGLTFBreathingClip } from './
 import { attachEnemyWeapon } from './enemyWeapon.js';
 import { attachWeapons3pToHand } from './weaponFBX.js';
 import { buildRifleMovementClips } from './rifleClips.js';
-import { preserveTemplateGeometry, disposeCharacter } from './characterResources.js';
+import { preserveTemplateGeometry, disposeCharacter, consolidateCharacterSkeletons } from './characterResources.js';
 import { applyCharacterAppearance, tintCharacterAccents } from './characterAppearance.js';
 import motionManifest from '../../tools/art/motion-manifest.json';
 import { createFirstPersonRig, disposeFirstPersonRig } from './firstPersonRig.js';
@@ -352,6 +352,7 @@ export function buildEnemyMesh(wx, wz, role = 'assault') {
 
   // ── GLTF path ─────────────────────────────────────────────────────────
   const clone = skeletonClone(gltfTemplate.scene);
+  consolidateCharacterSkeletons(clone);
   clone.position.set(wx, 0, wz);
   clone.traverse((ch) => {
     if (ch.isMesh) {
@@ -450,6 +451,7 @@ export function buildPlayerMesh() {
   if (playerFirstPersonRig) disposeFirstPersonRig(playerFirstPersonRig);
 
   const clone = skeletonClone(gltfTemplate.scene);
+  consolidateCharacterSkeletons(clone);
   clone.visible = false;
   clone.traverse((ch) => {
     if (ch.isMesh) {
@@ -512,6 +514,7 @@ export function tintEnemyMesh(mesh, hexColor) {
 export function createReviewCharacter(weapon = 'm4') {
   if (!gltfTemplate) throw new Error('Character asset unavailable');
   const mesh = skeletonClone(gltfTemplate.scene);
+  consolidateCharacterSkeletons(mesh);
   const mixer = new THREE.AnimationMixer(mesh), actions = {};
   for (const key of CLIP_KEYS) {
     const clip = findClip(gltfTemplate.animations, key, weapon);

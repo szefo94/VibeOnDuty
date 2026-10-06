@@ -9,6 +9,7 @@ import os from 'node:os';
 import { chromium } from '@playwright/test';
 import { createServer } from 'vite';
 import { ROOT, CACHE, hash, iterationPath } from './pipeline.mjs';
+import { producerContract, candidateLineage } from './animation-budget-v2.mjs';
 
 // This owns a loopback-only Vite server and separate browser contexts. It never connects
 // to multiplayer or adds a production debug/mutation API. Only the model GET is routed.
@@ -779,6 +780,12 @@ export async function captureAnimationBaseline({ smoke = false, failAt, onOwner,
     report.baselineSha256=hash(baselineBytes);
     report.comparison=smoke?{matched:false,budgetPass:false,reason:'Incomplete smoke proof only'}:compareAnimationCandidate(report,budget);
     report.limits+=' Candidate uses current phase-driven masks/handling and one essential local view, replacing source0 visually. All source roots/layout/scales stay fixed; the full view uses source0 eye plus1.65m standing/.85m crouched,75deg FOV and down-look1.3rad with source torso pitch clamped1.1rad. This camera/workload is not comparable to the external3P baseline frame improvement; old absolute frame-limit flags remain explicit. Selection, source correction and view copying/fitting are separately measured. Required moving charging geometry adds1/actor; numeric legacy overruns are never widened.';
+    // Outer report metadata only: the archived sampleAnimationPage producer and
+    // timing/draw/PNG boundaries above remain byte-identical to the V2 reference.
+    const v2Bytes = await fs.readFile(path.join(ANIMATION_EVIDENCE, '07-budget-view-v2.json'));
+    const v2 = JSON.parse(v2Bytes);
+    report.producerContract = producerContract(report);
+    report.v2Lineage = candidateLineage(v2, v2Bytes, report);
   }
   await fs.mkdir(path.dirname(reportPath), { recursive: true });
   // Atomic publication only after every sample, identity and cleanup check succeeded.

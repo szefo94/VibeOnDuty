@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { readFile } from 'node:fs/promises';
+import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { compareAnimationCandidate } from '../tools/art/review.mjs';
 import { parseGLB } from '../tools/art/inspect-character.mjs';
 
@@ -23,6 +23,111 @@ test('resources: each world actor uploads one independent skeleton palette', asy
   });
   expect(result.counts).toEqual([1, 1]);
   expect(result.independent).toBe(true); expect(result.uploaded).toBe(true);
+});
+
+test('resources: consolidation preserves actual posed vertices, pixels and bindings with single retirement', async ({ page }) => {
+  test.setTimeout(120000);
+  await page.goto('/'); await expect(page.locator('#range-startbtn')).toBeEnabled({ timeout: 60000 });
+  await page.locator('#range-startbtn').click();
+  const result = await page.evaluate(async () => {
+    const T = window.__THREE, r = await import('/src/builders/characterResources.js');
+    const g = await import('/src/builders/enemyGLTF.js');
+    const { renderer } = await import('/src/scene.js');
+    const { GLTFLoader } = await import('/node_modules/three/examples/jsm/loaders/GLTFLoader.js');
+    const { clone } = await import('/node_modules/three/examples/jsm/utils/SkeletonUtils.js');
+    const input = await import('/src/input.js'); input.setGameRunning(false);
+    const template = await new GLTFLoader().loadAsync(new URL('models/enemy.glb', location.href).href);
+    r.preserveTemplateGeometry(template.scene);
+    const root = clone(template.scene), sibling = clone(template.scene);
+    const scene = new T.Scene(); scene.background = new T.Color(0x26354a);
+    scene.add(new T.AmbientLight(0xffffff, 2));
+    const light = new T.DirectionalLight(0xffffff, 3); light.position.set(3, 4, 5); scene.add(light, root);
+    const camera = new T.PerspectiveCamera(44, 4 / 3, .1, 100);
+    camera.position.set(0, 1.6, 5); camera.lookAt(0, .9, 0);
+    renderer.setSize(800, 600);
+    const meshes = []; root.traverse(n => { if (n.isSkinnedMesh) { n.frustumCulled = false; meshes.push(n); } });
+    const mixer = new T.AnimationMixer(root);
+    const action = mixer.clipAction(g.findMotionClip(template.animations, 'reload', 'm4')); action.play();
+    const vertices = () => meshes.map(mesh => {
+      const positions = []; for (let i = 0; i < mesh.geometry.attributes.position.count; i++)
+        positions.push(...mesh.getVertexPosition(i, new T.Vector3()).toArray());
+      return positions;
+    });
+    const bind = () => meshes.map(mesh => ({ matrix: mesh.bindMatrix.toArray(), inverse: mesh.bindMatrixInverse.toArray(),
+      skinIndices: Array.from(mesh.geometry.attributes.skinIndex.array), skinWeights: Array.from(mesh.geometry.attributes.skinWeight.array) }));
+    const render = () => { renderer.render(scene, camera); renderer.getContext().finish(); return renderer.domElement.toDataURL('image/png'); };
+    mixer.setTime(.6); root.updateMatrixWorld(true);
+    const beforeVertices = vertices(), beforeBind = bind(), beforePixels = render();
+    const original = new Set(meshes.map(n => n.skeleton));
+    const originalPalettes = [...original].map(s => Array.from(s.boneMatrices));
+    let discardedTextures = 0; for (const skeleton of original)
+      skeleton.boneTexture.addEventListener('dispose', () => discardedTextures++);
+    const consolidation = r.consolidateCharacterSkeletons(root);
+    const discardedAtMerge = discardedTextures;
+    const afterPixels = render(), vertexExact = JSON.stringify(vertices()) === JSON.stringify(beforeVertices);
+    const bindingExact = JSON.stringify(bind()) === JSON.stringify(beforeBind);
+    const shared = meshes[0].skeleton, palette = Array.from(shared.boneMatrices);
+    const paletteExact = meshes.every(mesh => mesh.skeleton === shared);
+    const paletteValuesExact = originalPalettes.every(values => JSON.stringify(values) === JSON.stringify(palette));
+    const geometryMaterials = meshes.map(mesh => [mesh.geometry, mesh.material]);
+    const poses = [];
+    for (const time of [.1, .55, 1.2]) {
+      mixer.setTime(time); root.updateMatrixWorld(true); const expected = vertices();
+      // Independent palettes with the same ordered exact bones/inverses prove that
+      // consolidation does not change the deformation at later moving poses.
+      const replaced = new Set(meshes.map(mesh => mesh.skeleton));
+      meshes.forEach(mesh => { mesh.skeleton = new T.Skeleton(shared.bones, shared.boneInverses); });
+      for (const skeleton of replaced) skeleton.dispose();
+      const independent = vertices(); r.consolidateCharacterSkeletons(root); render();
+      poses.push(JSON.stringify(expected) === JSON.stringify(independent));
+    }
+    const retained = meshes[0].skeleton; let retainedDisposals = 0;
+    retained.boneTexture.addEventListener('dispose', () => retainedDisposals++);
+    let sharedDisposals = 0; const watched = new Set();
+    for (const mesh of meshes) { watched.add(mesh.geometry); for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material])
+      for (const texture of [material.map, material.normalMap]) if (texture) watched.add(texture); }
+    for (const resource of watched) resource.addEventListener('dispose', () => sharedDisposals++);
+    const siblingSkeletons = new Set(); sibling.traverse(n => { if (n.skeleton) siblingSkeletons.add(n.skeleton); });
+    const independentSibling = [...siblingSkeletons].every(s => !meshes.some(mesh => mesh.skeleton === s));
+    r.disposeCharacter(root, mixer); r.disposeCharacter(root, mixer);
+    scene.add(sibling); render();
+    const siblingUsable = [...siblingSkeletons].every(s => s.boneTexture?.image?.data.length > 0);
+    const next = clone(template.scene); r.consolidateCharacterSkeletons(next); scene.add(next); render();
+    const nextUsable = next.getObjectByProperty('isSkinnedMesh', true).skeleton.boneTexture?.image?.data.length > 0;
+    const resourcesExact = meshes.every((mesh, i) => mesh.geometry === geometryMaterials[i][0] && mesh.material === geometryMaterials[i][1]);
+    r.disposeCharacter(sibling); r.disposeCharacter(next);
+    return { consolidation, vertexExact, bindingExact, pixelExact: beforePixels === afterPixels, paletteExact, paletteValuesExact,
+      paletteLength: palette.length, discardedTexturesAtMerge: discardedAtMerge,
+      discardedTextures, poses, independentSibling, siblingUsable, nextUsable, resourcesExact,
+      retainedDisposals, sharedDisposals, bindings: mixer.stats.bindings.inUse,
+      beforePixels, afterPixels };
+  });
+  expect(result.consolidation).toEqual({ before: 51, after: 1 });
+  for (const name of ['vertexExact', 'bindingExact', 'pixelExact', 'paletteExact', 'paletteValuesExact', 'independentSibling', 'siblingUsable', 'nextUsable', 'resourcesExact'])
+    expect(result[name], name).toBe(true);
+  expect(result.poses).toEqual([true, true, true]); expect(result.retainedDisposals).toBe(1);
+  expect(result.discardedTexturesAtMerge).toBe(50); expect(result.discardedTextures).toBe(51);
+  expect(result.sharedDisposals).toBe(0); expect(result.bindings).toBe(0);
+  // Retain actual full pixels outside Playwright's shared output directory.
+  const directory = '.planning/research/.cache/07-09-skeleton-proof'; await mkdir(directory, { recursive: true });
+  for (const name of ['beforePixels', 'afterPixels']) await writeFile(`${directory}/${name}.png`, Buffer.from(result[name].split(',')[1], 'base64'));
+  const { beforePixels, afterPixels, ...metrics } = result;
+  await writeFile(`${directory}/metrics.json`, JSON.stringify(metrics, null, 2) + '\n');
+});
+
+test('resources: unequal inverse binds or ordered bone palettes are not consolidated', async ({ page }) => {
+  await page.goto('/');
+  const result = await page.evaluate(async () => {
+    const T = window.__THREE, r = await import('/src/builders/characterResources.js');
+    const root = new T.Group(), a = new T.Bone(), b = new T.Bone(); root.add(a, b);
+    const add = (bones, inverses) => { const mesh = new T.SkinnedMesh(new T.BufferGeometry(), new T.MeshBasicMaterial());
+      mesh.skeleton = new T.Skeleton(bones, inverses); root.add(mesh); return mesh; };
+    add([a, b], [new T.Matrix4(), new T.Matrix4()]);
+    add([b, a], [new T.Matrix4(), new T.Matrix4()]);
+    add([a, b], [new T.Matrix4().makeTranslation(.1, 0, 0), new T.Matrix4()]);
+    const result = r.consolidateCharacterSkeletons(root); r.disposeCharacter(root); return result;
+  });
+  expect(result).toEqual({ before: 3, after: 3 });
 });
 
 test('resources: fixed budget comparison rejects wrong properties and incomparable or overrun candidates', async () => {

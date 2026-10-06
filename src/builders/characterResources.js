@@ -29,6 +29,33 @@ export function preserveTemplateGeometry(root) {
   root.traverse(node => { if (node.geometry) sharedGeometry.add(node.geometry); });
 }
 
+/** Reuse only exactly equal palettes inside this instance, before its first render. */
+export function consolidateCharacterSkeletons(root) {
+  const meshes = [], bones = new Set(), original = new Set(), buckets = new Map();
+  root.traverse(node => {
+    if (node.isBone) bones.add(node);
+    if (node.isSkinnedMesh) { meshes.push(node); original.add(node.skeleton); }
+  });
+  for (const mesh of meshes) {
+    const skeleton = mesh.skeleton;
+    if (!skeleton.bones.length || !skeleton.bones.every(bone => bones.has(bone))) continue;
+    const key = skeleton.bones.map(bone => bone.uuid).join('/');
+    const candidates = buckets.get(key) ?? [];
+    const canonical = candidates.find(candidate =>
+      candidate.bones.length === skeleton.bones.length &&
+      candidate.bones.every((bone, i) => bone === skeleton.bones[i]) &&
+      candidate.boneInverses.length === skeleton.boneInverses.length &&
+      candidate.boneInverses.every((inverse, i) => inverse.equals(skeleton.boneInverses[i])));
+    // Do not call bind(): it can recalculate inverses or replace mesh bind matrices.
+    // Ordered skin indices, geometry, materials and each mesh's bind basis survive.
+    if (canonical) mesh.skeleton = canonical;
+    else { candidates.push(skeleton); buckets.set(key, candidates); }
+  }
+  const retained = new Set(meshes.map(mesh => mesh.skeleton));
+  for (const skeleton of original) if (!retained.has(skeleton)) skeleton.dispose();
+  return { before: original.size, after: retained.size };
+}
+
 export function disposeCharacter(root, mixer) {
   if (!root || disposed.has(root)) return;
   disposed.add(root);

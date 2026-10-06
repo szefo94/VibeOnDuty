@@ -98,6 +98,9 @@ export function qualify(report) {
     assert.ok([1, 2].includes(s.run) && ['low', 'medium', 'high'].includes(s.tier) && [1, 8].includes(s.actorCount));
     assert.equal(s.renderScope, 'source-eye-down-view-replaces-source-0', 'Mixed or wrong render scope');
     assert.equal(s.sourceIdentitySha256, identity, 'Stale source identity');
+    assert.equal(s.gpu, report.samples[0].gpu, 'Mixed GPU');
+    assert.equal(s.renderer, report.samples[0].renderer, 'Mixed renderer');
+    assert.deepEqual(s.transitions, report.samples[0].transitions, 'Mixed transition workload');
     assert.equal(s.browser, report.device.browser); assert.deepEqual(s.viewport, [1280, 960]);
     assert.equal(s.dpr, 1); assert.equal(s.frameCount, 214); assert.equal(s.warmupFrames, 12);
     assert.equal(s.simulationStepSeconds, 1 / 20); assert.ok(s.human && s.packedMaps > 0 && s.keeperIntact && s.restored);
@@ -221,6 +224,8 @@ async function originalFiles() {
 async function verifyFrozen(budget) {
   const referenceBytes = await readFile(path.resolve(ROOT, budget.referencePath));
   assert.equal(sha256(referenceBytes), budget.referenceReportSha256, 'Changed frozen reference');
+  assert.equal(sha256(await readFile(path.join(ROOT, EVIDENCE, '07-09-cost-report.json'))),
+    budget.referenceReportSha256, 'Changed original failed cost report');
   assert.deepEqual(budget, freezeBudget(JSON.parse(referenceBytes), referenceBytes, budget.referencePath), 'Changed frozen budget');
 }
 async function cli() {

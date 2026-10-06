@@ -68,6 +68,8 @@ for (const [name, change] of [
   ['mixed render scope', r => r.samples[0].renderScope = 'external-third-person-core'],
   ['different FOV', r => r.samples[0].viewEvidence.fov = 44],
   ['different DPR', r => r.samples[0].dpr = 2],
+  ['mixed GPU', r => r.samples[1].gpu = 'other GPU'],
+  ['mixed transition workload', r => r.samples[1].transitions[0] = 'other action'],
   ['missing essential arms draw', r => r.samples[0].viewEvidence.draws.arms = 0],
   ['missing body geometry', r => r.samples[0].viewEvidence.selectedVisibleMeshes[1] = 0],
   ['missing allocated view textures', r => r.samples[0].viewEvidence.allocatedBoneTextures = 0],
