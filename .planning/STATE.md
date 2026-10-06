@@ -3,11 +3,11 @@ gsd_state_version: "1.0"
 current_phase: 7
 current_phase_name: Movement-Matched and Action-Safe Animation
 status: executing
-stopped_at: Completed 07-08-PLAN.md
-last_updated: "2026-10-06T15:06:52.343Z"
+stopped_at: Checkpoint07-09 budget_contract; qualified technical evidence committed
+last_updated: "2026-10-06T16:52:11.508Z"
 last_activity: 2026-10-06
 last_activity_desc: Plan 07-08 committed; 15 focused units, 10 native browser cases, 36 retained weapon/view/tier captures, lint, both types and build pass. Shared requirements and human motion acceptance remain pending.
-state_head: a45e9acf2355aa131620c3d961d8af6448731244
+state_head: 962e0262a012bd4f2d26142e3612e0b1efa79b8a
 progress:
   total_phases: 12
   completed_phases: 2
@@ -148,6 +148,7 @@ None yet.
 - Phase 5-7: Movement/input rules, inherited rig/motion/FBX terms and later animation acceptance remain open. Phase 6's six accepted implementations include full-pixel actual-game pose/tier review, corrected retained source and independent recovery. Inherited support-hand/barrel fitting, armor facets and first-person box-based M4 form remain explicit review limits; no representative-device/FPS qualification is claimed. Phase 7 discussion is next; Phase 5 remains pending.
 - Phase 8-10: Choose catalogs, balance/penetration, minimal identity/recovery/save lifetime, durable reward storage, and equipment/streak/UAV rules.
 - Phase 11-12: Choose compiler/import/prompt backend and two-map mode/size matrix; no complete reusable map source is qualified yet.
+- Plan07-09 budget_contract checkpoint: qualified retirement and12 actual view profiles committed; legacy budget unmet/noncomparable, world51-equal-skeleton sharing requires root review. No09completion or golden-envelope change.
 
 ### Roadmap Evolution
 
@@ -161,9 +162,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-10-06T15:05:26.854Z
-Stopped at: Completed 07-08-PLAN.md
-Resume file: None
+Last session: 2026-10-06T16:52:11.361Z
+Stopped at: Checkpoint07-09 budget_contract; qualified technical evidence committed
+Resume file: .planning/phases/07-movement-matched-and-action-safe-animation/07-09-SUMMARY.md
 
 User passed both Phase 6 visual checks with "pass all tests and proceed".
 Canonical 06-VERIFICATION.md is passed; ART-01 through ART-04 are complete.

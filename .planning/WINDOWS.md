@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 5
+open_count: 6
 waived_count: 0
 fixed_count: 34
-total_count: 39
-last_updated: 2026-10-06T15:02:44.298Z
+total_count: 40
+last_updated: 2026-10-06T16:52:10.405Z
 ---
 
 # Broken Windows Ledger
@@ -54,6 +54,7 @@ last_updated: 2026-10-06T15:02:44.298Z
 | 37 | 07 | deviation | src/entities/friendlyBots.js |  | Sample friendly presentation after current simulation mesh posture and heading | fixed |  | 2026-10-06T06:47:14.809Z | 2026-10-06T06:47:15.209Z |
 | 38 | 07 | deviation | tests/animation-regressions.spec.js |  | Inspect actual played copied tracks and phase rather than inactive source-action playback rates | fixed |  | 2026-10-06T06:47:15.630Z | 2026-10-06T06:47:16.034Z |
 | 39 | 07 | deviation | src/dev/animationReview.js |  | Attach the isolated review arm hierarchy and restore frozen live visual visibility after rendering | fixed |  | 2026-10-06T15:02:09.492Z | 2026-10-06T15:02:44.298Z |
+| 40 | 07 | unmet-truth | .planning/phases/07-movement-matched-and-action-safe-animation/07-09-SUMMARY.md |  | Plan07-09 budget_contract remains open: actual source-eye view workload is noncomparable to immutable external-camera envelope; strict legacy pass false and twelve one-actor absolute frame flags retained. | open |  | 2026-10-06T16:52:10.405Z |  |
 
 ````json
 [
@@ -562,6 +563,19 @@ last_updated: 2026-10-06T15:02:44.298Z
     "reason": "",
     "recorded_at": "2026-10-06T15:02:09.492Z",
     "resolved_at": "2026-10-06T15:02:44.298Z",
+    "milestone": null
+  },
+  {
+    "id": 40,
+    "kind": "unmet-truth",
+    "phase": "07",
+    "file": ".planning/phases/07-movement-matched-and-action-safe-animation/07-09-SUMMARY.md",
+    "line": null,
+    "description": "Plan07-09 budget_contract remains open: actual source-eye view workload is noncomparable to immutable external-camera envelope; strict legacy pass false and twelve one-actor absolute frame flags retained.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-06T16:52:10.405Z",
+    "resolved_at": null,
     "milestone": null
   }
 ]
