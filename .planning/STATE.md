@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 7
 current_phase_name: Movement-Matched and Action-Safe Animation
 status: executing
-stopped_at: Completed 07-07-PLAN.md
-last_updated: "2026-10-06T11:08:07.543Z"
+stopped_at: Completed 07-08-PLAN.md
+last_updated: "2026-10-06T15:06:52.343Z"
 last_activity: 2026-10-06
-last_activity_desc: Plan07-07 committed;28 focused units,12 visible-view browser cases,3 legacy regressions, lint, types and build pass. Shared requirements and human motion acceptance remain pending.
-state_head: b1e2801bf90dd174b0db0b464cf9c46509e7677c
+last_activity_desc: Plan 07-08 committed; 15 focused units, 10 native browser cases, 36 retained weapon/view/tier captures, lint, both types and build pass. Shared requirements and human motion acceptance remain pending.
+state_head: a45e9acf2355aa131620c3d961d8af6448731244
 progress:
   total_phases: 12
   completed_phases: 2
   total_plans: 23
-  completed_plans: 20
+  completed_plans: 21
   percent: 17
 ---
 
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-10-05)
 ## Current Position
 
 Phase: 7 (Movement-Matched and Action-Safe Animation) — EXECUTING
-Plan: 8 of 10 — next incomplete 07-08; completed 07-01, 07-02, 07-03, 07-04, 07-05, 07-06 and 07-07
-Status: Executing — plan 07-07 complete; remaining dispatch and phase review owned by the orchestrator
-Next action: Continue authorized Phase7 from07-08; consume the owned first-person view and phase/contact observations for isolated moving review. WINDOWS34 technical integration is fixed; human motion gates remain owned by phase review. Phase5 follows Phase7.
+Plan: 9 of 10 — next incomplete 07-09; completed 07-01, 07-02, 07-03, 07-04, 07-05, 07-06, 07-07 and 07-08
+Status: Executing — plan 07-08 complete; remaining dispatch and phase review owned by the orchestrator
+Next action: Continue authorized Phase 7 from 07-09; qualify the matched multi-actor/two-client resource matrix using the current view and isolated review owners. WINDOWS34 technical integration and preview-rendering deviation39 are fixed; human motion gates remain owned by phase review. Phase5 follows Phase7.
 Roadmap review: User revised remaining order to6 → 7 → 5 → 2 → 3 → 4 → 8 → 9 → 10 → 11 → 12; Phase1 remains complete.
-Last activity: 2026-10-06 — Plan07-07 committed;28 focused units,12 visible-view browser cases,3 legacy regressions, lint, types and build pass. Shared requirements and human motion acceptance remain pending.
+Last activity: 2026-10-06 — Plan 07-08 committed; 15 focused units, 10 native browser cases, 36 retained weapon/view/tier captures, lint, both types and build pass. Shared requirements and human motion acceptance remain pending.
 
 Routing: Follow the selected order rather than numeric next-phase suggestions. After Phase7 select5; after5 select2; after4 select8. Phases2–5 and7–12 remain pending, with no skipped phase marked complete.
 
@@ -79,6 +79,7 @@ Progress: [██░░░░░░░░] 17%
 | Phase 07 P05 | 42min | 3 tasks | 12 files |
 | Phase 07 P06 | approximately 34min | 3 tasks | 8 files |
 | Phase 07 P07 | approximately 49min | 2 tasks | 8 files |
+| Phase 07 P08 | approximately 225min wall span including quota interruption | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -132,6 +133,9 @@ Full decisions are recorded in PROJECT.md.
 - [Phase 07]: Weapon handling samples the shared phase and corrects only owned parts/bones; detailed P90 uses the inspected articulated procedural fallback, with visible first-person contact and human review still pending.
 - [Phase 07]: Copy sampled source bones and pre-handling correction snapshots into owned full-skeleton selected view geometry; no second mixer or action clock.
 - [Phase 07]: Own the rendered gun copy and bounded down-look body fit while retaining the original simulation muzzle, camera eye, root and floor authority.
+- [Phase 07]: Isolated native review freezes live offline mixer/action markers and restores context; future one-handed/sprint reload comparisons remain Phase 5 previews with no outcomes.
+- [Phase 07]: P90 review fallback remains visible while detailed handling comparisons are disabled and never credited as contact passes.
+- [Phase 07]: Review owns one template-only source mixer and a view with no mixer; generation cancellation and finally-restored live visibility preserve gameplay and resource ownership.
 
 ### Pending Todos
 
@@ -157,8 +161,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-10-06T11:08:07.404Z
-Stopped at: Completed 07-07-PLAN.md
+Last session: 2026-10-06T15:05:26.854Z
+Stopped at: Completed 07-08-PLAN.md
 Resume file: None
 
 User passed both Phase 6 visual checks with "pass all tests and proceed".
@@ -167,8 +171,10 @@ Review game: http://127.0.0.1:5173/VibeOnDuty/ (owned process details in ignored
 .planning/research/.cache/06-review-game.json). Historical Phase 1 HTTPS review
 server remains inactive; prior trust checks remain recorded in 01-UAT.md.
 Temporary closeout Git configuration is restored after committing these records.
-The Phase 6 milestone claim is released. Continue Phase7 from07-08 after completed
-07-01/02/03/04/05/06/07;07-06/07 supply bounded third-person and actual visible
-first-person contact, body and shared samples. Ledger34 technical integration is
-fixed; phase review owns moving human review. Then Phase5 and2–4. No postponed phase
-or pending human motion acceptance is marked complete.
+The Phase 6 milestone claim is released. Continue Phase 7 from 07-09 after completed
+07-01/02/03/04/05/06/07/08. The DEV-only F3 Open animation review control is available
+in offline Training Range; preview outcomes stay isolated and Close leaves mouse
+capture to the existing Resume gesture. Plan 07-08 retains 36 actual-game captures
+under .planning/research/.cache/07-08-qualified. Ledger34 technical integration and
+preview-rendering deviation39 are fixed; phase review owns moving human review.
+Then Phase5 and2–4. No postponed phase or pending human motion acceptance is marked complete.
