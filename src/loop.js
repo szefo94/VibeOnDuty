@@ -23,7 +23,7 @@ import { playerMesh, playerMixer, playerActions } from './builders/enemyGLTF.js'
 import { tickPresentation, finishPresentation, tickBoneFlipMonitor } from './builders/enemyAnimations.js';
 import { tickKillcam, isKillcamActive } from './replay/killcam.js';
 import { adaptTick } from './ai/difficultyAdapter.js';
-import { initOnlineEntry, isOnline, tickOnline } from './network/onlineSession.js';
+import { initOnlineEntry, isOnline, tickOnline, getOnlinePresentation } from './network/onlineSession.js';
 
 // Shared animation state object for the player — same shape crossfade() expects
 const playerAnim = { actions: null, currentClip: 'idle', _dbgName: 'player', _dbgTransitions: false, _dbgFlipMonitor: false };
@@ -72,6 +72,7 @@ export function loop(ts) {
   const dt = Math.min(0.05, (ts - last) / 1000);
   last = ts;
   tickOnline(dt);
+  const onlinePose = getOnlinePresentation();
 
   // ── Touch look (consumed once per frame) ─────────────────────────
   if (!isOnline() && (touchLook.dx || touchLook.dy) && gameRunning && !player.dead) {
@@ -85,7 +86,7 @@ export function loop(ts) {
   if (!isOnline()) tickGamepad(dt);
 
   const _t0 = performance.now();
-  if (gameRunning) {
+  if (gameRunning || isOnline()) {
     if (!isOnline()) updatePlayer(dt);
 
     // ── Player body: GLTF mannequin if loaded, else procedural ───────
@@ -94,7 +95,7 @@ export function loop(ts) {
     const eyeH = (player.crouching || player.sliding) ? PLAYER_H_CROUCH : PLAYER_H;
     bodyTarget.position.set(camera.position.x, camera.position.y - eyeH, camera.position.z);
     // Mannequin faces +Z at rotation.y=0; player.yaw+PI makes it face forward (same as look dir)
-    bodyTarget.rotation.y = player.yaw + Math.PI;
+    bodyTarget.rotation.y = (onlinePose?.bodyYaw ?? player.yaw) + Math.PI;
 
     // Presentation reads the simulation eye before render-only camera offsets.
     if (playerMesh && playerMixer && playerActions) {
@@ -112,6 +113,7 @@ export function loop(ts) {
         crouching: player.crouching || player.sliding, onGround: player.onGround,
         verticalVelocity: player.velY, sprinting: !!(keys.ShiftLeft || keys.ShiftRight),
         weapon: player.weapon, alive: !player.dead, aiming: player.aiming, action,
+        ...onlinePose,
         reducedMotion: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true,
       }, dt, false);
       setDebugAnimClip(playerAnim.currentClip);

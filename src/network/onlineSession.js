@@ -17,7 +17,7 @@ import {
   tintEnemyMesh,
   usingGLTF,
 } from '../builders/enemyGLTF.js';
-import { createRemoteActors, animateRemoteActor } from './remoteActors.js';
+import { createRemoteActors, animateRemoteActor, createSnapshotPresentation } from './remoteActors.js';
 import { createOnlineUi, teamSwitchReason } from './onlineUi.js';
 import { show1pWeapon, show3pWeapon } from '../builders/weapon.js';
 import { spawnHitMarker, tickHitMarker } from '../hud/hitmarker.js';
@@ -503,6 +503,14 @@ function setOnlineKills(kills) {
   player.kills = kills;
   const counter = document.getElementById('kills-num');
   if (counter) counter.textContent = String(kills);
+}
+
+/** The local body uses the same server-time posture contract as remote rigs. */
+export function getOnlinePresentation() {
+  const me = room?.state?.players?.get(room.sessionId);
+  return me && room ? createSnapshotPresentation(me, room.sessionId,
+    `${sessionEpoch}/${room.roomId}/${room.state.matchGeneration}/${me.lifeGeneration}`,
+    room.state.currentTick) : null;
 }
 
 /** @template T @param {T} value @returns {T} */
