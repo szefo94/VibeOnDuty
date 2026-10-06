@@ -20,7 +20,7 @@ import { updateWeaponDeath } from './combat/shoot.js';
 import { tickGamepad } from './gamepad.js';
 import { drawMinimap } from './hud/radar.js';
 import { playerMesh, playerMixer, playerActions } from './builders/enemyGLTF.js';
-import { tickPresentation, finishPresentation, tickBoneFlipMonitor } from './builders/enemyAnimations.js';
+import { tickPresentation, finishPresentation, tickBoneFlipMonitor, inspectPresentationLayers } from './builders/enemyAnimations.js';
 import { tickKillcam, isKillcamActive } from './replay/killcam.js';
 import { adaptTick } from './ai/difficultyAdapter.js';
 import { initOnlineEntry, isOnline, tickOnline, getOnlinePresentation } from './network/onlineSession.js';
@@ -101,11 +101,22 @@ export function loop(ts) {
     if (playerMesh && playerMixer && playerActions) {
       playerAnim.mesh = playerMesh; playerAnim.mixer = playerMixer; playerAnim.actions = playerActions;
       const exclusive = offlineActions.presentation;
+      const damaged = playerAnim._previousHealth !== undefined && player.hp < playerAnim._previousHealth;
+      playerAnim._previousHealth = player.hp;
+      const fireTotal = player.weapon === 'awp' ? 1.2 : .2;
+      const shotElapsed = (ts - player.shootCd) / 1000;
+      if (player.dancing) {
+        playerAnim._danceElapsed = (playerAnim._danceElapsed ?? 0) + dt;
+        if (playerAnim._danceElapsed >= (playerActions.dance?.getClip().duration ?? 1)) player.dancing = false;
+      } else playerAnim._danceElapsed = 0;
       const action = exclusive.kind === 'throw' || exclusive.kind === 'melee'
         ? { kind: exclusive.kind, elapsed: exclusive.elapsed, total: exclusive.duration, variant: player.punchClip }
         : player.reloading ? { kind: 'reload', total: player.reloadTotal / 1000, remaining: player.reloadTimer / 1000 }
         : player.rollTimer > 0 ? { kind: 'roll', total: ROLL_ANIM_DUR, remaining: player.rollTimer }
-        : player.dancing ? { kind: 'dance' } : { kind: 'ready' };
+        : player.dancing ? { kind: 'dance', total: playerActions.dance?.getClip().duration ?? 1,
+          elapsed: playerAnim._danceElapsed }
+        : player.shootCd > 0 && shotElapsed >= 0 && shotElapsed < fireTotal
+          ? { kind: 'fire', total: fireTotal, elapsed: shotElapsed } : { kind: 'ready' };
       tickPresentation(playerAnim, {
         identity: 'local', generation: exclusive.generation,
         position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
@@ -113,6 +124,7 @@ export function loop(ts) {
         crouching: player.crouching || player.sliding, onGround: player.onGround,
         verticalVelocity: player.velY, sprinting: !!(keys.ShiftLeft || keys.ShiftRight),
         weapon: player.weapon, alive: !player.dead, aiming: player.aiming, action,
+        trustedDamage: damaged,
         ...onlinePose,
         reducedMotion: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true,
       }, dt, false);
@@ -234,7 +246,9 @@ export function loop(ts) {
 window.__THREE = THREE;
 window.__handRef = () => playerMesh?.getObjectByName('hand_r');
 window.__bodyRef = () => playerMesh;
-window.__presentationDebug = () => playerAnim.presentation ? structuredClone(playerAnim.presentation) : null;
+window.__presentationDebug = () => playerAnim.presentation ? structuredClone({
+  ...playerAnim.presentation, layers: inspectPresentationLayers(playerAnim),
+}) : null;
 
 window.__debugBone = (name) => {
   const b = playerMesh?.getObjectByName(name);

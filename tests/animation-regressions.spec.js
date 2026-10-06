@@ -158,39 +158,44 @@ test('grenade releases once at the throw marker and cancels on death', async ({ 
   expect(result).toEqual({ before: 0, released: 1, finished: true, afterCancel: 1 });
 });
 
-test('the live player controller fits reload, grenade and roll clips to gameplay time', async ({ page }) => {
+test('the live player controller samples played reload, grenade and roll tracks at gameplay phase', async ({ page }) => {
   await page.locator('#range-startbtn').click();
   await page.evaluate(async () => {
     const src = new URL('src/', location.href).href;
     const { player } = await import(src + 'entities/player.js');
-    const { playerActions: actions } = await import(src + 'builders/enemyGLTF.js');
     const config = await import(src + 'config.js');
-    window.__testAnimation = { player, actions, config };
-    player.reloading = true; player.reloadTotal = 1800; player.reloadTimer = 1800;
+    window.__testAnimation = { player, config };
+    player.reloading = true; player.reloadTotal = 1800; player.reloadTimer = 1200;
   });
-  await page.waitForFunction(() => window.__testAnimation.actions.reload.isRunning());
-  expect(await page.evaluate(() => {
-    const a = window.__testAnimation.actions.reload;
-    return a.getClip().duration / a.getEffectiveTimeScale();
-  })).toBeCloseTo(1.8);
-  await page.evaluate(() => {
-    const { player, config } = window.__testAnimation;
-    player.reloading = false; player.rollTimer = config.ROLL_ANIM_DUR;
+  const played = async (kind, clip) => {
+    await page.waitForFunction(({kind,clip}) => {
+      const p=window.__presentationDebug?.();
+      return p?.upper===kind && p.layers.some(a=>a.clip.includes(clip)&&a.scheduled&&a.weight>.9);
+    }, {kind,clip});
+    return page.evaluate(clip=> {
+      const p=window.__presentationDebug(), {player,config}=window.__testAnimation;
+      const a=p.layers.find(a=>a.clip.includes(clip)&&a.scheduled&&a.weight>.9);
+      const remaining=p.upper==='reload'?player.reloadTimer/1000:p.upper==='roll'?player.rollTimer:player.throwTimer;
+      const total=p.upper==='reload'?player.reloadTotal/1000:p.upper==='roll'?config.ROLL_ANIM_DUR:config.GRENADE_THROW_DUR;
+      return {actualPhase:a.time/a.duration, expectedPhase:1-remaining/total,total,
+        tracked:a.tracks.some(t=>/hand|arm|pelvis/i.test(t)),
+        base:p.layers.some(a=>a.scheduled&&a.weight>0&&a.tracks.some(t=>/thigh|calf|pelvis/i.test(t)))};
+    },clip);
+  };
+  const reload=await played('reload','m4_reload_upper');
+  expect(reload.total).toBe(1.8);expect(reload.actualPhase).toBeCloseTo(reload.expectedPhase,4);
+  expect(reload.tracked&&reload.base).toBe(true);
+  await page.evaluate(()=>{
+    const {player,config}=window.__testAnimation;
+    player.reloading=false;player.rollTimer=config.ROLL_ANIM_DUR;
   });
-  await page.waitForFunction(() => window.__testAnimation.actions.roll.isRunning());
-  expect(await page.evaluate(() => {
-    const { actions, config } = window.__testAnimation;
-    return actions.roll.getClip().duration / actions.roll.getEffectiveTimeScale() - config.ROLL_ANIM_DUR;
-  })).toBeCloseTo(0);
-  await page.evaluate(async () => {
-    const { player } = window.__testAnimation;
-    player.energy = 100;
-    const src = new URL('src/', location.href).href;
-    (await import(src + 'entities/grenades.js')).tryThrowGrenade();
+  const roll=await played('roll','Roll');
+  expect(roll.actualPhase).toBeCloseTo(roll.expectedPhase,4);expect(roll.tracked).toBe(true);
+  await page.evaluate(async()=>{
+    const {player}=window.__testAnimation;player.rollTimer=0;player.energy=100;
+    (await import(new URL('src/entities/grenades.js',location.href).href)).tryThrowGrenade();
   });
-  await page.waitForFunction(() => window.__testAnimation.actions.nade.isRunning());
-  expect(await page.evaluate(() => {
-    const { actions, config } = window.__testAnimation;
-    return actions.nade.getClip().duration / actions.nade.getEffectiveTimeScale() - config.GRENADE_THROW_DUR;
-  })).toBeCloseTo(0);
+  const grenade=await played('throw','vod7_throw');
+  expect(grenade.total).toBe(.9);expect(grenade.actualPhase).toBeCloseTo(grenade.expectedPhase,4);
+  expect(grenade.tracked).toBe(true);
 });

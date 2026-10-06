@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { JUMP_START_DUR, JUMP_LAND_DUR } from '../config.js';
 import { createPresentationHistory, normalizePresentation, samplePresentation } from './animationPresentation.js';
 
 // ── Additive breathing clips ──────────────────────────────────────────────
@@ -119,7 +118,6 @@ export function buildEnemyMixer(mesh) {
 // LOCO_CLIPS run simultaneously with direct weight control (no crossfade).
 // Override clips (death, jump, hit, crouch, shoot, attack-idle) use crossfade.
 const LOCO_CLIPS = new Set(['idle', 'walk', 'run', 'strafe_l', 'strafe_r']);
-const MAX_ENEMY_SPEED = 3.6;
 
 function _applyLocoWeight(action, w) {
   if (!action) return;
@@ -272,6 +270,7 @@ export function crossfade(e, to, dur = 0.16) {
   _exitLocoMode(e);
   if (to === e.currentClip) return;
   if (to === 'death') {
+    e.mixer?.stopAllAction(); // includes copied mask actions not enumerated in source aliases
     for (const action of new Set(Object.values(e.actions))) action.stop();
     e._inertia = null;
     e.actions.death.setLoop(THREE.LoopOnce, 1);
@@ -414,6 +413,16 @@ function correctPresentationBones(e, pose) {
 
 /** Read-only common rig driver. Order: restore -> mixer -> rest-aware correction -> inertia. */
 export function tickPresentation(e, raw, dt, updateMixer = true) {
+  if (e._presentationMixer !== e.mixer) {
+    if (e._presentationMixer) { e._bonesInit = false; e._bones = []; }
+    e._presentationMixer = e.mixer;
+    e._presentationMasks = new Map();
+    e._presentationCorrection = new Map();
+    e._presentationHistory = createPresentationHistory();
+    e._presentationKey = null;
+    e._presentationDamageRemaining = 0;
+    e._inertia = null;
+  }
   collectPresentationBones(e);
   e._presentationHistory ??= createPresentationHistory();
   const normalized = normalizePresentation(raw, e._presentationHistory);
@@ -446,9 +455,10 @@ export function tickPresentation(e, raw, dt, updateMixer = true) {
     key = pose.upper === 'melee' ? (pose.action.variant === 'punch_jab' ? 'melee_jab' : 'melee_cross') : pose.upper;
     add(key, null, 1, pose.action.total > 0 ? pose.action.phase : null);
   } else {
-    key = pose.jump ? `jump_${pose.jump}` : pose.turn || 'loco';
+    key = pose.jump ? `jump_${pose.jump}` : pose.turn || pose.transition || 'loco';
     if (pose.jump) add(key, false, 1, pose.jump === 'loop' ? null : pose.jumpPhase);
     else if (pose.turn) add(key, false, 1, pose.turnPhase);
+    else if (pose.transition) add(key, false, 1, pose.transitionPhase);
     else for (const gait of pose.gait) add(gait.key, false, gait.weight,
       pose.moving ? pose.phase : null, pose.moving ? pose.cadence : null);
     const upperKey = pose.upper === 'sprint' ? 'sprint' : `${pose.weapon}_${pose.upper}`;
@@ -461,6 +471,7 @@ export function tickPresentation(e, raw, dt, updateMixer = true) {
     if (action === e.actions._breathing || action === e.actions._hitAdditive) continue;
     if (!selected.has(action)) action.stop();
   }
+  e._presentationActive = selected;
   const transitionKey = `${key}/${pose.upper}/${pose.gait.map(g => g.key).join('+')}`;
   if (e._presentationKey !== transitionKey && pose.alive) _snapBones(e, INERTIA_OMEGA);
   e._presentationKey = transitionKey;
@@ -471,8 +482,11 @@ export function tickPresentation(e, raw, dt, updateMixer = true) {
     if (pose.alive) e.actions._breathing.play(); else e.actions._breathing.stop();
   }
   if (e.actions._hitAdditive) {
-    if (pose.alive && pose.damage && !pose.reducedMotion) e.actions._hitAdditive.reset().setEffectiveWeight(.25).play();
-    else if (!pose.alive || pose.reducedMotion) e.actions._hitAdditive.stop();
+    if (pose.alive && pose.damage && !pose.reducedMotion) {
+      e._presentationDamageRemaining = .3;
+      e.actions._hitAdditive.reset().setEffectiveWeight(.25).play();
+    } else e._presentationDamageRemaining = Math.max(0, (e._presentationDamageRemaining ?? 0) - dt);
+    if (!pose.alive || pose.reducedMotion || !e._presentationDamageRemaining) e.actions._hitAdditive.stop();
   }
   if (updateMixer) finishPresentation(e, dt);
   return pose;
@@ -482,6 +496,14 @@ export function finishPresentation(e, dt) {
   e.mixer?.update(dt);
   if (e.presentation) correctPresentationBones(e, e.presentation);
   _tickInertia(e, dt);
+}
+/** Observation of the actual contributing actions, without exposing live bindings. */
+export function inspectPresentationLayers(e) {
+  return Array.from(e._presentationActive?.keys() ?? [], action => ({
+    clip: action.getClip().name, duration: action.getClip().duration, time: action.time,
+    weight: action.getEffectiveWeight(), scheduled: action.isScheduled(),
+    tracks: action.getClip().tracks.map(track => track.name),
+  }));
 }
 
 // ── Skeleton debug ────────────────────────────────────────────────────────
@@ -564,82 +586,26 @@ export function setSkeletonDebugVisible(v) {
 // ── Per-enemy animation tick ──────────────────────────────────────────────
 // Drives jump-phase + locomotion blend tree + override clip selection.
 // Called every frame by both enemy-bot and friendly-bot tickers.
-const SNAP_CLIPS = new Set(['crouch', 'crouch_walk', 'death', 'hit', 'roll', 'jump_start', 'jump_land']);
-
-export function tickEnemyAnimation(e, dt, _isMoving) {
-  const nowOnGround = e.onGround;
-
-  // Jump phase bookkeeping
-  if (!e._prevOnGround && nowOnGround)      { e.jumpPhase = 'land';  e.jumpPhaseTimer = JUMP_LAND_DUR; }
-  else if (e._prevOnGround && !nowOnGround) { e.jumpPhase = 'start'; e.jumpPhaseTimer = JUMP_START_DUR; }
-  e._prevOnGround = nowOnGround;
-  if (e.jumpPhase === 'start') { e.jumpPhaseTimer -= dt; if (e.jumpPhaseTimer <= 0) e.jumpPhase = nowOnGround ? '' : 'loop'; }
-  if (e.jumpPhase === 'land')  { e.jumpPhaseTimer -= dt; if (e.jumpPhaseTimer <= 0) e.jumpPhase = ''; }
-
-  // Additive hit reaction — GLTF only; procedural falls through to full hit clip below
-  if (e.actions._hitAdditive) {
-    if (e.stunTimer > 0) {
-      if (!e._hitAddPlaying) { e.actions._hitAdditive.reset().fadeIn(0.03).play(); e._hitAddPlaying = true; }
-    } else if (e._hitAddPlaying) {
-      e.actions._hitAdditive.fadeOut(0.12); e._hitAddPlaying = false;
-    }
+export function tickEnemyAnimation(e, dt) {
+  if (e._botMesh !== e.mesh) {
+    e._botMesh = e.mesh; e._botTime = 0; e._botHealth = e.hp;
+    e._botMuzzle = 0; e._botShotAt = null; e._botStun = 0;
   }
-
-  // Lazy bone collection for inertial blending (SkinnedMesh skeleton, GLTF only)
-  if (!e._bonesInit) {
-    e._bonesInit = true;
-    e._bones = [];
-    e.mesh.traverse(obj => {
-      if (obj.isSkinnedMesh && obj.skeleton) {
-        for (const b of obj.skeleton.bones) if (!e._bones.includes(b)) e._bones.push(b);
-      }
-    });
-  }
-
-  // Position-derived velocity — captures strafe + knockback (velX/velZ miss direct-pos moves)
-  const prevX = e._prevX ?? e.x, prevZ = e._prevZ ?? e.z;
-  e._prevX = e.x; e._prevZ = e.z;
-  const velX = dt > 0 ? (e.x - prevX) / dt : 0;
-  const velZ = dt > 0 ? (e.z - prevZ) / dt : 0;
-  const speed  = Math.sqrt(velX * velX + velZ * velZ);
-  const speedN = Math.min(1, speed / MAX_ENEMY_SPEED);
-
-  // Strafe component: project velocity onto entity's right axis
-  // forward = (-sin(facingY), -cos(facingY)), right = (-cos(facingY), sin(facingY))
-  const rgtX  = -Math.cos(e.facingY), rgtZ = Math.sin(e.facingY);
-  const strN  = speed > 0.05 ? Math.max(-1, Math.min(1, (velX * rgtX + velZ * rgtZ) / MAX_ENEMY_SPEED)) : 0;
-
-  // ── Override clip selection (non-locomotion states) ────────────────────
-  let overrideClip = null;
-  if (e.jumpPhase === 'land' && e.actions.jump_land) {
-    overrideClip = 'jump_land';
-  } else if (!nowOnGround) {
-    overrideClip = e.jumpPhase === 'start' && e.actions.jump_start ? 'jump_start'
-                 : e.actions.jump_loop ? 'jump_loop' : null;
-  } else if (e.stunTimer > 0 && e.actions.hit && !e.actions._hitAdditive) {
-    overrideClip = 'hit'; // procedural fallback — GLTF uses additive layer above
-  } else if (e.crouching) {
-    overrideClip = speedN > 0.05
-      ? (e.actions.crouch_walk ? 'crouch_walk' : 'walk')
-      : (e.actions.crouch      ? 'crouch'      : null);
-  } else if (e.muzzleFlashT > 0 && e.actions.shoot) {
-    overrideClip = 'shoot';
-  } else if ((e.state === 'attack' || e.state === 'spotted') && speedN < 0.05 && e.actions.attack) {
-    overrideClip = 'attack'; // standing still in attack stance
-  }
-
-  // ── Drive animation ────────────────────────────────────────────────────
-  if (overrideClip) {
-    _exitLocoMode(e);
-    const snap = SNAP_CLIPS.has(overrideClip) || SNAP_CLIPS.has(e.currentClip);
-    crossfade(e, overrideClip, snap ? 0 : 0.3);
-    if (overrideClip === 'jump_start') fitActionDuration(e.actions.jump_start, JUMP_START_DUR);
-    if (overrideClip === 'jump_land') fitActionDuration(e.actions.jump_land, JUMP_LAND_DUR);
-  } else {
-    _enterLocoMode(e);
-    _setLocoWeights(e.actions, speedN, strN);
-  }
-
-  e.mixer.update(dt);
-  _tickInertia(e, dt);
+  e._botTime += dt;
+  const shot = e.muzzleFlashT > 0 && e.muzzleFlashT > e._botMuzzle;
+  if (shot) e._botShotAt = e._botTime;
+  const elapsed = e._botShotAt === null ? Infinity : e._botTime - e._botShotAt;
+  const damage = e.hp < e._botHealth || e.stunTimer > 0 && e._botStun <= 0;
+  e._botHealth = e.hp; e._botMuzzle = e.muzzleFlashT; e._botStun = e.stunTimer;
+  const weapon = {assault:'m4',smg:'p90',sniper:'awp',pistol:'pistol'}[e.weaponRole] ?? 'm4';
+  // No bot reload state exists. Muzzle/stun/health observations are cosmetics only.
+  return tickPresentation(e, { identity: 'bot', generation: e.mesh.uuid,
+    sampleTimeSeconds: e._botTime, position: {x:e.x,y:e.mesh.position.y,z:e.z},
+    bodyYaw: e.facingY, aimYaw: e.facingY, pitch: 0, alive: !e.dead,
+    crouching: e.crouching, onGround: e.onGround, verticalVelocity: e.velY,
+    weapon, aiming: e.state === 'attack' || e.state === 'spotted',
+    trustedDamage: damage, action: elapsed < .2
+      ? {kind:'fire',total:.2,elapsed} : {kind:'ready'},
+    reducedMotion: typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true }, dt);
 }

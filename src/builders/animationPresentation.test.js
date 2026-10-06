@@ -25,6 +25,13 @@ describe('actual-motion presentation', () => {
     expect([p.speed, p.pitch, p.phase, p.torsoYaw].every(Number.isFinite)).toBe(true);
     expect(r.position.x).toBe(Infinity);
   });
+  it('plants stop and reversal transitions without advancing travelling cadence while blocked', () => {
+    const h=createPresentationHistory();sample(h,raw(0));sample(h,raw(.1,0,-.3));
+    const stopped=sample(h,raw(.2,0,-.3));
+    expect(stopped.transition).toBe('stop');expect(stopped.cadence).toBe(0);
+    sample(h,raw(.3,0,-.6));
+    expect(sample(h,raw(.4,0,-.3)).transition).toBe('reversal');
+  });
   it('bounded torso leads small turns before contact-aware foot repositioning', () => {
     const h = createPresentationHistory(); sample(h, raw(0));
     const small = sample(h, { ...raw(.1), bodyYaw: .2, aimYaw: .2 });

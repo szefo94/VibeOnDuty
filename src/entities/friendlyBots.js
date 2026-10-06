@@ -59,12 +59,12 @@ function _tryShoot(e, eGround, allEnemies, killEnemy) {
 }
 
 function _updateMesh(e, eGround, isMoving, dt) {
-  tickEnemyAnimation(e, dt, isMoving);
   e.bobT += dt * 1.6;
   const meshY = eGround + (isMoving ? Math.abs(Math.sin(e.bobT)) * 0.022 : 0);
   e.mesh.position.set(e.x, meshY, e.z);
   e.mesh.rotation.y = e.facingY + (e.facingOffset ?? 0);
   e.mesh.scale.y = 1;
+  tickEnemyAnimation(e, dt);
   if (e._friendIndicator) {
     e._friendIndicator.position.set(e.x, meshY + 2.2, e.z);
     e._friendIndicator.rotation.y += dt * 1.2;

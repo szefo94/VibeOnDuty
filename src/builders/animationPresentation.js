@@ -70,8 +70,8 @@ export function samplePresentation(n, history, deltaSeconds = 0) {
       const r = impact.x * Math.cos(n.bodyYaw) - impact.z * Math.sin(n.bodyYaw);
       history.deathVariant = Math.abs(f) >= Math.abs(r) ? (f >= 0 ? 'front' : 'back')
         : r >= 0 ? 'right' : 'left';
-    } else history.deathVariant = ['front', 'right', 'back', 'left'][
-      Math.floor((angle(n.bodyYaw) + Math.PI) / (Math.PI / 2)) % 4];
+    } else history.deathVariant = 'front'; // forward collapse in the existing body's heading
+    history.deathDirectionSource = impact ? 'trusted-impact' : 'body-heading-fallback';
   }
   if (n.alive) { history.deathAt = null; history.deathVariant = null; }
   if (n.previousOnGround !== n.onGround) {
@@ -81,6 +81,16 @@ export function samplePresentation(n, history, deltaSeconds = 0) {
   const jumpElapsed = history.jumpAt === null ? Infinity : now - history.jumpAt;
   const jump = jumpElapsed < jumpTotal ? history.jumpKind : n.onGround ? '' : 'loop';
   const moving = n.speed > 0.05 && n.alive;
+  const prior = history.lastMotion;
+  if (!n.reset && prior?.moving && n.onGround && !n.crouching && n.alive) {
+    if (!moving) { history.transitionKind = 'stop'; history.transitionAt = now; }
+    else if (n.forward * prior.forward + n.right * prior.right < -0.25 * n.speed * prior.speed) {
+      history.transitionKind = 'reversal'; history.transitionAt = now;
+    }
+  }
+  history.lastMotion = { moving, forward: n.forward, right: n.right, speed: n.speed };
+  const transitionPhase = history.transitionAt === null ? 1 : clamp((now - history.transitionAt) / .4, 0, 1);
+  const transition = transitionPhase < 1 ? history.transitionKind : '';
   const family = n.crouching ? 'crouch' : n.sprinting || n.speed > 6.5 ? 'run' : 'walk';
   const cycle = manifest.actions.find(a => a.id === `${family}_forward`);
   const cycleMeters = cycle.cycleDisplacement;
@@ -117,8 +127,9 @@ export function samplePresentation(n, history, deltaSeconds = 0) {
     feetYaw: history.feetYaw,
     torsoYaw: clamp(angle(n.aimYaw - history.feetYaw), -PRESENTATION_LIMITS.twist, PRESENTATION_LIMITS.twist),
     turn, turnPhase: history.turnAt === null ? 0 : clamp((now - history.turnAt) / 0.4, 0, 1),
+    transition, transitionPhase,
     jump, jumpPhase: clamp(jumpElapsed / jumpTotal, 0, 1), jumpTotal,
-    upper, deathVariant: history.deathVariant, deathDirectionSource: n.impact ? 'trusted-impact' : 'body-heading-fallback',
+    upper, deathVariant: history.deathVariant, deathDirectionSource: history.deathDirectionSource ?? 'body-heading-fallback',
     deathPhase: clamp(deathElapsed / PRESENTATION_LIMITS.death, 0, 1),
     settled: !n.alive && deathElapsed >= PRESENTATION_LIMITS.death });
 }

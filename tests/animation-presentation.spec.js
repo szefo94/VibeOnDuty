@@ -3,6 +3,7 @@ import { createServer } from 'vite';
 import { createServer as portProbe } from 'node:net';
 import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
+import { writeFile } from 'node:fs/promises';
 
 let server, url;
 test.beforeAll(async () => {
@@ -55,13 +56,13 @@ test('local: held movement blocked by terrain plants the real loaded feet', asyn
   expect(errors).toEqual([]);
 });
 
-test('local: loaded directional masks and current action phase preserve gameplay roots', async ({ page }) => {
+test('local: loaded directional masks and current action phase preserve gameplay roots', async ({ page }, info) => {
   const result = await page.evaluate(async () => {
     const src = new URL('src/', location.href).href;
     const rig = await import(src + 'builders/enemyGLTF.js');
     const input = await import(src + 'input.js');
     const { player } = await import(src + 'entities/player.js');
-    const { camera } = await import(src + 'scene.js');
+    const { camera, renderer } = await import(src + 'scene.js');
     const { tickPresentation } = await import(src + 'builders/enemyAnimations.js');
     input.setGameRunning(false); rig.playerMixer.timeScale = 0;
     const actor = { mesh: rig.playerMesh, mixer: rig.playerMixer, actions: rig.playerActions };
@@ -76,12 +77,19 @@ test('local: loaded directional masks and current action phase preserve gameplay
     const jumped = tickPresentation(actor,{...r,sampleTimeSeconds:.2,onGround:false,pitch:1.38},.05);
     const land = tickPresentation(actor,{...r,sampleTimeSeconds:.3},.05);
     const turned = tickPresentation(actor,{...r,sampleTimeSeconds:.4,bodyYaw:1,aimYaw:1},.05);
-    const frames=[];
+    const frames=[],costs=[];
     for(let i=0;i<12;i++) {
+      const start=performance.now();
       tickPresentation(actor,{...r,sampleTimeSeconds:.45+i*.05,bodyYaw:1,aimYaw:1},.05);
+      costs.push(performance.now()-start);
       frames.push(actor.mesh.getObjectByName('foot_r').quaternion.toArray());
     }
+    costs.sort((a,b)=>a-b);
     return { gait:p.gait, phase:p.action.phase, hand, jump:jumped.jump, land:land.jump,
+      measurement:{samples:costs.length,driverMedianMs:costs[6],driverP95Ms:costs[11],
+        browser:navigator.userAgent,viewport:[innerWidth,innerHeight],dpr:devicePixelRatio,
+        renderer:renderer.getContext().getParameter(renderer.getContext().RENDERER),
+        actors:1,scope:'short direct-driver correctness sample; not matched warmed baseline or FPS'},
       turn:turned.turn, feetChange:frames.some(q=>q.some((v,j)=>Math.abs(v-frames[0][j])>.001)),
       rootSame:JSON.stringify(root)===JSON.stringify(actor.mesh.position.toArray()),
       eyeSame:JSON.stringify(eye)===JSON.stringify(camera.position.toArray()),
@@ -92,4 +100,75 @@ test('local: loaded directional masks and current action phase preserve gameplay
   expect(result.jump).toBe('start'); expect(result.land).toBe('land');
   expect(result.turn).toBe('turn_right'); expect(result.feetChange).toBe(true);
   expect(result.rootSame && result.eyeSame && result.aimSame && result.finite).toBe(true);
+  await info.attach('presentation-driver-observation', {body:Buffer.from(JSON.stringify(result.measurement)),contentType:'application/json'});
+  await writeFile(new URL('../.planning/research/.cache/07-05-driver-observation.json',import.meta.url),
+    JSON.stringify({capturedAt:new Date().toISOString(),...result.measurement},null,2)+'\n');
+});
+
+test('bot: actual displacement, muzzle observations and replaced rigs share the planted policy', async ({ page }) => {
+  const result=await page.evaluate(async()=>{
+    const src=new URL('src/',location.href).href;
+    const g=await import(src+'builders/enemyGLTF.js');
+    const { tickEnemyAnimation }=await import(src+'builders/enemyAnimations.js');
+    const { player }=await import(src+'entities/player.js');
+    const { camera }=await import(src+'scene.js');
+    (await import(src+'input.js')).setGameRunning(false);
+    const eye=camera.position.toArray(),aim=[player.yaw,player.pitch];
+    const e={...g.buildEnemyMesh(10,10),x:10,z:10,facingY:0,onGround:true,
+      hp:100,dead:false,state:'patrol',muzzleFlashT:0,stunTimer:0,weaponRole:'assault'};
+    tickEnemyAnimation(e,.05);tickEnemyAnimation(e,.05);
+    const stationary=e.presentation.speed;
+    e.x+=.15;e.z+=.15;tickEnemyAnimation(e,.05);
+    const gait=e.presentation.gait;
+    e.x+=.15;e.z+=.15;e.muzzleFlashT=55;tickEnemyAnimation(e,.05);
+    const firing={gait:e.presentation.gait,upper:e.presentation.upper,speed:e.presentation.speed};
+    e.hp=80;e.stunTimer=.3;tickEnemyAnimation(e,.05);
+    const damage=e.presentation.damage;tickEnemyAnimation(e,.05);const repeat=e.presentation.damage;
+    const old=e.mesh;g.disposeEnemyMesh(e.mesh,e.mixer);
+    Object.assign(e,g.buildEnemyMesh(10,10));
+    tickEnemyAnimation(e,.05);
+    const replaced={speed:e.presentation.speed,death:e.presentation.deathVariant,
+      bones:e._bones.every(b=>b.parent&&b!==old.getObjectByName(b.name))};
+    g.disposeEnemyMesh(e.mesh,e.mixer);
+    return {stationary,gait,firing,damage,repeat,replaced,
+      eyeSame:JSON.stringify(eye)===JSON.stringify(camera.position.toArray()),
+      aimSame:aim[0]===player.yaw&&aim[1]===player.pitch};
+  });
+  expect(result.stationary).toBe(0);
+  expect(result.gait.map(g=>g.key)).toEqual(['walk_back','walk_right']);
+  expect(result.firing.upper).toBe('fire');expect(result.firing.speed).toBeGreaterThan(4);
+  expect(result.damage).toBe(true);expect(result.repeat).toBe(false);
+  expect(result.replaced).toEqual({speed:0,death:null,bones:true});
+  expect(result.eyeSame&&result.aimSame).toBe(true);
+});
+
+test('bot: controlled deaths stop all action layers, hold at 0.65s and leave eligibility immediate', async ({ page }) => {
+  const result=await page.evaluate(async()=>{
+    const src=new URL('src/',location.href).href;
+    const g=await import(src+'builders/enemyGLTF.js');
+    const { tickPresentation, tickEnemyAnimation }=await import(src+'builders/enemyAnimations.js');
+    const { killEnemy }=await import(src+'entities/enemies.js');
+    (await import(src+'input.js')).setGameRunning(false);
+    const variants=[];
+    for(const [x,z,name] of [[0,-1,'front'],[0,1,'back'],[-1,0,'left'],[1,0,'right']]){
+      const e=g.buildEnemyMesh(10,10);
+      const raw={identity:name,position:{x:10,y:0,z:10},sampleTimeSeconds:0,bodyYaw:0,onGround:true};
+      tickPresentation(e,raw,.05);let p=tickPresentation(e,{...raw,alive:false,trustedImpact:{x,z}},.05);
+      for(let i=0;i<14;i++)p=tickPresentation(e,{...raw,sampleTimeSeconds:.1+i*.05,alive:false},.05);
+      const before=e.mesh.getObjectByName('pelvis').quaternion.toArray();
+      for(let i=0;i<8;i++)tickPresentation(e,{...raw,sampleTimeSeconds:.85+i*.05,alive:false},.05);
+      variants.push({name,variant:p.deathVariant,settled:p.settled,
+        stable:JSON.stringify(before)===JSON.stringify(e.mesh.getObjectByName('pelvis').quaternion.toArray())});
+      g.disposeEnemyMesh(e.mesh,e.mixer);
+    }
+    const e={...g.buildEnemyMesh(10,10),x:10,z:10,facingY:.8,dead:false,onGround:true,
+      state:'patrol',hp:100,muzzleFlashT:0,stunTimer:0,sndTeam:'friend'};
+    tickEnemyAnimation(e,.05);e.x+=.15;tickEnemyAnimation(e,.05);killEnemy(e);
+    const dead=e.dead;e.mixer.update(.66);
+    const held=e.mesh.getObjectByName('pelvis').quaternion.toArray();e.mixer.update(.8);
+    const stable=JSON.stringify(held)===JSON.stringify(e.mesh.getObjectByName('pelvis').quaternion.toArray());
+    return {variants,dead,stable,breathing:e.actions._breathing.isScheduled()};
+  });
+  for(const p of result.variants)expect(p).toEqual({name:p.name,variant:p.name,settled:true,stable:true});
+  expect(result.dead&&result.stable).toBe(true);expect(result.breathing).toBe(false);
 });

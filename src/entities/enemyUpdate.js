@@ -58,7 +58,6 @@ export function updateEnemies(ts, dt) {
       isMoving = e._aiState.tick(e, dt, ctx) ?? false;
     }
 
-    tickEnemyAnimation(e, dt, isMoving);
     if (e.state === 'attack') {
       if (!e.crouching && e.crouchTimer <= 0 && Math.random() < 0.008) {
         e.crouching = true;
@@ -132,6 +131,8 @@ export function updateEnemies(ts, dt) {
         if (found) break;
       }
     }
+    // Sample after simulation posture/terrain and direct position recovery.
+    tickEnemyAnimation(e, dt);
     e.radarAge += dt;
   }
   // ── Tick dying enemies (death animation plays, then mesh removed) ─────────
