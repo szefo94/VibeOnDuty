@@ -38,4 +38,20 @@ describe('first-person view ownership', () => {
     view.disposeFirstPersonRig(rig); view.disposeFirstPersonRig(rig);
     expect(root.children.includes(mesh)).toBe(true);
   });
+  it('starts ADS immediately and reaches both endpoints monotonically in 120ms', () => {
+    expect(typeof view.sampleFirstPersonMotion).toBe('function');
+    const motion = {};
+    const pose = { aiming: true, alive: true, upper: 'ads', phase: .2, moving: true };
+    const raised = Array.from({ length: 6 }, () => view.sampleFirstPersonMotion(motion, pose, .02).aim);
+    expect(raised[0]).toBeGreaterThan(0);
+    expect(raised.at(-1)).toBe(1);
+    expect(raised.every((n, i) => i === 0 || n >= raised[i-1])).toBe(true);
+    const ads = view.sampleFirstPersonMotion(motion, pose, .02);
+    expect(ads.sway).toEqual([0,0,0]);
+    const lowered = Array.from({ length: 6 }, () => view.sampleFirstPersonMotion(motion, { ...pose, aiming:false }, .02).aim);
+    expect(lowered.at(-1)).toBe(0);
+    expect(lowered.every((n, i) => i === 0 || n <= lowered[i-1])).toBe(true);
+    const reduced = view.sampleFirstPersonMotion(motion, { ...pose, aiming:false, reducedMotion:true }, .02);
+    expect(reduced.sway).toEqual([0,0,0]);
+  });
 });
