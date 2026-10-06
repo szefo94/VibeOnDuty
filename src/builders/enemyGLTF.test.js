@@ -1,5 +1,6 @@
 import { beforeAll, describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
@@ -28,6 +29,16 @@ beforeAll(async () => {
 });
 
 describe('retained original motion repertoire', () => {
+  it('binds motion provenance to the current editable source and published export', () => {
+    const provenance=JSON.parse(readFileSync('tools/art/provenance.json','utf8')).originalMotion;
+    const hash=file=>createHash('sha256').update(readFileSync(file)).digest('hex');
+    expect(provenance.sourceSha256).toBe(hash('tools/art/sources/motion.blend'));
+    expect(provenance.publishedSha256).toBe(hash('public/models/enemy.glb'));
+    expect(provenance.manifestSha256).toBe(hash('tools/art/motion-manifest.json'));
+    expect(provenance.actionCount).toBe(manifest.actions.length);
+    expect(provenance.inheritedOccurrences).toBe(48);
+    expect(provenance.combinedLicenseCleared).toBe(false);
+  });
   it('exports complete exact authored action names and weapon phase markers', () => {
     const asset = parseGLB(readFileSync('public/models/enemy.glb'));
     for (const weapon of ['m4', 'p90', 'awp', 'pistol']) {
