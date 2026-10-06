@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
-import { flash, replaceFbxModel, attachWeapon3pToHand } from './weapon.js';
+import { replaceFbxModel, attachWeapon3pToHand } from './weapon.js';
 import { WEAPON3P_ROT, WEAPON3P_GRIP } from './weapon3pTransform.js';
 
 // ── Tuning constants — FPV P90 ────────────────────────────────────────────────
@@ -11,7 +11,8 @@ const ROT_Y   = 0;
 // Nudge the model so the grip sits at the wpn group origin
 const OFFSET  = new THREE.Vector3(0.01, -0.04, 0.04);
 // Muzzle flash position in wpn-local space — adjust to sit at barrel tip
-const MUZZLE  = new THREE.Vector3(0, 0.012, -0.25);
+let loadGeneration = 0;
+export let inspectedWeaponFBX = null;
 
 // ── Material palette (keyed by FBX material name) ────────────────────────────
 // MeshStandardMaterial for PBR lighting — roughness/metalness per part
@@ -23,6 +24,7 @@ const PALETTE = {
 };
 
 export async function tryLoadWeaponFBX(path = import.meta.env.BASE_URL + 'models/FBX/P90.fbx') {
+  const generation = ++loadGeneration;
   try {
     const probe = await fetch(path, { method: 'HEAD' });
     if (!probe.ok) return false;
@@ -48,10 +50,18 @@ export async function tryLoadWeaponFBX(path = import.meta.env.BASE_URL + 'models
         : remap(ch.material);
     });
 
+    const parts = [];
+    fbx.traverse(node => { if (node.isMesh) parts.push({ name: node.name,
+      skinned: !!node.isSkinnedMesh, groups: node.geometry.groups.length,
+      vertices: node.geometry.attributes.position.count }); });
+    fbx.userData.partInspection = parts;
+    if (generation !== loadGeneration) return false;
+    inspectedWeaponFBX?.traverse(node => { node.geometry?.dispose(); });
+    inspectedWeaponFBX = fbx;
     replaceFbxModel(fbx);
 
     // Move flash to FBX barrel tip
-    flash.position.copy(MUZZLE);
+    // Inspection succeeded; articulation deliberately uses the complete fallback.
 
     console.log('[Weapon] P90.fbx loaded — adjust SCALE/ROT_Y/OFFSET/MUZZLE in weaponFBX.js if needed');
     return true;

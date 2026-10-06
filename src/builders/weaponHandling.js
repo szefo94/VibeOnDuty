@@ -5,21 +5,38 @@ const V = (...xyz) => new THREE.Vector3(...xyz);
 const clamp = value => Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
 const smooth = value => { const t = clamp(value); return t * t * (3 - 2 * t); };
 const M4 = Object.freeze({ grip: [0, -.06, .06], support: [0, -.032, -.15],
-  magazine: [0, -.08, -.04], charging: [.024, .018, .1], travel: -.14 });
-const definitions = { m4: M4 };
+  magazine: [0, -.06, -.04], charging: [.024, .018, .1], travel: -.14 });
+const definitions = {
+  m4: M4,
+  p90: { grip: [0, -.052, .06], support: [0, -.028, -.09], magazine: [0, .033, -.04],
+    charging: [.03, .012, -.1], travel: .14 },
+  awp: { grip: [0, -.07, .08], support: [0, -.03, -.19], magazine: [0, -.065, -.035],
+    charging: [.032, .016, .09], travel: -.14 },
+  pistol: { grip: [0, -.062, .05], support: [-.024, -.052, .048], magazine: [0, -.086, .05],
+    charging: [0, .016, -.025], travel: -.1 },
+};
+const owners = new WeakMap();
+export function getWeaponHandling(root) { return owners.get(root) ?? null; }
 
 /** Weapon-local, read-only phase sample. It never advances a gameplay clock. */
 export function sampleWeaponHandling(weapon, pose = {}) {
   const def = definitions[weapon];
   if (!def) return null;
   const reload = pose.alive !== false && pose.weapon === weapon && pose.upper === 'reload';
-  const phase = reload ? clamp(pose.action?.phase) : 1;
+  const firing = pose.alive !== false && pose.weapon === weapon && pose.upper === 'fire'
+    && pose.action?.kind === 'fire' && pose.action.total > 0;
+  const phase = reload || firing ? clamp(pose.action?.phase) : 1;
   const action = manifest.actions.find(a => a.id === `${weapon}_reload`);
   const markers = action.markers;
-  const removed = phase < markers.remove ? smooth(phase / markers.remove)
+  const removed = !reload ? 0 : phase < markers.remove ? smooth(phase / markers.remove)
     : phase < .4 ? 1 : 1 - smooth((phase - .4) / (markers.insert - .4));
-  const charge = reload && phase >= markers.insert && phase < markers.recontact
+  let charge = reload && phase >= markers.insert && phase < markers.recontact
     ? Math.sin(Math.PI * clamp((phase - markers.insert) / (markers.recontact - markers.insert))) : 0;
+  if (firing && ['awp', 'pistol'].includes(weapon)) {
+    const fireMarkers = manifest.actions.find(a => a.id === `${weapon}_fire`).markers;
+    charge = phase <= fireMarkers.bolt ? smooth((phase - fireMarkers.shot) / (fireMarkers.bolt - fireMarkers.shot))
+      : 1 - smooth((phase - fireMarkers.bolt) / (fireMarkers.return - fireMarkers.bolt));
+  }
   const magazine = V(...def.magazine); magazine.y += def.travel * removed;
   const charging = V(...def.charging); charging.z += .045 * charge;
   const support = V(...def.support);
@@ -31,9 +48,11 @@ export function sampleWeaponHandling(weapon, pose = {}) {
       support.copy(charging).lerp(V(...def.support), smooth((phase - markers.charge) / (markers.recontact - markers.charge)));
     }
   }
-  return Object.freeze({ weapon, phase, reload, mechanism: action.mechanism,
+  const boltHand = weapon === 'awp' && charge > 0;
+  return Object.freeze({ weapon, phase, reload, firing, boltHand, mechanism: action.mechanism,
     magazine: Object.freeze(magazine.toArray()), charging: Object.freeze(charging.toArray()),
-    grip: def.grip, support: Object.freeze(support.toArray()), markers });
+    grip: boltHand ? Object.freeze(charging.toArray()) : def.grip,
+    support: Object.freeze(support.toArray()), markers });
 }
 
 export function createWeaponHandling({ weapon, root, skeleton = null }) {
@@ -43,7 +62,9 @@ export function createWeaponHandling({ weapon, root, skeleton = null }) {
     corrections: new Map(), updates: 0, contacts: null,
     rest: new Map(Object.values(parts).filter(Boolean).map(part =>
       [part, { position: part.position.clone(), quaternion: part.quaternion.clone() }])) };
-  root.userData.weaponHandling = owner;
+  owners.set(root, owner);
+  if (root.parent) owner.mountRest = { root: root.parent, position: root.parent.position.clone(),
+    quaternion: root.parent.quaternion.clone() };
   return owner;
 }
 
@@ -100,11 +121,28 @@ function closeFingers(owner, side) {
   if (!hand) return;
   const axis = V(1, 0, 0).applyQuaternion(hand.getWorldQuaternion(new THREE.Quaternion()));
   for (const name of ['index', 'middle', 'ring', 'pinky', 'thumb']) {
+    if (name === 'thumb') {
+      // Thumb opposition follows its actual proximal segment, whose rest roll
+      // differs from the four fingers. Aim across the palm, not along finger X.
+      const center = hand.localToWorld(V(side === 'l' ? -.012 : .012, .095, .03));
+      for (const segment of [1, 2]) {
+        const bone = owner.skeleton.getObjectByName(`thumb_0${segment}_${side}`);
+        const next = owner.skeleton.getObjectByName(`thumb_0${segment + 1}_${side}`);
+        if (!bone || !next) continue;
+        const origin = bone.getWorldPosition(V());
+        const from = next.getWorldPosition(V()).sub(origin).normalize();
+        const to = center.clone().sub(origin).normalize();
+        const delta = new THREE.Quaternion().setFromUnitVectors(from, to);
+        const radians = 2 * Math.acos(Math.min(1, Math.abs(delta.w)));
+        if (radians > .7) delta.slerp(new THREE.Quaternion(), 1 - .7 / radians);
+        worldRotate(owner, bone, delta);
+      }
+      continue;
+    }
     for (let segment = 1; segment <= 3; segment++) {
       const bone = owner.skeleton.getObjectByName(`${name}_0${segment}_${side}`);
       if (!bone) continue;
-      const angle = name === 'thumb' ? [.22, .35, .3][segment - 1]
-        : name === 'index' && side === 'r' ? [.15, .35, .4][segment - 1] : [.45, .8, .65][segment - 1];
+      const angle = name === 'index' && side === 'r' ? [.15, .35, .4][segment - 1] : [.45, .8, .65][segment - 1];
       worldRotate(owner, bone, new THREE.Quaternion().setFromAxisAngle(axis, angle));
     }
   }
@@ -113,6 +151,10 @@ function closeFingers(owner, side) {
 export function updateWeaponHandling(owner, pose) {
   if (!owner || owner.disposed) return null;
   restoreWeaponHandlingBones(owner);
+  if (owner.mountRest && owner.skeleton && pose.weapon === owner.weapon) {
+    owner.mountRest.root.position.copy(owner.mountRest.position);
+    owner.mountRest.root.quaternion.copy(owner.mountRest.quaternion);
+  }
   for (const [part, rest] of owner.rest) {
     part.position.copy(rest.position); part.quaternion.copy(rest.quaternion);
   }
@@ -120,6 +162,9 @@ export function updateWeaponHandling(owner, pose) {
   const sample = sampleWeaponHandling(owner.weapon, pose);
   owner.sample = sample; owner.contacts = null;
   if (!sample) return null;
+  for (const name of ['grip', 'support', 'magazine', 'charging']) {
+    owner.root.getObjectByName(`${owner.weapon}_${name}Socket`)?.position.fromArray(sample[name]);
+  }
   const def = definitions[owner.weapon];
   if (owner.parts.magazine) owner.parts.magazine.position.add(V(...sample.magazine).sub(V(...def.magazine)));
   if (owner.parts.charging) owner.parts.charging.position.add(V(...sample.charging).sub(V(...def.charging)));
@@ -141,9 +186,23 @@ export function updateWeaponHandling(owner, pose) {
     // Wrist-to-palm measured on the actual inherited rig (+Y finger chains).
     const palmOffset = V(0, .085, .012).applyQuaternion(orientation);
     const target = owner.root.localToWorld(V(...sample.support)).sub(palmOffset);
+    let rightError = null;
+    if (sample.boltHand && owner.mountRest && right) {
+      const mount = owner.mountRest.root;
+      mount.updateWorldMatrix(true, true);
+      const anchor = mount.matrixWorld.clone();
+      const rightTarget = owner.root.localToWorld(V(...sample.grip)).sub(palmOffset);
+      rightError = solveArm(owner, 'r', rightTarget, orientation);
+      // The firing hand releases the bolt; keep the receiver anchored to its
+      // sampled carry rather than dragging the gun after its manipulating hand.
+      const local = mount.parent.matrixWorld.clone().invert().multiply(anchor);
+      local.decompose(mount.position, mount.quaternion, mount.scale);
+      mount.updateWorldMatrix(false, true);
+    }
     const leftError = solveArm(owner, 'l', target, orientation);
     closeFingers(owner, 'l'); closeFingers(owner, 'r');
-    owner.contacts = { leftError, solveRotations: 4, carryFitMaxMeters: .1, fingerMaxRadians: .8,
+    owner.contacts = { leftError, rightError, solveRotations: sample.boltHand ? 6 : 4,
+      carryFitMaxMeters: .1, fingerMaxRadians: .8,
       supportWorld: owner.root.localToWorld(V(...sample.support)).toArray() };
   }
   return sample;
@@ -157,5 +216,5 @@ export function disposeWeaponHandling(owner) {
   }
   for (const prop of owner.props) prop.removeFromParent();
   owner.props.length = 0; owner.disposed = true;
-  if (owner.root.userData.weaponHandling === owner) delete owner.root.userData.weaponHandling;
+  if (owners.get(owner.root) === owner) owners.delete(owner.root);
 }

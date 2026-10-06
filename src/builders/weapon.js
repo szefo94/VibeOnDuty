@@ -53,16 +53,19 @@ _w1.m4.traverse((node) => {
 
 // P90 — procedural fallback; FBX replaces children if loaded
 _w1.p90 = new THREE.Group();
-mk(_w1.p90, box(0.058, 0.055, 0.32), mGun,  0,      0,       0);
-mk(_w1.p90, box(0.042, 0.028, 0.26), mGun,  0,      0.033,  -0.04); // top feed
-mk(_w1.p90, box(0.034, 0.072, 0.040),mGun2, 0,     -0.052,   0.06);
+mk(_w1.p90, box(0.058, 0.055, 0.32), mGun,  0,      0,       0).name = 'p90_receiver';
+mk(_w1.p90, box(0.042, 0.028, 0.26), mGun,  0,      0.033,  -0.04).name = 'p90_magazine';
+mk(_w1.p90, box(0.034, 0.072, 0.040),mGun2, 0,     -0.052,   0.06).name = 'p90_grip';
+mk(_w1.p90, box(.012, .012, .024), mGun, .03, .012, -.1).name = 'p90_charging';
 brl(_w1.p90, 0.007, 0.007, 0.22, 0, 0.006, -0.27);
 
 // AWP
 _w1.awp = new THREE.Group();
-mk(_w1.awp, box(0.048, 0.055, 0.52),  mGun,  0,      0,       0);
+mk(_w1.awp, box(0.048, 0.055, 0.52),  mGun,  0,      0,       0).name = 'awp_receiver';
+mk(_w1.awp, box(.03, .06, .038), mGun2, 0, -.065, -.035).name = 'awp_magazine';
+mk(_w1.awp, box(.032, .014, .04), mGun, .032, .016, .09).name = 'awp_charging';
 mk(_w1.awp, box(0.038, 0.048, 0.22),  mGunL, 0,      0.004,   0.32); // stock
-mk(_w1.awp, box(0.034, 0.080, 0.036), mGun2, 0,     -0.070,   0.08); // grip
+mk(_w1.awp, box(0.034, 0.080, 0.036), mGun2, 0,     -0.070,   0.08).name = 'awp_grip';
 mk(_w1.awp, box(0.034, 0.034, 0.18),  mGunS, 0,      0.048,  -0.01); // scope tube
 brl(_w1.awp, 0.016, 0.016, 0.014, 0, 0.048, -0.098); // front lens cap
 brl(_w1.awp, 0.012, 0.012, 0.012, 0, 0.048,  0.088); // rear lens cap
@@ -70,8 +73,10 @@ brl(_w1.awp, 0.008, 0.010, 0.62,  0, 0.006, -0.57);  // long barrel
 
 // Pistol (M9)
 _w1.pistol = new THREE.Group();
-mk(_w1.pistol, box(0.038, 0.056, 0.18),  mGun,  0,      0,       0);
-mk(_w1.pistol, box(0.034, 0.075, 0.040), mGun2, 0,     -0.062,   0.05);
+mk(_w1.pistol, box(0.038, 0.056, 0.18),  mGun,  0,      0,       0).name = 'pistol_charging';
+mk(_w1.pistol, box(.038, .012, .16), mGun2, 0, -.024, 0).name = 'pistol_receiver';
+mk(_w1.pistol, box(0.034, 0.075, 0.040), mGun2, 0,     -0.062,   0.05).name = 'pistol_grip';
+mk(_w1.pistol, box(.026, .054, .03), mGun, 0, -.086, .05).name = 'pistol_magazine';
 mk(_w1.pistol, box(0.026, 0.012, 0.040), mGun2, 0,     -0.012,  -0.11); // trigger guard
 brl(_w1.pistol, 0.007, 0.007, 0.16, 0, 0.008, -0.20);
 
@@ -110,21 +115,28 @@ _w3.m4.traverse((node) => {
 
 // P90 (3p)
 _w3.p90 = new THREE.Group();
-b3(_w3.p90, box(0.060, 0.058, 0.32),  mGun, 0, 0,     0);
-b3(_w3.p90, box(0.044, 0.030, 0.26),  mGun, 0, 0.034, -0.04);
+b3(_w3.p90, box(0.060, 0.058, 0.32),  mGun, 0, 0,     0).name = 'p90_receiver';
+b3(_w3.p90, box(0.044, 0.030, 0.26),  mGun, 0, 0.034, -0.04).name = 'p90_magazine';
+b3(_w3.p90, box(.034, .072, .04), mGunW, 0, -.052, .06).name = 'p90_grip';
+b3(_w3.p90, box(.012, .012, .024), mGun, .03, .012, -.1).name = 'p90_charging';
 r3(_w3.p90, 0.008, 0.008, 0.20,       0, 0.008, -0.25);
 
 // AWP (3p)
 _w3.awp = new THREE.Group();
-b3(_w3.awp, box(0.050, 0.058, 0.52),  mGun,  0, 0,     0);
+b3(_w3.awp, box(0.050, 0.058, 0.52),  mGun,  0, 0,     0).name = 'awp_receiver';
+b3(_w3.awp, box(.034, .08, .036), mGunW, 0, -.07, .08).name = 'awp_grip';
+b3(_w3.awp, box(.03, .06, .038), mGunW, 0, -.065, -.035).name = 'awp_magazine';
+b3(_w3.awp, box(.032, .014, .04), mGun, .032, .016, .09).name = 'awp_charging';
 b3(_w3.awp, box(0.040, 0.050, 0.22),  mGunL, 0, 0.004, 0.32);
 b3(_w3.awp, box(0.036, 0.036, 0.18),  mGunS, 0, 0.050, -0.01);
 r3(_w3.awp, 0.009, 0.011, 0.58,       0, 0.006, -0.56);
 
 // Pistol (3p)
 _w3.pistol = new THREE.Group();
-b3(_w3.pistol, box(0.040, 0.058, 0.18),  mGun,  0, 0,      0);
-b3(_w3.pistol, box(0.036, 0.070, 0.042), mGun2, 0, -0.064, 0.05);
+b3(_w3.pistol, box(0.040, 0.058, 0.18),  mGun,  0, 0,      0).name = 'pistol_charging';
+b3(_w3.pistol, box(.038, .012, .16), mGun2, 0, -.024, 0).name = 'pistol_receiver';
+b3(_w3.pistol, box(0.036, 0.070, 0.042), mGun2, 0, -0.064, 0.05).name = 'pistol_grip';
+b3(_w3.pistol, box(.026, .054, .03), mGun, 0, -.086, .05).name = 'pistol_magazine';
 r3(_w3.pistol, 0.008, 0.008, 0.14,       0, 0.008, -0.18);
 
 // Per-weapon grip alignment along the model's own barrel axis (-Z). The models are
@@ -143,15 +155,21 @@ export const playerWeaponHandling = new Map();
 for (const [view, groups] of [['1p', _w1], ['3p', _w3]]) {
   for (const [key, root] of Object.entries(groups)) {
     root.name = `${key}_${view}`;
-    if (key === 'm4') playerWeaponHandling.set(`${view}:${key}`, createWeaponHandling({ weapon: key, root }));
+    const owner = createWeaponHandling({ weapon: key, root });
+    playerWeaponHandling.set(`${view}:${key}`, owner);
+    for (const name of ['grip', 'support', 'magazine', 'charging']) {
+      const socket = new THREE.Object3D(); socket.name = `${key}_${name}Socket`;
+      root.add(socket);
+    }
   }
 }
+_w1.p90.userData.handlingStatus = 'Procedural fallback — detailed weapon handling unavailable';
 export function restorePlayerWeaponHandling() {
   for (const owner of playerWeaponHandling.values()) restoreWeaponHandlingBones(owner);
 }
 export function updatePlayerWeaponHandling(pose, skeleton = null) {
   for (const [id, owner] of playerWeaponHandling) {
-    owner.skeleton = id.startsWith('3p') ? skeleton : null;
+    owner.skeleton = id.startsWith('3p') && pose.weapon === owner.weapon ? skeleton : null;
     updateWeaponHandling(owner, pose);
   }
 }
@@ -166,8 +184,11 @@ export function show3pWeapon(key) {
 
 // Called by weaponFBX.js after FBX loads — replaces P90 procedural meshes
 export function replaceFbxModel(fbxGroup) {
-  while (_w1.p90.children.length) _w1.p90.remove(_w1.p90.children[0]);
-  _w1.p90.add(fbxGroup);
+  // The inspected single skinned P90 mesh has material groups, not detachable
+  // named mechanisms. Retain the complete playable articulated original.
+  _w1.p90.userData.handlingStatus = 'Procedural fallback — detailed weapon handling unavailable';
+  _w1.p90.userData.fbxInspection = fbxGroup.userData.partInspection;
+  return false;
 }
 
 // Called by weaponFBX.js once hand_r bone is available

@@ -46,4 +46,20 @@ describe('weapon-specific mechanisms', () => {
       expect(fire?.charging[2]).toBeGreaterThan(ready?.charging[2]);
     }
   });
+  it('keeps interrupted magazines bounded and borrowed resources usable for siblings', () => {
+    for (const key of ['m4', 'p90', 'awp', 'pistol']) {
+      const root = weapon(), sibling = root.clone();
+      const owner = handling.createWeaponHandling({ weapon: key, root });
+      const geometry = root.children[0].geometry;
+      let disposed = 0; geometry.addEventListener('dispose', () => disposed++);
+      for (let i = 0; i < 30; i++) {
+        handling.updateWeaponHandling(owner, { weapon: key, alive: true, upper: 'reload', action: { phase: .35 } });
+        handling.updateWeaponHandling(owner, { weapon: key, alive: true, upper: 'melee' });
+      }
+      handling.disposeWeaponHandling(owner);
+      expect(root.children).toHaveLength(5); expect(owner.props).toHaveLength(0);
+      expect(disposed).toBe(0); expect(sibling.children[0].geometry).toBe(geometry);
+      expect(root.clone().children).toHaveLength(5);
+    }
+  });
 });
