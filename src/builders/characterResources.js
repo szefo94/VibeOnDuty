@@ -11,6 +11,11 @@ export function registerCharacterDisposer(root, callback) {
   if (!root || disposed.has(root)) return;
   if (!disposers.has(root)) disposers.set(root, new Set());
   disposers.get(root).add(callback);
+  return () => {
+    const callbacks = disposers.get(root);
+    callbacks?.delete(callback);
+    if (callbacks?.size === 0) disposers.delete(root);
+  };
 }
 
 // Shared GLB/atlas maps are never registered here.

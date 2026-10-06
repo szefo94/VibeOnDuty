@@ -24,8 +24,18 @@ describe('first-person view ownership', () => {
     geometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(
       Array.from({ length: 9 }, () => [1,0,0,0]).flat(), 4));
     const mesh = new THREE.SkinnedMesh(geometry, new THREE.MeshStandardMaterial());
+    mesh.material.userData.artDomain='team-accent';
+    mesh.userData.enemyGroup = root;
+    let sourceDisposals = 0;
+    geometry.addEventListener('dispose', () => sourceDisposals++);
     root.add(mesh); mesh.bind(new THREE.Skeleton(bones));
     const rig = view.createFirstPersonRig({ source: root });
+    expect(mesh.userData.enemyGroup).toBe(root);
+    const originalClone=root.clone, originalData=mesh.userData;
+    root.clone=()=>{throw new Error('clone-injected');};
+    expect(()=>view.createFirstPersonRig({source:root})).toThrow('clone-injected');
+    expect(mesh.userData).toBe(originalData);expect(mesh.userData.enemyGroup).toBe(root);
+    root.clone=originalClone;
     expect(rig.arms.getObjectByName('Head').isBone).toBe(true);
     expect(rig.body.getObjectByName('Head').isBone).toBe(true);
     const selected = [];
@@ -34,9 +44,17 @@ describe('first-person view ownership', () => {
     expect(selected[0].geometry.attributes.normal.array.slice(0, 3)).toEqual(geometry.attributes.normal.array.slice(0, 3));
     expect(selected[0].geometry.userData.selectedTriangles).toBe(1);
     expect(geometry.index).toBeNull();
+    mesh.material.color.setHex(0x1234ff);
+    view.updateFirstPersonRig(rig,{pose:{alive:false},camera:new THREE.PerspectiveCamera(),active:false});
+    expect(selected[0].material.color.getHex()).toBe(0x1234ff);
+    expect(selected[0].material).not.toBe(mesh.material);
     expect(bones.every(b => b.scale.equals(new THREE.Vector3(1,1,1)))).toBe(true);
     view.disposeFirstPersonRig(rig); view.disposeFirstPersonRig(rig);
     expect(root.children.includes(mesh)).toBe(true);
+    expect(sourceDisposals).toBe(0);
+    const next = view.createFirstPersonRig({ source:root });
+    expect(next.disposed).toBe(false); view.disposeFirstPersonRig(next);
+    expect(sourceDisposals).toBe(0);
   });
   it('starts ADS immediately and reaches both endpoints monotonically in 120ms', () => {
     expect(typeof view.sampleFirstPersonMotion).toBe('function');

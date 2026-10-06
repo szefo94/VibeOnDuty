@@ -232,7 +232,7 @@ export function loop(ts) {
   }
 
   updateFirstPersonRig(playerFirstPersonRig, { pose: playerAnim.presentation,
-    camera, weapon: wpn, handlers: Array.from(playerWeaponHandling).filter(([id]) => id.startsWith('1p:')).map(([, owner]) => owner),
+    camera, weapon: wpn, dt,
     active: (gameRunning || isOnline()) && !isKillcamActive(), thirdPerson: bodyVisible,
     spineQuaternion: playerAnim._presentationCorrection?.get(playerMesh?.getObjectByName('spine_03')),
     rawCorrections: playerWeaponHandling.get(`3p:${player.weapon}`)?.corrections,
@@ -240,7 +240,7 @@ export function loop(ts) {
 
   try {
     renderFirstPersonRig(playerFirstPersonRig, { weapon: wpn, worldWeapon: wpn3p,
-      firstPerson: !bodyVisible, active: (gameRunning || isOnline()) && !player.dead && !isKillcamActive() },
+      firstPerson: !bodyVisible, active: (gameRunning || isOnline()) && !isKillcamActive() },
     () => renderComicScene(renderer, scene, camera));
   } finally {
     // Movement reads the simulation eye even if a GPU/render callback throws.

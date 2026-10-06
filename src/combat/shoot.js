@@ -68,7 +68,8 @@ export function updateWeapon(dt, moving, sprint, crouching, sliding) {
   bobT += dt * spd;
   const scale = crouching ? 0.4 : sliding ? 0.15 : 1;
   const aimT = player.aimT;
-  const hipBobScale = 1 - aimT * 0.9; // damp bob while aiming
+  const reducedMotion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+  const hipBobScale = reducedMotion ? 0 : 1 - aimT;
   const bY = moving ? Math.sin(bobT) * 0.007 * (sprint ? 1.4 : 1) * scale * hipBobScale : 0;
   const bX = moving ? Math.sin(bobT * 0.5) * 0.003 * scale * hipBobScale : 0;
   const rc = recoilT > 0 ? recoilT / 100 : 0;

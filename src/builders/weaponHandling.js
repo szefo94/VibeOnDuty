@@ -214,8 +214,8 @@ export function updateWeaponHandling(owner, pose) {
     }
     const leftError = solveArm(owner, 'l', target, orientation);
     closeFingers(owner, 'l'); closeFingers(owner, 'r');
-    owner.contacts = { leftError, rightError, solveRotations: sample.boltHand ? 6 : 4,
-      carryFitMaxMeters: .1, fingerMaxRadians: .8,
+    owner.contacts = { leftError, rightError, solveRotations: owner.fixedAnchor ? 4 : sample.boltHand ? 6 : 4,
+      carryFitMaxMeters: owner.fixedAnchor ? 0 : .1, fingerMaxRadians: .8,
       supportWorld: owner.root.localToWorld(V(...sample.support)).toArray() };
   }
   return sample;
