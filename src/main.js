@@ -105,14 +105,15 @@ if (import.meta.env.DEV) {
     const { wpn, weapon3p } = await import('./builders/weapon.js');
     let wasRunning = false;
     animationReview = initAnimationReview({
+      getQuality:getGraphicsQuality,
       host: document.getElementById('developer-animation-diagnostics'),
       eligible: () => isOnline() ? REVIEW_COPY.online : player.dead || isKillcamActive() ? REVIEW_COPY.death
         : getMode()?.name !== 'range' ? REVIEW_COPY.online : '',
       createActor: selection => createActualReviewActor(selection, { scene, renderer,
-        origin: camera.position.clone(), weapon: wpn, worldWeapon: weapon3p }),
+        origin: camera.position.clone(), weapon: wpn, worldWeapon: weapon3p, liveBody:playerBody }),
       suspend() { wasRunning = input.gameRunning; input.neutralizeInput(); input.setGameRunning(false);
         document.exitPointerLock?.(); document.getElementById('pause-menu').style.display = 'none'; },
-      restore() { input.setGameRunning(wasRunning); document.getElementById('pause-menu').style.display = wasRunning ? 'block' : 'none'; },
+      restore() { input.neutralizeInput(); input.setGameRunning(wasRunning); document.getElementById('pause-menu').style.display = wasRunning ? 'block' : 'none'; },
     });
     setAnimationReview(animationReview);
   });
@@ -216,6 +217,7 @@ function switchWeapon(key) {
 
 // ── Input: game-action handlers ────────────────────────────────────
 document.addEventListener('keydown', (e) => {
+  if (animationReview?.getStatus().opened) return;
   if (isOnline() && e.code === 'KeyR') { requestOnlineAction('reload'); return; }
   if (isOnline() && !['F3', 'KeyV'].includes(e.code)) return;
   if (

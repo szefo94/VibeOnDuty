@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createAnimationReviewOwner, REVIEW_SCENARIOS } from './animationReview.js';
+import { createAnimationReviewOwner, REVIEW_SCENARIOS, sampleReviewScenario } from './animationReview.js';
 
 const pending = () => { let resolve, reject; const promise = new Promise((a,b) => { resolve=a; reject=b; }); return {promise,resolve,reject}; };
 const actor = () => ({ duration: 1.8, update: vi.fn(), render: vi.fn(), dispose: vi.fn(), getFrozenDebug: () => ({ joints:65 }) });
@@ -44,5 +44,38 @@ describe('isolated animation review ownership', () => {
     await owner.select({weapon:'<script>',view:'url',scenario:'arbitrary'});
     expect(owner.getFrozenDebug().selection).toEqual({weapon:'m4',view:'third',scenario:'ready'});
     owner.close();
+  });
+  it('compares exactly base × 1.15 then cancels into source one-handed supersprint',()=>{
+    for(const [weapon,base] of Object.entries({m4:1.8,p90:2,awp:2.5,pistol:1.2})){
+      const selection={weapon,scenario:'sprint-reload'};
+      const reload=sampleReviewScenario(selection,.2),cancel=sampleReviewScenario(selection,.99);
+      expect(reload.reloadDurationSeconds).toBe(base*1.15);expect(reload.actionTotal).toBe(base*1.15);
+      expect(cancel.clip).toBe('supersprint');expect(cancel.oneHandedCarry).toBe(true);expect(cancel.previewOnly).toBe(true);
+    }
+  });
+  it('seeks entry/hold/exit locally and keeps required posture under reduced motion',()=>{
+    for(const scenario of ['slide','dive','prone']){
+      const selection={weapon:'m4',scenario};
+      expect(sampleReviewScenario(selection,.125).clipPhase).toBe(.5);
+      expect(sampleReviewScenario(selection,.8).clip).toBe(scenario+'_exit');
+    }
+  });
+  it('contains a renderer failure to one state announcement and closes idempotently',async()=>{
+    const a=actor();a.render.mockImplementation(()=>{throw Error('GPU');});const changed=vi.fn();
+    const owner=createAnimationReviewOwner({createActor:async()=>a,changed});await owner.open();owner.render();
+    const count=changed.mock.calls.length;owner.render();expect(changed).toHaveBeenCalledTimes(count);
+    expect(owner.getFrozenDebug().state).toBe('error');owner.close();expect(a.dispose).toHaveBeenCalledTimes(1);
+  });
+  it('deep-freezes observations and rejects a malformed preview without installation',async()=>{
+    const a=actor();a.identity={source:'fixed'};a.compatibleScenarios=['ready'];
+    const owner=createAnimationReviewOwner({createActor:async()=>a});await owner.open();
+    const debug=owner.getFrozenDebug();expect(Object.isFrozen(debug.identity)).toBe(true);expect(Object.isFrozen(debug.actor)).toBe(true);owner.close();
+    const invalid={duration:0,dispose:vi.fn()},bad=createAnimationReviewOwner({createActor:async()=>invalid});await bad.open();
+    expect(bad.getFrozenDebug().state).toBe('error');expect(bad.getFrozenDebug().actorCount).toBe(0);expect(invalid.dispose).toHaveBeenCalledTimes(1);bad.close();
+  });
+  it('partial geometry cannot play or scrub an unavailable handling comparison after weapon replacement',async()=>{
+    const a=actor();a.partial=true;const owner=createAnimationReviewOwner({createActor:async()=>a});await owner.open();
+    await owner.select({scenario:'reload',weapon:'p90'});owner.play();owner.scrub(50);
+    expect(owner.getFrozenDebug().phase).toBe(0);expect(owner.getFrozenDebug().playing).toBe(false);owner.close();
   });
 });

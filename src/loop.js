@@ -76,7 +76,7 @@ export function loop(ts) {
   last = ts;
   if (import.meta.env.DEV && animationReview) {
     animationReview.tick(dt);
-    if (animationReview.getFrozenDebug().opened) {
+    if (animationReview.getStatus().opened) {
       animationReview.render(); requestAnimationFrame(loop); return;
     }
   }

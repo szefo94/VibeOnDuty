@@ -212,8 +212,10 @@ export function updateWeaponHandling(owner, pose) {
       local.decompose(mount.position, mount.quaternion, mount.scale);
       mount.updateWorldMatrix(false, true);
     }
-    const leftError = solveArm(owner, 'l', target, orientation);
-    closeFingers(owner, 'l'); closeFingers(owner, 'r');
+    const releaseSupport = pose.previewOnly === true && pose.oneHandedCarry === true;
+    const leftError = releaseSupport ? null : solveArm(owner, 'l', target, orientation);
+    if (!releaseSupport) closeFingers(owner, 'l');
+    closeFingers(owner, 'r');
     owner.contacts = { leftError, rightError, solveRotations: owner.fixedAnchor ? 4 : sample.boltHand ? 6 : 4,
       carryFitMaxMeters: owner.fixedAnchor ? 0 : .1, fingerMaxRadians: .8,
       supportWorld: owner.root.localToWorld(V(...sample.support)).toArray() };
