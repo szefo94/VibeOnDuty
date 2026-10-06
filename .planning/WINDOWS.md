@@ -2,9 +2,9 @@
 schema_version: 1
 open_count: 5
 waived_count: 0
-fixed_count: 26
-total_count: 31
-last_updated: 2026-10-04T05:30:04.172Z
+fixed_count: 28
+total_count: 33
+last_updated: 2026-10-06T04:49:09.372Z
 ---
 
 # Broken Windows Ledger
@@ -46,6 +46,8 @@ last_updated: 2026-10-04T05:30:04.172Z
 | 29 | 01 | unmet-truth | .planning/phases/01-two-client-authoritative-tdm/01-07-PLAN.md |  | HOST-03 and MODE-01 unclassified probes plus descriptor-less capacity/product-transparency prohibition remain flagged for explicit phase-end human judgment. | open |  | 2026-10-04T05:04:29.486Z |  |
 | 30 | 01 | unrun-verify | .planning/phases/01-two-client-authoritative-tdm/evidence/01-07 |  | Real map/rig/feedback visual quality and gesture usability remain pending human judgment; automated production screenshots do not establish visual approval. | open |  | 2026-10-04T05:04:29.908Z |  |
 | 31 | 01 | unrun-verify | .planning/phases/01-two-client-authoritative-tdm/01-07-CAPTURE.mjs |  | Additional deviceScaleFactor1 production capture timed out twice at first-corner navigation; required production captures and all 13 MP tests pass, but high-resolution online capture remains unverified. | open |  | 2026-10-04T05:30:04.172Z |  |
+| 32 | 07 | deviation | src/modes/tdm.js |  | Direct TDM respawn, buy reset/same-weapon purchase and editor transitions require action cancellation before field replacement; minimal hooks added and targeted browser negatives pass. | fixed |  | 2026-10-06T04:48:50.995Z | 2026-10-06T04:49:08.927Z |
+| 33 | 07 | deviation | tests/action-lifecycle.spec.js |  | Owned lifecycle browser fixture derives its repository root from the test module and respawns the retired enemy slot before the live death negative. | fixed |  | 2026-10-06T04:48:51.402Z | 2026-10-06T04:49:09.372Z |
 
 ````json
 [
@@ -450,6 +452,32 @@ last_updated: 2026-10-04T05:30:04.172Z
     "reason": "",
     "recorded_at": "2026-10-04T05:30:04.172Z",
     "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 32,
+    "kind": "deviation",
+    "phase": "07",
+    "file": "src/modes/tdm.js",
+    "line": null,
+    "description": "Direct TDM respawn, buy reset/same-weapon purchase and editor transitions require action cancellation before field replacement; minimal hooks added and targeted browser negatives pass.",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-10-06T04:48:50.995Z",
+    "resolved_at": "2026-10-06T04:49:08.927Z",
+    "milestone": null
+  },
+  {
+    "id": 33,
+    "kind": "deviation",
+    "phase": "07",
+    "file": "tests/action-lifecycle.spec.js",
+    "line": null,
+    "description": "Owned lifecycle browser fixture derives its repository root from the test module and respawns the retired enemy slot before the live death negative.",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-10-06T04:48:51.402Z",
+    "resolved_at": "2026-10-06T04:49:09.372Z",
     "milestone": null
   }
 ]
