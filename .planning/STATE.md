@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 7
 current_phase_name: Movement-Matched and Action-Safe Animation
 status: executing
-stopped_at: Completed 07-02-PLAN.md
-last_updated: "2026-10-05T20:38:29.258Z"
-last_activity: 2026-10-05
-last_activity_desc: Phase 7 research, UI contract and ten plans complete; independent checker passed after one revision, 4/4 requirements and 11/11 decisions covered. Runtime and human motion acceptance remain pending.
-state_head: d9ab267beb26e5441ce133827b02abdffffc1dd2
+stopped_at: Completed 07-04-PLAN.md
+last_updated: "2026-10-06T04:52:24.492Z"
+last_activity: 2026-10-06
+last_activity_desc: Plan 07-04 resumed after quota interruption and completed; simulation-owned throw/melee and retirement pass 10 unit and 20 browser tests. Remaining Phase 7 plans, phase gates and human motion acceptance remain pending.
+state_head: 4c68e3bb1b4f07ac7a55faf208ada14e722d230c
 progress:
   total_phases: 12
   completed_phases: 2
   total_plans: 23
-  completed_plans: 15
+  completed_plans: 16
   percent: 17
 ---
 
@@ -27,12 +27,12 @@ See: .planning/PROJECT.md (updated 2026-10-05)
 
 ## Current Position
 
-Phase: 7 (Movement-Matched and Action-Safe Animation) — READY TO EXECUTE
-Plan: 3 of 10 — 07-01
-Status: Ready to execute
-Next action: $gsd-execute-phase 7 — execute the ten independently checked animation plans; Phase 5 follows Phase 7.
+Phase: 7 (Movement-Matched and Action-Safe Animation) — EXECUTING
+Plan: 4 of 10 — next incomplete 07-03; completed 07-01, 07-02 and 07-04
+Status: Executing — plan 07-04 complete; remaining dispatch and phase review owned by the orchestrator
+Next action: Continue authorized Phase 7 execution from the committed 07-04 summary; Phase 5 follows Phase 7.
 Roadmap review: User revised remaining order to6 → 7 → 5 → 2 → 3 → 4 → 8 → 9 → 10 → 11 → 12; Phase1 remains complete.
-Last activity: 2026-10-05 — Phase 7 research, UI contract and ten plans complete; independent checker passed after one revision, 4/4 requirements and 11/11 decisions covered. Runtime and human motion acceptance remain pending.
+Last activity: 2026-10-06 — Plan 07-04 resumed and committed; 10 unit/20 browser lifecycle tests pass. Shared animation requirements and human motion acceptance remain pending.
 
 Routing: Follow the selected order rather than numeric next-phase suggestions. After Phase7 select5; after5 select2; after4 select8. Phases2–5 and7–12 remain pending, with no skipped phase marked complete.
 
@@ -74,6 +74,7 @@ Progress: [██░░░░░░░░] 17%
 | Phase 06 P06 | approximately 229min wall time including usage-limit interruption | 2 tasks | 16 files |
 | Phase 07 P01 | 34min | 2 tasks | 5 files |
 | Phase 07 P02 | 14min | 2 tasks | 8 files |
+| Phase 07 P04 | approximately 13min continuation; 488min recorded wall span including quota interruption | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -119,6 +120,8 @@ Full decisions are recorded in PROJECT.md.
 - [Phase 07]: Per-attempt media and atomic evidence preserve earlier reports; owned counters retire to zero and shared templates survive.
 - [Phase 07]: Original keyed donor curves use distinct saved rest rolls and fresh append/world-rest-delta retarget; accepted art and inherited motion remain exact.
 - [Phase 07]: New curve authorship remains separate from unresolved inherited rig, mannequin/Mixamo motion and weapon redistribution terms; human moving acceptance remains pending.
+- [Phase 07]: Exclusive offline throw and melee share simulation markers; direct respawn/same-weapon/editor resets retire before field replacement.
+- [Phase 07]: Action lifecycle changes preserve online M4 authority and existing timing; Phase 5 owns future sprint/reload gameplay rules.
 
 ### Pending Todos
 
@@ -144,8 +147,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-10-05T20:38:29.134Z
-Stopped at: Completed 07-02-PLAN.md
+Last session: 2026-10-06T04:51:26.295Z
+Stopped at: Completed 07-04-PLAN.md
 Resume file: None
 
 User passed both Phase 6 visual checks with "pass all tests and proceed".
@@ -154,5 +157,6 @@ Review game: http://127.0.0.1:5173/VibeOnDuty/ (owned process details in ignored
 .planning/research/.cache/06-review-game.json). Historical Phase 1 HTTPS review
 server remains inactive; prior trust checks remain recorded in 01-UAT.md.
 Temporary closeout Git configuration is restored after committing these records.
-The Phase 6 milestone claim is released. Next action: $gsd-discuss-phase 7;
-then Phase 5, followed by Phases 2–4. No postponed phase is marked complete.
+The Phase 6 milestone claim is released. Continue Phase 7 from completed plans
+07-01, 07-02 and 07-04, then Phase 5, followed by Phases 2–4. No postponed phase
+or pending human motion acceptance is marked complete.
