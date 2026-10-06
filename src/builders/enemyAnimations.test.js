@@ -16,6 +16,14 @@ function actor() {
 }
 
 describe('animation ownership across transitions', () => {
+  it('plants stationary feet even if an adapter reports a lateral intention', () => {
+    const e = actor();
+    enterLocoMode(e);
+    setLocoWeights(e.actions, 0, 1);
+    e.mixer.update(0.1);
+    expect(e.actions.idle.getEffectiveWeight()).toBe(1);
+    expect(e.actions.strafe_r.getEffectiveWeight()).toBe(0);
+  });
   it('restores idle after an interrupted shooting fade, including after mixer updates', () => {
     const e = actor();
     crossfade(e, 'attack');
