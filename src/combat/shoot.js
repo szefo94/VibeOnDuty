@@ -6,7 +6,7 @@ import { wpn, flash, flashMat, muzzleLight } from '../builders/weapon.js';
 import { spawnImpact } from '../fx/impacts.js';
 import { groundElevation } from '../map.js';
 import { segPointDist2 } from '../math.js';
-import { player, startReload } from '../entities/player.js';
+import { player, startReload, playerActions, canUseOfflineActions } from '../entities/player.js';
 import { enemies, killEnemy } from '../entities/enemies.js';
 import { rangeTargets, registerHit } from '../entities/targetDummy.js';
 import { notifyShot, isRangeActive } from '../modes/trainingRange.js';
@@ -242,6 +242,7 @@ export function tickBullets(dt) {
 // ── Melee punch ────────────────────────────────────────────────────────
 const _punchFwd = new THREE.Vector3();
 export function tryPunchDamage() {
+  if (!canUseOfflineActions()) return;
   _punchFwd.set(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
   for (const e of enemies) {
     if (e.dead) continue;
@@ -273,7 +274,7 @@ function _removeBullet(i) {
 
 // ── Try shoot ──────────────────────────────────────────────────────────
 export function tryShoot() {
-  if (player.dead || player.reloading) return;
+  if (!canUseOfflineActions() || !playerActions.canReload || player.reloading) return;
   if (player.ammo <= 0) {
     startReload();
     return;

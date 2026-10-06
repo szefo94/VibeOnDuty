@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { createServer } from 'vite';
 import { createServer as portProbe } from 'node:net';
 import { once } from 'node:events';
+import { fileURLToPath } from 'node:url';
 
 let server, url;
 test.beforeAll(async () => {
@@ -10,7 +11,7 @@ test.beforeAll(async () => {
   await once(probe, 'listening');
   const port = probe.address().port;
   await new Promise(resolve => probe.close(resolve));
-  server = await createServer({ root: 'C:/Programowanie/VibeOnDuty', base: '/',
+  server = await createServer({ root: fileURLToPath(new URL('../', import.meta.url)), base: '/',
     server: { host: '127.0.0.1', port, strictPort: true } });
   await server.listen();
   url = `http://127.0.0.1:${server.httpServer.address().port}/`;
@@ -105,9 +106,10 @@ for (const remaining of [1, 0, -1]) {
 test('melee: real death before wall-clock marker cannot damage or persist into respawn', async ({ page }) => {
   await page.evaluate(async () => {
     const { p, input, src } = window.actionProbe;
-    const { enemies, triggerDeath } = await import(src + 'entities/enemies.js');
+    const { enemies, triggerDeath, spawnEnemyIntoSlot } = await import(src + 'entities/enemies.js');
     const { camera } = await import(src + 'scene.js');
     const target = enemies[0];
+    spawnEnemyIntoSlot(target);
     target.dead = false; target.sndTeam = 'enemy'; target.x = camera.position.x;
     target.z = camera.position.z - 1; window.retiredHits = 0;
     target.takeDamage = () => { ++window.retiredHits; };

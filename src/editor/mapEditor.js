@@ -7,7 +7,7 @@ import { setGameRunning } from '../input.js';
 import { deactivateAllEnemies } from '../entities/enemies.js';
 import { rebuildAllEnemies } from '../entities/enemySpawning.js';
 import { setDifficulty } from '../difficulty.js';
-import { player } from '../entities/player.js';
+import { player, cancelPlayerActions } from '../entities/player.js';
 
 let _gW = 24, _gH = 24;
 const FLOOR1 = 3.0, FLOOR2 = 6.0;
@@ -765,6 +765,7 @@ function _decode(b64) {
 // ── 3D Preview ────────────────────────────────────────────────────────────────
 function _preview() {
   if (_inPreview) return;
+  cancelPlayerActions('editor-preview');
   _inPreview = true;
   document.getElementById('editor-overlay').style.display = 'none';
   const hint = document.getElementById('ed-preview-hint');
@@ -784,6 +785,7 @@ function _preview() {
 
 export function exitEditorPreview() {
   if (!_inPreview) return;
+  cancelPlayerActions('editor-exit');
   _inPreview = false;
   _inPlaytest = false;
   setGameRunning(false);
@@ -879,6 +881,7 @@ function _updatePresetButtons() {
 // ── Playtest ──────────────────────────────────────────────────────────────────
 function _playtest() {
   if (_inPreview) return;
+  cancelPlayerActions('editor-playtest');
   _inPreview = true;
   _inPlaytest = true;
   document.getElementById('editor-overlay').style.display = 'none';
@@ -943,6 +946,7 @@ export function mapDefFromB64(b64) {
 
 // ── Public API ────────────────────────────────────────────────────────────────
 export function openEditor() {
+  cancelPlayerActions('editor');
   document.getElementById('overlay').style.display = 'none';
   document.getElementById('editor-overlay').style.display = 'flex';
   const nf = document.getElementById('ed-map-name');

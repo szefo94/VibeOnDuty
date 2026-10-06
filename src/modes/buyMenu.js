@@ -1,5 +1,5 @@
 import { WEAPONS } from '../config.js';
-import { player } from '../entities/player.js';
+import { player, cancelPlayerActions } from '../entities/player.js';
 import { show1pWeapon, show3pWeapon } from '../builders/weapon.js';
 import { updateHUD } from '../hud/overlay.js';
 import { getCash, canAfford, spendCash } from './economy.js';
@@ -102,6 +102,7 @@ function _buy(key) {
   if (!_active) return;
   const w = WEAPONS[key];
   if (!canAfford(w.price)) return;
+  cancelPlayerActions('weapon');
   spendCash(w.price);
   player.weaponAmmo[player.weapon]    = WEAPONS[player.weapon].maxAmmo;
   player.weaponReserve[player.weapon] = WEAPONS[player.weapon].reserve;
@@ -142,6 +143,7 @@ function _closePanel() {
 // ── Public API ────────────────────────────────────────────────────────────
 
 export function startBuyPhase(duration = 10) {
+  cancelPlayerActions('round');
   _buildDOM();
   _active    = true;
   _timer     = duration;

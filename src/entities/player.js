@@ -125,7 +125,10 @@ export function startReload() {
 }
 
 export function updatePlayer(dt) {
-  if (player.dead) return;
+  if (player.dead) {
+    if (!playerActions.canAim || player.reloading || player.aiming) cancelPlayerActions('death');
+    return;
+  }
   if (!playerActions.canAim) player.aiming = player.holdBreath = false;
   if ((mouseHeld || keys['TouchFire']) && locked) tryShoot();
   if (player.slowTimer > 0) player.slowTimer = Math.max(0, player.slowTimer - dt);

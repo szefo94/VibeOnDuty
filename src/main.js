@@ -6,7 +6,7 @@ import { getGraphicsQuality, setGraphicsQuality, applyGraphicsQuality } from './
 import { debugLines } from './level.js';
 import { locked, gameRunning, setGameRunning, setLocked } from './input.js';
 import { initTouch, isTouchDevice } from './touch.js';
-import { player, startReload } from './entities/player.js';
+import { player, startReload, beginPlayerAction, cancelPlayerActions, setOfflineActionGuard } from './entities/player.js';
 import { deactivateAllEnemies } from './entities/enemies.js';
 import { rebuildAllEnemies, spawnSndEnemies, spawnTdmEnemies } from './entities/enemySpawning.js';
 import { spawnNewDrone, spawnSndDrones, clearSndDrones, clearAllDrones } from './entities/drone.js';
@@ -95,7 +95,7 @@ window.__animDebug = setAnimDebug;
 
 const _euler = new THREE.Euler(0, 0, 0, 'YXZ');
 let debugVisible = true;
-const meleeTimers = new Set();
+setOfflineActionGuard(() => !isOnline());
 
 // ── S&D: drop to pistol on death mid-round ────────────────────────────────
 on('player:died', () => {
@@ -180,10 +180,7 @@ function switchWeapon(key) {
   if (!WEAPONS[key] || player.dead) return;
   showStatus(`[${['m4','p90','awp','pistol'].indexOf(key)+1}] ${WEAPONS[key].name}`);
   if (player.weapon === key) return;
-  if (player.reloading) {
-    player.reloading = false;
-    document.getElementById('reloadwrap').style.display = 'none';
-  }
+  cancelPlayerActions('weapon');
   player.weaponAmmo[player.weapon] = player.ammo;
   player.weaponReserve[player.weapon] = player.reserve;
   player.weapon = key;
@@ -229,18 +226,13 @@ document.addEventListener('keydown', (e) => {
   if (e.code === 'Digit2' && gameRunning && !player.dead) { if (!buyWeapon('p90'))    switchWeapon('p90'); }
   if (e.code === 'Digit3' && gameRunning && !player.dead) { if (!buyWeapon('awp'))    switchWeapon('awp'); }
   if (e.code === 'Digit4' && gameRunning && !player.dead) { if (!buyWeapon('pistol')) switchWeapon('pistol'); }
-  if (e.code === 'KeyF' && !player.dead && !player.punching) {
+  if (e.code === 'KeyF' && gameRunning && !e.repeat &&
+      beginPlayerAction('melee', 0.7, [{ at: 0.35, run: () => {
+        tryPunchDamage();
+        flashMeleeRing(camera.position.x, camera.position.z);
+      } }])) {
     player.punching = true;
     player.punchClip = player.punchClip === 'punch_cross' ? 'punch_jab' : 'punch_cross';
-    const hitTimer = setTimeout(() => {
-      meleeTimers.delete(hitTimer);
-      if (isOnline() || !gameRunning) return;
-      tryPunchDamage();
-      flashMeleeRing(camera.position.x, camera.position.z);
-    }, 350);
-    const endTimer = setTimeout(() => { meleeTimers.delete(endTimer); player.punching = false; }, 700);
-    meleeTimers.add(hitTimer);
-    meleeTimers.add(endTimer);
   }
 });
 document.addEventListener('mousemove', (e) => {
@@ -270,6 +262,7 @@ document.addEventListener('mouseup', (e) => {
 
 // ── INCURSION (wave) start ─────────────────────────────────────────
 document.getElementById('startbtn').addEventListener('click', () => {
+  cancelPlayerActions('mode');
   _activateMap();
   rebuildAllEnemies();                     // re-spawn with chosen difficulty HP
   if (_selectedMap.spawnPlayer) {
@@ -297,11 +290,10 @@ document.getElementById('c').addEventListener('click', () => {
 const _pauseEl = document.getElementById('pause-menu');
 
 async function returnToMainMenu() {
+  cancelPlayerActions('menu');
   await leaveOnline();
   stopTrainingRange();
   cancelGrenadeThrow();
-  for (const timer of meleeTimers) clearTimeout(timer);
-  meleeTimers.clear();
   stopKillcam();
   _pauseEl.style.display = 'none';
   setGameRunning(false);
@@ -377,14 +369,14 @@ document.getElementById('mp-join-btn').addEventListener('click', async () => {
   const button = document.getElementById('mp-join-btn');
   button.disabled = true;
   button.textContent = 'Connecting…';
-  for (const timer of meleeTimers) clearTimeout(timer);
-  meleeTimers.clear();
+  cancelPlayerActions('online');
   try { await joinOnline(); }
   finally { button.disabled = false; button.textContent = 'Online TDM'; }
   document.getElementById('mp-leave-btn').hidden = !isOnline();
 });
 
 function sndStart() {
+  cancelPlayerActions('mode');
   _activateMap();
   setSndMap(_selectedMap);
   tintEnemyMesh(playerMesh, 0x00bb44);
@@ -402,6 +394,7 @@ function sndStart() {
 }
 
 function tdmStart() {
+  cancelPlayerActions('mode');
   _activateMap();
   tintEnemyMesh(playerMesh, 0x00bb44);
   spawnTdmEnemies(_selectedMap);             // 5 friendly bots + 5 enemies
@@ -419,6 +412,7 @@ function tdmStart() {
 }
 
 function rangeStart() {
+  cancelPlayerActions('mode');
   setActiveMap(rangeMapDef);
   buildLevel(rangeMapDef);
   if (debugLines) debugLines.visible = debugVisible;
@@ -433,6 +427,7 @@ function rangeStart() {
 }
 
 function adaptiveStart() {
+  cancelPlayerActions('mode');
   _activateMap();
   rebuildAllEnemies();
   if (_selectedMap.spawnPlayer) {

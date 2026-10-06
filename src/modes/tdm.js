@@ -1,6 +1,6 @@
 import { setMode } from './modeManager.js';
 import { on } from '../events.js';
-import { player } from '../entities/player.js';
+import { player, cancelPlayerActions } from '../entities/player.js';
 import { spawnEnemyIntoSlot, restoreFriendIndicator } from '../entities/enemies.js';
 import { tintEnemyMesh } from '../builders/enemyGLTF.js';
 import { camera } from '../scene.js';
@@ -78,6 +78,7 @@ function _endMatch(reason) {
 
 // ── Player respawn ────────────────────────────────────────────────────────
 function _respawnPlayer(spawnX, spawnZ) {
+  cancelPlayerActions('respawn');
   player.dead     = false;
   player.hp           = MAX_HP;
   player.ammo         = WEAPONS[player.weapon].maxAmmo;
@@ -142,6 +143,7 @@ function tick(dt) {
 
 // ── Start TDM ─────────────────────────────────────────────────────────────
 export function startTdm(spawnX, spawnZ) {
+  cancelPlayerActions('mode');
   _playerScore  = 0;
   _enemyScore   = 0;
   _matchTimer   = MATCH_SECS;
