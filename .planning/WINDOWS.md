@@ -2,9 +2,9 @@
 schema_version: 1
 open_count: 5
 waived_count: 0
-fixed_count: 33
-total_count: 38
-last_updated: 2026-10-06T11:10:47.764Z
+fixed_count: 34
+total_count: 39
+last_updated: 2026-10-06T15:02:44.298Z
 ---
 
 # Broken Windows Ledger
@@ -53,6 +53,7 @@ last_updated: 2026-10-06T11:10:47.764Z
 | 36 | 07 | deviation | src/builders/enemyAnimations.js |  | Cancel copied masks on death and reset mask/bone/history ownership when the mixer is replaced | fixed |  | 2026-10-06T06:47:13.968Z | 2026-10-06T06:47:14.389Z |
 | 37 | 07 | deviation | src/entities/friendlyBots.js |  | Sample friendly presentation after current simulation mesh posture and heading | fixed |  | 2026-10-06T06:47:14.809Z | 2026-10-06T06:47:15.209Z |
 | 38 | 07 | deviation | tests/animation-regressions.spec.js |  | Inspect actual played copied tracks and phase rather than inactive source-action playback rates | fixed |  | 2026-10-06T06:47:15.630Z | 2026-10-06T06:47:16.034Z |
+| 39 | 07 | deviation | src/dev/animationReview.js |  | Attach the isolated review arm hierarchy and restore frozen live visual visibility after rendering | fixed |  | 2026-10-06T15:02:09.492Z | 2026-10-06T15:02:44.298Z |
 
 ````json
 [
@@ -548,6 +549,19 @@ last_updated: 2026-10-06T11:10:47.764Z
     "reason": "",
     "recorded_at": "2026-10-06T06:47:15.630Z",
     "resolved_at": "2026-10-06T06:47:16.034Z",
+    "milestone": null
+  },
+  {
+    "id": 39,
+    "kind": "deviation",
+    "phase": "07",
+    "file": "src/dev/animationReview.js",
+    "line": null,
+    "description": "Attach the isolated review arm hierarchy and restore frozen live visual visibility after rendering",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-10-06T15:02:09.492Z",
+    "resolved_at": "2026-10-06T15:02:44.298Z",
     "milestone": null
   }
 ]
