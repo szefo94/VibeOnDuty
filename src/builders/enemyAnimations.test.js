@@ -16,6 +16,22 @@ function actor() {
 }
 
 describe('animation ownership across transitions', () => {
+  it('death cancels private masked locomotion bindings before settling', () => {
+    const e=actor(), pelvis=new THREE.Bone(), spine=new THREE.Bone();
+    pelvis.name='pelvis';spine.name='spine_03';e.mesh.add(pelvis);pelvis.add(spine);
+    e._bonesInit=true;e._bones=[pelvis,spine];
+    for(const [key,x] of [['walk_forward',2],['m4_ready',0],['death',8]]) {
+      e.actions[key]=e.mixer.clipAction(new THREE.AnimationClip(key,1,[
+        new THREE.NumberKeyframeTrack('pelvis.position[x]',[0,1],[x,x]) ]));
+    }
+    const r={identity:'bot',position:{x:0,y:0,z:0},sampleTimeSeconds:0,onGround:true};
+    tickPresentation(e,r,.05);
+    tickPresentation(e,{...r,sampleTimeSeconds:.1,position:{x:0,y:0,z:-.3}},.05);
+    crossfade(e,'death',0);e.mixer.update(.8);
+    expect(pelvis.position.x).toBeCloseTo(8);
+    const hold=pelvis.position.x;e.mixer.update(2);
+    expect(pelvis.position.x).toBe(hold);
+  });
   it('copies mask buffers and preserves a lower locomotion contribution during reload', () => {
     const e = actor(), pelvis = new THREE.Bone(), spine = new THREE.Bone();
     pelvis.name = 'pelvis'; spine.name = 'spine_03'; e.mesh.add(pelvis); pelvis.add(spine);
