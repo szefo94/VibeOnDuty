@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import { attachEnemyWeapon } from './enemyWeapon.js';
+import { tickPresentation } from './enemyAnimations.js';
+import { disposeCharacter } from './characterResources.js';
 
 const handling = await import('./weaponHandling.js').catch(() => ({}));
 function weapon() {
@@ -61,5 +64,24 @@ describe('weapon-specific mechanisms', () => {
       expect(disposed).toBe(0); expect(sibling.children[0].geometry).toBe(geometry);
       expect(root.clone().children).toHaveLength(5);
     }
+  });
+});
+describe('mounted actor ownership', () => {
+  it('updates one mounted handler from the common phase and retires it once', () => {
+    const mesh = new THREE.Group(), hand = new THREE.Bone(); hand.name = 'hand_r'; mesh.add(hand);
+    attachEnemyWeapon(mesh, 'assault');
+    const root = mesh.getObjectByName('enemyWeaponMount').children[0];
+    const owner = handling.getWeaponHandling(root);
+    expect(owner).not.toBeNull();
+    const actor = { mesh, mixer: new THREE.AnimationMixer(mesh), actions: {} };
+    const raw = { identity: 'remote-fixture', weapon: 'm4', alive: true, onGround: true,
+      position: { x: 0, y: 0, z: 0 }, sampleTimeSeconds: 1,
+      action: { kind: 'reload', total: 1.8, remaining: .9 } };
+    tickPresentation(actor, raw, .05);
+    expect(owner.updates).toBe(1); expect(owner.sample.phase).toBe(.5);
+    tickPresentation(actor, { ...raw, sampleTimeSeconds: 1.05, action: { kind: 'ready' } }, .05);
+    expect(owner.updates).toBe(2); expect(owner.sample.reload).toBe(false);
+    disposeCharacter(mesh, actor.mixer); disposeCharacter(mesh, actor.mixer);
+    expect(owner.disposed).toBe(true); expect(owner.props).toHaveLength(0);
   });
 });
