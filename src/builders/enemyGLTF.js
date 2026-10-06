@@ -22,6 +22,7 @@ import { buildRifleMovementClips } from './rifleClips.js';
 import { preserveTemplateGeometry, disposeCharacter } from './characterResources.js';
 import { applyCharacterAppearance, tintCharacterAccents } from './characterAppearance.js';
 import motionManifest from '../../tools/art/motion-manifest.json';
+import { createFirstPersonRig, disposeFirstPersonRig } from './firstPersonRig.js';
 export { disposeCharacter as disposeEnemyMesh } from './characterResources.js';
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -32,6 +33,7 @@ export let usingGLTF = false;
 export let playerMesh = null;
 export let playerMixer = null;
 export let playerActions = null;
+export let playerFirstPersonRig = null;
 
 // ── Clip aliases — maps internal state names to GLB clip names ────────────
 // Retargeted rifle clips listed first so they win over old pistol clips.
@@ -445,6 +447,8 @@ export function buildEnemyMesh(wx, wz, role = 'assault') {
 export function buildPlayerMesh() {
   if (!usingGLTF || !gltfTemplate) return false;
 
+  if (playerFirstPersonRig) disposeFirstPersonRig(playerFirstPersonRig);
+
   const clone = skeletonClone(gltfTemplate.scene);
   clone.visible = false;
   clone.traverse((ch) => {
@@ -487,6 +491,8 @@ export function buildPlayerMesh() {
 
   _addAdditiveLayer(mixer, actions);
 
+  playerFirstPersonRig = createFirstPersonRig({ source: clone });
+  scene.add(playerFirstPersonRig.arms, playerFirstPersonRig.body);
   attachSkeletonDebug(clone);
   attachWeapons3pToHand(clone);
   applyCharacterAppearance(clone);

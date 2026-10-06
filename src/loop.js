@@ -6,7 +6,7 @@ import { touchLook } from './touch.js';
 import { gameRunning, keys } from './input.js';
 import { player, updatePlayer, playerActions as offlineActions } from './entities/player.js';
 import { playerBody } from './builders/playerBody.js';
-import { wpn, weapon3p as wpn3p, restorePlayerWeaponHandling, updatePlayerWeaponHandling } from './builders/weapon.js';
+import { wpn, weapon3p as wpn3p, restorePlayerWeaponHandling, updatePlayerWeaponHandling, playerWeaponHandling } from './builders/weapon.js';
 import { enemies, spawnEnemyIntoSlot } from './entities/enemies.js';
 import { updateEnemies } from './entities/enemyUpdate.js';
 import { tickWave } from './entities/waveSystem.js';
@@ -19,7 +19,8 @@ import { tickScreenShake } from './fx/screenShake.js';
 import { updateWeaponDeath } from './combat/shoot.js';
 import { tickGamepad } from './gamepad.js';
 import { drawMinimap } from './hud/radar.js';
-import { playerMesh, playerMixer, playerActions } from './builders/enemyGLTF.js';
+import { playerMesh, playerMixer, playerActions, playerFirstPersonRig } from './builders/enemyGLTF.js';
+import { updateFirstPersonRig, renderFirstPersonRig } from './builders/firstPersonRig.js';
 import { tickPresentation, finishPresentation, tickBoneFlipMonitor, inspectPresentationLayers } from './builders/enemyAnimations.js';
 import { tickKillcam, isKillcamActive } from './replay/killcam.js';
 import { adaptTick } from './ai/difficultyAdapter.js';
@@ -230,8 +231,17 @@ export function loop(ts) {
     tickScreenShake(dt);
   }
 
+  updateFirstPersonRig(playerFirstPersonRig, { pose: playerAnim.presentation,
+    camera, weapon: wpn, handlers: Array.from(playerWeaponHandling).filter(([id]) => id.startsWith('1p:')).map(([, owner]) => owner),
+    active: (gameRunning || isOnline()) && !isKillcamActive(), thirdPerson: bodyVisible,
+    spineQuaternion: playerAnim._presentationCorrection?.get(playerMesh?.getObjectByName('spine_03')),
+    rawCorrections: playerWeaponHandling.get(`3p:${player.weapon}`)?.corrections,
+    eyeHeight: PLAYER_H });
+
   try {
-    renderComicScene(renderer, scene, camera);
+    renderFirstPersonRig(playerFirstPersonRig, { weapon: wpn, worldWeapon: wpn3p,
+      firstPerson: !bodyVisible, active: (gameRunning || isOnline()) && !player.dead && !isKillcamActive() },
+    () => renderComicScene(renderer, scene, camera));
   } finally {
     // Movement reads the simulation eye even if a GPU/render callback throws.
     if (!isKillcamActive()) camera.position.set(eyeX, eyeY, eyeZ);

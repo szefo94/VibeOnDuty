@@ -157,11 +157,11 @@ export function updateWeaponHandling(owner, pose) {
   restoreWeaponHandlingBones(owner);
   // Capture after the asynchronous canonical hand attachment, never at module
   // construction while the weapon mount still has its procedural identity basis.
-  if (!owner.mountRest && owner.skeleton && owner.root.parent) {
+  if (!owner.fixedAnchor && !owner.mountRest && owner.skeleton && owner.root.parent) {
     const mount = owner.root.parent;
     owner.mountRest = { root: mount, position: mount.position.clone(), quaternion: mount.quaternion.clone() };
   }
-  if (owner.mountRest && owner.skeleton && pose.weapon === owner.weapon) {
+  if (!owner.fixedAnchor && owner.mountRest && owner.skeleton && pose.weapon === owner.weapon) {
     owner.mountRest.root.position.copy(owner.mountRest.position);
     owner.mountRest.root.quaternion.copy(owner.mountRest.quaternion);
   }
@@ -183,7 +183,7 @@ export function updateWeaponHandling(owner, pose) {
     owner.skeleton.updateMatrixWorld(true);
     const right = owner.skeleton.getObjectByName('hand_r');
     const shoulder = owner.skeleton.getObjectByName('upperarm_l');
-    if (right && shoulder) {
+    if (!owner.fixedAnchor && right && shoulder) {
       // Bounded carry fit moves the authored firing wrist towards the other
       // shoulder by at most 10cm. The mounted gun stays in that hand's grip.
       const wrist = right.getWorldPosition(V());
@@ -197,6 +197,9 @@ export function updateWeaponHandling(owner, pose) {
     const palmOffset = V(0, .085, .012).applyQuaternion(orientation);
     const target = owner.root.localToWorld(V(...sample.support)).sub(palmOffset);
     let rightError = null;
+    if (owner.fixedAnchor && right) {
+      rightError = solveArm(owner, 'r', owner.root.localToWorld(V(...sample.grip)).sub(palmOffset), orientation);
+    }
     if (sample.boltHand && owner.mountRest && right) {
       const mount = owner.mountRest.root;
       mount.updateWorldMatrix(true, true);

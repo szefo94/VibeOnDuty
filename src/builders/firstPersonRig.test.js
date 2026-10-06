@@ -9,7 +9,7 @@ describe('first-person view ownership', () => {
   it('creates an owned arm view and world body from a complete skeleton', () => {
     expect(typeof view.createFirstPersonRig).toBe('function');
     const root = new THREE.Group();
-    const bones = ['pelvis', 'upperarm_l', 'hand_l', 'head'].map(name => {
+    const bones = ['pelvis', 'lowerarm_l', 'hand_l', 'Head'].map(name => {
       const bone = new THREE.Bone(); bone.name = name; root.add(bone); return bone;
     });
     const geometry = new THREE.BufferGeometry();
@@ -26,8 +26,8 @@ describe('first-person view ownership', () => {
     const mesh = new THREE.SkinnedMesh(geometry, new THREE.MeshStandardMaterial());
     root.add(mesh); mesh.bind(new THREE.Skeleton(bones));
     const rig = view.createFirstPersonRig({ source: root });
-    expect(rig.arms.getObjectByName('head').isBone).toBe(true);
-    expect(rig.body.getObjectByName('head').isBone).toBe(true);
+    expect(rig.arms.getObjectByName('Head').isBone).toBe(true);
+    expect(rig.body.getObjectByName('Head').isBone).toBe(true);
     const selected = [];
     rig.arms.traverse(node => { if (node.isSkinnedMesh) selected.push(node); });
     expect(selected[0].geometry).not.toBe(geometry);
