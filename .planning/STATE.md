@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-05)
 Phase: 7 (Movement-Matched and Action-Safe Animation) — EXECUTING
 Plan: 8 of 10 — next incomplete 07-08; completed 07-01, 07-02, 07-03, 07-04, 07-05, 07-06 and 07-07
 Status: Executing — plan 07-07 complete; remaining dispatch and phase review owned by the orchestrator
-Next action: Continue authorized Phase7 from07-08; consume the owned first-person view and phase/contact observations for isolated moving review. WINDOWS34 technical integration is implemented; its ledger resolution and human motion gates remain owned by phase review. Phase5 follows Phase7.
+Next action: Continue authorized Phase7 from07-08; consume the owned first-person view and phase/contact observations for isolated moving review. WINDOWS34 technical integration is fixed; human motion gates remain owned by phase review. Phase5 follows Phase7.
 Roadmap review: User revised remaining order to6 → 7 → 5 → 2 → 3 → 4 → 8 → 9 → 10 → 11 → 12; Phase1 remains complete.
 Last activity: 2026-10-06 — Plan07-07 committed;28 focused units,12 visible-view browser cases,3 legacy regressions, lint, types and build pass. Shared requirements and human motion acceptance remain pending.
 
@@ -170,5 +170,5 @@ Temporary closeout Git configuration is restored after committing these records.
 The Phase 6 milestone claim is released. Continue Phase7 from07-08 after completed
 07-01/02/03/04/05/06/07;07-06/07 supply bounded third-person and actual visible
 first-person contact, body and shared samples. Ledger34 technical integration is
-implemented; phase review owns its resolution and moving human review. Then Phase5 and2–4. No postponed phase
+fixed; phase review owns moving human review. Then Phase5 and2–4. No postponed phase
 or pending human motion acceptance is marked complete.

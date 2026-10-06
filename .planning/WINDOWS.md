@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 6
+open_count: 5
 waived_count: 0
-fixed_count: 32
+fixed_count: 33
 total_count: 38
-last_updated: 2026-10-06T06:47:16.034Z
+last_updated: 2026-10-06T11:10:47.764Z
 ---
 
 # Broken Windows Ledger
@@ -48,7 +48,7 @@ last_updated: 2026-10-06T06:47:16.034Z
 | 31 | 01 | unrun-verify | .planning/phases/01-two-client-authoritative-tdm/01-07-CAPTURE.mjs |  | Additional deviceScaleFactor1 production capture timed out twice at first-corner navigation; required production captures and all 13 MP tests pass, but high-resolution online capture remains unverified. | open |  | 2026-10-04T05:30:04.172Z |  |
 | 32 | 07 | deviation | src/modes/tdm.js |  | Direct TDM respawn, buy reset/same-weapon purchase and editor transitions require action cancellation before field replacement; minimal hooks added and targeted browser negatives pass. | fixed |  | 2026-10-06T04:48:50.995Z | 2026-10-06T04:49:08.927Z |
 | 33 | 07 | deviation | tests/action-lifecycle.spec.js |  | Owned lifecycle browser fixture derives its repository root from the test module and respawns the retired enemy slot before the live death negative. | fixed |  | 2026-10-06T04:48:51.402Z | 2026-10-06T04:49:09.372Z |
-| 34 | 07 | stub | tools/art/build_motion.py | 83 | Inherited rest/open finger chains and support-grip fit require bounded per-weapon correction in07-06 and07-07 forANIM-02/D-03; see07-03 reload-0.png | open |  | 2026-10-06T06:00:37.550Z |  |
+| 34 | 07 | stub | tools/art/build_motion.py | 83 | Inherited rest/open finger chains and support-grip fit require bounded per-weapon correction in07-06 and07-07 forANIM-02/D-03; see07-03 reload-0.png | fixed |  | 2026-10-06T06:00:37.550Z | 2026-10-06T11:10:47.764Z |
 | 35 | 07 | deviation | src/network/onlineSession.js |  | Guard local presentation until the SDK player collection exists at join | fixed |  | 2026-10-06T06:47:13.132Z | 2026-10-06T06:47:13.538Z |
 | 36 | 07 | deviation | src/builders/enemyAnimations.js |  | Cancel copied masks on death and reset mask/bone/history ownership when the mixer is replaced | fixed |  | 2026-10-06T06:47:13.968Z | 2026-10-06T06:47:14.389Z |
 | 37 | 07 | deviation | src/entities/friendlyBots.js |  | Sample friendly presentation after current simulation mesh posture and heading | fixed |  | 2026-10-06T06:47:14.809Z | 2026-10-06T06:47:15.209Z |
@@ -492,10 +492,10 @@ last_updated: 2026-10-06T06:47:16.034Z
     "file": "tools/art/build_motion.py",
     "line": 83,
     "description": "Inherited rest/open finger chains and support-grip fit require bounded per-weapon correction in07-06 and07-07 forANIM-02/D-03; see07-03 reload-0.png",
-    "status": "open",
+    "status": "fixed",
     "reason": "",
     "recorded_at": "2026-10-06T06:00:37.550Z",
-    "resolved_at": null,
+    "resolved_at": "2026-10-06T11:10:47.764Z",
     "milestone": null
   },
   {

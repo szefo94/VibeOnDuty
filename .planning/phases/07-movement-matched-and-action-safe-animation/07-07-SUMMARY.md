@@ -137,7 +137,7 @@ The final weapon manipulation, bolt, body and extreme-pitch pixels were inspecte
 
 ## Remaining Review and Mandatory Carry
 
-The technical integration requested by WINDOWS34 is now implemented in both third-person plan06 and visible first-person plan07, with individual four-weapon contact, finger and moving-part cases. WINDOWS34 was still open at this plan's handoff so the orchestrator can resolve its technical ledger after its current review; this is not a newly introduced runtime stub. No new TODO, placeholder, skipped test or unrun plan verification remains. Detailed imported P90 handling is a truthful inspected fallback, not a claimed FBX contact pass.
+The technical integration requested by WINDOWS34 is now implemented in both third-person plan06 and visible first-person plan07, with individual four-weapon contact, finger and moving-part cases. The SDK marked WINDOWS34 fixed after the qualified final matrix; this resolves the missing runtime integration only, and does not record human anatomical or moving-grip acceptance. No new TODO, placeholder, skipped test or unrun plan verification remains. Detailed imported P90 handling is a truthful inspected fallback, not a claimed FBX contact pass.
 
 Shared ANIM requirements remain pending phase/code/UI/production/matched-budget review and explicit human motion/anatomy/comfort acceptance. The required frontmatter copies this plan's assigned requirement IDs; it does not confer human acceptance. Inherited redistribution terms and Phase5 actual omnimovement integration remain unchanged. No network endpoint, auth path, schema or new trust-boundary outcome permission was introduced.
 
