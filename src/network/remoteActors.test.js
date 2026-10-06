@@ -91,4 +91,13 @@ describe('remote rig ownership', () => {
     expect(f.animate.mock.calls[2][1].alive).toBe(false);
     f.owner.disposeRemoteActors();
   });
+  it('teleport and regressed server tick never manufacture travelling velocity', () => {
+    const f = fixture();
+    const sync = tick => f.owner.syncRemoteActors({ sessionId:'me',matchGeneration:1,currentTick:tick,players:[f.p] }, .05);
+    sync(1); f.p.x += 20; sync(2);
+    expect(f.animate.mock.calls.at(-1)[0].velocityX).toBe(0);
+    f.p.x += .1; sync(1);
+    expect(f.animate.mock.calls.at(-1)[0].velocityX).toBe(0);
+    f.owner.disposeRemoteActors();
+  });
 });
