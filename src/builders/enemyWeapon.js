@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import { WEAPON3P_ROT, WEAPON3P_GRIP, WEAPON3P_BARREL_SHIFT } from './weapon3pTransform.js';
-import { preserveTemplateGeometry } from './characterResources.js';
+import { preserveTemplateGeometry, registerCharacterDisposer } from './characterResources.js';
+import { createWeaponHandling, disposeWeaponHandling } from './weaponHandling.js';
 import { makeIllustratedMaterial } from '../artMaterials.js';
 
 // ── Tuning ────────────────────────────────────────────────────────────────────
@@ -93,10 +94,11 @@ const _eScope= new THREE.MeshStandardMaterial({ color: 0x0e1218, roughness: 0.18
 const _m4Metal = makeIllustratedMaterial('metal');
 const _m4Polymer = makeIllustratedMaterial('polymer');
 
-function _mesh(geo, mat, x, y, z, rx = 0) {
+function _mesh(geo, mat, x, y, z, rx = 0, name = '') {
   const m = new THREE.Mesh(geo, mat);
   m.position.set(x, y, z);
   if (rx) m.rotation.x = rx;
+  m.name = name;
   return m;
 }
 
@@ -105,27 +107,33 @@ export function buildEnemyWeapon3p(role = 'assault') {
   const P2 = Math.PI / 2;
   switch (role) {
     case 'smg':
-      g.add(_mesh(new THREE.BoxGeometry(0.050, 0.048, 0.28), _eGun,  0,  0,      0));
-      g.add(_mesh(new THREE.BoxGeometry(0.038, 0.020, 0.22), _eGun,  0,  0.028, -0.02)); // top feed
-      g.add(_mesh(new THREE.BoxGeometry(0.028, 0.058, 0.026),_eGun2, 0, -0.044,  0.04)); // grip
+      g.add(_mesh(new THREE.BoxGeometry(0.050, 0.048, 0.28), _eGun,  0,  0, 0, 0, 'p90_receiver'));
+      g.add(_mesh(new THREE.BoxGeometry(0.038, 0.020, 0.22), _eGun,  0, .028, -.02, 0, 'p90_magazine'));
+      g.add(_mesh(new THREE.BoxGeometry(0.028, 0.058, 0.026),_eGun2, 0, -.044, .04, 0, 'p90_grip'));
+      g.add(_mesh(new THREE.BoxGeometry(.012, .012, .024), _eGun, .03, .012, -.1, 0, 'p90_charging'));
       g.add(_mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.18, 6), _eGun, 0, 0.005, -0.22, P2));
       break;
     case 'sniper':
-      g.add(_mesh(new THREE.BoxGeometry(0.042, 0.048, 0.50), _eGun,  0,  0,      0));
+      g.add(_mesh(new THREE.BoxGeometry(0.042, 0.048, 0.50), _eGun, 0, 0, 0, 0, 'awp_receiver'));
+      g.add(_mesh(new THREE.BoxGeometry(.03, .06, .038), _eGun2, 0, -.065, -.035, 0, 'awp_magazine'));
+      g.add(_mesh(new THREE.BoxGeometry(.032, .014, .04), _eGun, .032, .016, .09, 0, 'awp_bolt'));
       g.add(_mesh(new THREE.BoxGeometry(0.035, 0.048, 0.20), _eGun2, 0,  0,      0.30)); // stock
       g.add(_mesh(new THREE.BoxGeometry(0.028, 0.028, 0.16), _eScope,0,  0.038, -0.01)); // scope
-      g.add(_mesh(new THREE.BoxGeometry(0.026, 0.058, 0.026),_eGun2, 0, -0.058,  0.06)); // grip
+      g.add(_mesh(new THREE.BoxGeometry(0.026, 0.058, 0.026),_eGun2, 0, -.058, .06, 0, 'awp_grip'));
       g.add(_mesh(new THREE.CylinderGeometry(0.007, 0.009, 0.55, 6), _eGun, 0, 0.005, -0.50, P2));
       break;
     case 'pistol':
-      g.add(_mesh(new THREE.BoxGeometry(0.032, 0.048, 0.16), _eGun,  0,  0,      0));
-      g.add(_mesh(new THREE.BoxGeometry(0.028, 0.062, 0.028),_eGun2, 0, -0.052,  0.04)); // grip
+      g.add(_mesh(new THREE.BoxGeometry(0.032, 0.048, 0.16), _eGun, 0, 0, 0, 0, 'pistol_slide'));
+      g.add(_mesh(new THREE.BoxGeometry(.032, .012, .14), _eGun2, 0, -.024, 0, 0, 'pistol_receiver'));
+      g.add(_mesh(new THREE.BoxGeometry(.026, .054, .03), _eGun, 0, -.086, .05, 0, 'pistol_magazine'));
+      g.add(_mesh(new THREE.BoxGeometry(0.028, 0.062, 0.028),_eGun2, 0, -.052, .04, 0, 'pistol_grip'));
       g.add(_mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.12, 6), _eGun, 0, 0.005, -0.15, P2));
       break;
     default: // assault
-      g.add(_mesh(new THREE.BoxGeometry(0.055, 0.055, 0.38), _eGun,  0,  0,      0));
-      g.add(_mesh(new THREE.BoxGeometry(0.025, 0.088, 0.024),_eGun2, 0, -0.066,  0.05)); // magazine
-      g.add(_mesh(new THREE.BoxGeometry(0.030, 0.058, 0.026),_eGun2, 0, -0.052, -0.04)); // grip
+      g.add(_mesh(new THREE.BoxGeometry(0.055, 0.055, 0.38), _eGun, 0, 0, 0, 0, 'm4_receiver'));
+      g.add(_mesh(new THREE.BoxGeometry(0.025, 0.088, 0.024),_eGun2, 0, -.066, -.04, 0, 'm4_magazine'));
+      g.add(_mesh(new THREE.BoxGeometry(0.030, 0.058, 0.026),_eGun2, 0, -.052, .06, 0, 'm4_grip'));
+      g.add(_mesh(new THREE.BoxGeometry(.012, .012, .028), _eGun, .024, .018, .1, 0, 'm4_charging'));
       g.add(_mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.30, 6), _eGun, 0, 0.010, -0.28, P2));
       break;
   }
@@ -149,6 +157,8 @@ export function attachEnemyWeapon(enemyRoot, role = 'assault', muzzleFlash = nul
   wpn.position.z = WEAPON3P_BARREL_SHIFT[ROLE_WEAPON[role] ?? 'm4'];
   mount.add(wpn);
   hand.add(mount);
+  const handling = createWeaponHandling({ weapon: ROLE_WEAPON[role] ?? 'm4', root: wpn, skeleton: enemyRoot });
+  registerCharacterDisposer(enemyRoot, () => disposeWeaponHandling(handling));
   if (muzzleFlash) {
     wpn.add(muzzleFlash);
     const tip = role === 'pistol' && _template ? -TARGET_LENGTH / 2 : MUZZLE_Z[role] ?? MUZZLE_Z.assault;

@@ -40,7 +40,7 @@ const _w1 = {};
 // M4A1
 _w1.m4 = new THREE.Group();
 mk(_w1.m4, box(0.055, 0.064, 0.38),  mGun,  0,      0,       0).name = 'm4_receiver';
-mk(_w1.m4, box(0.044, 0.050, 0.18),  mGun2, 0,      0.004,  -0.15);
+mk(_w1.m4, box(0.044, 0.050, 0.18),  mGun2, 0, .004, -.15).name = 'm4_support';
 mk(_w1.m4, box(0.044, 0.055, 0.11),  mGunW, 0,     -0.008,   0.22);
 mk(_w1.m4, box(0.034, 0.092, 0.037), mGun2, 0,     -0.074,   0.06).name = 'm4_grip';
 mk(_w1.m4, box(0.027, 0.058, 0.036), mGun2, 0,     -0.060,  -0.04).name = 'm4_magazine';
@@ -63,7 +63,7 @@ brl(_w1.p90, 0.007, 0.007, 0.22, 0, 0.006, -0.27);
 _w1.awp = new THREE.Group();
 mk(_w1.awp, box(0.048, 0.055, 0.52),  mGun,  0,      0,       0).name = 'awp_receiver';
 mk(_w1.awp, box(.03, .06, .038), mGun2, 0, -.065, -.035).name = 'awp_magazine';
-mk(_w1.awp, box(.032, .014, .04), mGun, .032, .016, .09).name = 'awp_charging';
+mk(_w1.awp, box(.032, .014, .04), mGun, .032, .016, .09).name = 'awp_bolt';
 mk(_w1.awp, box(0.038, 0.048, 0.22),  mGunL, 0,      0.004,   0.32); // stock
 mk(_w1.awp, box(0.034, 0.080, 0.036), mGun2, 0,     -0.070,   0.08).name = 'awp_grip';
 mk(_w1.awp, box(0.034, 0.034, 0.18),  mGunS, 0,      0.048,  -0.01); // scope tube
@@ -73,7 +73,7 @@ brl(_w1.awp, 0.008, 0.010, 0.62,  0, 0.006, -0.57);  // long barrel
 
 // Pistol (M9)
 _w1.pistol = new THREE.Group();
-mk(_w1.pistol, box(0.038, 0.056, 0.18),  mGun,  0,      0,       0).name = 'pistol_charging';
+mk(_w1.pistol, box(0.038, 0.056, 0.18),  mGun,  0,      0,       0).name = 'pistol_slide';
 mk(_w1.pistol, box(.038, .012, .16), mGun2, 0, -.024, 0).name = 'pistol_receiver';
 mk(_w1.pistol, box(0.034, 0.075, 0.040), mGun2, 0,     -0.062,   0.05).name = 'pistol_grip';
 mk(_w1.pistol, box(.026, .054, .03), mGun, 0, -.086, .05).name = 'pistol_magazine';
@@ -126,14 +126,14 @@ _w3.awp = new THREE.Group();
 b3(_w3.awp, box(0.050, 0.058, 0.52),  mGun,  0, 0,     0).name = 'awp_receiver';
 b3(_w3.awp, box(.034, .08, .036), mGunW, 0, -.07, .08).name = 'awp_grip';
 b3(_w3.awp, box(.03, .06, .038), mGunW, 0, -.065, -.035).name = 'awp_magazine';
-b3(_w3.awp, box(.032, .014, .04), mGun, .032, .016, .09).name = 'awp_charging';
+b3(_w3.awp, box(.032, .014, .04), mGun, .032, .016, .09).name = 'awp_bolt';
 b3(_w3.awp, box(0.040, 0.050, 0.22),  mGunL, 0, 0.004, 0.32);
 b3(_w3.awp, box(0.036, 0.036, 0.18),  mGunS, 0, 0.050, -0.01);
 r3(_w3.awp, 0.009, 0.011, 0.58,       0, 0.006, -0.56);
 
 // Pistol (3p)
 _w3.pistol = new THREE.Group();
-b3(_w3.pistol, box(0.040, 0.058, 0.18),  mGun,  0, 0,      0).name = 'pistol_charging';
+b3(_w3.pistol, box(0.040, 0.058, 0.18),  mGun,  0, 0,      0).name = 'pistol_slide';
 b3(_w3.pistol, box(.038, .012, .16), mGun2, 0, -.024, 0).name = 'pistol_receiver';
 b3(_w3.pistol, box(0.036, 0.070, 0.042), mGun2, 0, -0.064, 0.05).name = 'pistol_grip';
 b3(_w3.pistol, box(.026, .054, .03), mGun, 0, -.086, .05).name = 'pistol_magazine';
@@ -156,6 +156,7 @@ for (const [view, groups] of [['1p', _w1], ['3p', _w3]]) {
   for (const [key, root] of Object.entries(groups)) {
     root.name = `${key}_${view}`;
     const owner = createWeaponHandling({ weapon: key, root });
+    if (key === 'p90') root.userData.handlingStatus = 'Procedural fallback — detailed weapon handling unavailable';
     playerWeaponHandling.set(`${view}:${key}`, owner);
     for (const name of ['grip', 'support', 'magazine', 'charging']) {
       const socket = new THREE.Object3D(); socket.name = `${key}_${name}Socket`;

@@ -57,7 +57,9 @@ export function sampleWeaponHandling(weapon, pose = {}) {
 
 export function createWeaponHandling({ weapon, root, skeleton = null }) {
   const parts = Object.fromEntries(['receiver', 'grip', 'support', 'magazine', 'charging'].map(name =>
-    [name, root.getObjectByName(`${weapon}_${name}`) || root.getObjectByName(name)]));
+    [name, root.getObjectByName(`${weapon}_${name}`) ||
+      (name === 'charging' ? root.getObjectByName(weapon === 'awp' ? 'awp_bolt' : 'pistol_slide') : null) ||
+      root.getObjectByName(name)]));
   const owner = { weapon, root, skeleton, parts, props: [], disposed: false, sample: null,
     corrections: new Map(), updates: 0, contacts: null,
     rest: new Map(Object.values(parts).filter(Boolean).map(part =>

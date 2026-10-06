@@ -61,6 +61,8 @@ for (const weapon of ['m4', 'p90', 'awp', 'pistol']) test(`${weapon}: moving loa
         const start = performance.now(); w.updatePlayerWeaponHandling(pose, actor.mesh);
         costs.push(performance.now() - start);
         samples.push({ phase, leftError: owner.contacts.leftError, sample: owner.sample,
+          forward: new window.__THREE.Vector3(0, 0, -1).applyQuaternion(owner.root.getWorldQuaternion(new window.__THREE.Quaternion()))
+            .dot(new window.__THREE.Vector3(0, 0, 1).transformDirection(actor.mesh.matrixWorld)),
           fingerAngle: open.angleTo(bone.quaternion), magazine1p: w.wpn.getObjectByName(`${weapon}_magazine`).position.toArray(),
           magazine3p: w.weapon3p.getObjectByName(`${weapon}_magazine`).position.toArray(),
           layers: driver.inspectPresentationLayers(actor).map(a => ({ weight: a.weight, tracks: a.tracks })) });
@@ -78,6 +80,7 @@ for (const weapon of ['m4', 'p90', 'awp', 'pistol']) test(`${weapon}: moving loa
   expect(result.rootSame && result.ammoSame).toBe(true);
   expect(result.mountBasis).toEqual(result.finalMountBasis);
   expect(Math.abs(result.mountBasis[0])).toBeCloseTo(Math.SQRT1_2);
+  expect(result.samples.at(-1).forward).toBeGreaterThan(.8);
   expect(result.samples.every(s => s.leftError < .025 && s.fingerAngle > .4)).toBe(true);
   const direction = weapon === 'p90' ? 1 : -1;
   expect(direction * (result.samples[2].magazine1p[1] - result.samples.at(-1).magazine1p[1])).toBeGreaterThan(.07);
@@ -145,4 +148,88 @@ test('awp: actual bolt-hand cycle and M9 slide reset on interruption without out
     expect(rows.at(-1).part).toEqual(rows.at(-1).ready); expect(rows.at(-1).props).toBe(0);
     if (weapon === 'awp') { expect(rows[2].boltHand).toBe(true); expect(rows[2].rightError).toBeLessThan(.025); }
   }
+});
+test('actors: remote snapshot reload shares one owner under locomotion and preserves a retired sibling template', async ({ page }, info) => {
+  const result = await page.evaluate(async () => {
+    const src = new URL('src/', location.href).href;
+    const rig = await import(src + 'builders/enemyGLTF.js');
+    const remote = await import(src + 'network/remoteActors.js');
+    const handling = await import(src + 'builders/weaponHandling.js');
+    const driver = await import(src + 'builders/enemyAnimations.js');
+    const { scene, camera, renderer } = await import(src + 'scene.js');
+    (await import(src + 'input.js')).setGameRunning(false);
+    const created = [];
+    const owners = remote.createRemoteActors(scene, { create(x, z) {
+      const actor = rig.buildEnemyMesh(x, z); created.push(actor); return actor;
+    }, dispose: rig.disposeEnemyMesh, animate(actor, p, dt) {
+      remote.animateRemoteActor(actor, p, dt);
+      Object.assign(created.find(entry => entry.mesh === actor.mesh), actor);
+    }, tint: rig.tintEnemyMesh });
+    const p = { sessionId: 'a', lifeGeneration: 1, x: camera.position.x, y: 1.65, z: camera.position.z,
+      yaw: 0, pitch: 0, alive: true, onGround: true, crouching: false, sprinting: false, aiming: false,
+      health: 100, team: 'red', reloadRemaining: .9, weapon: 'awp', firing: true, throwing: true };
+    const q = { ...p, sessionId: 'b', x: p.x + 2, reloadRemaining: 0 };
+    const samples = [];
+    for (let i = 0; i < 6; i++) {
+      p.x += .12;
+      owners.syncRemoteActors({ sessionId: 'me', matchGeneration: 1, currentTick: 30 + i * 3,
+        players: [p, q] }, .05);
+      const actor = created[0], weapon = actor.mesh.getObjectByName('enemyWeaponMount').children[0];
+      const owner = handling.getWeaponHandling(weapon);
+      samples.push({ phase: owner.sample.phase, updates: owner.updates, leftError: owner.contacts.leftError,
+        speed: actor.presentation.speed,
+        magazine: owner.parts.magazine.position.toArray() });
+    }
+    const a = created[0], b = created[1];
+    const oa = handling.getWeaponHandling(a.mesh.getObjectByName('enemyWeaponMount').children[0]);
+    const ob = handling.getWeaponHandling(b.mesh.getObjectByName('enemyWeaponMount').children[0]);
+    let sharedDisposals = 0;
+    b.mesh.traverse(node => { if (node.isSkinnedMesh) node.geometry.addEventListener('dispose', () => sharedDisposals++); });
+    const layers = driver.inspectPresentationLayers(a);
+    owners.syncRemoteActors({ sessionId: 'me', matchGeneration: 1, currentTick: 51, players: [q] }, .05);
+    const survivor = { disposed: ob.disposed, phase: ob.sample.phase, firing: ob.sample.firing,
+      finite: b.mesh.getObjectByName('hand_l').quaternion.toArray().every(Number.isFinite),
+      mount: b.mesh.getObjectByName('enemyWeaponMount').quaternion.toArray() };
+    renderer.render(scene, camera);
+    const retired = oa.disposed; owners.disposeRemoteActors();
+    return { samples, layers, survivor, retired, sharedDisposals };
+  });
+  await writeFile(info.outputPath('actors.json'), JSON.stringify(result, null, 2));
+  expect(result.samples.map(s => s.updates)).toEqual([1, 2, 3, 4, 5, 6]);
+  expect(result.samples.every(s => s.phase === .5 && s.leftError < .025)).toBe(true);
+  expect(result.layers.some(l => l.weight > 0 && l.tracks.some(t => /thigh|calf|foot/.test(t)))).toBe(true);
+  expect(result.retired && result.survivor.finite).toBe(true);
+  expect(result.survivor.disposed || result.survivor.firing).toBe(false);
+  expect(Math.abs(result.survivor.mount[0])).toBeCloseTo(Math.SQRT1_2);
+  expect(result.sharedDisposals).toBe(0);
+});
+test('actors: offline muzzle observations keep grips moving and unsupported reload quiet', async ({ page }, info) => {
+  const result = await page.evaluate(async () => {
+    const src = new URL('src/', location.href).href;
+    const rig = await import(src + 'builders/enemyGLTF.js');
+    const { getWeaponHandling } = await import(src + 'builders/weaponHandling.js');
+    const { tickEnemyAnimation } = await import(src + 'builders/enemyAnimations.js');
+    (await import(src + 'input.js')).setGameRunning(false);
+    const actor = { ...rig.buildEnemyMesh(10, 10), x: 10, z: 10, facingY: 0, hp: 100,
+      dead: false, onGround: true, state: 'patrol', stunTimer: 0, muzzleFlashT: 0, weaponRole: 'assault', reloadRemaining: .9 };
+    actor.mesh.rotation.y = actor.facingOffset;
+    const owner = getWeaponHandling(actor.mesh.getObjectByName('enemyWeaponMount').children[0]);
+    const frames = [];
+    for (let i = 0; i < 8; i++) {
+      actor.x += .15; actor.mesh.position.x = actor.x;
+      if (i === 2) actor.muzzleFlashT = 55;
+      tickEnemyAnimation(actor, .05);
+      frames.push({ upper: actor.presentation.upper, reload: owner.sample.reload, phase: owner.sample.phase,
+        updates: owner.updates, leftError: owner.contacts.leftError, speed: actor.presentation.speed,
+        hand: actor.mesh.getObjectByName('hand_l').quaternion.toArray() });
+    }
+    rig.disposeEnemyMesh(actor.mesh, actor.mixer);
+    return { frames, disposed: owner.disposed, props: owner.props.length };
+  });
+  await writeFile(info.outputPath('bot.json'), JSON.stringify(result, null, 2));
+  expect(result.frames.every(f => !f.reload && f.leftError < .025)).toBe(true);
+  expect(result.frames[2].upper).toBe('fire');
+  expect(result.frames.slice(1).every(f => f.speed > 0)).toBe(true);
+  expect(result.frames.map(f => f.updates)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+  expect(result.disposed).toBe(true); expect(result.props).toBe(0);
 });

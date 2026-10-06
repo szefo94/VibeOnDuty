@@ -55,7 +55,10 @@ export async function tryLoadWeaponFBX(path = import.meta.env.BASE_URL + 'models
       skinned: !!node.isSkinnedMesh, groups: node.geometry.groups.length,
       vertices: node.geometry.attributes.position.count }); });
     fbx.userData.partInspection = parts;
-    if (generation !== loadGeneration) return false;
+    if (generation !== loadGeneration) {
+      fbx.traverse(node => { node.geometry?.dispose(); });
+      return false;
+    }
     inspectedWeaponFBX?.traverse(node => { node.geometry?.dispose(); });
     inspectedWeaponFBX = fbx;
     replaceFbxModel(fbx);
@@ -63,7 +66,7 @@ export async function tryLoadWeaponFBX(path = import.meta.env.BASE_URL + 'models
     // Move flash to FBX barrel tip
     // Inspection succeeded; articulation deliberately uses the complete fallback.
 
-    console.log('[Weapon] P90.fbx loaded — adjust SCALE/ROT_Y/OFFSET/MUZZLE in weaponFBX.js if needed');
+    console.log('[Weapon] P90.fbx inspected; complete articulated procedural fallback selected');
     return true;
   } catch (err) {
     console.warn('[Weapon] Failed to load P90.fbx:', err);

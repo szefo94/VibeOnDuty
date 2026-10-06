@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { createPresentationHistory, normalizePresentation, samplePresentation } from './animationPresentation.js';
+import { getWeaponHandling, restoreWeaponHandlingBones, updateWeaponHandling } from './weaponHandling.js';
+import { WEAPONS } from '../config.js';
 
 // ── Additive breathing clips ──────────────────────────────────────────────
 // Procedural rig: target the arm-swing meshes with a slow sine oscillation.
@@ -413,6 +415,7 @@ function correctPresentationBones(e, pose) {
 
 /** Read-only common rig driver. Order: restore -> mixer -> rest-aware correction -> inertia. */
 export function tickPresentation(e, raw, dt, updateMixer = true) {
+  restoreWeaponHandlingBones(actorHandling(e));
   if (e._presentationMixer !== e.mixer) {
     if (e._presentationMixer) { e._bonesInit = false; e._bones = []; }
     e._presentationMixer = e.mixer;
@@ -473,7 +476,7 @@ export function tickPresentation(e, raw, dt, updateMixer = true) {
   }
   e._presentationActive = selected;
   const transitionKey = `${key}/${pose.upper}/${pose.gait.map(g => g.key).join('+')}`;
-  if (e._presentationKey !== transitionKey && pose.alive) _snapBones(e, INERTIA_OMEGA);
+  if (e._presentationKey !== transitionKey && pose.alive && !normalized.reset) _snapBones(e, INERTIA_OMEGA);
   e._presentationKey = transitionKey;
   e.currentClip = pose.alive && pose.upper === 'reload' ? 'reload' : key;
   e._inLocoMode = key === 'loco';
@@ -496,6 +499,11 @@ export function finishPresentation(e, dt) {
   e.mixer?.update(dt);
   if (e.presentation) correctPresentationBones(e, e.presentation);
   _tickInertia(e, dt);
+  if (e.presentation) updateWeaponHandling(actorHandling(e), e.presentation);
+}
+function actorHandling(e) {
+  const root = e.mesh?.getObjectByName('enemyWeaponMount')?.children[0];
+  return root ? getWeaponHandling(root) : null;
 }
 /** Observation of the actual contributing actions, without exposing live bindings. */
 export function inspectPresentationLayers(e) {
@@ -598,14 +606,15 @@ export function tickEnemyAnimation(e, dt) {
   const damage = e.hp < e._botHealth || e.stunTimer > 0 && e._botStun <= 0;
   e._botHealth = e.hp; e._botMuzzle = e.muzzleFlashT; e._botStun = e.stunTimer;
   const weapon = {assault:'m4',smg:'p90',sniper:'awp',pistol:'pistol'}[e.weaponRole] ?? 'm4';
+  const fireTotal = weapon === 'awp' ? WEAPONS.awp.fireRate / 1000 : .2;
   // No bot reload state exists. Muzzle/stun/health observations are cosmetics only.
   return tickPresentation(e, { identity: 'bot', generation: e.mesh.uuid,
     sampleTimeSeconds: e._botTime, position: {x:e.x,y:e.mesh.position.y,z:e.z},
     bodyYaw: e.facingY, aimYaw: e.facingY, pitch: 0, alive: !e.dead,
     crouching: e.crouching, onGround: e.onGround, verticalVelocity: e.velY,
     weapon, aiming: e.state === 'attack' || e.state === 'spotted',
-    trustedDamage: damage, action: elapsed < .2
-      ? {kind:'fire',total:.2,elapsed} : {kind:'ready'},
+    trustedDamage: damage, action: elapsed < fireTotal
+      ? {kind:'fire',total:fireTotal,elapsed} : {kind:'ready'},
     reducedMotion: typeof window !== 'undefined' &&
       window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true }, dt);
 }
