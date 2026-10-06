@@ -14,6 +14,9 @@ export function createRemoteActors(scene, builders) {
     disposed = 0;
   /** @param {Actor} actor */
   function retire(actor) {
+    // Invalidate references before disposal can synchronously call another owner.
+    actor.presentation = actor.presentationInput = undefined;
+    actor.movementHistory = undefined;
     builders.dispose(actor.mesh, actor.mixer);
     disposed++;
   }
@@ -91,7 +94,13 @@ export function createRemoteActors(scene, builders) {
           skinned,
           armed: !!actor.mesh.getObjectByName('enemyWeaponMount'),
           clip: actor.currentClip,
+          root: { x: actor.mesh.position.x, y: actor.mesh.position.y, z: actor.mesh.position.z,
+            yaw: actor.mesh.rotation.y },
           pose: actor.presentation ? { speed: actor.presentation.speed, phase: actor.presentation.action.phase,
+            generation: actor.presentation.generation, sampleTimeSeconds: actor.presentation.sampleTimeSeconds,
+            gait: actor.presentation.gait, moving: actor.presentation.moving,
+            jump: actor.presentation.jump, crouching: actor.presentation.crouching,
+            aiming: actor.presentation.aiming, bodyYaw: actor.presentation.bodyYaw,
             upper: actor.presentation.upper, feetYaw: actor.presentation.feetYaw,
             pitch: actor.presentation.pitch, deathVariant: actor.presentation.deathVariant,
             deathDirectionSource: actor.presentation.deathDirectionSource, settled: actor.presentation.settled } : null,

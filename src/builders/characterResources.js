@@ -32,12 +32,16 @@ export function preserveTemplateGeometry(root) {
 export function disposeCharacter(root, mixer) {
   if (!root || disposed.has(root)) return;
   disposed.add(root);
-  for (const callback of disposers.get(root) ?? []) callback();
+  // Retire ownership before invoking foreign callbacks. A failed owner must
+  // neither strand its siblings nor make a second disposal replay callbacks.
+  const failures = [];
+  const retire = callback => { try { callback(); } catch (error) { failures.push(error); } };
+  for (const callback of disposers.get(root) ?? []) retire(callback);
   disposers.delete(root);
-  mixer?.stopAllAction();
-  mixer?.uncacheRoot(root);
-  detachSkeletonDebug(root);
-  root.removeFromParent();
+  retire(() => mixer?.stopAllAction());
+  retire(() => mixer?.uncacheRoot(root));
+  retire(() => detachSkeletonDebug(root));
+  retire(() => root.removeFromParent());
 
   const geometries = new Set(), materials = new Set(), skeletons = new Set();
   root.traverse(node => {
@@ -47,9 +51,16 @@ export function disposeCharacter(root, mixer) {
       if (mat?.userData?._tinted || mat?.userData?.characterOwned) materials.add(mat);
     }
   });
-  for (const geometry of geometries) geometry.dispose();
-  for (const material of materials) material.dispose();
-  for (const texture of ownedTextures.get(root) ?? []) texture.dispose();
+  for (const geometry of geometries) retire(() => geometry.dispose());
+  for (const material of materials) retire(() => material.dispose());
+  for (const texture of ownedTextures.get(root) ?? []) retire(() => texture.dispose());
   ownedTextures.delete(root);
-  for (const skeleton of skeletons) skeleton.dispose();
+  for (const skeleton of skeletons) retire(() => skeleton.dispose());
+  if (failures.length) throw new AggregateError(failures, 'Character retirement failed after cleanup');
+}
+
+/** Scalar ownership diagnostics; never expose resources or count shared maps as retired. */
+export function inspectCharacterResources(root) {
+  return { disposed: !!root && disposed.has(root), callbacks: disposers.get(root)?.size ?? 0,
+    textures: ownedTextures.get(root)?.size ?? 0 };
 }

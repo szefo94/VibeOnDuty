@@ -1,6 +1,9 @@
 import { test, expect } from '@playwright/test';
 import { startMpFixture } from './helpers/mpServer.js';
-import { MOUSE_SENS } from '../src/config.js';
+import { MOUSE_SENS, PLAYER_H, PLAYER_H_CROUCH } from '../src/config.js';
+import { encode } from '@colyseus/schema';
+import { Protocol } from '@colyseus/shared-types';
+import { Packr, RESERVE_START_SPACE } from 'msgpackr';
 
 // Continuous WebGL screenshots delay keyboard release on software-rendered runners.
 // Keep the action/network trace; capture explicit gameplay evidence below.
@@ -157,7 +160,7 @@ for (const path of ['score', 'time'])
         }
         await expect(b.locator('#mp-switch-team')).toBeDisabled();
         await expect(b.locator('#mp-respawn')).toContainText('Respawn in');
-        await expect.poll(async () => (await snapshot(a)).remoteActors[0]?.clip).toBe('death');
+        await expect.poll(async () => (await snapshot(a)).remoteActors[0]?.clip).toBe('death_front');
         await b.screenshot({path:test.info().outputPath('death-respawn-timer.png')});
         // Two balanced members cannot become0v2, including at death.
         await expect(b.locator('#mp-team-rejection')).toContainText('teams must stay balanced');
@@ -375,15 +378,108 @@ test('animation retirement: two real M4 clients reload, die and render a fresh l
     const seen = await a.evaluate(() => { clearInterval(window.__animationTimer); return window.__animationSeen(); });
     expect(seen.reload.actor.pose.upper).toBe('reload');
     expect(seen.reload.actor.pose.phase).toBeCloseTo(1-seen.reload.p.reloadRemaining/1.8,5);
-    expect(seen.death.actor.clip).toBe('death');
+    expect(seen.death.actor.clip).toBe('death_front');
     expect(seen.death.actor.pose.deathDirectionSource).toBe('body-heading-fallback');
     expect(seen.death.actor.pose.settled).toBe(true);
     expect(seen.fresh.p).toMatchObject({ alive:true, ammo:30,reserve:90,health:100,reloadRemaining:0 });
     expect(seen.fresh.actor.pose).toMatchObject({ upper:'ready',settled:false,phase:0 });
     expect(seen.fresh.actor.lifeGeneration).toBe(seen.fresh.p.lifeGeneration);
+    for (const state of Object.values(seen)) {
+      expect(state.actor.root.x).toBeCloseTo(state.p.x, 6);
+      expect(state.actor.root.z).toBeCloseTo(state.p.z, 6);
+      expect(state.actor.pose.sampleTimeSeconds).toBeCloseTo(state.tick/30,6);
+    }
     expectHumanArt(await humanArtState(a)); expectHumanArt(await humanArtState(b));
     await a.screenshot({ path:test.info().outputPath('animation-fresh-life.png') });
   } finally { try { await Promise.all(contexts.map(c=>c.close())); } finally { await fixture.stop(); } }
+});
+
+test('animation authority: directional, blocked, pitch, stance, sprint and landing follow two-client snapshots', async ({ browser }) => {
+  test.setTimeout(180000);
+  const fixture = await startMpFixture(), contexts = [];
+  try {
+    for(let i=0;i<2;i++) contexts.push(await browser.newContext({ viewport:{width:800,height:600},deviceScaleFactor:.25 }));
+    const [a,b] = await Promise.all(contexts.map(c=>c.newPage()));
+    for(const page of [a,b]) { await page.goto(fixture.url); await expect(page.locator('#mp-join-btn')).toBeEnabled({timeout:60000}); await page.locator('#mp-join-btn').click(); }
+    await expect.poll(async()=>(await snapshot(b)).players.length).toBe(2);
+    const id=(await snapshot(a)).sessionId;
+    await b.evaluate(id=>{
+      window.__poseSamples=[];
+      window.__poseTimer=setInterval(()=>{
+        const s=window.__mpDebug(),p=s.players.find(p=>p.sessionId===id),actor=s.remoteActors.find(p=>p.sessionId===id);
+        if(p&&actor?.pose&&actor.pose.sampleTimeSeconds===s.currentTick/30) window.__poseSamples.push({p,actor,tick:s.currentTick});
+      },10);
+    },id);
+    await aimAt(a,null);
+    for(const key of ['KeyW','KeyD','KeyS','KeyA']) await pulseRouteKey(a,key,350);
+    await a.keyboard.down('ShiftLeft'); await pulseRouteKey(a,'KeyW',500); await a.keyboard.up('ShiftLeft');
+    await a.keyboard.down('ControlLeft'); await pulseRouteKey(a,'KeyD',350); await a.keyboard.up('ControlLeft');
+    await a.keyboard.press('Space');
+    await expect.poll(()=>b.evaluate(()=>window.__poseSamples.some(s=>!s.p.onGround))).toBe(true);
+    await expect.poll(()=>b.evaluate(()=>window.__poseSamples.some(s=>s.actor.pose.jump==='land'))).toBe(true);
+    await a.mouse.move(400,1200); await a.mouse.move(400,-1200);
+    await expect.poll(()=>b.evaluate(()=>window.__poseSamples.some(s=>Math.abs(s.p.pitch)>1.1))).toBe(true);
+    await aimAt(a,null);
+    await a.keyboard.down('KeyS');
+    await expect.poll(async()=>{
+      const s=await snapshot(b),p=s.players.find(p=>p.sessionId===id),actor=s.remoteActors.find(p=>p.sessionId===id);
+      return !p.moving&&!actor.pose.moving&&actor.pose.speed<.05;
+    },{timeout:12000}).toBe(true);
+    await a.keyboard.up('KeyS');
+    const samples=await b.evaluate(()=>{clearInterval(window.__poseTimer);return window.__poseSamples;});
+    expect(samples.some(s=>s.actor.pose.crouching&&s.p.crouching)).toBe(true);
+    expect(samples.some(s=>s.p.sprinting&&s.actor.pose.upper==='sprint')).toBe(true);
+    for(const direction of ['forward','back','left','right']) expect(samples.some(s=>s.actor.pose.gait.some(g=>g.key===`walk_${direction}`&&g.weight>0))).toBe(true);
+    for(const s of samples) {
+      expect(s.actor.root.x).toBeCloseTo(s.p.x,6); expect(s.actor.root.z).toBeCloseTo(s.p.z,6);
+      expect(s.actor.root.y).toBeCloseTo(s.p.y-(s.p.crouching?PLAYER_H_CROUCH:PLAYER_H),6);
+      expect(s.actor.pose.bodyYaw).toBe(s.p.yaw);
+      expect(s.actor.pose.pitch).toBeCloseTo(Math.max(-1.1,Math.min(1.1,s.p.pitch)),6);
+      expect(s.actor.pose.sampleTimeSeconds).toBeCloseTo(s.tick/30,6);
+      expect(s.p.ammo).toBe(30); expect(s.p.health).toBe(100);
+    }
+  } finally {try{await Promise.all(contexts.map(c=>c.close()));}finally{await fixture.stop();}}
+});
+
+test('animation authority: forged, unsupported, repeated and stale-life cues grant no pose or inventory', async ({ browser }) => {
+  test.setTimeout(120000);
+  const fixture = await startMpFixture(), contexts=[];
+  try {
+    for(let i=0;i<2;i++)contexts.push(await browser.newContext({viewport:{width:800,height:600},deviceScaleFactor:.25}));
+    const [a,b]=await Promise.all(contexts.map(c=>c.newPage()));
+    // Test-only transport attack. No room/state reference or mutation endpoint is added to production.
+    await a.addInitScript(() => {
+      const send=WebSocket.prototype.send;let socket;
+      WebSocket.prototype.send=function(data){socket=this;return send.call(this,data);};
+      window.__sendWireForTest=bytes=>send.call(socket,new Uint8Array(bytes));
+    });
+    for(const page of [a,b]){await page.goto(fixture.url);await expect(page.locator('#mp-join-btn')).toBeEnabled({timeout:60000});await page.locator('#mp-join-btn').click();}
+    await expect.poll(async()=>(await snapshot(b)).players.length).toBe(2);
+    await a.evaluate(()=>document.exitPointerLock());
+    const s=await snapshot(a),p=s.players.find(p=>p.sessionId===s.sessionId);
+    const base={protocolVersion:1,seq:s.inputSeq+1,ackTick:s.currentTick,matchGeneration:s.matchGeneration,
+      lifeGeneration:p.lifeGeneration,moveX:0,moveZ:0,yaw:p.yaw,pitch:p.pitch,
+      fire:false,reload:false,sprint:false,jump:false,crouch:false,aiming:false,neutral:true};
+    const packr=new Packr({useRecords:false});
+    const attack=async(type,payload,reason)=>{
+      if(type==='input')payload={...payload,ackTick:(await snapshot(a)).currentTick};
+      const header=new Uint8Array(128),it={offset:1};header[0]=Protocol.ROOM_DATA;encode.string(header,type,it);
+      const bytes=packr.pack(payload,RESERVE_START_SPACE|it.offset);bytes.set(header.subarray(0,it.offset));
+      await a.evaluate(bytes=>window.__sendWireForTest(bytes),Array.from(bytes));
+      await expect.poll(async()=>(await snapshot(a)).lastInputRejection).toBe(reason);
+      const after=await snapshot(b),actor=after.remoteActors.find(actor=>actor.sessionId===s.sessionId);
+      expect(after.players.find(player=>player.sessionId===s.sessionId)).toMatchObject({ammo:30,reserve:90,health:100,alive:true,reloadRemaining:0});
+      expect(actor.pose.upper).toBe('ready');expect(actor.pose.phase).toBe(0);expect(actor.pose.settled).toBe(false);
+      expect(after.scoreBlue).toBe(0);expect(after.scoreRed).toBe(0);
+    };
+    await attack('input',{...base,action:'throw',weapon:'awp',direction:'back'},'invalid_shape');
+    await attack('animation',{kind:'death',phase:1,impact:{x:1,z:0}},'unknown_message');
+    await attack('input',{...base,lifeGeneration:0},'wrong_generation');
+    await attack('input',{...base,seq:0},'duplicate_seq');
+    await attack('input',{...base,action:'reload'},'invalid_shape');
+    expect((await snapshot(a)).inputHandlerCount).toBe(12);
+    expect(await a.evaluate(()=>Object.isFrozen(window.__mpDebug())&& !('room' in window.__mpDebug()))).toBe(true);
+  }finally{try{await Promise.all(contexts.map(c=>c.close()));}finally{await fixture.stop();}}
 });
 
 async function focusControls(page) {
@@ -711,6 +807,7 @@ async function humanArtState(page) {
     const roots = [];
     for (const root of scene.children) {
       if (!root.getObjectByName('HumanBody')) continue;
+      if (root.name.startsWith('firstPerson_')) continue;
       const domains = [], accents = [], shared = [];
       root.traverse((n) => {
         for (const m of Array.isArray(n.material) ? n.material : [n.material]) {

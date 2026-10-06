@@ -4,7 +4,8 @@ import * as THREE from 'three';
 import { Client } from '@colyseus/sdk';
 import { MOUSE_SENS } from '../config.js';
 import { camera, scene, renderer } from '../scene.js';
-import { player } from '../entities/player.js';
+import { player, cancelPlayerActions, playerActions } from '../entities/player.js';
+import { resetFirstPersonRigGeneration } from '../builders/firstPersonRig.js';
 import { keys, locked, setGameRunning, gameRunning } from '../input.js';
 import { bunkerMapDef } from '../maps/bunker.js';
 import { setActiveMap } from '../map.js';
@@ -16,6 +17,7 @@ import {
   disposeEnemyMesh,
   tintEnemyMesh,
   usingGLTF,
+  playerFirstPersonRig,
 } from '../builders/enemyGLTF.js';
 import { createRemoteActors, animateRemoteActor, createSnapshotPresentation } from './remoteActors.js';
 import { createOnlineUi, teamSwitchReason } from './onlineUi.js';
@@ -239,6 +241,8 @@ function connectionError(message) {
 
 export async function joinOnline() {
   if (isOnline()) return;
+  cancelPlayerActions('online-entry');
+  resetFirstPersonRigGeneration(playerFirstPersonRig);
   setOnlineKills(0);
   joining = true;
   const epoch = ++sessionEpoch;
@@ -356,6 +360,8 @@ function disposeActors() {
 }
 export async function leaveOnline() {
   sessionEpoch++;
+  cancelPlayerActions('online-retirement');
+  resetFirstPersonRigGeneration(playerFirstPersonRig);
   const previous = room;
   room = null;
   joining = false;
@@ -554,6 +560,7 @@ export function getOnlineSnapshot() {
     resultsEndsAtMs: s?.resultsEndsAtMs ?? 0,
     resultsRemaining: s?.resultsRemaining ?? 0,
     presentation: {
+      actionGeneration: playerActions.generation,
       kills: player.kills,
       weapon: view.weapon,
       punching: view.punching,
@@ -636,6 +643,8 @@ function syncInputGeneration() {
   if (!me || !room) return;
   const generation = `${sessionEpoch}/${room.state.matchGeneration}/${me.lifeGeneration}`;
   if (generation === inputGeneration) return;
+  cancelPlayerActions('online-generation');
+  resetFirstPersonRigGeneration(playerFirstPersonRig);
   inputGeneration = generation;
   seq = 0;
   lastConfirmedHit = null;

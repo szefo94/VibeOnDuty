@@ -197,7 +197,13 @@ function buildViewWeapon(rig, source, camera) {
   const root = cloneHierarchy(source);
   root.name = 'firstPerson_weapon';
   root.traverse(node => {
-    if (node.isMesh) { node.geometry = node.geometry.clone(); node.castShadow = false; node.frustumCulled = false; }
+    if (node.isMesh) {
+      node.geometry = node.geometry.clone(); node.castShadow = false; node.frustumCulled = false;
+      // Actor-owned materials cannot be borrowed by another disposal owner.
+      const own = material => material.userData.characterOwned || material.userData._tinted
+        ? material.clone() : material;
+      node.material = Array.isArray(node.material) ? node.material.map(own) : own(node.material);
+    }
   });
   camera.add(root); rig.weapon = root;
   const sourceFlash = source.children.find(n => n.isMesh && n.material?.transparent);
@@ -292,6 +298,17 @@ export function updateFirstPersonRig(rig, { pose, camera, weapon = null,
     owner.root.visible = pose?.weapon === owner.weapon;
     owner.skeleton = pose?.weapon === owner.weapon ? rig.arms : null;
     updateWeaponHandling(owner, active && pose ? pose : { weapon: owner.weapon, alive: false });
+  }
+}
+
+/** Retire presentation before a server life/session replacement; keep the view allocation. */
+export function resetFirstPersonRigGeneration(rig) {
+  if (!rig || rig.disposed) return;
+  rig.identity = null; rig.motion = null; rig.motionSample = null; rig.pose = null;
+  for (const owner of rig.handlers) {
+    restoreWeaponHandlingBones(owner);
+    updateWeaponHandling(owner, { weapon: owner.weapon, alive: false });
+    owner.sample = owner.contacts = null;
   }
 }
 
