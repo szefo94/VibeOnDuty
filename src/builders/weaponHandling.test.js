@@ -29,3 +29,21 @@ describe('M4 phase-driven presentation', () => {
     expect(root.children).toHaveLength(5);
   });
 });
+describe('weapon-specific mechanisms', () => {
+  it('lifts the P90 top feed while bottom-fed magazines drop', () => {
+    const pose = key => ({ weapon: key, alive: true, upper: 'reload', action: { phase: .35 } });
+    expect(handling.sampleWeaponHandling('p90', pose('p90'))).not.toBeNull();
+    expect(handling.sampleWeaponHandling('p90', pose('p90'))?.magazine[1]).toBeGreaterThan(.1);
+    expect(handling.sampleWeaponHandling('awp', pose('awp'))?.magazine[1]).toBeLessThan(-.1);
+    expect(handling.sampleWeaponHandling('pistol', pose('pistol'))?.magazine[1]).toBeLessThan(-.1);
+  });
+  it('samples AWP bolt and M9 slide only in supported firing windows', () => {
+    for (const key of ['awp', 'pistol']) {
+      const fire = handling.sampleWeaponHandling(key, { weapon: key, alive: true,
+        upper: 'fire', action: { kind: 'fire', phase: .42, total: key === 'awp' ? 1.1 : .2 } });
+      const ready = handling.sampleWeaponHandling(key, { weapon: key, alive: true, upper: 'ready' });
+      expect(fire).not.toBeNull();
+      expect(fire?.charging[2]).toBeGreaterThan(ready?.charging[2]);
+    }
+  });
+});
