@@ -10,7 +10,7 @@ const definitions = {
   m4: M4,
   p90: { grip: [0, -.052, .06], support: [0, -.028, -.09], magazine: [0, .033, -.04],
     charging: [.03, .012, -.1], travel: .14 },
-  awp: { grip: [0, -.07, .08], support: [0, -.03, -.19], magazine: [0, -.065, -.035],
+  awp: { grip: [0, -.07, .08], support: [0, -.03, -.13], magazine: [0, -.065, -.035],
     charging: [.032, .016, .09], travel: -.14 },
   pistol: { grip: [0, -.062, .05], support: [-.024, -.052, .048], magazine: [0, -.086, .05],
     charging: [0, .016, -.025], travel: -.1 },
@@ -63,14 +63,16 @@ export function createWeaponHandling({ weapon, root, skeleton = null }) {
     rest: new Map(Object.values(parts).filter(Boolean).map(part =>
       [part, { position: part.position.clone(), quaternion: part.quaternion.clone() }])) };
   owners.set(root, owner);
-  if (root.parent) owner.mountRest = { root: root.parent, position: root.parent.position.clone(),
-    quaternion: root.parent.quaternion.clone() };
   return owner;
 }
 
 export function restoreWeaponHandlingBones(owner) {
   if (!owner) return;
   for (const [bone, q] of owner.corrections) bone.quaternion.copy(q);
+  if (owner.corrections.size && owner.mountRest) {
+    owner.mountRest.root.position.copy(owner.mountRest.position);
+    owner.mountRest.root.quaternion.copy(owner.mountRest.quaternion);
+  }
   owner.corrections.clear();
 }
 function save(owner, bone) {
@@ -125,9 +127,9 @@ function closeFingers(owner, side) {
       // Thumb opposition follows its actual proximal segment, whose rest roll
       // differs from the four fingers. Aim across the palm, not along finger X.
       const center = hand.localToWorld(V(side === 'l' ? -.012 : .012, .095, .03));
-      for (const segment of [1, 2]) {
+      for (const segment of [1, 2, 3]) {
         const bone = owner.skeleton.getObjectByName(`thumb_0${segment}_${side}`);
-        const next = owner.skeleton.getObjectByName(`thumb_0${segment + 1}_${side}`);
+        const next = owner.skeleton.getObjectByName(segment === 3 ? `thumb_04_leaf_${side}` : `thumb_0${segment + 1}_${side}`);
         if (!bone || !next) continue;
         const origin = bone.getWorldPosition(V());
         const from = next.getWorldPosition(V()).sub(origin).normalize();
@@ -151,6 +153,12 @@ function closeFingers(owner, side) {
 export function updateWeaponHandling(owner, pose) {
   if (!owner || owner.disposed) return null;
   restoreWeaponHandlingBones(owner);
+  // Capture after the asynchronous canonical hand attachment, never at module
+  // construction while the weapon mount still has its procedural identity basis.
+  if (!owner.mountRest && owner.skeleton && owner.root.parent) {
+    const mount = owner.root.parent;
+    owner.mountRest = { root: mount, position: mount.position.clone(), quaternion: mount.quaternion.clone() };
+  }
   if (owner.mountRest && owner.skeleton && pose.weapon === owner.weapon) {
     owner.mountRest.root.position.copy(owner.mountRest.position);
     owner.mountRest.root.quaternion.copy(owner.mountRest.quaternion);

@@ -45,6 +45,7 @@ for (const weapon of ['m4', 'p90', 'awp', 'pistol']) test(`${weapon}: moving loa
     const open = bone.quaternion.clone();
     w.show1pWeapon(weapon); w.show3pWeapon(weapon);
     const owner = w.playerWeaponHandling.get(`3p:${weapon}`);
+    const mountBasis = w.weapon3p.quaternion.toArray();
     const frames = [], samples = [], costs = [];
     try {
       actor.mesh.visible = true; w.wpn.visible = false;
@@ -67,13 +68,16 @@ for (const weapon of ['m4', 'p90', 'awp', 'pistol']) test(`${weapon}: moving loa
         frames.push(renderer.domElement.toDataURL('image/png'));
       }
     } finally { camera.position.copy(eye); camera.quaternion.copy(aim); }
-    return { samples, frames, costs, rootSame: JSON.stringify(root) === JSON.stringify(actor.mesh.position.toArray()),
+    return { samples, frames, costs, mountBasis, finalMountBasis: w.weapon3p.quaternion.toArray(),
+      rootSame: JSON.stringify(root) === JSON.stringify(actor.mesh.position.toArray()),
       ammoSame: ammo === player.ammo, renderer: renderer.getContext().getParameter(renderer.getContext().RENDERER) };
   }, weapon);
   await writeFile(info.outputPath('contacts.json'), JSON.stringify({ ...result, frames: undefined }, null, 2));
   for (const [i, frame] of result.frames.entries())
     await writeFile(info.outputPath(`${weapon}-${i}.png`), Buffer.from(frame.split(',')[1], 'base64'));
   expect(result.rootSame && result.ammoSame).toBe(true);
+  expect(result.mountBasis).toEqual(result.finalMountBasis);
+  expect(Math.abs(result.mountBasis[0])).toBeCloseTo(Math.SQRT1_2);
   expect(result.samples.every(s => s.leftError < .025 && s.fingerAngle > .4)).toBe(true);
   const direction = weapon === 'p90' ? 1 : -1;
   expect(direction * (result.samples[2].magazine1p[1] - result.samples.at(-1).magazine1p[1])).toBeGreaterThan(.07);
