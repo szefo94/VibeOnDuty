@@ -3,6 +3,7 @@ import { WEAPON3P_BARREL_SHIFT } from './weapon3pTransform.js';
 import { mm } from '../materials.js';
 import { scene, camera } from '../scene.js';
 import { makeIllustratedMaterial } from '../artMaterials.js';
+import { createWeaponHandling, updateWeaponHandling, restoreWeaponHandlingBones } from './weaponHandling.js';
 
 const mGun  = mm(0x181818, 0.30, 0.85);
 const mGun2 = mm(0x221810, 0.60, 0.20);
@@ -38,11 +39,12 @@ const _w1 = {};
 
 // M4A1
 _w1.m4 = new THREE.Group();
-mk(_w1.m4, box(0.055, 0.064, 0.38),  mGun,  0,      0,       0);
+mk(_w1.m4, box(0.055, 0.064, 0.38),  mGun,  0,      0,       0).name = 'm4_receiver';
 mk(_w1.m4, box(0.044, 0.050, 0.18),  mGun2, 0,      0.004,  -0.15);
 mk(_w1.m4, box(0.044, 0.055, 0.11),  mGunW, 0,     -0.008,   0.22);
-mk(_w1.m4, box(0.034, 0.092, 0.037), mGun2, 0,     -0.074,   0.06);
-mk(_w1.m4, box(0.027, 0.058, 0.036), mGun2, 0,     -0.060,  -0.04);
+mk(_w1.m4, box(0.034, 0.092, 0.037), mGun2, 0,     -0.074,   0.06).name = 'm4_grip';
+mk(_w1.m4, box(0.027, 0.058, 0.036), mGun2, 0,     -0.060,  -0.04).name = 'm4_magazine';
+mk(_w1.m4, box(.012, .012, .028), mGun2, .024, .018, .1).name = 'm4_charging';
 brl(_w1.m4, 0.009, 0.009, 0.36, 0, 0.012, -0.33);
 brl(_w1.m4, 0.013, 0.013, 0.04, 0, 0.012, -0.51); // muzzle device
 _w1.m4.traverse((node) => {
@@ -91,12 +93,15 @@ export const weapon3p = new THREE.Group();
 export let weapon3pAttached = false;
 
 const _w3 = {};
-const b3 = (g, geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x,y,z); g.add(m); };
+const b3 = (g, geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x,y,z); g.add(m); return m; };
 const r3 = (g, rt, rb, l, x, y, z) => { const m = new THREE.Mesh(cyl(rt,rb,l), mGun); m.rotation.x=Math.PI/2; m.position.set(x,y,z); g.add(m); };
 
 // M4 (3p)
 _w3.m4 = new THREE.Group();
-b3(_w3.m4, box(0.060, 0.060, 0.44), mGun,  0, 0,     0);
+b3(_w3.m4, box(0.060, 0.060, 0.44), mGun,  0, 0,     0).name = 'm4_receiver';
+b3(_w3.m4, box(.034, .092, .037), mGunW, 0, -.074, .06).name = 'm4_grip';
+b3(_w3.m4, box(.027, .058, .036), mGunW, 0, -.06, -.04).name = 'm4_magazine';
+b3(_w3.m4, box(.012, .012, .028), mGun, .024, .018, .1).name = 'm4_charging';
 b3(_w3.m4, box(0.050, 0.070, 0.19), mGunW, 0, 0,  0.23); // stock
 r3(_w3.m4, 0.010, 0.010, 0.36,      0, 0.010, -0.35);
 _w3.m4.traverse((node) => {
@@ -134,6 +139,22 @@ for (const [k, g] of Object.entries(_w3)) {
 }
 
 // ── Switch helpers ────────────────────────────────────────────────────
+export const playerWeaponHandling = new Map();
+for (const [view, groups] of [['1p', _w1], ['3p', _w3]]) {
+  for (const [key, root] of Object.entries(groups)) {
+    root.name = `${key}_${view}`;
+    if (key === 'm4') playerWeaponHandling.set(`${view}:${key}`, createWeaponHandling({ weapon: key, root }));
+  }
+}
+export function restorePlayerWeaponHandling() {
+  for (const owner of playerWeaponHandling.values()) restoreWeaponHandlingBones(owner);
+}
+export function updatePlayerWeaponHandling(pose, skeleton = null) {
+  for (const [id, owner] of playerWeaponHandling) {
+    owner.skeleton = id.startsWith('3p') ? skeleton : null;
+    updateWeaponHandling(owner, pose);
+  }
+}
 export function show1pWeapon(key) {
   for (const [k, g] of Object.entries(_w1)) g.visible = k === key;
   flash.position.z = _muzzleZ[key] ?? -0.54;

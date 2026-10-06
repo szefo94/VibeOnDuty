@@ -6,7 +6,7 @@ import { touchLook } from './touch.js';
 import { gameRunning, keys } from './input.js';
 import { player, updatePlayer, playerActions as offlineActions } from './entities/player.js';
 import { playerBody } from './builders/playerBody.js';
-import { wpn, weapon3p as wpn3p } from './builders/weapon.js';
+import { wpn, weapon3p as wpn3p, restorePlayerWeaponHandling, updatePlayerWeaponHandling } from './builders/weapon.js';
 import { enemies, spawnEnemyIntoSlot } from './entities/enemies.js';
 import { updateEnemies } from './entities/enemyUpdate.js';
 import { tickWave } from './entities/waveSystem.js';
@@ -71,6 +71,7 @@ let last = 0;
 export function loop(ts) {
   const dt = Math.min(0.05, (ts - last) / 1000);
   last = ts;
+  restorePlayerWeaponHandling();
   tickOnline(dt);
   const onlinePose = getOnlinePresentation();
 
@@ -103,7 +104,7 @@ export function loop(ts) {
       const exclusive = offlineActions.presentation;
       const damaged = playerAnim._previousHealth !== undefined && player.hp < playerAnim._previousHealth;
       playerAnim._previousHealth = player.hp;
-      const fireTotal = player.weapon === 'awp' ? 1.2 : .2;
+      const fireTotal = player.weapon === 'awp' ? WEAPONS.awp.fireRate / 1000 : .2;
       const shotElapsed = (ts - player.shootCd) / 1000;
       if (player.dancing) {
         playerAnim._danceElapsed = (playerAnim._danceElapsed ?? 0) + dt;
@@ -146,6 +147,8 @@ export function loop(ts) {
   // ── Player mixer ticks even when dead so death animation plays ───
   if (playerMesh && playerMixer) {
     finishPresentation(playerAnim, dt);
+    updatePlayerWeaponHandling(gameRunning || isOnline() ? playerAnim.presentation
+      : { weapon: player.weapon, alive: !player.dead, upper: 'ready' }, playerMesh);
     tickBoneFlipMonitor(playerAnim);
   }
 
