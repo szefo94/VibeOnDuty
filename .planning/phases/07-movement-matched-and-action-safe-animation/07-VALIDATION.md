@@ -96,6 +96,8 @@ T-07-SC is the reserved cross-plan package threat: no installation tasks exist. 
 
 ## Validation Sign-Off
 
+Plan09 acceptance amendment (2026-10-06): `07-BUDGET-AMENDMENT.md` explicitly repairs external-camera versus source-eye measurement scope. Original golden files and false comparison remain immutable. Before further optimization, freeze separate `07-09-view-reference-v2.json` and `07-budget-view-v2.json` with producer/settings lineage and two-run max-plus-dispersion limits. The actual independently captured `07-09-cost-postopt.json` must pass `node tools/art/animation-budget-v2.mjs verify --budget .planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-budget-view-v2.json --candidate .planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-09-cost-postopt.json` with nonzero failure. Add `node --test tools/art/animation-budget-v2.test.mjs` negatives for changed producer/scope/settings, missing draw/pixels, numeric overrun/growth/shared disposal and frozen-budget replacement. World skeleton sharing is per-instance exact equality only, with posed-vertex/bind-matrix/sibling-disposal proof. Execution remains pending until these new gates run; no original failure becomes a pass.
+
 - [x] Every task has automated verification and adjacent explicit failure semantics.
 - [x] No three consecutive tasks without automated verification.
 - [x] All missing files/commands have creation tasks before use; no watch flags.
