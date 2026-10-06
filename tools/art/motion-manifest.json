@@ -1,20 +1,3116 @@
 {
   "schemaVersion": 1,
   "source": "tools/art/sources/motion.blend",
-  "sourceHash": "d8f6c2315f2661254256f22f049d1c8cf0826c3cab304db41663ad4a45e8303d",
+  "sourceHash": "5a9e8c4c160cd4d7bb072f724e28dbb52b902f05d75d68a37c68d98449470903",
   "baselineHash": "3d92a093fc6724c295fdabb456d41110a0b03fc7f72f565b42b36c4c09b00847",
   "targetJoints": 65,
   "actions": [
     {
-      "id": "original_walk",
-      "clip": "vod_walk_forward",
-      "donorAction": "OriginalWalk",
+      "id": "m4_ready",
+      "clip": "vod7_m4_ready",
+      "donorAction": "Original_m4_ready",
       "donorSlot": "OBMotionDonor",
       "boneMap": {
         "donor_pelvis": "pelvis",
         "donor_spine_01": "spine_01",
         "donor_spine_02": "spine_02",
         "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        61
+      ],
+      "fps": 60,
+      "loop": true,
+      "cycleDisplacement": 0,
+      "markers": {
+        "leftContact": 0,
+        "rightContact": 0.5
+      },
+      "torsoLimit": 0.7,
+      "kind": "ready",
+      "weapon": "m4",
+      "direction": "none",
+      "aliases": [
+        "idle"
+      ],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 1,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0
+    },
+    {
+      "id": "m4_ads",
+      "clip": "vod7_m4_ads",
+      "donorAction": "Original_m4_ads",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        61
+      ],
+      "fps": 60,
+      "loop": true,
+      "cycleDisplacement": 0,
+      "markers": {
+        "leftContact": 0,
+        "rightContact": 0.5
+      },
+      "torsoLimit": 0.7,
+      "kind": "ads",
+      "weapon": "m4",
+      "direction": "none",
+      "aliases": [
+        "attack"
+      ],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 1,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0
+    },
+    {
+      "id": "m4_fire",
+      "clip": "vod7_m4_fire",
+      "donorAction": "Original_m4_fire",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        13
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "shot": 0.08,
+        "bolt": 0.42,
+        "return": 0.8,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "fire",
+      "weapon": "m4",
+      "direction": "none",
+      "aliases": [
+        "shoot"
+      ],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 0.2,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0
+    },
+    {
+      "id": "m4_reload",
+      "clip": "vod7_m4_reload",
+      "donorAction": "Original_m4_reload",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        109
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "remove": 0.22,
+        "insert": 0.56,
+        "charge": 0.76,
+        "recontact": 0.9,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "reload",
+      "weapon": "m4",
+      "direction": "none",
+      "aliases": [
+        "reload"
+      ],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 1.8,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0
+    },
+    {
+      "id": "m4_sprint_reload",
+      "clip": "vod7_m4_sprint_reload",
+      "donorAction": "Original_m4_sprint_reload",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        125
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "remove": 0.22,
+        "insert": 0.56,
+        "charge": 0.76,
+        "recontact": 0.9,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "sprint_reload",
+      "weapon": "m4",
+      "direction": "none",
+      "aliases": [],
+      "previewOnly": true,
+      "phaseOwner": "Phase5",
+      "durationSeconds": 2.07,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0
+    },
+    {
+      "id": "p90_ready",
+      "clip": "vod7_p90_ready",
+      "donorAction": "Original_p90_ready",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        61
+      ],
+      "fps": 60,
+      "loop": true,
+      "cycleDisplacement": 0,
+      "markers": {
+        "leftContact": 0,
+        "rightContact": 0.5
+      },
+      "torsoLimit": 0.7,
+      "kind": "ready",
+      "weapon": "p90",
+      "direction": "none",
+      "aliases": [],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 1,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.33
+        ],
+        "support": [
+          0.07,
+          -0.43,
+          1.34
+        ],
+        "remove": [
+          0.03,
+          -0.38,
+          1.58
+        ],
+        "insert": [
+          0.03,
+          -0.38,
+          1.43
+        ],
+        "charge": [
+          0.08,
+          -0.39,
+          1.32
+        ]
+      },
+      "mechanism": "top-feed-magazine-and-charging-handle",
+      "bodyDrop": 0
+    },
+    {
+      "id": "p90_ads",
+      "clip": "vod7_p90_ads",
+      "donorAction": "Original_p90_ads",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        61
+      ],
+      "fps": 60,
+      "loop": true,
+      "cycleDisplacement": 0,
+      "markers": {
+        "leftContact": 0,
+        "rightContact": 0.5
+      },
+      "torsoLimit": 0.7,
+      "kind": "ads",
+      "weapon": "p90",
+      "direction": "none",
+      "aliases": [],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 1,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.33
+        ],
+        "support": [
+          0.07,
+          -0.43,
+          1.34
+        ],
+        "remove": [
+          0.03,
+          -0.38,
+          1.58
+        ],
+        "insert": [
+          0.03,
+          -0.38,
+          1.43
+        ],
+        "charge": [
+          0.08,
+          -0.39,
+          1.32
+        ]
+      },
+      "mechanism": "top-feed-magazine-and-charging-handle",
+      "bodyDrop": 0
+    },
+    {
+      "id": "p90_fire",
+      "clip": "vod7_p90_fire",
+      "donorAction": "Original_p90_fire",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        13
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "shot": 0.08,
+        "bolt": 0.42,
+        "return": 0.8,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "fire",
+      "weapon": "p90",
+      "direction": "none",
+      "aliases": [],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 0.2,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.33
+        ],
+        "support": [
+          0.07,
+          -0.43,
+          1.34
+        ],
+        "remove": [
+          0.03,
+          -0.38,
+          1.58
+        ],
+        "insert": [
+          0.03,
+          -0.38,
+          1.43
+        ],
+        "charge": [
+          0.08,
+          -0.39,
+          1.32
+        ]
+      },
+      "mechanism": "top-feed-magazine-and-charging-handle",
+      "bodyDrop": 0
+    },
+    {
+      "id": "p90_reload",
+      "clip": "vod7_p90_reload",
+      "donorAction": "Original_p90_reload",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        121
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "remove": 0.22,
+        "insert": 0.56,
+        "charge": 0.76,
+        "recontact": 0.9,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "reload",
+      "weapon": "p90",
+      "direction": "none",
+      "aliases": [],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 2,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.33
+        ],
+        "support": [
+          0.07,
+          -0.43,
+          1.34
+        ],
+        "remove": [
+          0.03,
+          -0.38,
+          1.58
+        ],
+        "insert": [
+          0.03,
+          -0.38,
+          1.43
+        ],
+        "charge": [
+          0.08,
+          -0.39,
+          1.32
+        ]
+      },
+      "mechanism": "top-feed-magazine-and-charging-handle",
+      "bodyDrop": 0
+    },
+    {
+      "id": "p90_sprint_reload",
+      "clip": "vod7_p90_sprint_reload",
+      "donorAction": "Original_p90_sprint_reload",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        139
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "remove": 0.22,
+        "insert": 0.56,
+        "charge": 0.76,
+        "recontact": 0.9,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "sprint_reload",
+      "weapon": "p90",
+      "direction": "none",
+      "aliases": [],
+      "previewOnly": true,
+      "phaseOwner": "Phase5",
+      "durationSeconds": 2.3,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.33
+        ],
+        "support": [
+          0.07,
+          -0.43,
+          1.34
+        ],
+        "remove": [
+          0.03,
+          -0.38,
+          1.58
+        ],
+        "insert": [
+          0.03,
+          -0.38,
+          1.43
+        ],
+        "charge": [
+          0.08,
+          -0.39,
+          1.32
+        ]
+      },
+      "mechanism": "top-feed-magazine-and-charging-handle",
+      "bodyDrop": 0
+    },
+    {
+      "id": "awp_ready",
+      "clip": "vod7_awp_ready",
+      "donorAction": "Original_awp_ready",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        61
+      ],
+      "fps": 60,
+      "loop": true,
+      "cycleDisplacement": 0,
+      "markers": {
+        "leftContact": 0,
+        "rightContact": 0.5
+      },
+      "torsoLimit": 0.7,
+      "kind": "ready",
+      "weapon": "awp",
+      "direction": "none",
+      "aliases": [],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 1,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.57,
+          1.35
+        ],
+        "remove": [
+          -0.03,
+          -0.36,
+          1.14
+        ],
+        "insert": [
+          -0.03,
+          -0.36,
+          1.3
+        ],
+        "charge": [
+          -0.08,
+          -0.28,
+          1.42
+        ]
+      },
+      "mechanism": "detachable-magazine-and-right-hand-bolt",
+      "bodyDrop": 0
+    },
+    {
+      "id": "awp_ads",
+      "clip": "vod7_awp_ads",
+      "donorAction": "Original_awp_ads",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        61
+      ],
+      "fps": 60,
+      "loop": true,
+      "cycleDisplacement": 0,
+      "markers": {
+        "leftContact": 0,
+        "rightContact": 0.5
+      },
+      "torsoLimit": 0.7,
+      "kind": "ads",
+      "weapon": "awp",
+      "direction": "none",
+      "aliases": [],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 1,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.57,
+          1.35
+        ],
+        "remove": [
+          -0.03,
+          -0.36,
+          1.14
+        ],
+        "insert": [
+          -0.03,
+          -0.36,
+          1.3
+        ],
+        "charge": [
+          -0.08,
+          -0.28,
+          1.42
+        ]
+      },
+      "mechanism": "detachable-magazine-and-right-hand-bolt",
+      "bodyDrop": 0
+    },
+    {
+      "id": "awp_fire",
+      "clip": "vod7_awp_fire",
+      "donorAction": "Original_awp_fire",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        73
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "shot": 0.08,
+        "bolt": 0.42,
+        "return": 0.8,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "fire",
+      "weapon": "awp",
+      "direction": "none",
+      "aliases": [],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 1.2,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.57,
+          1.35
+        ],
+        "remove": [
+          -0.03,
+          -0.36,
+          1.14
+        ],
+        "insert": [
+          -0.03,
+          -0.36,
+          1.3
+        ],
+        "charge": [
+          -0.08,
+          -0.28,
+          1.42
+        ]
+      },
+      "mechanism": "detachable-magazine-and-right-hand-bolt",
+      "bodyDrop": 0
+    },
+    {
+      "id": "awp_reload",
+      "clip": "vod7_awp_reload",
+      "donorAction": "Original_awp_reload",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        151
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "remove": 0.22,
+        "insert": 0.56,
+        "charge": 0.76,
+        "recontact": 0.9,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "reload",
+      "weapon": "awp",
+      "direction": "none",
+      "aliases": [],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 2.5,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.57,
+          1.35
+        ],
+        "remove": [
+          -0.03,
+          -0.36,
+          1.14
+        ],
+        "insert": [
+          -0.03,
+          -0.36,
+          1.3
+        ],
+        "charge": [
+          -0.08,
+          -0.28,
+          1.42
+        ]
+      },
+      "mechanism": "detachable-magazine-and-right-hand-bolt",
+      "bodyDrop": 0
+    },
+    {
+      "id": "awp_sprint_reload",
+      "clip": "vod7_awp_sprint_reload",
+      "donorAction": "Original_awp_sprint_reload",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        174
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "remove": 0.22,
+        "insert": 0.56,
+        "charge": 0.76,
+        "recontact": 0.9,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "sprint_reload",
+      "weapon": "awp",
+      "direction": "none",
+      "aliases": [],
+      "previewOnly": true,
+      "phaseOwner": "Phase5",
+      "durationSeconds": 2.875,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.57,
+          1.35
+        ],
+        "remove": [
+          -0.03,
+          -0.36,
+          1.14
+        ],
+        "insert": [
+          -0.03,
+          -0.36,
+          1.3
+        ],
+        "charge": [
+          -0.08,
+          -0.28,
+          1.42
+        ]
+      },
+      "mechanism": "detachable-magazine-and-right-hand-bolt",
+      "bodyDrop": 0
+    },
+    {
+      "id": "pistol_ready",
+      "clip": "vod7_pistol_ready",
+      "donorAction": "Original_pistol_ready",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        61
+      ],
+      "fps": 60,
+      "loop": true,
+      "cycleDisplacement": 0,
+      "markers": {
+        "leftContact": 0,
+        "rightContact": 0.5
+      },
+      "torsoLimit": 0.7,
+      "kind": "ready",
+      "weapon": "pistol",
+      "direction": "none",
+      "aliases": [],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 1,
+      "contactTargets": {
+        "grip": [
+          -0.06,
+          -0.4,
+          1.36
+        ],
+        "support": [
+          0.02,
+          -0.38,
+          1.34
+        ],
+        "remove": [
+          -0.05,
+          -0.39,
+          1.15
+        ],
+        "insert": [
+          -0.05,
+          -0.39,
+          1.27
+        ],
+        "charge": [
+          0,
+          -0.45,
+          1.45
+        ]
+      },
+      "mechanism": "grip-magazine-and-slide",
+      "bodyDrop": 0
+    },
+    {
+      "id": "pistol_ads",
+      "clip": "vod7_pistol_ads",
+      "donorAction": "Original_pistol_ads",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        61
+      ],
+      "fps": 60,
+      "loop": true,
+      "cycleDisplacement": 0,
+      "markers": {
+        "leftContact": 0,
+        "rightContact": 0.5
+      },
+      "torsoLimit": 0.7,
+      "kind": "ads",
+      "weapon": "pistol",
+      "direction": "none",
+      "aliases": [],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 1,
+      "contactTargets": {
+        "grip": [
+          -0.06,
+          -0.4,
+          1.36
+        ],
+        "support": [
+          0.02,
+          -0.38,
+          1.34
+        ],
+        "remove": [
+          -0.05,
+          -0.39,
+          1.15
+        ],
+        "insert": [
+          -0.05,
+          -0.39,
+          1.27
+        ],
+        "charge": [
+          0,
+          -0.45,
+          1.45
+        ]
+      },
+      "mechanism": "grip-magazine-and-slide",
+      "bodyDrop": 0
+    },
+    {
+      "id": "pistol_fire",
+      "clip": "vod7_pistol_fire",
+      "donorAction": "Original_pistol_fire",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        13
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "shot": 0.08,
+        "bolt": 0.42,
+        "return": 0.8,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "fire",
+      "weapon": "pistol",
+      "direction": "none",
+      "aliases": [],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 0.2,
+      "contactTargets": {
+        "grip": [
+          -0.06,
+          -0.4,
+          1.36
+        ],
+        "support": [
+          0.02,
+          -0.38,
+          1.34
+        ],
+        "remove": [
+          -0.05,
+          -0.39,
+          1.15
+        ],
+        "insert": [
+          -0.05,
+          -0.39,
+          1.27
+        ],
+        "charge": [
+          0,
+          -0.45,
+          1.45
+        ]
+      },
+      "mechanism": "grip-magazine-and-slide",
+      "bodyDrop": 0
+    },
+    {
+      "id": "pistol_reload",
+      "clip": "vod7_pistol_reload",
+      "donorAction": "Original_pistol_reload",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        73
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "remove": 0.22,
+        "insert": 0.56,
+        "charge": 0.76,
+        "recontact": 0.9,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "reload",
+      "weapon": "pistol",
+      "direction": "none",
+      "aliases": [],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 1.2,
+      "contactTargets": {
+        "grip": [
+          -0.06,
+          -0.4,
+          1.36
+        ],
+        "support": [
+          0.02,
+          -0.38,
+          1.34
+        ],
+        "remove": [
+          -0.05,
+          -0.39,
+          1.15
+        ],
+        "insert": [
+          -0.05,
+          -0.39,
+          1.27
+        ],
+        "charge": [
+          0,
+          -0.45,
+          1.45
+        ]
+      },
+      "mechanism": "grip-magazine-and-slide",
+      "bodyDrop": 0
+    },
+    {
+      "id": "pistol_sprint_reload",
+      "clip": "vod7_pistol_sprint_reload",
+      "donorAction": "Original_pistol_sprint_reload",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        84
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "remove": 0.22,
+        "insert": 0.56,
+        "charge": 0.76,
+        "recontact": 0.9,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "sprint_reload",
+      "weapon": "pistol",
+      "direction": "none",
+      "aliases": [],
+      "previewOnly": true,
+      "phaseOwner": "Phase5",
+      "durationSeconds": 1.38,
+      "contactTargets": {
+        "grip": [
+          -0.06,
+          -0.4,
+          1.36
+        ],
+        "support": [
+          0.02,
+          -0.38,
+          1.34
+        ],
+        "remove": [
+          -0.05,
+          -0.39,
+          1.15
+        ],
+        "insert": [
+          -0.05,
+          -0.39,
+          1.27
+        ],
+        "charge": [
+          0,
+          -0.45,
+          1.45
+        ]
+      },
+      "mechanism": "grip-magazine-and-slide",
+      "bodyDrop": 0
+    },
+    {
+      "id": "walk_forward",
+      "clip": "vod7_walk_forward",
+      "donorAction": "Original_walk_forward",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        61
+      ],
+      "fps": 60,
+      "loop": true,
+      "cycleDisplacement": 2.4,
+      "markers": {
+        "leftContact": 0,
+        "rightContact": 0.5
+      },
+      "torsoLimit": 0.7,
+      "kind": "walk",
+      "weapon": "m4",
+      "direction": "forward",
+      "aliases": [
+        "walk"
+      ],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 1,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0
+    },
+    {
+      "id": "walk_back",
+      "clip": "vod7_walk_back",
+      "donorAction": "Original_walk_back",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        61
+      ],
+      "fps": 60,
+      "loop": true,
+      "cycleDisplacement": 2.4,
+      "markers": {
+        "leftContact": 0,
+        "rightContact": 0.5
+      },
+      "torsoLimit": 0.7,
+      "kind": "walk",
+      "weapon": "m4",
+      "direction": "back",
+      "aliases": [
+        "walk_back"
+      ],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 1,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0
+    },
+    {
+      "id": "walk_left",
+      "clip": "vod7_walk_left",
+      "donorAction": "Original_walk_left",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        61
+      ],
+      "fps": 60,
+      "loop": true,
+      "cycleDisplacement": 2.4,
+      "markers": {
+        "leftContact": 0,
+        "rightContact": 0.5
+      },
+      "torsoLimit": 0.7,
+      "kind": "walk",
+      "weapon": "m4",
+      "direction": "left",
+      "aliases": [
+        "strafe_l"
+      ],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 1,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0
+    },
+    {
+      "id": "walk_right",
+      "clip": "vod7_walk_right",
+      "donorAction": "Original_walk_right",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        61
+      ],
+      "fps": 60,
+      "loop": true,
+      "cycleDisplacement": 2.4,
+      "markers": {
+        "leftContact": 0,
+        "rightContact": 0.5
+      },
+      "torsoLimit": 0.7,
+      "kind": "walk",
+      "weapon": "m4",
+      "direction": "right",
+      "aliases": [
+        "strafe_r"
+      ],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 1,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0
+    },
+    {
+      "id": "run_forward",
+      "clip": "vod7_run_forward",
+      "donorAction": "Original_run_forward",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        40
+      ],
+      "fps": 60,
+      "loop": true,
+      "cycleDisplacement": 3.1,
+      "markers": {
+        "leftContact": 0,
+        "rightContact": 0.5
+      },
+      "torsoLimit": 0.7,
+      "kind": "run",
+      "weapon": "m4",
+      "direction": "forward",
+      "aliases": [
+        "run"
+      ],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 0.65,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0
+    },
+    {
+      "id": "run_back",
+      "clip": "vod7_run_back",
+      "donorAction": "Original_run_back",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        40
+      ],
+      "fps": 60,
+      "loop": true,
+      "cycleDisplacement": 3.1,
+      "markers": {
+        "leftContact": 0,
+        "rightContact": 0.5
+      },
+      "torsoLimit": 0.7,
+      "kind": "run",
+      "weapon": "m4",
+      "direction": "back",
+      "aliases": [
+        "run_back"
+      ],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 0.65,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0
+    },
+    {
+      "id": "run_left",
+      "clip": "vod7_run_left",
+      "donorAction": "Original_run_left",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        40
+      ],
+      "fps": 60,
+      "loop": true,
+      "cycleDisplacement": 3.1,
+      "markers": {
+        "leftContact": 0,
+        "rightContact": 0.5
+      },
+      "torsoLimit": 0.7,
+      "kind": "run",
+      "weapon": "m4",
+      "direction": "left",
+      "aliases": [],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 0.65,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0
+    },
+    {
+      "id": "run_right",
+      "clip": "vod7_run_right",
+      "donorAction": "Original_run_right",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        40
+      ],
+      "fps": 60,
+      "loop": true,
+      "cycleDisplacement": 3.1,
+      "markers": {
+        "leftContact": 0,
+        "rightContact": 0.5
+      },
+      "torsoLimit": 0.7,
+      "kind": "run",
+      "weapon": "m4",
+      "direction": "right",
+      "aliases": [],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 0.65,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0
+    },
+    {
+      "id": "crouch_forward",
+      "clip": "vod7_crouch_forward",
+      "donorAction": "Original_crouch_forward",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        73
+      ],
+      "fps": 60,
+      "loop": true,
+      "cycleDisplacement": 1.65,
+      "markers": {
+        "leftContact": 0,
+        "rightContact": 0.5
+      },
+      "torsoLimit": 0.7,
+      "kind": "crouch",
+      "weapon": "m4",
+      "direction": "forward",
+      "aliases": [
+        "crouch_walk"
+      ],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 1.2,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0.32
+    },
+    {
+      "id": "crouch_back",
+      "clip": "vod7_crouch_back",
+      "donorAction": "Original_crouch_back",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        73
+      ],
+      "fps": 60,
+      "loop": true,
+      "cycleDisplacement": 1.65,
+      "markers": {
+        "leftContact": 0,
+        "rightContact": 0.5
+      },
+      "torsoLimit": 0.7,
+      "kind": "crouch",
+      "weapon": "m4",
+      "direction": "back",
+      "aliases": [],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 1.2,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0.32
+    },
+    {
+      "id": "crouch_left",
+      "clip": "vod7_crouch_left",
+      "donorAction": "Original_crouch_left",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        73
+      ],
+      "fps": 60,
+      "loop": true,
+      "cycleDisplacement": 1.65,
+      "markers": {
+        "leftContact": 0,
+        "rightContact": 0.5
+      },
+      "torsoLimit": 0.7,
+      "kind": "crouch",
+      "weapon": "m4",
+      "direction": "left",
+      "aliases": [],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 1.2,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0.32
+    },
+    {
+      "id": "crouch_right",
+      "clip": "vod7_crouch_right",
+      "donorAction": "Original_crouch_right",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        73
+      ],
+      "fps": 60,
+      "loop": true,
+      "cycleDisplacement": 1.65,
+      "markers": {
+        "leftContact": 0,
+        "rightContact": 0.5
+      },
+      "torsoLimit": 0.7,
+      "kind": "crouch",
+      "weapon": "m4",
+      "direction": "right",
+      "aliases": [],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 1.2,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0.32
+    },
+    {
+      "id": "crouch_idle",
+      "clip": "vod7_crouch_idle",
+      "donorAction": "Original_crouch_idle",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        61
+      ],
+      "fps": 60,
+      "loop": true,
+      "cycleDisplacement": 0,
+      "markers": {
+        "leftContact": 0,
+        "rightContact": 0.5
+      },
+      "torsoLimit": 0.7,
+      "kind": "crouch_idle",
+      "weapon": "m4",
+      "direction": "none",
+      "aliases": [
+        "crouch"
+      ],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 1,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0.32
+    },
+    {
+      "id": "stop",
+      "clip": "vod7_stop",
+      "donorAction": "Original_stop",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        25
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "plant": 0.25,
+        "pivot": 0.55,
+        "recontact": 0.85,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "stop",
+      "weapon": "m4",
+      "direction": "none",
+      "aliases": [],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 0.4,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0
+    },
+    {
+      "id": "reversal",
+      "clip": "vod7_reversal",
+      "donorAction": "Original_reversal",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        25
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "plant": 0.25,
+        "pivot": 0.55,
+        "recontact": 0.85,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "reversal",
+      "weapon": "m4",
+      "direction": "back",
+      "aliases": [],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 0.4,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0
+    },
+    {
+      "id": "turn_left",
+      "clip": "vod7_turn_left",
+      "donorAction": "Original_turn_left",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        25
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "plant": 0.25,
+        "pivot": 0.55,
+        "recontact": 0.85,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "turn",
+      "weapon": "m4",
+      "direction": "left",
+      "aliases": [],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 0.4,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0
+    },
+    {
+      "id": "turn_right",
+      "clip": "vod7_turn_right",
+      "donorAction": "Original_turn_right",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        25
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "plant": 0.25,
+        "pivot": 0.55,
+        "recontact": 0.85,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "turn",
+      "weapon": "m4",
+      "direction": "right",
+      "aliases": [],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 0.4,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0
+    },
+    {
+      "id": "sprint",
+      "clip": "vod7_sprint",
+      "donorAction": "Original_sprint",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        40
+      ],
+      "fps": 60,
+      "loop": true,
+      "cycleDisplacement": 3.1,
+      "markers": {
+        "leftContact": 0,
+        "rightContact": 0.5
+      },
+      "torsoLimit": 0.7,
+      "kind": "sprint",
+      "weapon": "m4",
+      "direction": "none",
+      "aliases": [],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 0.65,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0
+    },
+    {
+      "id": "jump_start",
+      "clip": "vod7_jump_start",
+      "donorAction": "Original_jump_start",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        12
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "compression": 0.35,
+        "contact": 0.5,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "jump_start",
+      "weapon": "m4",
+      "direction": "none",
+      "aliases": [
+        "jump_start"
+      ],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 0.18,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0.08
+    },
+    {
+      "id": "jump_loop",
+      "clip": "vod7_jump_loop",
+      "donorAction": "Original_jump_loop",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
         "donor_thigh_l": "thigh_l",
         "donor_calf_l": "calf_l",
         "donor_foot_l": "foot_l",
@@ -28,14 +3124,1552 @@
         1,
         31
       ],
-      "fps": 30,
+      "fps": 60,
       "loop": true,
-      "cycleDisplacement": 2.4,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "compression": 0.35,
+        "contact": 0.5,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "jump_loop",
+      "weapon": "m4",
+      "direction": "none",
+      "aliases": [
+        "jump_loop"
+      ],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 0.5,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0
+    },
+    {
+      "id": "jump_land",
+      "clip": "vod7_jump_land",
+      "donorAction": "Original_jump_land",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        14
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "compression": 0.35,
+        "contact": 0.5,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "jump_land",
+      "weapon": "m4",
+      "direction": "none",
+      "aliases": [
+        "jump_land"
+      ],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 0.22,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0.12
+    },
+    {
+      "id": "melee_cross",
+      "clip": "vod7_melee_cross",
+      "donorAction": "Original_melee_cross",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        43
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "impact": 0.5,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "melee",
+      "weapon": "m4",
+      "direction": "none",
+      "aliases": [
+        "punch_cross"
+      ],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 0.7,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0
+    },
+    {
+      "id": "melee_jab",
+      "clip": "vod7_melee_jab",
+      "donorAction": "Original_melee_jab",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        43
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "impact": 0.5,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "melee",
+      "weapon": "m4",
+      "direction": "none",
+      "aliases": [
+        "punch_jab"
+      ],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 0.7,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0
+    },
+    {
+      "id": "throw",
+      "clip": "vod7_throw",
+      "donorAction": "Original_throw",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        55
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "release": 0.45,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "throw",
+      "weapon": "m4",
+      "direction": "none",
+      "aliases": [
+        "nade"
+      ],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 0.9,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0
+    },
+    {
+      "id": "damage",
+      "clip": "vod7_damage",
+      "donorAction": "Original_damage",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        19
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "impact": 0.2,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "damage",
+      "weapon": "m4",
+      "direction": "none",
+      "aliases": [
+        "hit"
+      ],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 0.3,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0
+    },
+    {
+      "id": "death_front",
+      "clip": "vod7_death_front",
+      "donorAction": "Original_death_front",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        40
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "contact": 0.7,
+        "settled": 0.82,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "death",
+      "weapon": "m4",
+      "direction": "forward",
+      "aliases": [
+        "death"
+      ],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 0.65,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0.7
+    },
+    {
+      "id": "death_back",
+      "clip": "vod7_death_back",
+      "donorAction": "Original_death_back",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        40
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "contact": 0.7,
+        "settled": 0.82,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "death",
+      "weapon": "m4",
+      "direction": "back",
+      "aliases": [],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 0.65,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0.7
+    },
+    {
+      "id": "death_left",
+      "clip": "vod7_death_left",
+      "donorAction": "Original_death_left",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        40
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "contact": 0.7,
+        "settled": 0.82,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "death",
+      "weapon": "m4",
+      "direction": "left",
+      "aliases": [],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 0.65,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0.7
+    },
+    {
+      "id": "death_right",
+      "clip": "vod7_death_right",
+      "donorAction": "Original_death_right",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        40
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "contact": 0.7,
+        "settled": 0.82,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "death",
+      "weapon": "m4",
+      "direction": "right",
+      "aliases": [],
+      "previewOnly": false,
+      "phaseOwner": "Phase7",
+      "durationSeconds": 0.65,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0.7
+    },
+    {
+      "id": "supersprint",
+      "clip": "vod7_supersprint",
+      "donorAction": "Original_supersprint",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        37
+      ],
+      "fps": 60,
+      "loop": true,
+      "cycleDisplacement": 3.3,
       "markers": {
         "leftContact": 0,
         "rightContact": 0.5
       },
-      "torsoLimit": 0.7
+      "torsoLimit": 0.7,
+      "kind": "supersprint",
+      "weapon": "m4",
+      "direction": "none",
+      "aliases": [],
+      "previewOnly": true,
+      "phaseOwner": "Phase5",
+      "durationSeconds": 0.6,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0
+    },
+    {
+      "id": "slide_entry",
+      "clip": "vod7_slide_entry",
+      "donorAction": "Original_slide_entry",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        28
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "contact": 0.6,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "slide_entry",
+      "weapon": "m4",
+      "direction": "none",
+      "aliases": [],
+      "previewOnly": true,
+      "phaseOwner": "Phase5",
+      "durationSeconds": 0.45,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0.45
+    },
+    {
+      "id": "slide_hold",
+      "clip": "vod7_slide_hold",
+      "donorAction": "Original_slide_hold",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        61
+      ],
+      "fps": 60,
+      "loop": true,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "contact": 0.6,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "slide_hold",
+      "weapon": "m4",
+      "direction": "none",
+      "aliases": [],
+      "previewOnly": true,
+      "phaseOwner": "Phase5",
+      "durationSeconds": 1,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0.45
+    },
+    {
+      "id": "slide_exit",
+      "clip": "vod7_slide_exit",
+      "donorAction": "Original_slide_exit",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        28
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "contact": 0.6,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "slide_exit",
+      "weapon": "m4",
+      "direction": "none",
+      "aliases": [],
+      "previewOnly": true,
+      "phaseOwner": "Phase5",
+      "durationSeconds": 0.45,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0.45
+    },
+    {
+      "id": "dive_entry",
+      "clip": "vod7_dive_entry",
+      "donorAction": "Original_dive_entry",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        28
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "contact": 0.6,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "dive_entry",
+      "weapon": "m4",
+      "direction": "none",
+      "aliases": [],
+      "previewOnly": true,
+      "phaseOwner": "Phase5",
+      "durationSeconds": 0.45,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0.72
+    },
+    {
+      "id": "dive_hold",
+      "clip": "vod7_dive_hold",
+      "donorAction": "Original_dive_hold",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        61
+      ],
+      "fps": 60,
+      "loop": true,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "contact": 0.6,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "dive_hold",
+      "weapon": "m4",
+      "direction": "none",
+      "aliases": [],
+      "previewOnly": true,
+      "phaseOwner": "Phase5",
+      "durationSeconds": 1,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0.72
+    },
+    {
+      "id": "dive_exit",
+      "clip": "vod7_dive_exit",
+      "donorAction": "Original_dive_exit",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        28
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "contact": 0.6,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "dive_exit",
+      "weapon": "m4",
+      "direction": "none",
+      "aliases": [],
+      "previewOnly": true,
+      "phaseOwner": "Phase5",
+      "durationSeconds": 0.45,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0.72
+    },
+    {
+      "id": "prone_entry",
+      "clip": "vod7_prone_entry",
+      "donorAction": "Original_prone_entry",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        28
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "contact": 0.6,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "prone_entry",
+      "weapon": "m4",
+      "direction": "none",
+      "aliases": [],
+      "previewOnly": true,
+      "phaseOwner": "Phase5",
+      "durationSeconds": 0.45,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0.72
+    },
+    {
+      "id": "prone_hold",
+      "clip": "vod7_prone_hold",
+      "donorAction": "Original_prone_hold",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        61
+      ],
+      "fps": 60,
+      "loop": true,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "contact": 0.6,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "prone_hold",
+      "weapon": "m4",
+      "direction": "none",
+      "aliases": [],
+      "previewOnly": true,
+      "phaseOwner": "Phase5",
+      "durationSeconds": 1,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0.72
+    },
+    {
+      "id": "prone_exit",
+      "clip": "vod7_prone_exit",
+      "donorAction": "Original_prone_exit",
+      "donorSlot": "OBMotionDonor",
+      "boneMap": {
+        "donor_pelvis": "pelvis",
+        "donor_spine_01": "spine_01",
+        "donor_spine_02": "spine_02",
+        "donor_spine_03": "spine_03",
+        "donor_neck_01": "neck_01",
+        "donor_clavicle_l": "clavicle_l",
+        "donor_clavicle_r": "clavicle_r",
+        "donor_upperarm_l": "upperarm_l",
+        "donor_lowerarm_l": "lowerarm_l",
+        "donor_hand_l": "hand_l",
+        "donor_upperarm_r": "upperarm_r",
+        "donor_lowerarm_r": "lowerarm_r",
+        "donor_hand_r": "hand_r",
+        "donor_thigh_l": "thigh_l",
+        "donor_calf_l": "calf_l",
+        "donor_foot_l": "foot_l",
+        "donor_ball_l": "ball_l",
+        "donor_thigh_r": "thigh_r",
+        "donor_calf_r": "calf_r",
+        "donor_foot_r": "foot_r",
+        "donor_ball_r": "ball_r"
+      },
+      "frames": [
+        1,
+        28
+      ],
+      "fps": 60,
+      "loop": false,
+      "cycleDisplacement": 0,
+      "markers": {
+        "entry": 0,
+        "contact": 0.6,
+        "ready": 1
+      },
+      "torsoLimit": 0.7,
+      "kind": "prone_exit",
+      "weapon": "m4",
+      "direction": "none",
+      "aliases": [],
+      "previewOnly": true,
+      "phaseOwner": "Phase5",
+      "durationSeconds": 0.45,
+      "contactTargets": {
+        "grip": [
+          -0.1,
+          -0.3,
+          1.36
+        ],
+        "support": [
+          0.04,
+          -0.55,
+          1.35
+        ],
+        "remove": [
+          -0.04,
+          -0.35,
+          1.15
+        ],
+        "insert": [
+          -0.04,
+          -0.35,
+          1.29
+        ],
+        "charge": [
+          -0.04,
+          -0.25,
+          1.41
+        ]
+      },
+      "mechanism": "bottom-magazine-and-charging-handle",
+      "bodyDrop": 0.72
     }
   ]
 }

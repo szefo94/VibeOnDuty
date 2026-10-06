@@ -2,6 +2,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
+import * as THREE from 'three';
 import { ROOT, SOURCES, PIN, hash, owned, bootstrap, run, iterationPath } from './pipeline.mjs';
 import { parseGLB, encodeGLB, accessor, compareSemanticExports, inspectMotionCandidate,
   compareMotionExports } from './inspect-character.mjs';
@@ -26,17 +27,39 @@ export function validateManifest(m) {
   for (const key of ['id', 'clip', 'donorAction'])
     assert.equal(new Set(m.actions.map((a) => a[key])).size, m.actions.length, 'Duplicate ' + key);
   for (const a of m.actions) {
+    const authored = Object.hasOwn(a, 'kind');
     fields(a, ['id', 'clip', 'donorAction', 'donorSlot', 'boneMap', 'frames', 'fps', 'loop',
-      'cycleDisplacement', 'markers', 'torsoLimit'], 'action');
+      'cycleDisplacement', 'markers', 'torsoLimit', ...(authored ? ['kind', 'weapon',
+        'direction', 'aliases', 'previewOnly', 'phaseOwner', 'durationSeconds',
+        'contactTargets', 'mechanism', 'bodyDrop'] : [])], 'action');
     for (const key of ['id', 'clip', 'donorAction']) assert.ok(identifier(a[key]), 'Invalid ' + key);
     assert.match(a.donorSlot, /^OB[A-Za-z][A-Za-z0-9_]{0,63}$/);
     assert.ok(Array.isArray(a.frames) && a.frames.length === 2 && a.frames.every(Number.isInteger));
     assert.ok(a.frames[0] >= 1 && a.frames[1] > a.frames[0] && a.frames[1] - a.frames[0] <= 240);
     assert.ok(Number.isInteger(a.fps) && a.fps >= 24 && a.fps <= 60);
     assert.equal(typeof a.loop, 'boolean');
-    assert.ok(Number.isFinite(a.cycleDisplacement) && a.cycleDisplacement > 0 && a.cycleDisplacement <= 12);
+    assert.ok(Number.isFinite(a.cycleDisplacement) && a.cycleDisplacement >= (authored ? 0 : 0.001) && a.cycleDisplacement <= 12);
     assert.ok(Number.isFinite(a.torsoLimit) && a.torsoLimit > 0 && a.torsoLimit <= 1.2);
-    fields(a.markers, ['leftContact', 'rightContact'], 'markers');
+    if (!authored) fields(a.markers, ['leftContact', 'rightContact'], 'markers');
+    else {
+      assert.match(a.clip, /^vod7_[a-z0-9_]+$/);
+      assert.ok(identifier(a.kind));
+      assert.ok(['m4', 'p90', 'awp', 'pistol'].includes(a.weapon));
+      assert.ok(['forward', 'back', 'left', 'right', 'none'].includes(a.direction));
+      assert.equal(typeof a.previewOnly, 'boolean');
+      assert.equal(a.phaseOwner, a.previewOnly ? 'Phase5' : 'Phase7');
+      assert.ok(Array.isArray(a.aliases) && a.aliases.every(identifier));
+      assert.ok(a.durationSeconds > 0 && a.durationSeconds <= 8);
+      assert.ok(Number.isFinite(a.bodyDrop) && a.bodyDrop >= 0 && a.bodyDrop <= 0.8);
+      assert.ok(typeof a.mechanism === 'string' && a.mechanism.length <= 96);
+      fields(a.contactTargets, ['grip', 'support', 'remove', 'insert', 'charge'], 'contacts');
+      for (const v of Object.values(a.contactTargets))
+        assert.ok(Array.isArray(v) && v.length === 3 && v.every(n => Number.isFinite(n) && Math.abs(n) <= 2));
+      assert.ok(Object.keys(a.markers).length >= 2 && Object.keys(a.markers).length <= 12);
+      for (const k of Object.keys(a.markers)) assert.ok(identifier(k));
+      if (a.kind === 'reload' || a.kind === 'sprint_reload')
+        assert.ok(a.markers.remove < a.markers.insert && a.markers.insert < a.markers.charge && a.markers.charge < a.markers.ready);
+    }
     for (const n of Object.values(a.markers)) assert.ok(Number.isFinite(n) && n >= 0 && n <= 1);
     assert.ok(Object.keys(a.boneMap).length >= 1 && Object.keys(a.boneMap).length <= 65);
     for (const [donor, target] of Object.entries(a.boneMap))
@@ -90,17 +113,29 @@ export async function mergeMotion(baseline, raw, manifest) {
     for (const c of matches[0].channels) {
       const name = rawNames[c.target.node];
       const sampler = matches[0].samplers[c.sampler];
-      if (!Object.values(a.boneMap).includes(name) || c.target.path !== 'rotation') {
+      const verticalPelvis = name === 'pelvis' && c.target.path === 'translation' && a.bodyDrop > 0;
+      if (!Object.values(a.boneMap).includes(name) || (c.target.path !== 'rotation' && !verticalPelvis)) {
         const values = accessor(raw, sampler.output), type = raw.json.accessors[sampler.output].type;
         const width = type === 'VEC4' ? 4 : 3;
         assert.ok(values.every((n, i) => Math.abs(n - values[i % width]) < 1e-6), 'Unlisted changing channel/root travel');
         continue;
       }
       assert.ok(joints.has(name), 'Unsupported target');
-      const input = appendAccessor(out, accessor(raw, sampler.input), 'SCALAR');
-      const output = appendAccessor(out, accessor(raw, sampler.output), 'VEC4');
-      anim.channels.push({ sampler: anim.samplers.length, target: { node: joints.get(name), path: 'rotation' } });
-      anim.samplers.push({ input, output, interpolation: sampler.interpolation || 'LINEAR' });
+      let rawTimes = accessor(raw, sampler.input), rawValues = accessor(raw, sampler.output);
+      const width = verticalPelvis ? 3 : 4;
+      const constant = rawValues.every((n, i) => Math.abs(n - rawValues[i % width]) < 1e-6);
+      // Blender emits STEP/two endpoints for constant held transforms. Retain
+      // the non-rest transform and normalize only that proven constant case.
+      if (sampler.interpolation === 'STEP') assert.ok(constant, 'Changing STEP motion');
+      if (constant && rawTimes.length < 3) {
+        rawTimes = [0, rawTimes.at(-1) / 2, rawTimes.at(-1)];
+        rawValues = [...rawValues.slice(0, width), ...rawValues.slice(0, width), ...rawValues.slice(0, width)];
+      }
+      const timeScale = a.durationSeconds ? a.durationSeconds / rawTimes.at(-1) : 1;
+      const input = appendAccessor(out, rawTimes.map(t => t * timeScale), 'SCALAR');
+      const output = appendAccessor(out, rawValues, verticalPelvis ? 'VEC3' : 'VEC4');
+      anim.channels.push({ sampler: anim.samplers.length, target: { node: joints.get(name), path: c.target.path } });
+      anim.samplers.push({ input, output, interpolation: constant ? 'LINEAR' : sampler.interpolation || 'LINEAR' });
     }
     out.json.animations.push(anim);
   }
@@ -125,26 +160,46 @@ export async function validateMotionCandidate(candidate, baseline, manifest) {
 }
 export function validateListedMotion(c, manifest, inheritedCount = c.json.animations.length - manifest.actions.length) {
   validateManifest(manifest);
+  const objects = c.json.nodes.map(n => {
+    const o = new THREE.Object3D();
+    if (n.translation) o.position.fromArray(n.translation);
+    if (n.rotation) o.quaternion.fromArray(n.rotation);
+    if (n.scale) o.scale.fromArray(n.scale);
+    return o;
+  });
+  c.json.nodes.forEach((n, i) => (n.children || []).forEach(k => objects[i].add(objects[k])));
+  objects.filter(o => !o.parent).forEach(o => o.updateMatrixWorld(true));
   let changingClips = 0;
   for (let k = 0; k < manifest.actions.length; k++) {
     const a = manifest.actions[k], clip = c.json.animations[inheritedCount + k];
     assert.equal(c.json.animations.filter((v) => v.name === a.clip).length, 1, 'Missing/duplicate named motion');
     assert.equal(clip.name, a.clip, 'Clip name/order mismatch');
     assert.deepEqual(clip.extras, { motionId: a.id, donorAction: a.donorAction, donorSlot: a.donorSlot }, 'Action/slot mismatch');
-    const expected = Object.values(a.boneMap).sort(), seen = [], duration = (a.frames[1] - a.frames[0]) / a.fps;
+    const expected = Object.values(a.boneMap).map(n => n + ':rotation').sort(), seen = [], duration = a.durationSeconds || (a.frames[1] - a.frames[0]) / a.fps;
+    if (a.bodyDrop > 0) expected.push('pelvis:translation');
     let changed = false;
     for (const ch of clip.channels) {
       const bone = c.json.nodes[ch.target.node]?.name;
-      assert.ok(expected.includes(bone), 'Unsupported target');
-      assert.equal(ch.target.path, 'rotation', 'Root travel or unlisted path'); seen.push(bone);
+      assert.ok(expected.includes(bone + ':' + ch.target.path), 'Root travel or unlisted target/path');
+      seen.push(bone + ':' + ch.target.path);
       const s = clip.samplers[ch.sampler];
       assert.equal(s.interpolation || 'LINEAR', 'LINEAR');
       assert.equal(c.json.accessors[s.input].type, 'SCALAR');
-      assert.equal(c.json.accessors[s.output].type, 'VEC4');
+      const translation = ch.target.path === 'translation';
+      assert.equal(c.json.accessors[s.output].type, translation ? 'VEC3' : 'VEC4');
       const times = accessor(c, s.input), q = accessor(c, s.output);
-      assert.ok(times.length >= 3 && q.length === times.length * 4, 'Incomplete keys');
+      assert.ok(times.length >= 3 && q.length === times.length * (translation ? 3 : 4), 'Incomplete keys');
       assert.ok(Math.abs(times[0]) < 1e-6 && Math.abs(times.at(-1) - duration) < 1e-5, 'Duration mismatch');
       for (let i = 1; i < times.length; i++) assert.ok(times[i] > times[i - 1], 'Unordered samples');
+      if (translation) {
+        const node = objects[ch.target.node], parentQ = node.parent.getWorldQuaternion(new THREE.Quaternion());
+        for (let i = 0; i < q.length; i += 3) {
+          const delta = new THREE.Vector3().fromArray(q, i).sub(node.position).applyQuaternion(parentQ);
+          assert.ok(Math.abs(delta.x) < 1e-5 && Math.abs(delta.z) < 1e-5, 'Horizontal pelvis/root travel');
+          assert.ok(delta.y >= -a.bodyDrop - 1e-4 && delta.y <= 1e-4, 'Unbounded vertical body motion');
+        }
+        continue;
+      }
       for (let i = 0; i < times.length; i++) {
         assert.ok(Math.abs(Math.hypot(...q.slice(i * 4, i * 4 + 4)) - 1) < 1e-4, 'Invalid quaternion');
         const dot = Math.abs(q.slice(i * 4, i * 4 + 4).reduce((n, v, j) => n + v * q[j], 0));
@@ -156,7 +211,7 @@ export function validateListedMotion(c, manifest, inheritedCount = c.json.animat
         assert.ok(dot > 0.9999, 'Loop seam');
       }
     }
-    assert.deepEqual(seen.sort(), expected, 'Missing/duplicate target channels');
+    assert.deepEqual(seen.sort(), expected.sort(), 'Missing/duplicate target channels');
     assert.ok(changed, 'Silently unchanged motion'); changingClips++;
   }
   return changingClips;
@@ -189,12 +244,30 @@ async function unique(label) {
   owned(ROOT, MOTION_CACHE); await fs.mkdir(MOTION_CACHE, { recursive: true });
   return fs.mkdtemp(path.join(MOTION_CACHE, label + '-'));
 }
+async function acceptedBaseline() {
+  const m = parseManifest(await fs.readFile(MANIFEST, 'utf8'));
+  if (hash(await fs.readFile(BASELINE)) === m.baselineHash) return BASELINE;
+  const publication = path.join(MOTION_CACHE, 'publication.json');
+  await iterationPath([MOTION_CACHE], publication);
+  const r = JSON.parse(await fs.readFile(publication, 'utf8'));
+  assert.equal(r.complete, true, 'Incomplete baseline retention');
+  const retained = path.join(r.directory, 'previous-publication.glb');
+  await iterationPath([MOTION_CACHE], retained);
+  // The accepted baseline is independently retained before the first publish.
+  // Later publications keep that baseline rather than promoting runtime motion
+  // into the protected inherited domain.
+  for (const filename of [r.baseline, retained]) {
+    await iterationPath([MOTION_CACHE], filename);
+    if (hash(await fs.readFile(filename)) === m.baselineHash) return filename;
+  }
+  throw Error('Accepted art baseline missing or stale');
+}
 export async function exportMotion(source, manifestPath, baseline, output) {
   await iterationPath([SOURCES, MOTION_CACHE], source);
   await iterationPath([path.join(ROOT, 'tools/art'), MOTION_CACHE], manifestPath);
   await iterationPath([MOTION_CACHE], output);
   await iterationPath([path.join(ROOT, 'public/models'), MOTION_CACHE], baseline);
-  for (const [file, bound] of [[source, 64000000], [manifestPath, 64000]]) {
+  for (const [file, bound] of [[source, 64000000], [manifestPath, 131072]]) {
     const stat = await fs.stat(file);
     assert.ok(stat.isFile() && stat.size > 0 && stat.size <= bound, 'Input size/type bound');
   }
@@ -219,7 +292,8 @@ export async function exportMotion(source, manifestPath, baseline, output) {
 }
 export async function buildCandidate() {
   const directory = await unique('candidate');
-  await fs.copyFile(BASELINE, path.join(directory, 'baseline.glb'));
+  const baseline = await acceptedBaseline();
+  await fs.copyFile(baseline, path.join(directory, 'baseline.glb'));
   // First authoring retains an inspectable saved donor. Subsequent builds preserve edits.
   try { await fs.access(SOURCE); } catch (e) {
     if (e.code !== 'ENOENT') throw e;
@@ -237,7 +311,7 @@ export async function buildCandidate() {
   const report = { schemaVersion: 1, complete: true, directory, source, manifest, output,
     baseline: path.join(directory, 'baseline.glb'), check,
     hashes: { source: hash(await fs.readFile(source)), manifest: hash(await fs.readFile(manifest)),
-      baseline: hash(await fs.readFile(BASELINE)), output: hash(await fs.readFile(output)) },
+      baseline: hash(await fs.readFile(baseline)), publication: hash(await fs.readFile(BASELINE)), output: hash(await fs.readFile(output)) },
     scriptHashes: await scriptHashes(),
     runtime: { version: '4.5.13 LTS', archiveHash: PIN.sha256 },
     evidence: JSON.parse(await fs.readFile(output + '.raw.glb.evidence.json', 'utf8')) };
@@ -254,7 +328,7 @@ async function retained(label) {
   const directory = await unique(label);
   const source = path.join(directory, 'baseline.blend'), manifest = path.join(directory, 'baseline.manifest.json');
   const baseline = path.join(directory, 'baseline.glb');
-  await fs.copyFile(SOURCE, source); await fs.copyFile(MANIFEST, manifest); await fs.copyFile(BASELINE, baseline);
+  await fs.copyFile(SOURCE, source); await fs.copyFile(MANIFEST, manifest); await fs.copyFile(await acceptedBaseline(), baseline);
   return { directory, source, manifest, baseline };
 }
 async function saveReport(name, report) {
@@ -276,7 +350,7 @@ export async function repeatMotion() {
     runtime: PIN.sha256, durationMs: Date.now() - start });
 }
 export async function recoverMotion() {
-  const start = Date.now(), r = await retained('recovery');
+  const start = Date.now(), publicationHash = hash(await fs.readFile(BASELINE)), r = await retained('recovery');
   const before = path.join(r.directory, 'before.glb'), changed = path.join(r.directory, 'changed.glb');
   await exportMotion(r.source, r.manifest, r.baseline, before);
   const edited = path.join(r.directory, 'edited.blend'), editedManifest = path.join(r.directory, 'edited.manifest.json');
@@ -299,7 +373,7 @@ export async function recoverMotion() {
   await compareMotionExports(restored, regenerated, m);
   assert.equal(hash(await fs.readFile(SOURCE)), m.sourceHash, 'Accepted source changed');
   assert.equal(hash(await fs.readFile(MANIFEST)), hash(await fs.readFile(r.manifest)), 'Accepted manifest changed');
-  assert.equal(hash(await fs.readFile(BASELINE)), m.baselineHash, 'Publication changed');
+  assert.equal(hash(await fs.readFile(BASELINE)), publicationHash, 'Publication changed');
   return saveReport('recovery', { schemaVersion: 1, complete: true, ...r, before, changed, restored,
     regenerated, restoredSource, restoredManifest, changedCheck, comparison, sourceHash: m.sourceHash,
     manifestHash: hash(await fs.readFile(r.manifest)), scriptHashes: await scriptHashes(),
@@ -318,7 +392,8 @@ export async function validateLatest(report) {
   assert.deepEqual(report.scriptHashes, await scriptHashes(), 'Stale authoring/validation scripts');
   assert.equal(hash(await fs.readFile(SOURCE)), report.hashes.source, 'Stale editable source');
   assert.equal(hash(await fs.readFile(MANIFEST)), report.hashes.manifest, 'Stale manifest');
-  assert.equal(hash(await fs.readFile(BASELINE)), report.hashes.baseline, 'Stale accepted export');
+  assert.equal(hash(await fs.readFile(BASELINE)), report.hashes.publication || report.hashes.baseline, 'Stale runtime publication');
+  assert.equal(hash(await fs.readFile(await acceptedBaseline())), report.hashes.baseline, 'Stale accepted art baseline');
   assert.equal(report.runtime.archiveHash, PIN.sha256, 'Wrong runtime pin');
   for (const key of ['freshProcess', 'reopened', 'libraryAppended', 'autoexecDisabled'])
     assert.equal(report.evidence[key], true, 'Missing fresh-process evidence');
@@ -330,7 +405,32 @@ export async function validateLatest(report) {
 export async function publishLatest() {
   await iterationPath([MOTION_CACHE], path.join(MOTION_CACHE, 'latest.json'));
   const r = JSON.parse(await fs.readFile(path.join(MOTION_CACHE, 'latest.json'), 'utf8'));
-  await validateLatest(r);
+  const manifest = await validateLatest(r);
+  // A candidate is publishable only after matching repeat and editable recovery,
+  // including the independent reopened verifier. Historical one-clip evidence
+  // cannot authorize a changed repertoire or source.
+  for (const label of ['repeat', 'recovery']) {
+    const filename = path.join(MOTION_CACHE, label + '.json');
+    await iterationPath([MOTION_CACHE], filename);
+    const evidence = JSON.parse(await fs.readFile(filename, 'utf8'));
+    assert.equal(evidence.complete, true, 'Incomplete ' + label);
+    assert.equal(evidence.sourceHash, r.hashes.source, 'Stale ' + label + ' source');
+    assert.equal(evidence.manifestHash, r.hashes.manifest, 'Stale ' + label + ' manifest');
+    assert.deepEqual(evidence.scriptHashes, r.scriptHashes, 'Stale ' + label + ' scripts');
+    for (const key of label === 'repeat' ? ['first', 'second'] : ['before', 'restored', 'regenerated'])
+      await iterationPath([MOTION_CACHE], evidence[key]);
+    await compareMotionExports(evidence[label === 'repeat' ? 'first' : 'before'],
+      evidence[label === 'repeat' ? 'second' : 'regenerated'], manifest);
+  }
+  const verificationFile = path.join(MOTION_CACHE, 'verification.json');
+  await iterationPath([MOTION_CACHE], verificationFile);
+  const verification = JSON.parse(await fs.readFile(verificationFile, 'utf8'));
+  assert.equal(verification.complete, true, 'Incomplete independent recovery');
+  assert.equal(verification.recoveryReportHash, hash(await fs.readFile(path.join(MOTION_CACHE, 'recovery.json'))), 'Stale independent recovery');
+  assert.deepEqual(verification.scriptHashes, r.scriptHashes, 'Stale independent scripts');
+  await iterationPath([MOTION_CACHE], verification.output);
+  assert.equal(hash(await fs.readFile(verification.output)), verification.outputHash, 'Changed independent export');
+  await inspectMotionCandidate(verification.output, r.baseline, manifest);
   const backup = await retained('publication');
   await fs.copyFile(BASELINE, path.join(backup.directory, 'previous-publication.glb'));
   const stage = BASELINE + '.motion-stage';

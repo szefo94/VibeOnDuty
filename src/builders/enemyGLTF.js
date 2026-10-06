@@ -21,6 +21,7 @@ import { attachWeapons3pToHand } from './weaponFBX.js';
 import { buildRifleMovementClips } from './rifleClips.js';
 import { preserveTemplateGeometry, disposeCharacter } from './characterResources.js';
 import { applyCharacterAppearance, tintCharacterAccents } from './characterAppearance.js';
+import motionManifest from '../../tools/art/motion-manifest.json';
 export { disposeCharacter as disposeEnemyMesh } from './characterResources.js';
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -61,21 +62,35 @@ const ALIASES = {
 };
 
 // All clip keys to attempt loading
-const CLIP_KEYS = [
+const CLIP_KEYS = [...new Set([
   'idle', 'walk', 'run', 'attack', 'shoot', 'crouch', 'crouch_walk',
   'death', 'hit', 'roll', 'jump_start', 'jump_loop', 'jump_land', 'reload',
   'run_back', 'walk_back', 'strafe_l', 'strafe_r', 'nade', 'dance', 'punch_cross', 'punch_jab',
-];
+  ...motionManifest.actions.map((action) => action.id),
+])];
 // Minimum clips required — fall back to procedural if none of these match
 const REQUIRED_KEYS = ['idle', 'walk'];
 
-function findClip(animations, key) {
+export function getMotionDefinition(key, weapon = 'm4') {
+  const handling = { idle: 'ready', attack: 'ads', shoot: 'fire', reload: 'reload' };
+  return motionManifest.actions.find((a) => a.id === key) ||
+    motionManifest.actions.find((a) => !a.previewOnly && a.weapon === weapon && a.kind === handling[key]) ||
+    motionManifest.actions.find((a) => !a.previewOnly && a.aliases.includes(key)) || null;
+}
+
+export function findMotionClip(animations, key, weapon = 'm4') {
+  const spec = getMotionDefinition(key, weapon);
+  if (spec) {
+    const matches = animations.filter((c) => c.name === spec.clip);
+    if (matches.length === 1) return matches[0];
+  }
   for (const alias of (ALIASES[key] || [])) {
     const found = animations.find((c) => c.name === alias);
     if (found) return found;
   }
   return null;
 }
+const findClip = findMotionClip;
 
 // ── Note on the "+90°X CORR" theory (disproven) ───────────────────────────
 // Earlier revisions assumed merge_animations.py had baked a +90°X rotation into the
@@ -104,7 +119,7 @@ function findClip(animations, key) {
 //
 // Result: walk at ANY frame T is on the same hemisphere as crouch at frame 0.
 function normaliseClipQuatSigns(clips) {
-  const refClip = clips.find((c) => c.name === 'attack' || c.name === 'Idle_Loop' || c.name === 'idle');
+  const refClip = findClip(clips, 'idle');
   const ref = {};
   if (refClip) {
     for (const track of refClip.tracks) {
@@ -274,6 +289,18 @@ function stripRedundantTracks(gltf) {
 }
 
 // ── Load ───────────────────────────────────────────────────────────────────
+export function prepareEnemyClips(input) {
+  // Preparation owns its clip/track arrays. The parsed template and siblings
+  // keep their authored buffers even when sign alignment or stripping mutates.
+  const gltf = { ...input, animations: input.animations.map((clip) => clip.clone()) };
+  stripRedundantTracks(gltf);
+  gltf.animations.push(...buildRifleMovementClips(gltf.scene, gltf.animations));
+  normaliseClipQuatSigns(gltf.animations);
+  alignClipBoundaries(gltf.animations, 'jump_start', 'jump_loop');
+  alignClipBoundaries(gltf.animations, 'jump_loop', 'jump_land', { useFirstFrame: true });
+  return gltf;
+}
+
 export async function tryLoadEnemyGLTF() {
   // HEAD probe first so no 404 noise when file is absent
   try {
@@ -285,21 +312,9 @@ export async function tryLoadEnemyGLTF() {
 
   try {
     const loader = new GLTFLoader();
-    const gltf = await loader.loadAsync(import.meta.env.BASE_URL + 'models/enemy.glb');
-    // GLB reuses the same Float32Array between clips that share a GLTF accessor.
-    // Clone all track data before any mutation so each clip owns its arrays.
-    for (const clip of gltf.animations)
-      for (const track of clip.tracks) {
-        track.values = track.values.slice();
-        track.times  = track.times.slice();
-      }
-    stripRedundantTracks(gltf);
-    gltf.animations.push(...buildRifleMovementClips(gltf.scene, gltf.animations));
-    normaliseClipQuatSigns(gltf.animations);
+    const gltf = prepareEnemyClips(await loader.loadAsync(import.meta.env.BASE_URL + 'models/enemy.glb'));
     preserveTemplateGeometry(gltf.scene);
     // Align jump phase clip boundaries — sign-flip guard after shared-space normalisation.
-    alignClipBoundaries(gltf.animations, 'jump_start', 'jump_loop');
-    alignClipBoundaries(gltf.animations, 'jump_loop',  'jump_land', { useFirstFrame: true });
     gltfTemplate = gltf;
     usingGLTF = true;
     const found = CLIP_KEYS.filter((k) => findClip(gltf.animations, k));
@@ -349,16 +364,22 @@ export function buildEnemyMesh(wx, wz, role = 'assault') {
   // Build AnimationMixer — load every clip we recognise
   const mixer = new THREE.AnimationMixer(clone);
   const actions = {};
+  const weaponKey = { assault: 'm4', smg: 'p90', sniper: 'awp', pistol: 'pistol' }[role] || 'm4';
 
   for (const key of CLIP_KEYS) {
-    const clip = findClip(gltfTemplate.animations, key);
+    const clip = findClip(gltfTemplate.animations, key, weaponKey);
     if (!clip) continue;
     const action = mixer.clipAction(clip);
-    if (['death', 'hit', 'shoot', 'roll', 'jump_start', 'jump_land', 'reload', 'punch_cross', 'punch_jab', 'nade'].includes(key)) {
+    if (['death', 'hit', 'shoot', 'roll', 'jump_start', 'jump_land', 'reload', 'punch_cross', 'punch_jab', 'nade'].includes(key) || getMotionDefinition(key, weaponKey)?.loop === false) {
       action.setLoop(THREE.LoopOnce);
       action.clampWhenFinished = true;
     }
-    actions[key] = action;
+    if (motionManifest.actions.some(a => a.id === key) && Object.values(actions).includes(action)) {
+      // A named source ID can refer to the same mixer action as its live alias.
+      // Keep that lookup without duplicating semantic entries during gameplay
+      // weight/retirement scans (notably death versus death_front).
+      Object.defineProperty(actions, key, { value: action, enumerable: false });
+    } else actions[key] = action;
   }
 
 
@@ -441,11 +462,13 @@ export function buildPlayerMesh() {
     const clip = findClip(gltfTemplate.animations, key);
     if (!clip) continue;
     const action = mixer.clipAction(clip);
-    if (['death', 'hit', 'shoot', 'roll', 'jump_start', 'jump_land', 'reload', 'punch_cross', 'punch_jab', 'nade'].includes(key)) {
+    if (['death', 'hit', 'shoot', 'roll', 'jump_start', 'jump_land', 'reload', 'punch_cross', 'punch_jab', 'nade'].includes(key) || getMotionDefinition(key)?.loop === false) {
       action.setLoop(THREE.LoopOnce);
       action.clampWhenFinished = true;
     }
-    actions[key] = action;
+    if (motionManifest.actions.some(a => a.id === key) && Object.values(actions).includes(action)) {
+      Object.defineProperty(actions, key, { value: action, enumerable: false });
+    } else actions[key] = action;
   }
 
   // Start idle

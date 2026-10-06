@@ -44,11 +44,29 @@ export function owned(root, target) {
   }
   return absolute;
 }
-export async function run(exe, args, env = process.env) {
+export async function run(exe, args, env = process.env, options = {}) {
+  // Bound our own Blender process, including import/bake/export. This generous
+  // 15-minute ceiling covers measured contended 220-second exports. No timeout
+  // changes a completed proof; an expired child cannot emit a successful report.
+  const timeoutMs = options.timeoutMs ?? (/^blender(?:\.exe)?$/i.test(path.basename(exe)) ? 900000 : 0);
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 0 || timeoutMs > 900000 ||
+    (Object.hasOwn(options, 'timeoutMs') && timeoutMs === 0)) throw Error('Invalid process deadline');
   return new Promise((resolve, reject) => {
     const child = spawn(exe, args, { cwd: ROOT, env, windowsHide: true, stdio: 'inherit' });
-    child.on('error', reject);
-    child.on('exit', (code) => (code === 0 ? resolve() : reject(Error(`Process failed: ${code}`))));
+    let timedOut = false;
+    const timer = timeoutMs ? setTimeout(() => {
+      timedOut = true;
+      // The ChildProcess handle names only this invocation. Never kill by name,
+      // enumerate sibling jobs, or terminate any other browser/runtime owner.
+      child.kill();
+    }, timeoutMs) : null;
+    const finish = (error) => {
+      if (timer) clearTimeout(timer);
+      if (error) reject(error); else resolve();
+    };
+    child.on('error', finish);
+    child.on('exit', code => finish(timedOut ? Error(`Process timeout: ${timeoutMs}ms`) :
+      code === 0 ? null : Error(`Process failed: ${code}`)));
   });
 }
 async function download(url, destination, digest, maximum) {
