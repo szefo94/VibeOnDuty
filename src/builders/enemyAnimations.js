@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { JUMP_START_DUR, JUMP_LAND_DUR } from '../config.js';
+import { createPresentationHistory, normalizePresentation, samplePresentation } from './animationPresentation.js';
 
 // ── Additive breathing clips ──────────────────────────────────────────────
 // Procedural rig: target the arm-swing meshes with a slow sine oscillation.
@@ -118,8 +119,7 @@ export function buildEnemyMixer(mesh) {
 // LOCO_CLIPS run simultaneously with direct weight control (no crossfade).
 // Override clips (death, jump, hit, crouch, shoot, attack-idle) use crossfade.
 const LOCO_CLIPS = new Set(['idle', 'walk', 'run', 'strafe_l', 'strafe_r']);
-
-const MAX_ENEMY_SPEED = 3.6; // ENEMY_SPEED * max speedMult
+const MAX_ENEMY_SPEED = 3.6;
 
 function _applyLocoWeight(action, w) {
   if (!action) return;
@@ -131,6 +131,7 @@ function _applyLocoWeight(action, w) {
 }
 
 function _setLocoWeights(actions, speedN, strN) {
+  if (speedN <= 0) strN = 0;
   // Procedural/minimal rigs may have no lateral or run clips.
   if ((strN < 0 && !actions.strafe_l) || (strN > 0 && !actions.strafe_r)) strN = 0;
   if (!actions.run) speedN = Math.min(speedN, 0.5);
@@ -265,7 +266,7 @@ function _dbgWants(e) {
 // ── Crossfade helper ──────────────────────────────────────────────────────
 // Call once per frame after computing the desired clip name.
 // e must have { actions, currentClip } on it.
-export function crossfade(e, to, dur = 0.22) {
+export function crossfade(e, to, dur = 0.16) {
   if (!e.actions[to]) return;
   // Callers such as killEnemy can enter an override directly from the blend tree.
   _exitLocoMode(e);
@@ -273,7 +274,10 @@ export function crossfade(e, to, dur = 0.22) {
   if (to === 'death') {
     for (const action of new Set(Object.values(e.actions))) action.stop();
     e._inertia = null;
+    e.actions.death.setLoop(THREE.LoopOnce, 1);
+    e.actions.death.clampWhenFinished = true;
     e.actions.death.reset().setEffectiveTimeScale(1).setEffectiveWeight(1).play();
+    fitActionDuration(e.actions.death, 0.65);
     e.currentClip = to;
     return;
   }
@@ -340,6 +344,144 @@ export function crossfade(e, to, dur = 0.22) {
     );
     console.log(`[crossfade:${e._dbgName ?? 'enemy'}] ${fromLabel} → ${to} dur=${dur.toFixed(2)} | ${tags.length ? tags.join(' ') : 'clean'}`);
   }
+}
+
+const UPPER_TRACK = /(?:spine|neck|head|clavicle|upperarm|lowerarm|hand|finger|thumb|index|middle|ring|pinky)/i;
+/** Mask copies preserve shared prepared buffers and action aliases. */
+export function copyPresentationMask(clip, upper) {
+  return new THREE.AnimationClip(`${clip.name}_${upper ? 'upper' : 'lower'}`, clip.duration,
+    clip.tracks.filter(track => UPPER_TRACK.test(track.name) === upper).map(track => track.clone()));
+}
+function presentationAction(e, key, upper) {
+  const fallback = { walk_forward: 'walk', run_forward: 'run', walk_left: 'strafe_l',
+    walk_right: 'strafe_r', run_left: 'strafe_l', run_right: 'strafe_r',
+    crouch_forward: 'crouch_walk', crouch_back: 'crouch_walk', crouch_left: 'crouch_walk',
+    crouch_right: 'crouch_walk', crouch_idle: 'crouch', sprint: 'run',
+    melee_cross: 'punch_cross', melee_jab: 'punch_jab', throw: 'nade' };
+  const generic = key.endsWith('_reload') ? 'reload' : key.endsWith('_ads') ? 'attack'
+    : key.endsWith('_fire') ? 'shoot' : key.endsWith('_ready') ? 'idle' : null;
+  const source = e.actions[key] || e.actions[fallback[key]] || e.actions[generic] || e.actions.idle;
+  if (!source) return null;
+  if (upper === null || !e._bones?.length) return source;
+  e._presentationMasks ??= new Map();
+  let pair = e._presentationMasks.get(source);
+  if (!pair) { pair = {}; e._presentationMasks.set(source, pair); }
+  const side = upper ? 'upper' : 'lower';
+  if (!pair[side]) {
+    const clip = copyPresentationMask(source.getClip(), upper);
+    pair[side] = clip.tracks.length ? e.mixer.clipAction(clip) : null;
+  }
+  return pair[side];
+}
+function collectPresentationBones(e) {
+  if (e._bonesInit) return;
+  e._bonesInit = true; e._bones = [];
+  e.mesh?.traverse(obj => {
+    if (obj.isSkinnedMesh && obj.skeleton)
+      for (const bone of obj.skeleton.bones) if (!e._bones.includes(bone)) e._bones.push(bone);
+  });
+}
+function restorePresentationCorrection(e) {
+  if (e._presentationCorrection)
+    for (const [bone, quaternion] of e._presentationCorrection) bone.quaternion.copy(quaternion);
+  e._presentationCorrection = new Map();
+}
+function correctPresentationBones(e, pose) {
+  if (!pose.alive) return;
+  const root = e.mesh;
+  root?.updateMatrixWorld(true);
+  const pelvis = e._bones?.find(b => b.name === 'pelvis');
+  const spine = e._bones?.find(b => b.name === 'spine_03');
+  // Apply bounded deltas in the parent's space; authored rest rolls are retained.
+  const apply = (bone, worldAxis, value) => {
+    if (!bone || Math.abs(value) < 1e-6) return;
+    e._presentationCorrection.set(bone, bone.quaternion.clone());
+    const parentQ = bone.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
+    const axis = worldAxis.clone().applyQuaternion(parentQ).normalize();
+    bone.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(axis, value));
+    bone.updateWorldMatrix(false, true);
+  };
+  const lowerYaw = Math.atan2(Math.sin(pose.feetYaw - pose.bodyYaw), Math.cos(pose.feetYaw - pose.bodyYaw));
+  apply(pelvis, new THREE.Vector3(0, 1, 0), lowerYaw);
+  // The upper chain counteracts planted pelvis yaw and leads the aim.
+  if (spine) {
+    const q = spine.quaternion.clone();
+    apply(spine, new THREE.Vector3(0, 1, 0), pose.torsoYaw);
+    apply(spine, new THREE.Vector3(Math.cos(pose.bodyYaw), 0, -Math.sin(pose.bodyYaw)), pose.pitch * .55);
+    e._presentationCorrection.set(spine, q);
+  }
+}
+
+/** Read-only common rig driver. Order: restore -> mixer -> rest-aware correction -> inertia. */
+export function tickPresentation(e, raw, dt, updateMixer = true) {
+  collectPresentationBones(e);
+  e._presentationHistory ??= createPresentationHistory();
+  const normalized = normalizePresentation(raw, e._presentationHistory);
+  const pose = samplePresentation(normalized, e._presentationHistory, dt);
+  e.presentation = pose;
+  restorePresentationCorrection(e);
+  if (normalized.reset) { e._inertia = null; e._presentationKey = null; }
+  const selected = new Map();
+  const add = (key, upper, weight, phase = null, cadence = null) => {
+    const action = presentationAction(e, key, upper);
+    if (!action) return;
+    selected.set(action, (selected.get(action) ?? 0) + weight);
+    action.enabled = true; action.paused = false; action.stopFading().stopWarping();
+    action.setEffectiveWeight(selected.get(action)).play();
+    if (phase !== null) {
+      action.time = action.getClip().duration * phase;
+      // The observed simulation phase wins, including late reload receipts.
+      action.setEffectiveTimeScale(0);
+    } else if (cadence !== null) {
+      action.time = action.getClip().duration * pose.phase;
+      action.setEffectiveTimeScale(0);
+    } else action.setEffectiveTimeScale(1);
+  };
+  let key;
+  if (!pose.alive) {
+    key = `death_${pose.deathVariant}`;
+    add(e.actions[key] ? key : 'death', null, 1, pose.deathPhase);
+    e._inertia = null;
+  } else if (['throw', 'melee', 'roll', 'dance'].includes(pose.upper)) {
+    key = pose.upper === 'melee' ? (pose.action.variant === 'punch_jab' ? 'melee_jab' : 'melee_cross') : pose.upper;
+    add(key, null, 1, pose.action.total > 0 ? pose.action.phase : null);
+  } else {
+    key = pose.jump ? `jump_${pose.jump}` : pose.turn || 'loco';
+    if (pose.jump) add(key, false, 1, pose.jump === 'loop' ? null : pose.jumpPhase);
+    else if (pose.turn) add(key, false, 1, pose.turnPhase);
+    else for (const gait of pose.gait) add(gait.key, false, gait.weight,
+      pose.moving ? pose.phase : null, pose.moving ? pose.cadence : null);
+    const upperKey = pose.upper === 'sprint' ? 'sprint' : `${pose.weapon}_${pose.upper}`;
+    add(upperKey, true, 1, pose.upper === 'reload' || pose.upper === 'fire' && pose.action.total > 0
+      ? pose.action.phase : null);
+  }
+  const all = new Set(Object.values(e.actions));
+  for (const pair of e._presentationMasks?.values() ?? []) for (const action of Object.values(pair)) if (action) all.add(action);
+  for (const action of all) {
+    if (action === e.actions._breathing || action === e.actions._hitAdditive) continue;
+    if (!selected.has(action)) action.stop();
+  }
+  const transitionKey = `${key}/${pose.upper}/${pose.gait.map(g => g.key).join('+')}`;
+  if (e._presentationKey !== transitionKey && pose.alive) _snapBones(e, INERTIA_OMEGA);
+  e._presentationKey = transitionKey;
+  e.currentClip = pose.alive && pose.upper === 'reload' ? 'reload' : key;
+  e._inLocoMode = key === 'loco';
+  if (e.actions._breathing) {
+    e.actions._breathing.setEffectiveWeight(!pose.alive || pose.reducedMotion ? 0 : pose.aiming ? .4 : .75);
+    if (pose.alive) e.actions._breathing.play(); else e.actions._breathing.stop();
+  }
+  if (e.actions._hitAdditive) {
+    if (pose.alive && pose.damage && !pose.reducedMotion) e.actions._hitAdditive.reset().setEffectiveWeight(.25).play();
+    else if (!pose.alive || pose.reducedMotion) e.actions._hitAdditive.stop();
+  }
+  if (updateMixer) finishPresentation(e, dt);
+  return pose;
+}
+export function finishPresentation(e, dt) {
+  restorePresentationCorrection(e);
+  e.mixer?.update(dt);
+  if (e.presentation) correctPresentationBones(e, e.presentation);
+  _tickInertia(e, dt);
 }
 
 // ── Skeleton debug ────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { crossfade, enterLocoMode, setLocoWeights, fitActionDuration } from './enemyAnimations.js';
+import { crossfade, enterLocoMode, setLocoWeights, fitActionDuration, copyPresentationMask, tickPresentation } from './enemyAnimations.js';
 
 function actor() {
   const root = new THREE.Object3D();
@@ -16,6 +16,29 @@ function actor() {
 }
 
 describe('animation ownership across transitions', () => {
+  it('copies mask buffers and preserves a lower locomotion contribution during reload', () => {
+    const e = actor(), pelvis = new THREE.Bone(), spine = new THREE.Bone();
+    pelvis.name = 'pelvis'; spine.name = 'spine_03'; e.mesh.add(pelvis); pelvis.add(spine);
+    e._bonesInit = true; e._bones = [pelvis, spine];
+    const make = (key, value) => {
+      const clip = new THREE.AnimationClip(key, 1, [
+        new THREE.NumberKeyframeTrack('pelvis.position[x]', [0,1], [value,value]),
+        new THREE.QuaternionKeyframeTrack('spine_03.quaternion', [0,1], [0,0,0,1,0,.2,0,.98]),
+      ]);
+      e.actions[key] = e.mixer.clipAction(clip); return clip;
+    };
+    make('walk_forward', 2); const reload = make('m4_reload', 8); make('m4_ready', 0);
+    const masked = copyPresentationMask(reload, true);
+    masked.tracks[0].values[0] = 1;
+    expect(reload.tracks[1].values[0]).toBe(0);
+    const r = { identity: 'x', position: {x:0,y:0,z:0}, sampleTimeSeconds:0, onGround:true };
+    tickPresentation(e,r,.05);
+    const pose=tickPresentation(e,{...r, position:{x:0,y:0,z:-.3}, sampleTimeSeconds:.1,
+      action:{kind:'reload',total:1.8,remaining:.9}},.05);
+    e._inertia = null; e.mixer.update(0);
+    expect(pose.action.phase).toBe(.5); expect(pelvis.position.x).toBeCloseTo(2);
+    expect(e.mesh.position.x).toBe(0);
+  });
   it('plants stationary feet even if an adapter reports a lateral intention', () => {
     const e = actor();
     enterLocoMode(e);

@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import { renderComicScene } from './comicOutline.js';
 import { renderer, scene, camera } from './scene.js';
-import { PLAYER_H, PLAYER_H_CROUCH, WEAPONS, LEAN_SHIFT, JUMP_START_DUR, JUMP_LAND_DUR, ROLL_ANIM_DUR, GRENADE_THROW_DUR } from './config.js';
+import { PLAYER_H, PLAYER_H_CROUCH, WEAPONS, LEAN_SHIFT, ROLL_ANIM_DUR } from './config.js';
 import { touchLook } from './touch.js';
 import { gameRunning, keys } from './input.js';
-import { player, updatePlayer } from './entities/player.js';
+import { player, updatePlayer, playerActions as offlineActions } from './entities/player.js';
 import { playerBody } from './builders/playerBody.js';
 import { wpn, weapon3p as wpn3p } from './builders/weapon.js';
 import { enemies, spawnEnemyIntoSlot } from './entities/enemies.js';
@@ -20,19 +20,13 @@ import { updateWeaponDeath } from './combat/shoot.js';
 import { tickGamepad } from './gamepad.js';
 import { drawMinimap } from './hud/radar.js';
 import { playerMesh, playerMixer, playerActions } from './builders/enemyGLTF.js';
-import { crossfade, tickInertia, setLocoWeights, enterLocoMode, exitLocoMode, tickBoneFlipMonitor, fitActionDuration } from './builders/enemyAnimations.js';
+import { tickPresentation, finishPresentation, tickBoneFlipMonitor } from './builders/enemyAnimations.js';
 import { tickKillcam, isKillcamActive } from './replay/killcam.js';
 import { adaptTick } from './ai/difficultyAdapter.js';
 import { initOnlineEntry, isOnline, tickOnline } from './network/onlineSession.js';
 
 // Shared animation state object for the player — same shape crossfade() expects
 const playerAnim = { actions: null, currentClip: 'idle', _dbgName: 'player', _dbgTransitions: false, _dbgFlipMonitor: false };
-
-// ── Player jump-phase state ───────────────────────────────────────────────
-// Tracks jump_start → jump_loop → jump_land sequence with timers
-let prevPlayerOnGround = true;
-let jumpPhase = '';       // 'start' | 'loop' | 'land' | ''
-let jumpPhaseTimer = 0;
 
 // ── Third-person state ────────────────────────────────────────────────
 // thirdPerson: semantic bool (what mode we're in)
@@ -102,144 +96,26 @@ export function loop(ts) {
     // Mannequin faces +Z at rotation.y=0; player.yaw+PI makes it face forward (same as look dir)
     bodyTarget.rotation.y = player.yaw + Math.PI;
 
-    // ── Player jump-phase bookkeeping ────────────────────────────────
-    const _prevJumpPhase = jumpPhase;
-    if (!prevPlayerOnGround && player.onGround) {
-      jumpPhase = 'land';
-      jumpPhaseTimer = JUMP_LAND_DUR;
-    } else if (prevPlayerOnGround && !player.onGround && !player.diving) {
-      jumpPhase = 'start';
-      jumpPhaseTimer = JUMP_START_DUR;
-    }
-    prevPlayerOnGround = player.onGround;
-    if (jumpPhase === 'start') {
-      jumpPhaseTimer -= dt;
-      if (jumpPhaseTimer <= 0) jumpPhase = player.onGround ? '' : 'loop';
-    }
-    if (jumpPhase === 'land') {
-      jumpPhaseTimer -= dt;
-      if (jumpPhaseTimer <= 0) jumpPhase = '';
-    }
-    if (jumpPhase !== _prevJumpPhase && playerAnim._dbgTransitions) {
-      const loopT = playerAnim.actions?.jump_loop?.time?.toFixed(3) ?? '?';
-      console.log(`[jumpPhase] ${_prevJumpPhase || 'idle'} → ${jumpPhase || 'idle'}  onGround=${player.onGround}  jump_loop.time=${loopT}`);
-    }
-
-    // ── Player animation ─────────────────────────────────────────────
-    if (!playerMesh || !playerMixer) {
-      setDebugAnimClip('no GLTF (procedural)');
-    }
-    if (playerMesh && playerMixer) {
-      // Sync action table once playerActions is populated after load
-      if (!playerAnim.actions && playerActions) playerAnim.actions = playerActions;
-
-      // Lazy bone collection for inertial blending
-      if (!playerAnim._bonesInit) {
-        playerAnim._bonesInit = true;
-        playerAnim._bones = [];
-        playerMesh.traverse(obj => {
-          if (obj.isSkinnedMesh && obj.skeleton)
-            for (const b of obj.skeleton.bones) if (!playerAnim._bones.includes(b)) playerAnim._bones.push(b);
-        });
-      }
-
-      if (playerAnim.actions) {
-        const a = playerAnim.actions;
-        let clip = null;
-        let locoHandled = false;
-        const sprint = keys['ShiftLeft'] || keys['ShiftRight'];
-
-        if (player.dead && a.death) {
-          exitLocoMode(playerAnim); clip = 'death';
-        } else if (player.dancing && a.dance) {
-          exitLocoMode(playerAnim); clip = 'dance';
-        } else if (player.punching && a[player.punchClip]) {
-          exitLocoMode(playerAnim); clip = player.punchClip;
-        } else if (player.throwingNade && a.nade) {
-          exitLocoMode(playerAnim); clip = 'nade';
-        } else if (player.rollTimer > 0 && a.roll) {
-          exitLocoMode(playerAnim); clip = 'roll';
-        } else if (jumpPhase === 'land' && a.jump_land && !player.crouching && !player.sliding) {
-          exitLocoMode(playerAnim); clip = 'jump_land';
-        } else if (!player.onGround && !player.crouching && !player.sliding) {
-          exitLocoMode(playerAnim);
-          if (jumpPhase === 'start' && a.jump_start) clip = 'jump_start';
-          else clip = a.jump_loop ? 'jump_loop' : 'idle';
-        } else if (player.reloading && a.reload) {
-          exitLocoMode(playerAnim); clip = 'reload';
-        } else if (player.crouching || player.sliding) {
-          exitLocoMode(playerAnim);
-          clip = player.moving
-            ? (a.crouch_walk ? 'crouch_walk' : 'walk')
-            : (a.crouch      ? 'crouch'      : 'idle');
-        } else if (player.moving) {
-          const back  = keys['KeyS'] && !keys['KeyW'];
-          const left  = keys['KeyA'] && !keys['KeyD'] && !keys['KeyW'] && !keys['KeyS'];
-          const right = keys['KeyD'] && !keys['KeyA'] && !keys['KeyW'] && !keys['KeyS'];
-          if (back) {
-            exitLocoMode(playerAnim);
-            clip = a.walk_back ? 'walk_back' : (a.run_back ? 'run_back' : 'idle');
-          } else {
-            // Use loco blend tree for forward/strafe — same approach as enemies
-            const strN = left ? -1 : right ? 1 : 0;
-            const speedN = sprint ? 1.0 : 0.45;
-            enterLocoMode(playerAnim);
-            setLocoWeights(playerAnim.actions, speedN, strN);
-            locoHandled = true;
-          }
-        } else {
-          // Idle / aiming: loco at speedN=0 → idle clip gets full weight, no fade artifact
-          // idle===attack alias, so the attack/aim pose shows correctly at weight=1
-          enterLocoMode(playerAnim);
-          setLocoWeights(playerAnim.actions, 0, 0);
-          locoHandled = true;
-        }
-
-        const SNAP_CLIPS = new Set(['crouch', 'crouch_walk', 'death', 'roll', 'dance', 'punch_cross', 'punch_jab']);
-        // Jump phase transitions use a shorter crossfade instead of snap — avoids arm flap at peak and landing
-        const JUMP_FADE_CLIPS = new Set(['jump_start', 'jump_loop', 'jump_land']);
-        const jumpFade = clip && (JUMP_FADE_CLIPS.has(clip) || JUMP_FADE_CLIPS.has(playerAnim.currentClip));
-        const snapTransition = !jumpFade && clip && (SNAP_CLIPS.has(clip) || SNAP_CLIPS.has(playerAnim.currentClip));
-        const prevClip = playerAnim.currentClip;
-        if (!locoHandled && clip) crossfade(playerAnim, clip, snapTransition ? 0 : jumpFade ? 0.2 : 0.3);
-        const timed = clip === 'reload' ? [player.reloadTotal / 1000, player.reloadTimer / 1000]
-          : clip === 'nade' ? [GRENADE_THROW_DUR, player.throwTimer]
-          : clip === 'roll' ? [ROLL_ANIM_DUR, player.rollTimer]
-          : clip === 'jump_start' ? [JUMP_START_DUR, jumpPhaseTimer]
-          : clip === 'jump_land' ? [JUMP_LAND_DUR, jumpPhaseTimer] : null;
-        if (timed) {
-          fitActionDuration(a[clip], timed[0]);
-          // Resume an interrupted action at its gameplay phase, not at frame zero.
-          if (prevClip !== clip)
-            a[clip].time = a[clip].getClip().duration * Math.max(0, 1 - timed[1] / timed[0]);
-        }
-
-        // Dance plays once then stops — set LoopOnce when first entering the state
-        // so it doesn't spin forever when the player forgets to press T again.
-        if (clip === 'dance' && prevClip !== 'dance' && a.dance && playerMixer) {
-          a.dance.setLoop(THREE.LoopOnce, 1);
-          a.dance.clampWhenFinished = true;
-          playerMixer.addEventListener('finished', function onDanceEnd(ev) {
-            if (ev.action === a.dance) {
-              player.dancing = false;
-              playerMixer.removeEventListener('finished', onDanceEnd);
-            }
-          });
-        }
-
-        setDebugAnimClip(locoHandled ? `loco[${playerAnim.currentClip}]` : clip);
-
-        // Scale breathing weight: heavier during sprint, lighter while aiming
-        if (playerAnim.actions?._breathing) {
-          const breathW = player.dead ? 0
-            : player.aiming          ? 0.4
-            : (sprint && player.moving) ? 1.1
-            : 0.75;
-          playerAnim.actions._breathing.setEffectiveWeight(breathW);
-          if (!player.dead) playerAnim.actions._breathing.play();
-        }
-      }
-    }
+    // Presentation reads the simulation eye before render-only camera offsets.
+    if (playerMesh && playerMixer && playerActions) {
+      playerAnim.mesh = playerMesh; playerAnim.mixer = playerMixer; playerAnim.actions = playerActions;
+      const exclusive = offlineActions.presentation;
+      const action = exclusive.kind === 'throw' || exclusive.kind === 'melee'
+        ? { kind: exclusive.kind, elapsed: exclusive.elapsed, total: exclusive.duration, variant: player.punchClip }
+        : player.reloading ? { kind: 'reload', total: player.reloadTotal / 1000, remaining: player.reloadTimer / 1000 }
+        : player.rollTimer > 0 ? { kind: 'roll', total: ROLL_ANIM_DUR, remaining: player.rollTimer }
+        : player.dancing ? { kind: 'dance' } : { kind: 'ready' };
+      tickPresentation(playerAnim, {
+        identity: 'local', generation: exclusive.generation,
+        position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
+        sampleTimeSeconds: ts / 1000, bodyYaw: player.yaw, aimYaw: player.yaw, pitch: player.pitch,
+        crouching: player.crouching || player.sliding, onGround: player.onGround,
+        verticalVelocity: player.velY, sprinting: !!(keys.ShiftLeft || keys.ShiftRight),
+        weapon: player.weapon, alive: !player.dead, aiming: player.aiming, action,
+        reducedMotion: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true,
+      }, dt, false);
+      setDebugAnimClip(playerAnim.currentClip);
+    } else setDebugAnimClip('no GLTF (procedural)');
 
     if (!isOnline()) {
     updateEnemies(ts, dt);
@@ -255,8 +131,7 @@ export function loop(ts) {
 
   // ── Player mixer ticks even when dead so death animation plays ───
   if (playerMesh && playerMixer) {
-    playerMixer.update(dt);
-    tickInertia(playerAnim, dt);
+    finishPresentation(playerAnim, dt);
     tickBoneFlipMonitor(playerAnim);
   }
 
@@ -357,6 +232,7 @@ export function loop(ts) {
 window.__THREE = THREE;
 window.__handRef = () => playerMesh?.getObjectByName('hand_r');
 window.__bodyRef = () => playerMesh;
+window.__presentationDebug = () => playerAnim.presentation ? structuredClone(playerAnim.presentation) : null;
 
 window.__debugBone = (name) => {
   const b = playerMesh?.getObjectByName(name);
