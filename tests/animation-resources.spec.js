@@ -3,6 +3,28 @@ import { readFile } from 'node:fs/promises';
 import { compareAnimationCandidate } from '../tools/art/review.mjs';
 import { parseGLB } from '../tools/art/inspect-character.mjs';
 
+test('resources: each world actor uploads one independent skeleton palette', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#range-startbtn')).toBeEnabled({ timeout: 60000 });
+  await page.locator('#range-startbtn').click();
+  const result = await page.evaluate(async () => {
+    const g = await import('/src/builders/enemyGLTF.js');
+    const { scene, camera, renderer } = await import('/src/scene.js');
+    const input = await import('/src/input.js'); input.setGameRunning(false);
+    const a = g.buildEnemyMesh(camera.position.x, camera.position.z - 3);
+    const b = g.buildEnemyMesh(camera.position.x + 1, camera.position.z - 3);
+    scene.add(a.mesh, b.mesh); renderer.render(scene, camera); renderer.getContext().finish();
+    const palettes = actor => { const set = new Set(); actor.mesh.traverse(n => { if (n.skeleton) set.add(n.skeleton); }); return [...set]; };
+    const left = palettes(a), right = palettes(b);
+    const result = { counts: [left.length, right.length], independent: left.every(s => !right.includes(s)),
+      uploaded: [...left, ...right].every(s => s.boneTexture?.image?.data.length > 0) };
+    g.disposeEnemyMesh(a.mesh, a.mixer); g.disposeEnemyMesh(b.mesh, b.mixer);
+    return result;
+  });
+  expect(result.counts).toEqual([1, 1]);
+  expect(result.independent).toBe(true); expect(result.uploaded).toBe(true);
+});
+
 test('resources: fixed budget comparison rejects wrong properties and incomparable or overrun candidates', async () => {
   const folder='.planning/phases/07-movement-matched-and-action-safe-animation/evidence/';
   const baseline=JSON.parse(await readFile(folder+'07-baseline.json','utf8'));
