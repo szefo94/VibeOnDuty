@@ -69,9 +69,17 @@ const _tEuler = new THREE.Euler(0, 0, 0, 'YXZ');
 const TOUCH_SENS = 0.005;
 
 let last = 0;
+let animationReview = null;
+export function setAnimationReview(owner) { animationReview = owner; }
 export function loop(ts) {
   const dt = Math.min(0.05, (ts - last) / 1000);
   last = ts;
+  if (import.meta.env.DEV && animationReview) {
+    animationReview.tick(dt);
+    if (animationReview.getFrozenDebug().opened) {
+      animationReview.render(); requestAnimationFrame(loop); return;
+    }
+  }
   restorePlayerWeaponHandling();
   tickOnline(dt);
   const onlinePose = getOnlinePresentation();

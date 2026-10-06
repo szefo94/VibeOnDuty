@@ -19,7 +19,7 @@ import { startSnd, nextRound, getSndSitePositions, isMatchOver, setSndMap, compu
 import { on } from './events.js';
 import { getMode, setMode } from './modes/modeManager.js';
 import { isOnline, joinOnline, leaveOnline, requestOnlineAction, resumeOnline } from './network/onlineSession.js';
-import { stopKillcam } from './replay/killcam.js';
+import { stopKillcam, isKillcamActive } from './replay/killcam.js';
 import { toggleBuyPanel, isBuyPanelOpen, buyWeapon } from './modes/buyMenu.js';
 import { startTdm } from './modes/tdm.js';
 import { setDifficulty } from './difficulty.js';
@@ -95,6 +95,28 @@ window.__animDebug = setAnimDebug;
 
 const _euler = new THREE.Euler(0, 0, 0, 'YXZ');
 let debugVisible = true;
+let animationReview = null;
+if (import.meta.env.DEV) {
+  import('./dev/animationReview.js').then(async ({ initAnimationReview, createActualReviewActor, REVIEW_COPY }) => {
+    const input = await import('./input.js');
+    const { setAnimationReview } = await import('./loop.js');
+    const { getMode } = await import('./modes/modeManager.js');
+    const { renderer, scene } = await import('./scene.js');
+    const { wpn, weapon3p } = await import('./builders/weapon.js');
+    let wasRunning = false;
+    animationReview = initAnimationReview({
+      host: document.getElementById('developer-animation-diagnostics'),
+      eligible: () => isOnline() ? REVIEW_COPY.online : player.dead || isKillcamActive() ? REVIEW_COPY.death
+        : getMode()?.name !== 'range' ? REVIEW_COPY.online : '',
+      createActor: selection => createActualReviewActor(selection, { scene, renderer,
+        origin: camera.position.clone(), weapon: wpn, worldWeapon: weapon3p }),
+      suspend() { wasRunning = input.gameRunning; input.neutralizeInput(); input.setGameRunning(false);
+        document.exitPointerLock?.(); document.getElementById('pause-menu').style.display = 'none'; },
+      restore() { input.setGameRunning(wasRunning); document.getElementById('pause-menu').style.display = wasRunning ? 'block' : 'none'; },
+    });
+    setAnimationReview(animationReview);
+  });
+}
 setOfflineActionGuard(() => !isOnline());
 
 // ── S&D: drop to pistol on death mid-round ────────────────────────────────
@@ -205,6 +227,7 @@ document.addEventListener('keydown', (e) => {
   )
     startReload();
   if (e.code === 'F3') {
+    animationReview?.toggleDiagnostics();
     debugVisible = !debugVisible;
     if (debugLines) debugLines.visible = debugVisible;
     setSkeletonDebugVisible(debugVisible);
@@ -290,6 +313,7 @@ document.getElementById('c').addEventListener('click', () => {
 const _pauseEl = document.getElementById('pause-menu');
 
 async function returnToMainMenu() {
+  animationReview?.close(false);
   cancelPlayerActions('menu');
   await leaveOnline();
   stopTrainingRange();

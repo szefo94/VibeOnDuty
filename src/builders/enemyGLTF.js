@@ -507,3 +507,17 @@ export function buildPlayerMesh() {
 export function tintEnemyMesh(mesh, hexColor) {
   tintCharacterAccents(mesh, hexColor);
 }
+
+/** Template-only inspection factory: no scene, pool, gameplay or random state. */
+export function createReviewCharacter(weapon = 'm4') {
+  if (!gltfTemplate) throw new Error('Character asset unavailable');
+  const mesh = skeletonClone(gltfTemplate.scene);
+  const mixer = new THREE.AnimationMixer(mesh), actions = {};
+  for (const key of CLIP_KEYS) {
+    const clip = findClip(gltfTemplate.animations, key, weapon);
+    if (clip) actions[key] = mixer.clipAction(clip);
+  }
+  mesh.traverse(node => { if (node.isMesh) { node.frustumCulled = false; node.castShadow = true; } });
+  applyCharacterAppearance(mesh);
+  return { mesh, mixer, actions };
+}

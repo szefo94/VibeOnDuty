@@ -10,6 +10,12 @@ export function setLocked(v) {
   locked = v;
 }
 
+export function neutralizeInput() {
+  for (const key of Object.keys(keys)) keys[key] = false;
+  mouseHeld = false;
+  locked = false;
+}
+
 document.addEventListener('keydown', (e) => {
   keys[e.code] = true;
   if (['Space', 'Tab', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault();

@@ -1,6 +1,5 @@
 import { test, expect } from '@playwright/test';
 import { createServer } from 'vite';
-import { writeFile, mkdir } from 'node:fs/promises';
 
 let server, url;
 test.beforeAll(async () => {
@@ -25,9 +24,11 @@ async function live(page) {
 test('tracer: isolated real M4 playback pauses, scrubs, resets and closes without outcomes', async ({ page }) => {
   await range(page);
   await expect(page.getByRole('button', { name: 'Open animation review', exact: true })).toBeVisible({ timeout: 1500 });
-  await page.getByRole('button', { name: 'Open animation review', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Open animation review', exact: true })).toBeFocused();
+  await page.keyboard.press('Enter');
   await expect(page.getByRole('region', { name: 'Animation review', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Play transition', exact: true })).toBeEnabled();
+  await expect.poll(() => page.evaluate(() => !!document.pointerLockElement)).toBe(false);
   const before = await live(page);
   await page.waitForTimeout(120);
   expect(await page.evaluate(() => window.__animationReviewDebug().phase)).toBe(0);

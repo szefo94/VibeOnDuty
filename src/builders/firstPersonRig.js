@@ -113,7 +113,7 @@ function copyMetadata(value, seen = new WeakSet(), depth = 0) {
   return data;
 }
 
-function cloneHierarchy(source) {
+export function cloneVisualHierarchy(source) {
   // Runtime actors carry observation back-references (enemyGroup). Three r160
   // JSON-copies userData; isolate that metadata only for the synchronous clone,
   // and always restore the exact source objects, including on clone failure.
@@ -128,6 +128,8 @@ function cloneHierarchy(source) {
   }
   finally { for (const [node, data] of saved) node.userData = data; }
 }
+
+const cloneHierarchy = cloneVisualHierarchy;
 
 function makeView(source, selection) {
   const root = cloneHierarchy(source), pairs = [], meshPairs = [], skeletons = new Map();
