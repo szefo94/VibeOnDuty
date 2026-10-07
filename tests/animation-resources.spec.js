@@ -3,6 +3,38 @@ import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { compareAnimationCandidate } from '../tools/art/review.mjs';
 import { parseGLB } from '../tools/art/inspect-character.mjs';
 
+test('resources: a warmed first-person view reuses its exact bone lookup and releases it on retirement', async ({ page }) => {
+  test.setTimeout(90000);
+  await page.goto('/');
+  await expect(page.locator('#range-startbtn')).toBeEnabled({ timeout: 60000 });
+  await page.locator('#range-startbtn').click();
+  const result = await page.evaluate(async () => {
+    const g = await import('/src/builders/enemyGLTF.js');
+    const f = await import('/src/builders/firstPersonRig.js');
+    const input = await import('/src/input.js'); input.setGameRunning(false);
+    const { camera } = await import('/src/scene.js');
+    const source = g.buildEnemyMesh(1, 1), rig = f.createFirstPersonRig({ source: source.mesh });
+    const args = { pose: { identity: 'cache', weapon: 'm4', alive: true, upper: 'ready',
+      action: { phase: 0 } }, camera,
+      rawCorrections: [[source.mesh.getObjectByName('hand_r'), new window.__THREE.Quaternion()]] };
+    f.updateFirstPersonRig(rig, args);
+    let lookups = 0;
+    const original = rig.arms.getObjectByName;
+    rig.arms.getObjectByName = function (...values) { lookups++; return original.apply(this, values); };
+    for (let i = 0; i < 20; i++) f.updateFirstPersonRig(rig, args);
+    // No gun means no handling solver can contribute recursive lookups here.
+    // Retain the actual arms/body calculation and its source correction copying.
+    const hand = original.call(rig.arms, 'hand_r');
+    const cachedHand = rig.armBones?.get('hand_r') === hand;
+    const sameCorrection = hand.quaternion.equals(args.rawCorrections[0][1]);
+    f.disposeFirstPersonRig(rig); f.disposeFirstPersonRig(rig);
+    const released = rig.armBones?.size === 0;
+    g.disposeEnemyMesh(source.mesh, source.mixer);
+    return { lookups, cachedHand, sameCorrection, released };
+  });
+  expect(result).toEqual({ lookups: 0, cachedHand: true, sameCorrection: true, released: true });
+});
+
 test('resources: each world actor uploads one independent skeleton palette', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('#range-startbtn')).toBeEnabled({ timeout: 60000 });
