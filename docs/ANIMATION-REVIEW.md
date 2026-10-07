@@ -1,5 +1,60 @@
 # Animation and model review
 
+## Current moving collection and qualification — 2026-10-07
+
+`node tools/art/review.mjs --animation-capture` owns a free loopback root-base
+listener, browser contexts and full-pixel continuous WebM. It records all four
+offline weapons, P90 loaded-inspection/fallback behavior, first/down/third views
+and Low/Medium/High, using normal offline input and simulation/render clocks.
+Separately isolated future preview movies keep visible Preview — / Phase5 text
+while the control panel is hidden. Supported production M4 observations use the
+existing isolated dedicated-server fixture; server authority is never frozen.
+The matrix is a required collection target; current coverage is partial. Actual
+retained coverage and exact hashes are in phase07 `evidence/07-motion-review.json`.
+Its local `index.html` links directly to movies and the full report.
+
+At the current `d7812cb` runtime identity, full units passed323/323. The actual full
+offline command failed with125/127 passes and two throw setup timeouts; its focused
+follow-up also failed before those assertions. Full production multiplayer failed
+with5/17 passes. No host cause or runtime correction was established by the bounded
+transport observations. A fresh214-frame Low/one V2 smoke retained3 PNGs and9/16
+over-bound statistics; the actual acceptance CLI rejected its incomplete report.
+These facts remain open gates. Separate short captured segments and recovery
+success do not qualify the full suites or the required twelve-profile V2 matrix.
+
+For collector diagnosis, `--animation-capture --tracer` records one Low/M4 view,
+shared gait, labeled preview and legally earned combat union. `--combat-probe`
+limits collection to one Low combat context, proving accepted ordinary mouse aim
+against a visible target before waiting for energy. Both modes save separate
+partial reports and retain the same strict final acceptance failure. They never
+count as the full moving matrix. The first corrected tracer retained two sealed
+movies but did not earn grenade eligibility; its input driver is not an accepted
+combat proof. Exact historical attempts remain in separate evidence records.
+
+For human running-game review: start Vite on an owned free port, enter the enabled
+Training Range, press F3, choose Open animation review, select weapon/view/
+transition and Play. Close review → Resume returns input capture. Inspect the
+moving hands/parts, anatomy/view continuity, feet/turns, ADS settle, interruption
+and directional stable death. Record the human's exact words against current
+source/export hashes separately. Agent metrics/pixels never supply that verdict.
+
+The accepted GLB has 107 occurrences: 48 inherited plus 59 original donor actions.
+Current candidate art recovery independently reopens saved art and preserves
+all 107 while demonstrating bounded visible edits and exact restoration.
+[Creator instructions](ART.md#current-motion-creator-and-recovery-path--2026-10-07)
+describe donor append/import/retarget/action slots/bone mapping and commands.
+Separate original authorship does not clear inherited rig/motion/FBX rights.
+
+Collection success is separate from acceptance. The CLI executes applicable
+frozen source-eye V2 against actual current-source evidence and requires plan09
+to be complete/non-halted, with both outstanding executed browser assertions.
+Missing/stale/halted/unqualified09, incomplete footage and failed fixed limits
+exit nonzero while preserving partial artifacts. No old budget substitutes for V2.
+SwiftShader texture reduction is not a timing pass, hardware/FPS certification
+or human smoothness acceptance. Phase5 owns actual Shift/double-tap supersprint,
+movement/stamina/input, live base×1.15 timing, supersprint cancellation and ANIM-01.
+Older sections below are historical observations at their recorded identities.
+
 ## Phase 7 pre-tuning moving baseline — 2026-10-05
 
 The current accepted soldier now has two independently loaded moving Training Range

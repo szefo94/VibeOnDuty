@@ -1,7 +1,7 @@
 # VibeOnDuty — repository context
 
 Initial onboarding: 2026-09-09, source commit `dc27c6f` on `main`.
-Updated for authoritative online M4 combat and the editable human/comic art slice on 2026-10-05.
+Updated for authoritative online M4 combat, editable human/comic art and Phase 7 motion/recovery tooling on 2026-10-07.
 Use this as a navigation guide; verify current source before acting on historical
 notes or roadmap proposals. Update relevant context when the architecture changes.
 
@@ -181,6 +181,28 @@ maps when changing lifecycle/spawning/radar behavior.
 
 ## Character animation and weapons
 
+- Current accepted `enemy.glb` contains **107 clip occurrences**: the exact 48 inherited
+  occurrences plus 59 original `vod7_` actions (45 current, 14 explicitly Phase5 previews).
+  `tools/art/sources/motion.blend`, `motion-manifest.json`, `build_motion.py` and
+  `motion-pipeline.mjs` own donor actions, slots, world-space retargeting, candidate
+  validation and independent editable recovery. Inherited rig/motion/FBX terms remain open.
+- `entities/actionLifecycle.js` owns offline interruption and marker/award order;
+  `builders/animationPresentation.js` normalizes presentation observations. `enemyAnimations.js`
+  consumes them through masked lower/upper actions and bounded contact/turn correction.
+  Lazy mask collections belong to each mixer generation. `weaponHandling.js` owns
+  articulated parts/sockets and real-rig hand reach. P90 FBX is inspected; gameplay
+  uses the complete procedural articulation fallback. `firstPersonRig.js` owns
+  independent arms/body proxies, full hierarchies, camera restoration and disposal.
+- `dev/animationReview.js` owns the F3 offline Training Range opener and isolated
+  preview actor/view/clock. Review controls never drive live health, ammo or online
+  authority. One-handed supersprint, slide/dive/prone and reload×1.15/cancellation
+  remain labeled Preview — / Phase 5. Close review returns to Resume.
+- Ordered-bone/inverse-bind world skeleton consolidation is per actor. Mutable
+  skeletons never cross actor/view ownership. Owned reference/collection caches
+  preserve first depth-first lookup, include new lazy mask actions and invalidate
+  on replacement/generation/retirement. The frozen source-eye V2 performance gate
+  remains unqualified; texture reductions establish no timing pass.
+
 - Start with `builders/enemyGLTF.js` (load/clone, `ALIASES`, clip preparation),
   `builders/enemyAnimations.js` (locomotion weights, overrides, inertia, diagnostics),
   and `loop.js` (player action selection). Enemy action selection lives in the animation
@@ -231,6 +253,20 @@ maps when changing lifecycle/spawning/radar behavior.
 ## Validation and deployment
 
 Phase 6 art ownership and reproducibility:
+
+- Phase 7 candidate art exports validate the manifest and approved publication,
+  then copy all 59 approved sampled action buffers exactly over the unchanged
+  inherited 48-clip compatibility seam. Candidate iterate/recovery independently
+  reopens art, retains 107 clips and verifies panel/paint changes plus restored
+  semantics/pixels without publication. Motion edits keep their separate validator.
+- `review.mjs --animation-capture` collects continuous actual-input WebM on a free
+  owned root-base listener and separately labeled future previews. It executes
+  actual current-source frozen V2 and requires non-halted plan09 plus both outstanding
+  executed browser assertions. Partial collection exits nonzero. Protected sampler,
+  art/provenance bytes remain unchanged; the reviewed opt-in transition
+  logger restoration in `enemyAnimations.js` changes its runtime identity only.
+  New facts go to evidence/docs.
+  Current coverage/limits belong to `07-10-SUMMARY.md` and `07-motion-review.json`.
 
 - `tools/art/sources/soldier.blend`, `character-params.json` and `build_soldier.py`
   own the fitted anatomical human, original equipment and packed paint; `slice.blend`

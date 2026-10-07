@@ -129,7 +129,7 @@ async function frame(page, key, phase) {
   return page.evaluate(phase => window.motionTrace.samples?.[phase] ?? { authored: false, name: null }, phase);
 }
 
-test('original source: normal prefix-aware game renders authored walk and physical reload over real frames', async ({page}, testInfo) => {
+test('original source: authored walk/reload clip motion on an unmounted loaded rig over actual render frames', async ({page}, testInfo) => {
   test.setTimeout(120000);
   await enter(page);
   const walks = [], reloads = [];
@@ -162,7 +162,7 @@ test('original source: normal prefix-aware game renders authored walk and physic
   expect(Math.max(...reloads.map(s=>distance(s.support,reloads[0].support)))).toBeGreaterThan(.1);
   expect(distance(reloads[0].entrySupport,reloads.at(-1).support)).toBeLessThan(.002);
   await writeFile(testInfo.outputPath('frames.json'),JSON.stringify({
-    playback:'independent loaded source clone; walk/reload1x; simulation frozen; live correction unchanged; temporary camera restored in finally',
+    playback:'unmounted independent loaded source rig; authored walk/reload clips1x over actual render frames; source-motion proof only; simulation frozen; live correction unchanged; temporary camera restored in finally',
     walks:walks.map(({image,...sample})=>sample), reloads:reloads.map(({image,...sample})=>sample)
   },null,2));
 });

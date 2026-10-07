@@ -1,5 +1,47 @@
 # tools
 
+## Phase 7 original motion and current-art recovery
+
+The current accepted GLB contains 107 clip occurrences (48 inherited + 59 original
+`vod7_`). Read [docs/ART.md](../docs/ART.md#current-motion-creator-and-recovery-path--2026-10-07)
+for the exact donor append/import, world-space parent-first retarget, action-slot,
+bone-mapping and rights boundaries. The saved `MotionDonor` library uses action
+slot `OBMotionDonor`; exact `donorAction` and one-to-one bone names live in
+`art/motion-manifest.json`. New creator FBX inputs must first become a reviewed
+saved donor; runtime/export does not accept uncontrolled FBX paths.
+
+```sh
+node tools/art/motion-pipeline.mjs build --candidate
+node tools/art/motion-pipeline.mjs repeat
+node tools/art/motion-pipeline.mjs recover --demo
+node tools/art/verify-export.mjs --motion
+node tools/art/motion-pipeline.mjs publish --latest
+node tools/art/pipeline.mjs self-test
+node tools/art/pipeline.mjs iterate --demo
+node tools/art/verify-export.mjs --iteration
+node tools/art/review.mjs --animation-capture
+```
+
+Retain the editable donor/manifest before intentional edits. Update candidate
+sourceHash after saving, retain accepted art baselineHash, and run repeat/recover/
+independent verification before publication. The frozen Phase7 V2 contract
+currently requires candidate-only work: do not publish or rewrite protected
+provenance/art/runtime bytes. Separate new evidence identifies current recovery.
+The existing art build command below publishes assets; it is not the Phase7
+motion `build --candidate` command.
+
+Art iteration now retains all approved sampled motion bytes exactly while
+preserving historical inherited-occurrence, inverse-bind and rest checks. Actual
+old-motion-only, inverse-bind and quaternion corruption controls reject. Separate
+motion edits keep the motion validator; art recovery cannot authorize changed motion.
+New moving collection owns free root-base listeners, WebM and a local evidence
+index, then executes frozen V2 and non-halted09/browser qualification. Partial
+collection exits nonzero; human aesthetics, physical device/FPS qualification and
+Phase5 actual movement/stamina/×1.15/cancel/ANIM-01 remain open.
+The diagnostic `--animation-capture --tracer` and `--animation-capture --combat-probe`
+save separate partial evidence; their short segments cannot complete the matrix
+or bypass actual full-suite/frozen-V2 failures.
+
 ## `retarget.py` — rebuild `public/models/enemy.glb`
 
 `enemy.glb` shipped with clips from two sources on incompatible rigs: 24 authored on

@@ -1,5 +1,78 @@
 # Editable human and illustrated art
 
+## Current motion creator and recovery path — 2026-10-07
+
+The accepted character has 107 clip occurrences: 48 exact inherited occurrences
+and 59 original `vod7_` actions. The retained donor is
+`tools/art/sources/motion.blend` (SHA256 `5a9e8c4c160cd4d7bb072f724e28dbb52b902f05d75d68a37c68d98449470903`),
+with `motion-manifest.json` (`af139b82f372c8b66c994a519fbe5a685cae23dc5b5153c8607578ef02f296c5`).
+The current GLB is `8503964441a36d54d9dada52911f4869ce48bf4e32cf403a7836b9cf53c3b936`.
+These facts come from plan07-03's published source and bounded manifest, not from
+renaming inherited motion. Original neutral/rest keyed curves remain separate
+from unresolved inherited rig, mannequin/Mixamo motion and weapon-FBX terms.
+
+Open the saved donor in verified portable Blender4.5.13 LTS. The library object
+is `MotionDonor`; every manifest action uses the exact `OBMotionDonor` action slot.
+For an approved creator addition, append `Object/MotionDonor` from the saved
+library rather than importing its rig as the game skeleton. Add the exact
+`donorAction`, `donorSlot`, frame window/FPS, action ID, `vod7_` clip name,
+markers and one-to-one `boneMap` to a candidate manifest. A separately sourced
+FBX must first be imported into a creator donor and mapped explicitly; this
+pipeline currently accepts the retained `.blend` library, not arbitrary FBX paths.
+Do not assign an FBX license to original keyed motion or assume rig rights are cleared.
+
+`build_motion.py` appends the saved donor with source scripts disabled, assigns
+the exact action and slot, evaluates donor bones in world space parent-first,
+and maps each declared bone onto the inherited target rest axes. It clears
+unwanted translations and rejects horizontal pelvis/root travel. Declared vertical
+compression/collapse is bounded. Map spine/clavicle/upperarm/lowerarm/hand,
+pelvis/thigh/calf/foot/ball by the exact 21 current mapped bone names. Finger
+chains remain inherited; runtime handling fits them separately. Unsupported
+or duplicate targets, stale source hashes, missing action/slot, NaN, wrong rig,
+unlisted channels, unchanged motion and protected art corruption reject.
+After intentionally saving a donor edit, update the candidate `sourceHash`;
+retain the accepted art `baselineHash`. Preserve the retained donor/manifest first.
+
+```sh
+node tools/art/motion-pipeline.mjs build --candidate
+node tools/art/motion-pipeline.mjs repeat
+node tools/art/motion-pipeline.mjs recover --demo
+node tools/art/verify-export.mjs --motion
+node tools/art/motion-pipeline.mjs publish --latest
+```
+
+Candidate construction, repeat and editable recovery happen in separate owned
+cache directories. Publication requires all matching current identities and
+independent verification; it performs one validated atomic rename. During the
+frozen Phase7 V2 contract, candidates stay unpublished and protected donor/art/
+provenance/publication bytes stay exact. Plan07-10 records new facts separately
+in `07-motion-recovery.json`; the frozen provenance ledger remains historical.
+
+The art export seam now consumes this validated current manifest/publication.
+It retains the original 48-occurrence compatibility checks, copies approved
+sample bytes without re-normalization, and rejects loss/change of the 59 actions.
+`pipeline.mjs iterate --demo` changes only reviewed helmet panels/accent paint,
+keeps accepted inputs intact and independently restores 107-clip output. The
+separate `verify-export.mjs --iteration` reopens restored editable art in another
+Blender process and checks full mesh/skin/paint/motion semantics and matched game
+pixels. Old-motion-only and inverse-bind/quaternion corruption fixtures reject.
+
+Run `node tools/art/review.mjs --animation-capture` for continuous full-pixel
+moving actual-input movies and separately labeled future previews. Its retained
+local `index.html` is linked from `07-motion-review.json`. In the running game,
+enter enabled Training Range, press F3 and choose Open animation review; choose
+weapon/view/transition and Play. Close review then choose Resume to capture input.
+Future one-handed carry, slide/dive/prone and reload×1.15/cancel labels remain
+Preview — / Phase5. Normal game input and server authority keep their own clocks.
+
+Capture always executes actual current-source frozen-V2 acceptance and requires
+plan09's complete, non-halted qualification and both outstanding executed browser
+assertion logs. Saved movies or successful recovery cannot bypass these gates.
+Incomplete coverage stays partial and the command exits nonzero. Human anatomy,
+grip, feet, ADS comfort, motion smoothness and representative hardware/FPS review
+remain pending. Phase5 owns actual Shift/double-tap supersprint, movement speeds,
+stamina/input, base×1.15 reload timing, supersprint cancellation and final ANIM-01.
+
 The current human, M4 and Greek Columns slice is generated from retained Blender
 sources and displayed through the existing gameplay renderer. Phase 6 provides
 repeatable authoring, protected rig/motion comparisons, selective ink and three
