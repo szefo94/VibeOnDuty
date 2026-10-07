@@ -100,6 +100,8 @@ Plan09 acceptance amendment (2026-10-06): `07-BUDGET-AMENDMENT.md` explicitly re
 
 Plan09 owner correction (2026-10-07): `07-09-OWNER-SCOPE-REVIEW.md` is binding. Permit exactly two additional runtime owners (`enemyAnimations.js`, `weaponHandling.js`) for reference/collection caches with actual loaded-rig equivalence, duplicate/missing name semantics, replacement/retirement and lazily created mask action negatives. Keep source-unit bytes and other protected-source predicates intact; add explicit allow/reject controls to the acceptance suite. All numerical/reference/producer/settings predicates remain unchanged. Current actual complete candidate fails with 135 numerical flags; owner approval does not waive them.
 
+Plan10 sequencing correction (2026-10-07): `07-10-SEQUENCING-REVIEW.md` is binding. Independent implementation after03+08 may proceed in wave8 while09 remains unqualified, with sequential shared-owner execution. Final10/Phase7 acceptance still requires actual current-source09 V2 acceptance and its outstanding browser qualification, enforced by strict capture CLI plus halted/missing/stale dependency negative controls. Protected provenance/art/runtime/sampler bytes remain unchanged; recovery facts are separate evidence/docs and candidates unpublished. Partial recovery or review collection cannot confer completion. User requires unrelated browser jobs to keep running.
+
 - [x] Every task has automated verification and adjacent explicit failure semantics.
 - [x] No three consecutive tasks without automated verification.
 - [x] All missing files/commands have creation tasks before use; no watch flags.
