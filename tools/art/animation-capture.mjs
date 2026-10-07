@@ -150,6 +150,8 @@ async function weaponSegment(page, specification) {
   const observations = await page.evaluate(time => window.__movingSince(time), start.wallMs);
   const end = await observe(page, 'ready-after-reload'); observations.push(end);
   const coverage = { quality: observations.every(o => o.quality === specification.tier),
+    view: specification.view==='third'?end.thirdPerson:!end.thirdPerson
+      &&(specification.view==='down'?end.pitch< -1:Math.abs(end.pitch)<.01),
     ads: observations.some(o => o.aiming), fire: observations.some(o => o.ammo < start.ammo),
     physicalReload: observations.some(o => o.reloading) && end.ammo > beforeReload.ammo && !end.reloading,
     actualFrames: end.mixerTime > start.mixerTime };
@@ -188,7 +190,7 @@ async function sharedMovementUnion(page, tier) {
     history, eligibleActions:['directional','sprint','crouch','jump','pitch','melee-reload-interruption'],
     deadlineLimits:'Exact equality at reload deadline remains dependent on executed lifecycle assertions, not driver timing'};
 }
-async function earnedCombatUnion(page, tier) {
+async function earnedCombatUnion(page, tier, recordStep) {
   await badge(page, `Actual ${tier} TDM · earn grenade energy through enemy damage · normal input/clock`);
   const start = (await observe(page,'combat-start')).wallMs;
   await page.evaluate(async () => {
@@ -198,7 +200,7 @@ async function earnedCombatUnion(page, tier) {
       const {groundElevation} = await import('/src/map.js');
       const {hasLOS} = await import('/src/utils/los.js');
       const {BULLET_GRAV,BULLET_SPEED,MOUSE_SENS} = await import('/src/config.js');
-      let route=0,raf,left=false,walking=false,aiming=false,lastJournal=0;
+      let route=0,raf,left=false,walking=false,aiming=false,lastJournal=0,approaching=false;
       const points=[[62,46],[62,22],[34,22],[34,46]], progress=[];
       const mouse=(button,down)=>document.dispatchEvent(new MouseEvent(down?'mousedown':'mouseup',{button,bubbles:true}));
       const forward=down=>{if(walking===down)return;walking=down;
@@ -219,16 +221,16 @@ async function earnedCombatUnion(page, tier) {
           visible:hasLOS(camera.position.x,camera.position.y,camera.position.z,e.x,y,e.z)};
         }).sort((a,b)=>Number(b.visible)-Number(a.visible)||a.distance-b.distance)[0];
         let aimProof=null;
-        if(player.dead||player.energy>=100){fire(false);forward(false);}
+        if(player.dead||!approaching&&player.energy>=100){fire(false);forward(false);}
         else if(target?.visible){
-          forward(false);if(!aiming){aiming=true;mouse(2,true);}
+          forward(approaching);if(!approaching&&!aiming){aiming=true;mouse(2,true);}
           aimProof=look(Math.atan2(-(target.x-camera.position.x),-(target.z-camera.position.z)),
             Math.atan2(target.y-camera.position.y,Math.hypot(target.x-camera.position.x,target.z-camera.position.z)));
           const direction=camera.getWorldDirection(new window.__THREE.Vector3());
           const desired=new window.__THREE.Vector3(target.x-camera.position.x,target.y-camera.position.y,target.z-camera.position.z).normalize();
           aimProof.cameraDirection=direction.toArray();aimProof.desiredDirection=desired.toArray();aimProof.dot=direction.dot(desired);
           aimProof.collision={center:[target.x,target.y-.5*BULLET_GRAV*(target.distance/BULLET_SPEED)**2,target.z],radius:.75,distance:target.distance};
-          fire(true);
+          fire(!approaching);
         }else{
           fire(false);const point=points[route%points.length];
           if(Math.hypot(point[0]-camera.position.x,point[1]-camera.position.z)<1)route++;
@@ -244,6 +246,7 @@ async function earnedCombatUnion(page, tier) {
       };
       window.__combatDriverProgress=()=>progress;
       window.__combatDriverDispose=()=>{cancelAnimationFrame(raf);fire(false);forward(false);mouse(2,false);};
+      window.__combatDriverApproach=()=>{approaching=true;raf=requestAnimationFrame(tick);};
       raf=requestAnimationFrame(tick);
   });
   try {
@@ -251,19 +254,27 @@ async function earnedCombatUnion(page, tier) {
     const proof=await page.evaluate(()=>window.__combatDriverProgress().find(s=>s.aimProof));
     assert.ok(proof.aimProof.dot>.999,'Normal mouse aim did not align with the observed viable target');
     console.log('Moving combat accepted-aim proof: '+JSON.stringify(proof.aimProof));
+    await recordStep('accepted-aim',{proof});
     await page.waitForFunction(()=>window.__movingRead().energy>=100,null,{timeout:120000});
   } catch(error){
     error.combatProgress=await page.evaluate(()=>window.__combatDriverProgress());throw error;
   } finally {await page.evaluate(()=>window.__combatDriverDispose());}
   const earned=await observe(page,'earned-grenade-resource');
   assert.ok(earned.energy>=100,'Normal combat did not earn grenade eligibility within its bound');
+  await recordStep('earned-resource',{earned});
   await page.keyboard.press('KeyR');
   const throwAt=(await observe(page,'throw-input')).wallMs;
   await page.mouse.click(640,480,{button:'middle'});
   await page.waitForFunction(time=>window.__movingSince(time).some(s=>s.throwingNade&&!s.reloading&&s.energy===0),throwAt,{timeout:30000});
+  await recordStep('throw-canceled-reload',{observations:await page.evaluate(time=>window.__movingSince(time),throwAt)});
   const teams = await page.evaluate(async()=>(await import('/src/entities/enemies.js')).enemies.map(e=>e.sndTeam));
-  await page.waitForFunction(time=>window.__movingSince(time).some(s=>s.dead),start,{timeout:60000});
-  await page.waitForFunction(()=>!window.__movingRead().dead,null,{timeout:45000});
+  await page.evaluate(()=>window.__combatDriverApproach());
+  try {
+    await page.waitForFunction(time=>window.__movingSince(time).some(s=>s.dead),start,{timeout:60000});
+    await recordStep('natural-death',{observations:await page.evaluate(time=>window.__movingSince(time),start)});
+    await page.waitForFunction(()=>!window.__movingRead().dead,null,{timeout:45000});
+    await recordStep('natural-respawn',{sample:await observe(page,'respawn')});
+  }finally{await page.evaluate(()=>window.__combatDriverDispose());}
   return {tier,kind:'actual-earned-resource-combat-union',complete:true, earned,teams,
     aimProof:await page.evaluate(()=>window.__combatDriverProgress()),
     observations:await page.evaluate(time=>window.__movingSince(time),start),
@@ -555,12 +566,24 @@ async function collectCombat(serverUrl,browser,directory,report) {
       await page.locator('.map-card[data-map="bunker"]').click();
       await page.locator('#tdm-startbtn').click();
       await installObserver(page);await page.keyboard.press('KeyV');
-      entry=await earnedCombatUnion(page,tier);report.offlineCombat.push(entry);
+      const combatStarted=Date.now();
+      entry={tier,kind:'actual-earned-resource-combat-union',complete:false,stages:[]};report.offlineCombat.push(entry);
+      const completed=await earnedCombatUnion(page,tier,async(name,evidence)=>{
+        entry.stages.push({name,...evidence});
+        console.log(`Moving combat stage ${tier}/${name}: ${Date.now()-combatStarted}ms collection wall`);
+        await fs.writeFile(path.join(directory,'collection-partial.json'),JSON.stringify(report,null,2));
+      });
+      Object.assign(entry,completed);
       console.log(`Moving eligible combat ${tier}: qualified earned grenade/damage/death/respawn`);
       await page.evaluate(()=>document.exitPointerLock());
       await page.locator('#pause-mainmenu-btn').click();
       await page.locator('#overlay').waitFor({state:'visible'});entry.menuReturn=true;
-    } catch(error){report.collectionErrors.push({stage:'eligible-combat',tier,error:error.message,
+    } catch(error){
+      if(entry&&page&&!page.isClosed()){
+        entry.lastObservation=await observe(page,'combat-incomplete').catch(()=>null);
+        entry.observations=await page.evaluate(()=>window.__movingSince(0)).catch(()=>[]);
+      }
+      report.collectionErrors.push({stage:'eligible-combat',tier,error:error.message,
         progress:error.combatProgress??[]});
       console.error(`Moving eligible combat ${tier} retained partial: ${error.message}`);
     } finally {
