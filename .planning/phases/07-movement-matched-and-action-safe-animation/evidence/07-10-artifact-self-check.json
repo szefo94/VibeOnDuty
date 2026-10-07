@@ -1,0 +1,569 @@
+{
+  "checkedAt": "2026-10-07T19:30:28.314Z",
+  "scope": "Artifact integrity only; no acceptance waiver",
+  "complete": true,
+  "files": [
+    {
+      "path": ".planning\\phases\\07-movement-matched-and-action-safe-animation\\evidence\\07-motion-review.json",
+      "sha256": "da14ed77d286e3d2c6fe7b8d0468fb8a453261b69673005dc797b2b6d703ec6b"
+    },
+    {
+      "path": ".planning\\phases\\07-movement-matched-and-action-safe-animation\\evidence\\07-motion-review-fallback-recovery.json",
+      "sha256": "8434ea8a7b50fa0d3acdc17b0eb08f09cab29ee6e24c35495583eab1254aad16"
+    },
+    {
+      "path": ".planning\\phases\\07-movement-matched-and-action-safe-animation\\evidence\\07-motion-review-tracer.json",
+      "sha256": "c3c371bf36b449a9760a916b673988507fb59187543e6dfd51e1cef88f3fc5aa"
+    },
+    {
+      "path": ".planning\\phases\\07-movement-matched-and-action-safe-animation\\evidence\\07-motion-review-view-tracer.json",
+      "sha256": "37152997e38a19a55419c7cd9df5c22b772df5c4e0cf6d8ea7ccd93f85116f2c"
+    },
+    {
+      "path": ".planning\\phases\\07-movement-matched-and-action-safe-animation\\evidence\\07-motion-review-independent-first.json",
+      "sha256": "9a299cd5c90e72b14785373beb0caf93f19b36edcd2fe3f6fcf55c37e21fe1e6"
+    },
+    {
+      "path": ".planning\\phases\\07-movement-matched-and-action-safe-animation\\evidence\\07-motion-review-combat-probe.json",
+      "sha256": "9df4306c19122462e1855a6a706afde9b12d88270c4986615bab284beff62b46"
+    },
+    {
+      "path": ".planning\\phases\\07-movement-matched-and-action-safe-animation\\evidence\\07-motion-review-tracer-first.json",
+      "sha256": "c34cf0751ec6836e747e1a121ca14d19075925b3963c5ed84a11c8cee9f4f582"
+    },
+    {
+      "path": ".planning\\phases\\07-movement-matched-and-action-safe-animation\\evidence\\07-motion-review-tracer-second.json",
+      "sha256": "28ec9479b87996f3dfae719ae334622378fadc420801e88900ad1072844b25b2"
+    },
+    {
+      "path": ".planning\\phases\\07-movement-matched-and-action-safe-animation\\evidence\\07-motion-review-attempt1.json",
+      "sha256": "9bace5dce4f6e5f3b361ecb77dd29f1a95d235951299e1b2325f828ba5851b5c"
+    },
+    {
+      "path": ".planning\\phases\\07-movement-matched-and-action-safe-animation\\evidence\\07-motion-review-attempt2.json",
+      "sha256": "1f769f151e9504756028c79fa91c6489de8230e0b9ba70821aa9ce222a34af60"
+    }
+  ],
+  "missing": [],
+  "hashMismatch": [],
+  "currentSource": [
+    {
+      "path": "index.html",
+      "matches": true
+    },
+    {
+      "path": "public/models/enemy.glb",
+      "matches": true
+    },
+    {
+      "path": "public/textures/comic-slice.png",
+      "matches": true
+    },
+    {
+      "path": "src/ai/difficultyAdapter.js",
+      "matches": true
+    },
+    {
+      "path": "src/ai/enemyStates.js",
+      "matches": true
+    },
+    {
+      "path": "src/artMaterials.js",
+      "matches": true
+    },
+    {
+      "path": "src/astar.js",
+      "matches": true
+    },
+    {
+      "path": "src/astar.test.js",
+      "matches": true
+    },
+    {
+      "path": "src/builders/animationPresentation.js",
+      "matches": true
+    },
+    {
+      "path": "src/builders/animationPresentation.test.js",
+      "matches": true
+    },
+    {
+      "path": "src/builders/assetManager.js",
+      "matches": true
+    },
+    {
+      "path": "src/builders/characterAppearance.js",
+      "matches": true
+    },
+    {
+      "path": "src/builders/characterAppearance.test.js",
+      "matches": true
+    },
+    {
+      "path": "src/builders/characterResources.js",
+      "matches": true
+    },
+    {
+      "path": "src/builders/drone.js",
+      "matches": true
+    },
+    {
+      "path": "src/builders/enemy.js",
+      "matches": true
+    },
+    {
+      "path": "src/builders/enemyAnimations.js",
+      "matches": true
+    },
+    {
+      "path": "src/builders/enemyAnimations.test.js",
+      "matches": true
+    },
+    {
+      "path": "src/builders/enemyGLTF.js",
+      "matches": true
+    },
+    {
+      "path": "src/builders/enemyGLTF.test.js",
+      "matches": true
+    },
+    {
+      "path": "src/builders/enemyWeapon.js",
+      "matches": true
+    },
+    {
+      "path": "src/builders/firstPersonRig.js",
+      "matches": true
+    },
+    {
+      "path": "src/builders/firstPersonRig.test.js",
+      "matches": true
+    },
+    {
+      "path": "src/builders/playerBody.js",
+      "matches": true
+    },
+    {
+      "path": "src/builders/rifleClips.js",
+      "matches": true
+    },
+    {
+      "path": "src/builders/rifleClips.test.js",
+      "matches": true
+    },
+    {
+      "path": "src/builders/weapon.js",
+      "matches": true
+    },
+    {
+      "path": "src/builders/weapon3pTransform.js",
+      "matches": true
+    },
+    {
+      "path": "src/builders/weapon3pTransform.test.js",
+      "matches": true
+    },
+    {
+      "path": "src/builders/weaponFBX.js",
+      "matches": true
+    },
+    {
+      "path": "src/builders/weaponHandling.js",
+      "matches": true
+    },
+    {
+      "path": "src/builders/weaponHandling.test.js",
+      "matches": true
+    },
+    {
+      "path": "src/combat/damage.js",
+      "matches": true
+    },
+    {
+      "path": "src/combat/damage.test.js",
+      "matches": true
+    },
+    {
+      "path": "src/combat/shoot.js",
+      "matches": true
+    },
+    {
+      "path": "src/comicOutline.js",
+      "matches": true
+    },
+    {
+      "path": "src/comicOutline.test.js",
+      "matches": true
+    },
+    {
+      "path": "src/config.js",
+      "matches": true
+    },
+    {
+      "path": "src/dev/animationReview.js",
+      "matches": true
+    },
+    {
+      "path": "src/dev/animationReview.test.js",
+      "matches": true
+    },
+    {
+      "path": "src/difficulty.js",
+      "matches": true
+    },
+    {
+      "path": "src/editor/mapEditor.js",
+      "matches": true
+    },
+    {
+      "path": "src/entities/actionLifecycle.js",
+      "matches": true
+    },
+    {
+      "path": "src/entities/actionLifecycle.test.js",
+      "matches": true
+    },
+    {
+      "path": "src/entities/ammoDrops.js",
+      "matches": true
+    },
+    {
+      "path": "src/entities/drone.js",
+      "matches": true
+    },
+    {
+      "path": "src/entities/enemies.js",
+      "matches": true
+    },
+    {
+      "path": "src/entities/enemySpawning.js",
+      "matches": true
+    },
+    {
+      "path": "src/entities/enemyUpdate.js",
+      "matches": true
+    },
+    {
+      "path": "src/entities/entityBase.js",
+      "matches": true
+    },
+    {
+      "path": "src/entities/friendlyBots.js",
+      "matches": true
+    },
+    {
+      "path": "src/entities/grenades.js",
+      "matches": true
+    },
+    {
+      "path": "src/entities/groundSync.test.js",
+      "matches": true
+    },
+    {
+      "path": "src/entities/player.js",
+      "matches": true
+    },
+    {
+      "path": "src/entities/targetDummy.js",
+      "matches": true
+    },
+    {
+      "path": "src/entities/waveSystem.js",
+      "matches": true
+    },
+    {
+      "path": "src/events.js",
+      "matches": true
+    },
+    {
+      "path": "src/fx/damageNumbers.js",
+      "matches": true
+    },
+    {
+      "path": "src/fx/impacts.js",
+      "matches": true
+    },
+    {
+      "path": "src/fx/meleeRange.js",
+      "matches": true
+    },
+    {
+      "path": "src/fx/particles.js",
+      "matches": true
+    },
+    {
+      "path": "src/fx/screenShake.js",
+      "matches": true
+    },
+    {
+      "path": "src/fx/tracers.js",
+      "matches": true
+    },
+    {
+      "path": "src/gamepad.js",
+      "matches": true
+    },
+    {
+      "path": "src/graphicsQuality.js",
+      "matches": true
+    },
+    {
+      "path": "src/graphicsQuality.test.js",
+      "matches": true
+    },
+    {
+      "path": "src/hud/enemyBars.js",
+      "matches": true
+    },
+    {
+      "path": "src/hud/hitmarker.js",
+      "matches": true
+    },
+    {
+      "path": "src/hud/hud.js",
+      "matches": true
+    },
+    {
+      "path": "src/hud/overlay.js",
+      "matches": true
+    },
+    {
+      "path": "src/hud/radar.js",
+      "matches": true
+    },
+    {
+      "path": "src/hud/rings.js",
+      "matches": true
+    },
+    {
+      "path": "src/hud/sndHud.js",
+      "matches": true
+    },
+    {
+      "path": "src/input.js",
+      "matches": true
+    },
+    {
+      "path": "src/level.js",
+      "matches": true
+    },
+    {
+      "path": "src/lighting.js",
+      "matches": true
+    },
+    {
+      "path": "src/loop.js",
+      "matches": true
+    },
+    {
+      "path": "src/main.js",
+      "matches": true
+    },
+    {
+      "path": "src/map.js",
+      "matches": true
+    },
+    {
+      "path": "src/map.test.js",
+      "matches": true
+    },
+    {
+      "path": "src/maps/bunker.js",
+      "matches": true
+    },
+    {
+      "path": "src/maps/concept.js",
+      "matches": true
+    },
+    {
+      "path": "src/maps/range.js",
+      "matches": true
+    },
+    {
+      "path": "src/maps/rooftop.js",
+      "matches": true
+    },
+    {
+      "path": "src/maps/vanguard.js",
+      "matches": true
+    },
+    {
+      "path": "src/materials.js",
+      "matches": true
+    },
+    {
+      "path": "src/math.js",
+      "matches": true
+    },
+    {
+      "path": "src/math.test.js",
+      "matches": true
+    },
+    {
+      "path": "src/modes/buyMenu.js",
+      "matches": true
+    },
+    {
+      "path": "src/modes/economy.js",
+      "matches": true
+    },
+    {
+      "path": "src/modes/modeManager.js",
+      "matches": true
+    },
+    {
+      "path": "src/modes/snd.js",
+      "matches": true
+    },
+    {
+      "path": "src/modes/snd.test.js",
+      "matches": true
+    },
+    {
+      "path": "src/modes/tdm.js",
+      "matches": true
+    },
+    {
+      "path": "src/modes/trainingRange.js",
+      "matches": true
+    },
+    {
+      "path": "src/network/onlineSession.js",
+      "matches": true
+    },
+    {
+      "path": "src/network/onlineUi.js",
+      "matches": true
+    },
+    {
+      "path": "src/network/onlineUi.test.js",
+      "matches": true
+    },
+    {
+      "path": "src/network/remoteActors.js",
+      "matches": true
+    },
+    {
+      "path": "src/network/remoteActors.test.js",
+      "matches": true
+    },
+    {
+      "path": "src/rampMath.js",
+      "matches": true
+    },
+    {
+      "path": "src/replay/damageTracker.js",
+      "matches": true
+    },
+    {
+      "path": "src/replay/killcam.js",
+      "matches": true
+    },
+    {
+      "path": "src/replay/killcam.test.js",
+      "matches": true
+    },
+    {
+      "path": "src/scene.js",
+      "matches": true
+    },
+    {
+      "path": "src/shared/combat.js",
+      "matches": true
+    },
+    {
+      "path": "src/shared/combat.test.js",
+      "matches": true
+    },
+    {
+      "path": "src/shared/maps/bunker.js",
+      "matches": true
+    },
+    {
+      "path": "src/shared/movement.js",
+      "matches": true
+    },
+    {
+      "path": "src/shared/movement.test.js",
+      "matches": true
+    },
+    {
+      "path": "src/shared/protocol.js",
+      "matches": true
+    },
+    {
+      "path": "src/shared/protocol.test.js",
+      "matches": true
+    },
+    {
+      "path": "src/shared/tdmRules.js",
+      "matches": true
+    },
+    {
+      "path": "src/shared/tdmRules.test.js",
+      "matches": true
+    },
+    {
+      "path": "src/shared/tdmSimulation.js",
+      "matches": true
+    },
+    {
+      "path": "src/shared/world.js",
+      "matches": true
+    },
+    {
+      "path": "src/shared/world.test.js",
+      "matches": true
+    },
+    {
+      "path": "src/tiles.js",
+      "matches": true
+    },
+    {
+      "path": "src/tiles.test.js",
+      "matches": true
+    },
+    {
+      "path": "src/touch.js",
+      "matches": true
+    },
+    {
+      "path": "src/utils/los.js",
+      "matches": true
+    },
+    {
+      "path": "src/version.js",
+      "matches": true
+    },
+    {
+      "path": "style.css",
+      "matches": true
+    },
+    {
+      "path": "tools/art/build_soldier.py",
+      "matches": true
+    },
+    {
+      "path": "tools/art/character-params.json",
+      "matches": true
+    },
+    {
+      "path": "tools/art/provenance.json",
+      "matches": true
+    },
+    {
+      "path": "tools/art/sources/soldier.blend",
+      "matches": true
+    },
+    {
+      "path": "captureSampler",
+      "matches": true
+    }
+  ],
+  "independentContextCounts": {
+    "freshCurrent": 42,
+    "separateFallback": 3,
+    "previews": 9,
+    "qualification": false
+  }
+}

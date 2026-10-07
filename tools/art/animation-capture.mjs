@@ -487,8 +487,8 @@ async function previewChain(page, tier, view) {
     completed: true, authority: 'Phase5 deferred; isolated review clock only' };
 }
 async function collectOffline(serverUrl, browser, directory, report) {
-  const variants = report.tracer||report.viewTracer ? ['m4'] : ['m4', 'p90', 'awp', 'pistol', 'p90-fallback'];
-  for (const tier of report.tracer||report.viewTracer ? ['low'] : ['low', 'medium', 'high']) for (const variant of variants) {
+  const variants = report.fallbackRecovery?['p90-fallback']:report.tracer||report.viewTracer ? ['m4'] : ['m4', 'p90', 'awp', 'pistol', 'p90-fallback'];
+  for (const tier of report.tracer||report.viewTracer||report.fallbackRecovery ? ['low'] : ['low', 'medium', 'high']) for (const variant of variants) {
     const weapon = variant === 'p90-fallback' ? 'p90' : variant;
     const context = await browser.newContext({ viewport: { width: 1280, height: 960 }, deviceScaleFactor: 1,
       recordVideo: { dir: directory, size: { width: 1280, height: 960 } } });
@@ -507,16 +507,28 @@ async function collectOffline(serverUrl, browser, directory, report) {
         document.exitPointerLock = () => { captured = false; document.dispatchEvent(new Event('pointerlockchange')); };
       }, tier);
       page = await context.newPage(); video = page.video(); page.setDefaultTimeout(45000);
+      if(report.fallbackRecovery){
+        page.on('framenavigated',frame=>{if(frame===page.mainFrame())report.lifecycle.push({kind:'navigation',url:frame.url(),wallMs:Date.now()});});
+        page.on('pageerror',error=>report.lifecycle.push({kind:'pageerror',message:error.message.slice(0,1000),wallMs:Date.now()}));
+        page.on('response',response=>{if(response.url().includes('/models/FBX/P90.fbx'))report.lifecycle.push({kind:'fallback-response',url:response.url(),status:response.status(),wallMs:Date.now()});});
+        page.on('console',message=>{if(/vite|reload|outdated|optimized/i.test(message.text()))report.lifecycle.push({kind:'console',text:message.text().slice(0,1000),wallMs:Date.now()});});
+      }
       if (variant === 'p90-fallback') await page.route('**/models/FBX/P90.fbx', route => route.fulfill({ status: 404, body: '' }));
       await page.goto(serverUrl);
       await page.waitForFunction(() => !document.getElementById('range-startbtn')?.disabled);
-      await page.locator('#range-startbtn').click();
-      await installObserver(page);
-      await page.keyboard.press('Digit' + ({ m4: 1, p90: 2, awp: 3, pistol: 4 }[weapon]));
       const asset = await page.evaluate(async () => {
         const { inspectedWeaponFBX } = await import('/src/builders/weaponFBX.js');
         return inspectedWeaponFBX ? 'loaded P90 FBX inspected; articulated procedural fallback used' : 'FBX unavailable; procedural fallback used';
       });
+      // Complete the read-only asset import before owning game-frame references.
+      // A development document restart before entry cannot strand this observer.
+      await page.waitForFunction(() => !document.getElementById('range-startbtn')?.disabled);
+      await page.locator('#range-startbtn').click();
+      await installObserver(page);
+      await page.keyboard.press('Digit' + ({ m4: 1, p90: 2, awp: 3, pistol: 4 }[weapon]));
+      if(report.fallbackRecovery)report.lifecycle.push({kind:'observer-owned',wallMs:Date.now(),
+        state:await page.evaluate(()=>({timeOrigin:performance.timeOrigin,url:location.href,
+          reader:typeof window.__movingRead,history:typeof window.__movingSince,mode:window.__movingRead()?.mode,weapon:window.__movingRead()?.weapon}))});
       if (weapon === 'm4'&&!report.viewTracer) {
         const movement = await blockedWalkUnion(page, tier);
         entries.push(movement); report.offlineMovement.push(movement);
@@ -607,7 +619,7 @@ async function collectCombat(serverUrl,browser,directory,report) {
     }
   }
 }
-export async function captureAnimationReview(getIdentities, { tracer = false, combatProbe = false, independentMatrix = false, viewTracer = false } = {}) {
+export async function captureAnimationReview(getIdentities, { tracer = false, combatProbe = false, independentMatrix = false, viewTracer = false, fallbackRecovery = false } = {}) {
   const start = Date.now(), identities = await getIdentities();
   await fs.mkdir(path.join(CACHE, 'moving-review'), { recursive: true });
   const directory = await fs.mkdtemp(path.join(CACHE, 'moving-review', 'capture-'));
@@ -616,7 +628,7 @@ export async function captureAnimationReview(getIdentities, { tracer = false, co
       cpu: os.cpus()[0]?.model, node: process.version },
     approvedMotion: null, matrix: [], previews: [], offlineCombat: [], offlineMovement: [], sharedMovement:[], media: [], collectionErrors: [],
     creatorTracer: { complete: false }, online: { complete: false, observations: [], media: [] },
-    humanMotionAcceptance: 'pending', certification: false, tracer, combatProbe, independentMatrix, viewTracer,
+    humanMotionAcceptance: 'pending', certification: false, tracer, combatProbe, independentMatrix, viewTracer, fallbackRecovery,lifecycle:[],
     limits: 'Continuous actual game input WebM collection; isolated labeled future review uses its own clock. No outcome hooks, no online freeze, no human/device/FPS acceptance. Independent collection cannot qualify plan09.' };
   let server, browser, canceled = false;
   const cancel = () => { canceled = true; void browser?.close(); };
@@ -652,13 +664,13 @@ export async function captureAnimationReview(getIdentities, { tracer = false, co
     report.browser = browser.version();
     console.log('Moving collection owned listener/browser ready; normal game input only');
     if(!combatProbe)await collectOffline(url, browser, directory, report);
-    if(independentMatrix||viewTracer)report.omittedCoverage={kind:'shared-combat-unions',
+    if(independentMatrix||viewTracer||fallbackRecovery)report.omittedCoverage={kind:'shared-combat-unions',
       reason:'Bounded current-source tracer retained earned throw and damage but natural death did not occur; independent segments proceed without retrying or qualifying this missing union',
       evidence:relative(path.join(EVIDENCE,'07-motion-review-tracer.json'))};
     else await collectCombat(url,browser,directory,report);
     report.creatorTracer.complete = report.matrix.some(entry => entry.completed && entry.media?.bytes > 0);
     const { collectMovingOnline } = await import('./moving-online.mjs');
-    if(!tracer&&!combatProbe&&!viewTracer)report.online = await collectMovingOnline(browser, directory);
+    if(!tracer&&!combatProbe&&!viewTracer&&!fallbackRecovery)report.online = await collectMovingOnline(browser, directory);
     report.media.push(...report.online.media);
   } catch (error) { report.collectionErrors.push({ stage: 'creator-or-collection', error: error.message }); }
   finally {
@@ -718,17 +730,21 @@ export async function captureAnimationReview(getIdentities, { tracer = false, co
     &&report.offlineCombat[0].media?.bytes>0&&report.protectedBytesUnchanged&&!report.canceled&&!report.collectionErrors.length;
   report.independentViewTracerComplete=viewTracer&&report.matrix.length===3&&report.matrix.every(e=>e.completed&&e.media?.bytes>0)
     &&new Set(report.matrix.map(e=>e.view)).size===3&&report.protectedBytesUnchanged&&!report.canceled&&!report.collectionErrors.length;
+  report.independentFallbackRecoveryComplete=fallbackRecovery&&report.matrix.length===3
+    &&report.matrix.every(e=>e.completed&&e.media?.bytes>0&&e.asset==='FBX unavailable; procedural fallback used')
+    &&report.protectedBytesUnchanged&&!report.canceled&&!report.collectionErrors.length;
   report.durationMs = Date.now() - start; report.directory = relative(directory);
   const links = report.media.map(m => {
     const contexts = [...report.matrix, ...report.previews, ...report.offlineCombat, ...report.offlineMovement]
       .filter(entry => entry.media?.path === m.path).map(entry => `${entry.kind}: ${entry.tier}/${entry.weapon ?? 'world'}/${entry.view ?? 'combat'}`);
-    const title = contexts.join(' · ') || 'Actual production online M4 observation';
+    const title = contexts.join(' · ') || (report.online.media.some(item=>item.path===m.path)
+      ? 'Partial production online M4 observation' : 'Unqualified collector context; see report errors');
     return `<details><summary>${title}</summary><p>SHA256 ${m.sha256}</p><video controls preload="metadata" width="960" style="max-width:100%" src="${path.basename(m.path)}"></video><p><a href="${path.basename(m.path)}">Open full movie</a></p></details>`;
   }).join('\n');
   await fs.writeFile(path.join(directory, 'index.html'), `<!doctype html><meta charset="utf-8"><title>Current moving review — ${report.status}</title><h1>Current moving review: ${report.status}</h1><p>Human verdict pending. Continuous full-pixel WebM; context and Preview — / Phase 5 labels are in each movie. Plan09 and missing coverage remain blocking.</p>${links}<a href="report.json">Exact identities and actual gate outcomes</a>`);
   report.index = relative(path.join(directory, 'index.html'));
   await fs.writeFile(path.join(directory, 'report.json'), JSON.stringify(report, null, 2) + '\n');
-  await fs.writeFile(path.join(EVIDENCE, viewTracer?'07-motion-review-view-tracer.json':combatProbe?'07-motion-review-combat-probe.json':tracer?'07-motion-review-tracer.json':'07-motion-review.json'), JSON.stringify(report, null, 2) + '\n');
+  await fs.writeFile(path.join(EVIDENCE, fallbackRecovery?'07-motion-review-fallback-recovery.json':viewTracer?'07-motion-review-view-tracer.json':combatProbe?'07-motion-review-combat-probe.json':tracer?'07-motion-review-tracer.json':'07-motion-review.json'), JSON.stringify(report, null, 2) + '\n');
   console.log(JSON.stringify({ report: relative(path.join(EVIDENCE, '07-motion-review.json')), complete: report.complete, index: report.index }));
   if (!report.complete) { const error = Error('Current moving capture remains unqualified; see retained partial report'); error.report = report; throw error; }
   return report;

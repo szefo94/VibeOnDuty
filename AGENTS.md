@@ -267,6 +267,9 @@ Phase 6 art ownership and reproducibility:
   logger restoration in `enemyAnimations.js` changes its runtime identity only.
   New facts go to evidence/docs.
   Current coverage/limits belong to `07-10-SUMMARY.md` and `07-motion-review.json`.
+  The final separate index retains42 fresh current contexts plus3 Low/P90-fallback
+  recovery contexts, nine labeled previews and partial three-tier online media.
+  Natural death/respawn, online routes and current09/full-suite gates stay open.
 
 - `tools/art/sources/soldier.blend`, `character-params.json` and `build_soldier.py`
   own the fitted anatomical human, original equipment and packed paint; `slice.blend`

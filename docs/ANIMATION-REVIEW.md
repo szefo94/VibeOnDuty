@@ -61,6 +61,17 @@ or human smoothness acceptance. Phase5 owns actual Shift/double-tap supersprint,
 movement/stamina/input, live base×1.15 timing, supersprint cancellation and ANIM-01.
 Older sections below are historical observations at their recorded identities.
 
+The final fresh attempt retained42 completed current contexts, nine labeled
+preview rows, all three gait unions and partial movies from three online tiers.
+One separate instrumented Low/P90-fallback recovery retained the missing three
+views with a real404 response, stable observer ownership and no later navigation.
+The earlier observer-loss/loading-menu cause remains unproven. These attempts
+stay separately identified; `07-motion-review-index.html` links all movies and
+their exact reports. They cover45 independent weapon/view/tier combinations,
+while the full matrix remains unqualified because shared death/respawn and
+online routes are incomplete. Low online failed to reach(34,22); Medium/High
+failed to reach(62,46). No failed full-suite/V2 predicate is waived.
+
 ## Phase 7 pre-tuning moving baseline — 2026-10-05
 
 The current accepted soldier now has two independently loaded moving Training Range
