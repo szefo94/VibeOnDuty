@@ -107,7 +107,7 @@ Browser artifacts were copied before shared output reuse to `.planning/research/
 
 ## Canonical Independent V2 Evidence
 
-Report: `evidence/07-09-cost-postopt.json`; actual failed gate: `evidence/07-09-budget-postopt-result.json`. Metrics/36 PNGs: `.planning/research/.cache/06-art/animation-candidate/capture-1791356297635-26892/`. Source: `2a5b7efe1e939ce7962bc9501aac977cbce712a3`; identity: `97d77c14a822357f7ea82ba6739f605c43beb34819ba4dda104e71e93b0c21b5`. Owned browser and listener closed.
+Report: `.planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-09-cost-postopt.json`; actual failed gate: `.planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-09-budget-postopt-result.json`. Metrics/36 PNGs: `.planning/research/.cache/06-art/animation-candidate/capture-1791356297635-26892/`. Source: `2a5b7efe1e939ce7962bc9501aac977cbce712a3`; identity: `97d77c14a822357f7ea82ba6739f605c43beb34819ba4dda104e71e93b0c21b5`. Owned browser and listener closed.
 
 The actual CLI validated complete scope/device/producer/settings, current/protected source hashes, exact source-eye settings, required draws/full pixels, ownership and deterministic plateaus before its numerical failure. Six eight-source reductions are exactly350 textures: Low367→17; Medium/High368→18. One-source and after-retirement plateaus retain fixed values. Twenty-seven of36 PNG hashes match reference bytes; this is neither universal pixel equality nor human aesthetic acceptance.
 
@@ -188,7 +188,7 @@ All-tier zero/one/eight retirement, deterministic plateaus, exact shared buffers
 
 ### Actual Current Pilot — Diagnostic Only
 
-`evidence/07-09-owner-cache-smoke.json` SHA256 is `3bf8ae8972a4a429075a61e56f3877d93d84650a42527adad0f6bbd58051bc78`, source `f89d82082dfea6ee5ce4544011745e1bfbba0ff1`. Raw metrics and3 PNGs: `.planning/research/.cache/06-art/animation-candidate/capture-1791359694832-10580/`. `evidence/07-09-owner-cache-pilot-result.json` retains the actual named CLI command/exit/stderr, exact statistics/bounds and source/host facts.
+`.planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-09-owner-cache-smoke.json` SHA256 is `3bf8ae8972a4a429075a61e56f3877d93d84650a42527adad0f6bbd58051bc78`, source `f89d82082dfea6ee5ce4544011745e1bfbba0ff1`. Raw metrics and3 PNGs: `.planning/research/.cache/06-art/animation-candidate/capture-1791359694832-10580/`. `.planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-09-owner-cache-pilot-result.json` retains the actual named CLI command/exit/stderr, exact statistics/bounds and source/host facts.
 
 | Low/one component | Actual median/p95 ms | Frozen median/p95 upper ms |
 | --- | --- | --- |
@@ -213,6 +213,8 @@ An unrelated `node tests/browser-probes.mjs` (PID31152), browser23584 and GPU287
 
 Task2, plan09 and dependent plan10 remain open. After justified host readiness or independently reviewed scoped work, capture a fresh complete twelve-profile matrix and run the actual unchanged V2 CLI. Never splice/reuse profiles/reference, re-freeze bounds, widen zero/timer allowances, alter producer/settings or remove required geometry/layers/corrections. Two original setup-limited assertions require targeted qualification. WINDOWS41 retains the full numeric unmet truth; WINDOWS42/43 record those unrun assertions. No requirements or roadmap completion is advanced. No new stub, endpoint, schema, authority permission, asset export/install, global trust, reset/stash/push/blanket restore occurred. Root-owned temporary config remains unstaged; human motion and representative hardware/Pi/60FPS acceptance remain pending.
 
-## Self-Check: PASSED — Current Artifacts and Qualified Cache Behavior Only
+**Qualification remains halted. The numerical, full-suite and required coverage gates above remain open; no plan, requirement, human or phase acceptance is granted.**
 
-Current RED/GREEN/evidence commits and records, exact protected/golden identities, byte-identical earlier archive, actual current pilot/3 full1280×960 PNGs, actual CLI exit1 and final corrected loaded-rig proofs exist. Cache behavior is qualified. **The numerical gate and two setup-limited assertions remain unqualified; task2, plan09 and Phase7 are incomplete.**
+## Self-Check: PASSED — Artifact Integrity Only
+
+Referenced artifacts and commits exist. Current protected source and media identity checks agree with saved evidence. Owned collection and fixture handles are retired. This section verifies artifact integrity only; qualification is governed by the actual gates recorded above.

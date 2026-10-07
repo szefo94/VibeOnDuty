@@ -77,7 +77,7 @@ All independently authorized collection/recovery work is closed. The fresh matri
 - Three-view M4 synchronization control passed in50,739ms with actual settled ADS aimT.9919/upperads in all3 views. A preallocated free listener matched requested/actual port49727; future captures avoid Vite's inherited port0→5173 behavior. No pre-existing service or unrelated job was stopped/reused.
 - Fresh partial matrix retained42/42 completed rows,9/9 previews,3 blocked gait and3 shared movement unions,21 sealed videos. Low/P90-fallback3 views are missing following observer loss; its movie ends in the loading menu. Three actual online tier attempts retained membership/crouch/aim and two videos each, but ordinary routes failed. These are partial observations, not a production MP pass.
 - One separately identified Low/P90-fallback recovery qualified the missing3 views with an actual404 response, one initial navigation, stable range/p90 observer ownership, no later navigation/pageerror and a sealed6,787,242-byte movie. The earlier restart cause is unproven. Observer establishment now follows the final read-only asset import and current enabled native entry; no mid-action reset/retry or protected source change. All45 independent weapon/view/tier contexts exist as42+3 separate records, never as spliced benchmark profiles or a passing full report.
-- `evidence/07-motion-review-index.html` links every current/historical attempt and directly playable movie. Artifact integrity checks all referenced movie sizes/hashes and row PNGs, every current protected source and the exact sampler; zero missing/hash/source mismatches. This artifact pass waives no qualification predicate.
+- `.planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-motion-review-index.html` links every current/historical attempt and directly playable movie. Artifact integrity checks all referenced movie sizes/hashes and row PNGs, every current protected source and the exact sampler; zero missing/hash/source mismatches. This artifact pass waives no qualification predicate.
 
 ## Task Commits
 
@@ -142,6 +142,8 @@ Task2 RED `9c22c44` precedes GREEN `089cc5b`; it exercises real old-motion/corru
 
 None introduced. Missing executed coverage and failing gates are explicit deferred issues; no empty/mock outcome is presented as accepted gameplay.
 
-## Self-Check: PASSED — Artifacts and Independent Components Only
+**Qualification remains halted. The numerical, full-suite and required coverage gates above remain open; no plan, requirement, human or phase acceptance is granted.**
 
-All ten ledger commits, created tooling/evidence/index files, stable/recovery report logs, fresh42-row/9-preview21-movie record and separate3-row fallback movie exist. Referenced videos/PNGs and current protected identities have no missing/hash/source mismatch. Owned fixture PIDs12648/28156/9092 are absent; all owned collection commands returned and closed their browsers/listeners. No unrelated job, protected art/provenance/sampler byte or root-owned config was changed by cleanup. **Numerical/full-suite/full-matrix acceptance remains failed; tasks0/2, plan09/10 and Phase7 remain incomplete.**
+## Self-Check: PASSED — Artifact Integrity Only
+
+Referenced artifacts and commits exist. Current protected source and media identity checks agree with saved evidence. Owned collection and fixture handles are retired. This section verifies artifact integrity only; qualification is governed by the actual gates recorded above.
