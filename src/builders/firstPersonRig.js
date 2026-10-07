@@ -168,7 +168,12 @@ function makeView(source, selection) {
 
 export function createFirstPersonRig({ source }) {
   const arms = makeView(source, 'arms'), body = makeView(source, 'body');
+  // The owned view hierarchy is fixed until retirement. Preserve exactly the
+  // first depth-first name match used by Three's getObjectByName, once per rig.
+  const armBones = new Map();
+  arms.root.traverse(node => { if (!armBones.has(node.name)) armBones.set(node.name, node); });
   const rig = { source, arms: arms.root, body: body.root, armPairs: arms.pairs,
+    armBones,
     bodyPairs: body.pairs, meshPairs: [...arms.meshPairs,...body.meshPairs],
     disposed: false, handlers: new Set(), updates: 0, pose: null };
   rig.releaseSource = registerCharacterDisposer(source, () => disposeFirstPersonRig(rig));
@@ -246,7 +251,7 @@ export function updateFirstPersonRig(rig, { pose, camera, weapon = null,
   // Source handling is post-mixer. Reuse its saved authored pose before applying
   // the view's independent gun targets; never curl an already curled finger.
   for (const [sourceBone, quaternion] of rawCorrections)
-    rig.arms.getObjectByName(sourceBone.name)?.quaternion.copy(quaternion);
+    rig.armBones.get(sourceBone.name)?.quaternion.copy(quaternion);
   rig.pose = active ? pose : null; rig.updates++;
   if (rig.identity !== pose?.identity) { rig.motion = {}; rig.identity = pose?.identity; }
   rig.motion ??= {};
@@ -261,15 +266,15 @@ export function updateFirstPersonRig(rig, { pose, camera, weapon = null,
   rig.body.position.add(V(0, 0, bodyForward).applyQuaternion(rig.source.quaternion));
   // Camera pitch is applied once at the view root. World torso pitch was already
   // corrected for world aiming, so use its pre-correction sample for view arms.
-  if (spineQuaternion) rig.arms.getObjectByName('spine_03')?.quaternion.copy(spineQuaternion);
+  if (spineQuaternion) rig.armBones.get('spine_03')?.quaternion.copy(spineQuaternion);
   rig.arms.quaternion.copy(camera.quaternion).multiply(new THREE.Quaternion().setFromAxisAngle(V(0, 1, 0), Math.PI));
   rig.arms.position.copy(camera.position).add(V(0, -eyeHeight, -.25).applyQuaternion(camera.quaternion));
   rig.arms.scale.copy(rig.source.scale); rig.arms.updateMatrixWorld(true); rig.body.updateMatrixWorld(true);
   // View shoulders retain the same anatomical lengths in every stance. The
   // source body's crouch displacement belongs to the world clone; translating
   // the view root avoids lowering its forearms twice relative to crouched eyes.
-  const leftShoulder = rig.arms.getObjectByName('upperarm_l');
-  const rightShoulder = rig.arms.getObjectByName('upperarm_r');
+  const leftShoulder = rig.armBones.get('upperarm_l');
+  const rightShoulder = rig.armBones.get('upperarm_r');
   if (leftShoulder && rightShoulder) {
     const center = leftShoulder.getWorldPosition(V()).add(rightShoulder.getWorldPosition(V())).multiplyScalar(.5);
     const local = center.sub(camera.position).applyQuaternion(camera.quaternion.clone().invert());
@@ -314,6 +319,7 @@ export function resetFirstPersonRigGeneration(rig) {
 
 export function disposeFirstPersonRig(rig) {
   if (!rig || rig.disposed) return;
+  rig.armBones.clear();
   rig.releaseSource?.(); rig.releaseSource = null;
   for (const owner of rig.handlers) disposeWeaponHandling(owner);
   rig.handlers.clear(); disposeCharacter(rig.arms); disposeCharacter(rig.body);
