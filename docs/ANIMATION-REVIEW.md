@@ -30,6 +30,12 @@ partial reports and retain the same strict final acceptance failure. They never
 count as the full moving matrix. The first corrected tracer retained two sealed
 movies but did not earn grenade eligibility; its input driver is not an accepted
 combat proof. Exact historical attempts remain in separate evidence records.
+The subsequent bounded tracer proved accepted native mouse aim, earned100 energy,
+throw cancellation/consumption and natural damage, then retained hp54.6/alive at
+the unchanged death-wait deadline. It supplies partial combat evidence. The
+explicit `--independent-matrix` option collects other weapon/view/tier movies and
+supported online observations without retrying that missing shared union. Its
+report records the omission and retains the original full acceptance predicates.
 
 For human running-game review: start Vite on an owned free port, enter the enabled
 Training Range, press F3, choose Open animation review, select weapon/view/

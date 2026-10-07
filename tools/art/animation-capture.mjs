@@ -595,7 +595,7 @@ async function collectCombat(serverUrl,browser,directory,report) {
     }
   }
 }
-export async function captureAnimationReview(getIdentities, { tracer = false, combatProbe = false } = {}) {
+export async function captureAnimationReview(getIdentities, { tracer = false, combatProbe = false, independentMatrix = false } = {}) {
   const start = Date.now(), identities = await getIdentities();
   await fs.mkdir(path.join(CACHE, 'moving-review'), { recursive: true });
   const directory = await fs.mkdtemp(path.join(CACHE, 'moving-review', 'capture-'));
@@ -604,7 +604,7 @@ export async function captureAnimationReview(getIdentities, { tracer = false, co
       cpu: os.cpus()[0]?.model, node: process.version },
     approvedMotion: null, matrix: [], previews: [], offlineCombat: [], offlineMovement: [], sharedMovement:[], media: [], collectionErrors: [],
     creatorTracer: { complete: false }, online: { complete: false, observations: [], media: [] },
-    humanMotionAcceptance: 'pending', certification: false, tracer, combatProbe,
+    humanMotionAcceptance: 'pending', certification: false, tracer, combatProbe, independentMatrix,
     limits: 'Continuous actual game input WebM collection; isolated labeled future review uses its own clock. No outcome hooks, no online freeze, no human/device/FPS acceptance. Independent collection cannot qualify plan09.' };
   let server, browser, canceled = false;
   const cancel = () => { canceled = true; void browser?.close(); };
@@ -638,7 +638,10 @@ export async function captureAnimationReview(getIdentities, { tracer = false, co
     report.browser = browser.version();
     console.log('Moving collection owned listener/browser ready; normal game input only');
     if(!combatProbe)await collectOffline(url, browser, directory, report);
-    await collectCombat(url,browser,directory,report);
+    if(independentMatrix)report.omittedCoverage={kind:'shared-combat-unions',
+      reason:'Bounded current-source tracer retained earned throw and damage but natural death did not occur; independent segments proceed without retrying or qualifying this missing union',
+      evidence:relative(path.join(EVIDENCE,'07-motion-review-tracer.json'))};
+    else await collectCombat(url,browser,directory,report);
     report.creatorTracer.complete = report.matrix.some(entry => entry.completed && entry.media?.bytes > 0);
     const { collectMovingOnline } = await import('./moving-online.mjs');
     if(!tracer&&!combatProbe)report.online = await collectMovingOnline(browser, directory);

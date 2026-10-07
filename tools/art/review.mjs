@@ -953,9 +953,9 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const args = process.argv.slice(2);
   let operation;
   if (args.length === 1 && args[0] === '--capture') operation = captureGameplay;
-  else if (args[0] === '--animation-capture' && (args.length === 1 || args.length === 2 && ['--tracer','--combat-probe'].includes(args[1]))) operation = async () => {
+  else if (args[0] === '--animation-capture' && (args.length === 1 || args.length === 2 && ['--tracer','--combat-probe','--independent-matrix'].includes(args[1]))) operation = async () => {
     const { captureAnimationReview } = await import('./animation-capture.mjs');
-    return captureAnimationReview(animationIdentities,{tracer:args[1] === '--tracer',combatProbe:args[1] === '--combat-probe'});
+    return captureAnimationReview(animationIdentities,{tracer:args[1] === '--tracer',combatProbe:args[1] === '--combat-probe',independentMatrix:args[1] === '--independent-matrix'});
   };
   else if (args.length === 1 && args[0] === '--animation-budget') operation = recordAnimationBudget;
   else if(args[0]==='--animation-candidate'&&(args.length===1||args.length===2&&args[1]==='--smoke'))operation=()=>captureAnimationBaseline({candidate:true,smoke:args[1]==='--smoke'});

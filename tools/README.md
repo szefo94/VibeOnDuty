@@ -41,6 +41,10 @@ Phase5 actual movement/stamina/×1.15/cancel/ANIM-01 remain open.
 The diagnostic `--animation-capture --tracer` and `--animation-capture --combat-probe`
 save separate partial evidence; their short segments cannot complete the matrix
 or bypass actual full-suite/frozen-V2 failures.
+`--animation-capture --independent-matrix` retains independently observable
+weapon/view/tier and online footage while explicitly recording the unresolved
+shared combat union. It keeps every original full acceptance predicate and
+cannot produce a complete report while that coverage is missing.
 
 ## `retarget.py` — rebuild `public/models/enemy.glb`
 
