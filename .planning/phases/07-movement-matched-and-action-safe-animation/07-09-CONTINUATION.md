@@ -84,3 +84,31 @@ Plan09 task2, dependent plan10, Phase7 and assigned requirements remain open.
 No new numeric bound, producer, reference, source whitelist or protected runtime
 change was approved or implemented here. Human motion/device/FPS claims remain
 pending. The root-owned temporary config stays unstaged for parent restoration.
+
+## Terminal owner-cache continuation — 2026-10-07
+
+Binding review1e537a4 permits exactly enemyAnimations/weaponHandling reference
+and stable-collection caches; frozen predicates stay unchanged. RED116f9ba and
+GREENf89d820 prove zero repeated warm traversal/enumeration, exact5 pose/layer
+and28 handling snapshots, duplicate/missing semantics, lazy mask interruption/
+death, rig/root/mixer/current-weapon replacement, old retirement, keepers and
+later clones.17 unchanged units/41 V2 controls, lint/both types/build pass.
+
+Current distinct browser coverage45/46 and legacy1/2 is incomplete: original
+throw1ms and repeated-removal checks stopped in setup before assertions.
+WINDOWS42/43 retain limits. No unchanged broad retries are needed.
+
+Evidence1dea2c2 preserves earlier complete report/raw failure byte-identically
+and current actual smoke atf89d820. Smoke83,037ms has1 profile/214 timed frames/
+3 full PNGs/complete:false, SHA3bf8ae8972a4a429075a61e56f3877d93d84650a42527adad0f6bbd58051bc78.
+Raw capture-1791359694832-10580 is retained. Low/one frame300.8/410.3ms exceeds
+244.7/261.4;14 of16 fixed statistics overrun. Actual V2 CLI exits1 Incomplete
+report. This diagnostic is never a full candidate or pass.
+
+Unrelated node tests/browser-probes.mjs PID31152/GPU28780 were observed, never
+stopped or altered; no causal waiver follows. User requires other jobs keep
+running. Parent owns host-condition/sequencing followup. No known-unready full
+matrix was launched. Applicable V2 acceptance and two targeted assertions still
+block task2/plan10. Halted summarya9bb060 is committed; no requirement/roadmap/
+phase completion or human/hardware/FPS acceptance is claimed. Config stays
+root-owned and unstaged.

@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 7
+open_count: 9
 waived_count: 0
 fixed_count: 34
-total_count: 41
-last_updated: 2026-10-07T07:20:26.241Z
+total_count: 43
+last_updated: 2026-10-07T07:56:19.277Z
 ---
 
 # Broken Windows Ledger
@@ -56,6 +56,8 @@ last_updated: 2026-10-07T07:20:26.241Z
 | 39 | 07 | deviation | src/dev/animationReview.js |  | Attach the isolated review arm hierarchy and restore frozen live visual visibility after rendering | fixed |  | 2026-10-06T15:02:09.492Z | 2026-10-06T15:02:44.298Z |
 | 40 | 07 | unmet-truth | .planning/phases/07-movement-matched-and-action-safe-animation/07-09-SUMMARY.md |  | Plan07-09 budget_contract remains open: actual source-eye view workload is noncomparable to immutable external-camera envelope; strict legacy pass false and twelve one-actor absolute frame flags retained. | open |  | 2026-10-06T16:52:10.405Z |  |
 | 41 | 07 | unmet-truth | .planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-09-cost-postopt.json |  | Complete independent twelve-profile V2 candidate fails135 unchanged numeric limits; view/pixel/ownership/plateau checks pass. Plan07-09 task2 remains open pending reviewed scoped optimization. | open |  | 2026-10-07T07:20:26.241Z |  |
+| 42 | 7 | unrun-verify | tests/action-lifecycle.spec.js | 40 | Plan07-09 owner-cache qualification: original throw1ms case did not reach assertion in3 setup-timeout attempts; other action cases passed without changed test/timeouts. | open |  | 2026-10-07T07:54:36.811Z |  |
+| 43 | 7 | unrun-verify | tests/animation-regressions.spec.js | 101 | Plan07-09 owner-cache qualification: original repeated-removal keeper timed out in asset-loading setup before its assertion; actual three-tier resource/keeper/new-clone and character-art resource cases passed. | open |  | 2026-10-07T07:56:19.277Z |  |
 
 ````json
 [
@@ -589,6 +591,32 @@ last_updated: 2026-10-07T07:20:26.241Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-10-07T07:20:26.241Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 42,
+    "kind": "unrun-verify",
+    "phase": "7",
+    "file": "tests/action-lifecycle.spec.js",
+    "line": 40,
+    "description": "Plan07-09 owner-cache qualification: original throw1ms case did not reach assertion in3 setup-timeout attempts; other action cases passed without changed test/timeouts.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-07T07:54:36.811Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 43,
+    "kind": "unrun-verify",
+    "phase": "7",
+    "file": "tests/animation-regressions.spec.js",
+    "line": 101,
+    "description": "Plan07-09 owner-cache qualification: original repeated-removal keeper timed out in asset-loading setup before its assertion; actual three-tier resource/keeper/new-clone and character-art resource cases passed.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-07T07:56:19.277Z",
     "resolved_at": null,
     "milestone": null
   }

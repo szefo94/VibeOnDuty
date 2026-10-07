@@ -3,11 +3,11 @@ gsd_state_version: "1.0"
 current_phase: 7
 current_phase_name: Movement-Matched and Action-Safe Animation
 status: executing
-stopped_at: 07-09 actual complete V2 failure; owner-scope review checkpoint
-last_updated: "2026-10-07T07:25:41.320Z"
+stopped_at: 07-09 owner caches qualified; actual pilot exceeds fixed limits
+last_updated: "2026-10-07T08:04:39.385Z"
 last_activity: 2026-10-06
 last_activity_desc: Plan 07-08 committed; 15 focused units, 10 native browser cases, 36 retained weapon/view/tier captures, lint, both types and build pass. Shared requirements and human motion acceptance remain pending.
-state_head: 0e1e1774a4505550984502eddd498ef2b0edfaf7
+state_head: a9bb0605caa92e03d53fabe1b44025f8d0f0e13c
 progress:
   total_phases: 12
   completed_phases: 2
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-05)
 Phase: 7 (Movement-Matched and Action-Safe Animation) — EXECUTING
 Plan: 9 of 10 — next incomplete 07-09; completed 07-01, 07-02, 07-03, 07-04, 07-05, 07-06, 07-07 and 07-08
 Status: Executing — plan 07-08 complete; remaining dispatch and phase review owned by the orchestrator
-Next action: Continue authorized Phase 7 from 07-09; qualify the matched multi-actor/two-client resource matrix using the current view and isolated review owners. WINDOWS34 technical integration and preview-rendering deviation39 are fixed; human motion gates remain owned by phase review. Phase5 follows Phase7.
+Next action: Plan07-09 task2 remains open after qualified exact owner caches and failed current Low/one smoke. Parent owns host-condition followup and targeted two setup-limited assertions before a justified fresh complete V2 matrix; plan10 remains blocked. Other jobs must keep running. Phase5 follows accepted Phase7.
 Roadmap review: User revised remaining order to6 → 7 → 5 → 2 → 3 → 4 → 8 → 9 → 10 → 11 → 12; Phase1 remains complete.
 Last activity: 2026-10-06 — Plan 07-08 committed; 15 focused units, 10 native browser cases, 36 retained weapon/view/tier captures, lint, both types and build pass. Shared requirements and human motion acceptance remain pending.
 
@@ -149,7 +149,8 @@ None yet.
 - Phase 8-10: Choose catalogs, balance/penetration, minimal identity/recovery/save lifetime, durable reward storage, and equipment/streak/UAV rules.
 - Phase 11-12: Choose compiler/import/prompt backend and two-map mode/size matrix; no complete reusable map source is qualified yet.
 - Plan07-09 budget_contract checkpoint: qualified retirement and12 actual view profiles committed; legacy budget unmet/noncomparable, world51-equal-skeleton sharing requires root review. No09completion or golden-envelope change.
-- Plan07-09 fixed V2 candidate actually fails135 numeric limits;12-profile view/pixel/ownership qualification passes. Parent review07-09-OWNER-SCOPE-PROPOSAL.md before new scoped optimization; no plan/requirement advance.
+- Plan07-09 exact two owner caches are qualified at f89d820. Actual unchanged-producer current smoke fails14 fixed Low/one statistics; named V2 CLI exits1 Incomplete report. Earlier complete135-flag failure is preserved separately. No current full candidate/plan/requirement advance; unrelated browser jobs remain running.
+- Plan07-09 qualifies45/46 distinct current resource/action/handling cases and1/2 legacy keepers. Original throw1ms and repeated-removal checks stopped in setup before assertions (WINDOWS42/43); targeted qualification remains open without changed tests/timeouts.
 
 ### Roadmap Evolution
 
@@ -163,8 +164,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-10-07T07:25:41.154Z
-Stopped at: 07-09 actual complete V2 failure; owner-scope review checkpoint
+Last session: 2026-10-07T08:04:39.239Z
+Stopped at: 07-09 owner caches qualified; actual pilot exceeds fixed limits
 Resume file: .planning/phases/07-movement-matched-and-action-safe-animation/07-09-CONTINUATION.md
 
 User passed both Phase 6 visual checks with "pass all tests and proceed".
