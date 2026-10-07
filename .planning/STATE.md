@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 7
 current_phase_name: Movement-Matched and Action-Safe Animation
 status: executing
-stopped_at: 07-09 continuation quota interruption; 11 of 12 postopt profiles retained, numeric gate unmet
-last_updated: "2026-10-06T20:58:49.381Z"
+stopped_at: 07-09 actual complete V2 failure; owner-scope review checkpoint
+last_updated: "2026-10-07T07:25:41.320Z"
 last_activity: 2026-10-06
 last_activity_desc: Plan 07-08 committed; 15 focused units, 10 native browser cases, 36 retained weapon/view/tier captures, lint, both types and build pass. Shared requirements and human motion acceptance remain pending.
-state_head: d30da22963650ebb93ddedd871af374022eea64c
+state_head: 0e1e1774a4505550984502eddd498ef2b0edfaf7
 progress:
   total_phases: 12
   completed_phases: 2
   total_plans: 23
-  completed_plans: 21
+  completed_plans: 22
   percent: 17
 ---
 
@@ -149,6 +149,7 @@ None yet.
 - Phase 8-10: Choose catalogs, balance/penetration, minimal identity/recovery/save lifetime, durable reward storage, and equipment/streak/UAV rules.
 - Phase 11-12: Choose compiler/import/prompt backend and two-map mode/size matrix; no complete reusable map source is qualified yet.
 - Plan07-09 budget_contract checkpoint: qualified retirement and12 actual view profiles committed; legacy budget unmet/noncomparable, world51-equal-skeleton sharing requires root review. No09completion or golden-envelope change.
+- Plan07-09 fixed V2 candidate actually fails135 numeric limits;12-profile view/pixel/ownership qualification passes. Parent review07-09-OWNER-SCOPE-PROPOSAL.md before new scoped optimization; no plan/requirement advance.
 
 ### Roadmap Evolution
 
@@ -162,8 +163,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-10-06T20:58:49.241Z
-Stopped at: 07-09 continuation quota interruption; 11 of 12 postopt profiles retained, numeric gate unmet
+Last session: 2026-10-07T07:25:41.154Z
+Stopped at: 07-09 actual complete V2 failure; owner-scope review checkpoint
 Resume file: .planning/phases/07-movement-matched-and-action-safe-animation/07-09-CONTINUATION.md
 
 User passed both Phase 6 visual checks with "pass all tests and proceed".

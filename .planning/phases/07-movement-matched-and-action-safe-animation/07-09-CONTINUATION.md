@@ -36,3 +36,51 @@ Original immutable budget SHA256: `66722a272115cdc1145cf1af97a1cb583389d7ea5adb7
 V2 reference SHA256: `6d5fd41136766209445b9694dfb0ffdf269d4a1887cffadba868dcad8a8b6aef`.
 V2 budget SHA256: `6f0bf775eda9061b601023d5890a50248668a3bccbec48eeaeb7f84e7a64ba34`.
 V2 producer SHA256: `035432f721cb0661a82c288d3b5e92ce4d631a48da5bc6fbb73022897960f5e0`.
+
+## 2026-10-07 continuation checkpoint before final profile
+
+Source is frozen at `2a5b7ef`. Independent current attempt:
+`.planning/research/.cache/06-art/animation-candidate/capture-1791356297635-26892/`.
+Eleven of twelve profiles are retained; final run2 High/eight is active. Actual
+timings exceed the fixed envelope. Do not count this as a complete report until
+atomic publication and the actual V2 CLI run. Earlier partial attempt remains
+untouched and cannot supply the missing profile.
+
+Current commits: `3656f42` protected handling-cache RED; `a9cbc5f` exact scoped
+restoration preserving that history; `97b8b37` permitted owned view-cache RED;
+`2a5b7ef` permitted view-cache GREEN. Handling source/test bytes exactly match
+the frozen reference. The view owns a first-depth-first lookup map and clears it
+before foreign disposal callbacks; no pose/clock/draw/authority change.
+
+Current qualification:44 actual browser cases passed in4.7min;2 legacy keepers
+passed24.9s; final targeted view cache browser passed15.8s and2 view units passed.
+Seventeen focused units,lint,both types,build and33 V2 negative tests passed.
+Initial three setup timeouts, diagnostic no-test grep, and interrupted probe-only
+browser runs are nonpasses, not behavioral RED or full qualification.
+
+An unrelated Chrome software GPU job was observed consuming29.65625 CPU seconds
+over3.0522724 wall seconds; it exited naturally before this full matrix. It was
+never stopped and no causal conclusion is established. Its existence does not
+waive any actual failure.
+
+If final numeric acceptance fails, use
+`07-09-OWNER-SCOPE-PROPOSAL.md` for parent independent review. It proposes exactly
+two additional runtime owners, not new numeric/producer allowances. No owner
+whitelist change or protected implementation was made by this continuation.
+
+## Terminal checkpoint — 2026-10-07
+
+The current attempt completed all12 profiles/36 PNGs in1,170,050ms. Browser and
+owned listener closed. Canonical `evidence/07-09-cost-postopt.json` has SHA256
+`799b7217d1e1120fac2d16442accfadfa578a7d5cec14bb75d57faef58742c39`.
+Actual named V2 CLI exit1; `07-09-budget-postopt-result.json` records135 numeric
+overruns while complete view/pixel/source/device/ownership/plateau checks pass.
+This supersedes the active11-profile note above, not the older interrupted attempt.
+
+Evidence/proposal commit `1e252ae`; halted summary commit `0e1e177`.
+No running capture remains. Parent should independently review the concrete
+owner-scope proposal and actual failed gate before any new implementation.
+Plan09 task2, dependent plan10, Phase7 and assigned requirements remain open.
+No new numeric bound, producer, reference, source whitelist or protected runtime
+change was approved or implemented here. Human motion/device/FPS claims remain
+pending. The root-owned temporary config stays unstaged for parent restoration.
