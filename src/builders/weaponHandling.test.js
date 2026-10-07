@@ -67,6 +67,38 @@ describe('weapon-specific mechanisms', () => {
   });
 });
 describe('mounted actor ownership', () => {
+  it('reuses the current rig bone lookup and releases it when the rig changes or retires', () => {
+    const makeRig = () => {
+      const rig = new THREE.Group();
+      for (const side of ['l', 'r']) {
+        const upper = new THREE.Bone(), lower = new THREE.Bone(), hand = new THREE.Bone();
+        upper.name = `upperarm_${side}`; lower.name = `lowerarm_${side}`; hand.name = `hand_${side}`;
+        upper.position.set(side === 'l' ? -.2 : .2, 1.4, 0);
+        lower.position.set(0, -.3, 0); hand.position.set(0, -.25, 0);
+        rig.add(upper); upper.add(lower); lower.add(hand);
+      }
+      return rig;
+    };
+    const skeleton = makeRig(), root = weapon();
+    const owner = handling.createWeaponHandling({ weapon: 'm4', root, skeleton });
+    owner.fixedAnchor = true;
+    const ready = { weapon: 'm4', alive: true, upper: 'ready' };
+    handling.updateWeaponHandling(owner, ready);
+    let lookups = 0;
+    const original = skeleton.getObjectByName;
+    skeleton.getObjectByName = function (...args) { lookups++; return original.apply(this, args); };
+    for (let i = 0; i < 20; i++) handling.updateWeaponHandling(owner, ready);
+    expect(lookups).toBe(0);
+    expect(owner.contacts.leftError).toBeLessThan(.3);
+    const replacement = makeRig();
+    owner.skeleton = replacement;
+    handling.updateWeaponHandling(owner, ready);
+    expect([...owner.corrections.keys()].every(bone => replacement.getObjectByName(bone.name) === bone)).toBe(true);
+    handling.disposeWeaponHandling(owner);
+    expect(owner.boneLookup.size).toBe(0);
+    expect(owner.boneRoot).toBeNull();
+    expect(owner.corrections.size).toBe(0);
+  });
   it('updates one mounted handler from the common phase and retires it once', () => {
     const mesh = new THREE.Group(), hand = new THREE.Bone(); hand.name = 'hand_r'; mesh.add(hand);
     attachEnemyWeapon(mesh, 'assault');
