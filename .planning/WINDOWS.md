@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 9
+open_count: 10
 waived_count: 0
 fixed_count: 34
-total_count: 43
-last_updated: 2026-10-07T07:56:19.277Z
+total_count: 44
+last_updated: 2026-10-07T19:34:18.566Z
 ---
 
 # Broken Windows Ledger
@@ -58,6 +58,7 @@ last_updated: 2026-10-07T07:56:19.277Z
 | 41 | 07 | unmet-truth | .planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-09-cost-postopt.json |  | Complete independent twelve-profile V2 candidate fails135 unchanged numeric limits; view/pixel/ownership/plateau checks pass. Plan07-09 task2 remains open pending reviewed scoped optimization. | open |  | 2026-10-07T07:20:26.241Z |  |
 | 42 | 7 | unrun-verify | tests/action-lifecycle.spec.js | 40 | Plan07-09 owner-cache qualification: original throw1ms case did not reach assertion in3 setup-timeout attempts; other action cases passed without changed test/timeouts. | open |  | 2026-10-07T07:54:36.811Z |  |
 | 43 | 7 | unrun-verify | tests/animation-regressions.spec.js | 101 | Plan07-09 owner-cache qualification: original repeated-removal keeper timed out in asset-loading setup before its assertion; actual three-tier resource/keeper/new-clone and character-art resource cases passed. | open |  | 2026-10-07T07:56:19.277Z |  |
+| 44 | 7 | unmet-truth | tools/art/animation-capture.mjs |  | Plan07-10 retains45 separate independent weapon contexts and9 previews, but natural death/respawn and three online routes plus current09/full offline/MP gates remain unqualified. | open |  | 2026-10-07T19:34:18.566Z |  |
 
 ````json
 [
@@ -617,6 +618,19 @@ last_updated: 2026-10-07T07:56:19.277Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-10-07T07:56:19.277Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 44,
+    "kind": "unmet-truth",
+    "phase": "7",
+    "file": "tools/art/animation-capture.mjs",
+    "line": null,
+    "description": "Plan07-10 retains45 separate independent weapon contexts and9 previews, but natural death/respawn and three online routes plus current09/full offline/MP gates remain unqualified.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-07T19:34:18.566Z",
     "resolved_at": null,
     "milestone": null
   }
