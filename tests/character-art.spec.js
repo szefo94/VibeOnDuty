@@ -895,15 +895,24 @@ test('art slice: missing paint preserves usable shaded materials and weapon geom
     const { buildEnemyWeapon3p } = await import(src + 'builders/enemyWeapon.js');
     const { bunkerMapDef } = await import(src + 'maps/bunker.js');
     const material = makeIllustratedMaterial('metal');
+    const weapon = buildEnemyWeapon3p('assault');
+    const parts = ['m4_receiver', 'm4_magazine', 'm4_grip', 'm4_charging'].map(name => {
+      const part = weapon.getObjectByName(name);
+      return { name, mesh: !!part?.isMesh, vertices: part?.geometry.attributes.position.count ?? 0,
+        shaded: part?.material.type === 'MeshStandardMaterial' && !part.material.map &&
+          part.material.color.getHex() > 0 };
+    });
     return { map: material.map, type: material.type, color: material.color.getHex(),
-      failed: material.userData.paintState, meshes: buildEnemyWeapon3p('assault').children.length,
+      failed: material.userData.paintState, meshes: weapon.children.filter(n => n.isMesh).length, parts,
       stones: Object.values(bunkerMapDef.materials).every((m) => m.map === null && m.color.getHex() > 0) };
   });
   expect(state.map).toBeNull();
   expect(state.type).toBe('MeshStandardMaterial');
   expect(state.color).toBeGreaterThan(0);
   expect(state.failed).toBe('failed');
-  expect(state.meshes).toBe(4);
+  expect(state.meshes).toBe(5); // Receiver, magazine, grip, charging handle and barrel.
+  expect(state.parts.map(p => p.name)).toEqual(['m4_receiver', 'm4_magazine', 'm4_grip', 'm4_charging']);
+  expect(state.parts.every(p => p.mesh && p.vertices > 0 && p.shaded)).toBe(true);
   expect(state.stones).toBe(true);
 });
 

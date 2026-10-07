@@ -1,0 +1,7 @@
+# Plan 07-10 — Public animation debug restoration
+
+2026-10-07. Parent reviewed and authorized the exact narrow restoration in the already permitted `src/builders/enemyAnimations.js` owner. The full offline run executed 127 cases: 124 passed and three failed, including the unchanged `tests/assets.spec.js` public transition logging assertion. `drivePresentation` replaced the legacy crossfade/loco selection path but omitted its opt-in diagnostics.
+
+The change logs only when the existing presentation transition key changes and `_dbgWants(e)` accepts the actor. It retains `[loco:player]` / `[crossfade:player]` prefixes and `_dbgName` matching. It changes no pose, key, weight, action selection/order, clock, deadline, geometry or authority. Default diagnostics remain off. The original assets assertions stay intact and must execute GREEN; existing loaded-rig pose/layer equivalence remains required.
+
+This is a concrete regression fix within the reviewed mutable owner, not a protected-source whitelist expansion or numerical acceptance amendment. Other protected source/test/art/provenance bytes and the sampler remain fixed. The new runtime source identity invalidates the prior f89d820 smoke as current-source qualification. Preserve that historical proof and collect one fresh unchanged-producer smoke after final runtime work; its actual failed/incomplete V2 result still blocks plan09/10 completion.

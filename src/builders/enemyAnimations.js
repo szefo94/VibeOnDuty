@@ -506,6 +506,9 @@ export function tickPresentation(e, raw, dt, updateMixer = true) {
   e._presentationActive = selected;
   const transitionKey = `${key}/${pose.upper}/${pose.gait.map(g => g.key).join('+')}`;
   if (e._presentationKey !== transitionKey && pose.alive && !normalized.reset) _snapBones(e, INERTIA_OMEGA);
+  if (e._presentationKey !== transitionKey && _dbgWants(e)) {
+    console.log(`[${key === 'loco' ? 'loco' : 'crossfade'}:${e._dbgName ?? 'enemy'}] ${e._presentationKey ?? 'none'} → ${transitionKey}`);
+  }
   e._presentationKey = transitionKey;
   e.currentClip = pose.alive && pose.upper === 'reload' ? 'reload' : key;
   e._inLocoMode = key === 'loco';
