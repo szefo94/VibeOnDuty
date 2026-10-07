@@ -3,6 +3,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { execFile } from 'node:child_process';
+import { createServer as createPortProbe } from 'node:net';
 import { promisify } from 'node:util';
 import { chromium } from '@playwright/test';
 import { createServer } from 'vite';
@@ -65,6 +66,14 @@ export async function executeV2(directory) {
 const relative = filename => path.relative(ROOT, filename).replaceAll('\\', '/');
 const reloadSeconds = { m4: 1.8, p90: 2, awp: 2.5, pistol: 1.2 };
 
+async function ownedFreePort() {
+  const probe=createPortProbe();
+  await new Promise((resolve,reject)=>{probe.once('error',reject);probe.listen(0,'127.0.0.1',resolve);});
+  const port=probe.address().port;
+  await new Promise((resolve,reject)=>probe.close(error=>error?reject(error):resolve()));
+  return port;
+}
+
 async function observe(page, label) {
   return page.evaluate(async label => {
     if (window.__movingRead) return { ...window.__movingRead(), label };
@@ -77,7 +86,7 @@ async function observe(page, label) {
       weapon: player.weapon, ammo: player.ammo, reserve: player.reserve, hp: player.hp, energy: player.energy,
       dead: player.dead, reloadMs: player.reloadTimer, reloading: player.reloading,
       punching: player.punching, throwingNade: player.throwingNade,
-      aiming: player.aiming, crouching: player.crouching, onGround: player.onGround,
+      aiming: player.aiming, aimT:player.aimT, crouching: player.crouching, onGround: player.onGround,
       eye: camera.position.toArray(), pitch: player.pitch, yaw: player.yaw,
       thirdPerson: getThirdPerson?.(), draws: renderer.info.render.calls,
       quality: getGraphicsQuality(), shadows: renderer.shadowMap.enabled,
@@ -97,7 +106,7 @@ async function installObserver(page) {
       return { wallMs: performance.now(), mixerTime: g.playerMixer?.time, mode: mode.getMode()?.name,
         weapon: player.weapon, ammo: player.ammo, reserve: player.reserve, hp: player.hp, energy: player.energy,
         dead: player.dead, reloadMs: player.reloadTimer, reloading: player.reloading,
-        punching: player.punching, throwingNade: player.throwingNade, aiming: player.aiming,
+        punching: player.punching, throwingNade: player.throwingNade, aiming: player.aiming, aimT:player.aimT,
         crouching: player.crouching, onGround: player.onGround, eye: world.camera.position.toArray(),
         pitch: player.pitch, yaw: player.yaw, thirdPerson: view.getThirdPerson(),
         quality: quality.getGraphicsQuality(), shadows: world.renderer.shadowMap.enabled,
@@ -111,6 +120,7 @@ async function installObserver(page) {
       if (recentFrames.length > 16) recentFrames.shift();
       const next = [sample.weapon,sample.ammo,sample.hp,sample.energy,sample.aiming,sample.reloading,sample.punching,sample.throwingNade,
         sample.dead,sample.crouching,sample.onGround,sample.pose?.upper,sample.pose?.moving,
+        Math.floor(sample.aimT*100),
         Math.floor((sample.pose?.action?.phase ?? sample.pose?.phase ?? 0)*10)].join('/');
       if (next !== key) { history.push(sample); key = next; if (history.length > 4096) {history.shift();dropped++;} }
       raf = requestAnimationFrame(tick);
@@ -137,7 +147,9 @@ async function weaponSegment(page, specification) {
   await badge(page, `Actual ${specification.tier}/${specification.weapon}/${specification.view} · ADS/fire/physical reload · normal game clock`);
   const start = await observe(page, 'segment-start');
   await page.mouse.down({button:'right'});
-  await page.waitForFunction(() => window.__movingRead().aiming);
+  await page.waitForFunction(({time,third})=>window.__movingFrames().some(s=>s.wallMs>=time
+    &&s.aiming&&s.aimT>=.99&&s.pose?.upper==='ads'&&s.pose.aiming&&s.thirdPerson===third),
+    {time:start.wallMs,third:specification.view==='third'});
   await page.mouse.down({button:'left'});
   await page.waitForFunction(ammo => window.__movingRead().ammo < ammo, start.ammo);
   await page.mouse.up({button:'left'}); await page.mouse.up({button:'right'});
@@ -152,7 +164,7 @@ async function weaponSegment(page, specification) {
   const coverage = { quality: observations.every(o => o.quality === specification.tier),
     view: specification.view==='third'?end.thirdPerson:!end.thirdPerson
       &&(specification.view==='down'?end.pitch< -1:Math.abs(end.pitch)<.01),
-    ads: observations.some(o => o.aiming), fire: observations.some(o => o.ammo < start.ammo),
+    ads: observations.some(o => o.aiming&&o.aimT>=.99&&o.pose?.upper==='ads'&&o.pose.aiming), fire: observations.some(o => o.ammo < start.ammo),
     physicalReload: observations.some(o => o.reloading) && end.ammo > beforeReload.ammo && !end.reloading,
     actualFrames: end.mixerTime > start.mixerTime };
   return { ...specification, kind:'actual-offline-weapon-segment', clock:'Normal game RAF and capped delta',
@@ -475,8 +487,8 @@ async function previewChain(page, tier, view) {
     completed: true, authority: 'Phase5 deferred; isolated review clock only' };
 }
 async function collectOffline(serverUrl, browser, directory, report) {
-  const variants = report.tracer ? ['m4'] : ['m4', 'p90', 'awp', 'pistol', 'p90-fallback'];
-  for (const tier of report.tracer ? ['low'] : ['low', 'medium', 'high']) for (const variant of variants) {
+  const variants = report.tracer||report.viewTracer ? ['m4'] : ['m4', 'p90', 'awp', 'pistol', 'p90-fallback'];
+  for (const tier of report.tracer||report.viewTracer ? ['low'] : ['low', 'medium', 'high']) for (const variant of variants) {
     const weapon = variant === 'p90-fallback' ? 'p90' : variant;
     const context = await browser.newContext({ viewport: { width: 1280, height: 960 }, deviceScaleFactor: 1,
       recordVideo: { dir: directory, size: { width: 1280, height: 960 } } });
@@ -505,7 +517,7 @@ async function collectOffline(serverUrl, browser, directory, report) {
         const { inspectedWeaponFBX } = await import('/src/builders/weaponFBX.js');
         return inspectedWeaponFBX ? 'loaded P90 FBX inspected; articulated procedural fallback used' : 'FBX unavailable; procedural fallback used';
       });
-      if (weapon === 'm4') {
+      if (weapon === 'm4'&&!report.viewTracer) {
         const movement = await blockedWalkUnion(page, tier);
         entries.push(movement); report.offlineMovement.push(movement);
       }
@@ -523,12 +535,12 @@ async function collectOffline(serverUrl, browser, directory, report) {
         console.log(`Moving weapon segment ${tier}/${variant}/${view}: ${entry.completed ? 'qualified' : 'partial'}; ${entry.observations.length} normal-frame observations; ${entry.durationMs}ms`);
         await fs.writeFile(path.join(directory, 'collection-partial.json'), JSON.stringify(report, null, 2));
       }
-      if (weapon === 'm4') {
+      if (weapon === 'm4'&&!report.viewTracer) {
         const shared = await sharedMovementUnion(page,tier);
         entries.push(shared); report.sharedMovement.push(shared);
         console.log(`Moving shared movement ${tier}: ${shared.complete ? 'qualified' : 'partial'}`);
       }
-      if (weapon === 'm4') for (const view of report.tracer ? ['first'] : ['first', 'down', 'third']) {
+      if (weapon === 'm4'&&!report.viewTracer) for (const view of report.tracer ? ['first'] : ['first', 'down', 'third']) {
         entries.push(await previewChain(page, tier, view)); report.previews.push(entries.at(-1));
       }
     } catch (error) {
@@ -595,7 +607,7 @@ async function collectCombat(serverUrl,browser,directory,report) {
     }
   }
 }
-export async function captureAnimationReview(getIdentities, { tracer = false, combatProbe = false, independentMatrix = false } = {}) {
+export async function captureAnimationReview(getIdentities, { tracer = false, combatProbe = false, independentMatrix = false, viewTracer = false } = {}) {
   const start = Date.now(), identities = await getIdentities();
   await fs.mkdir(path.join(CACHE, 'moving-review'), { recursive: true });
   const directory = await fs.mkdtemp(path.join(CACHE, 'moving-review', 'capture-'));
@@ -604,7 +616,7 @@ export async function captureAnimationReview(getIdentities, { tracer = false, co
       cpu: os.cpus()[0]?.model, node: process.version },
     approvedMotion: null, matrix: [], previews: [], offlineCombat: [], offlineMovement: [], sharedMovement:[], media: [], collectionErrors: [],
     creatorTracer: { complete: false }, online: { complete: false, observations: [], media: [] },
-    humanMotionAcceptance: 'pending', certification: false, tracer, combatProbe, independentMatrix,
+    humanMotionAcceptance: 'pending', certification: false, tracer, combatProbe, independentMatrix, viewTracer,
     limits: 'Continuous actual game input WebM collection; isolated labeled future review uses its own clock. No outcome hooks, no online freeze, no human/device/FPS acceptance. Independent collection cannot qualify plan09.' };
   let server, browser, canceled = false;
   const cancel = () => { canceled = true; void browser?.close(); };
@@ -628,23 +640,25 @@ export async function captureAnimationReview(getIdentities, { tracer = false, co
       recoveryReportSha256: hash(await fs.readFile(recoveryFile)),
       comparison: await compareMotionExports(recovery.regenerated, report.approvedMotion.publication, manifest),
       meaning: 'Independently reopened editable donor and manifest regenerate accepted current motion; first actual input movie is the game leg.' };
+    const port=await ownedFreePort();
     server = await createServer({ root: ROOT, base: '/', cacheDir: path.join(directory, 'vite-cache'),
-      server: { host: '127.0.0.1', port: 0, strictPort: true, hmr: false, open: false,
+      server: { host: '127.0.0.1', port, strictPort: true, hmr: false, open: false,
         watch: { ignored: ['**/.planning/**', '**/tools/art/sources/**'] } } });
     await server.listen();
     const url = `http://127.0.0.1:${server.httpServer.address().port}/`;
+    report.ownedListener={url,requestedPort:port,actualPort:server.httpServer.address().port};
     report.runningGamePath = 'npm run dev (choose a free owned port), Training Range, enabled Start, F3 → Open animation review; Close review → Resume.';
     browser = await chromium.launch({ headless: true, args: ['--use-gl=swiftshader'] });
     report.browser = browser.version();
     console.log('Moving collection owned listener/browser ready; normal game input only');
     if(!combatProbe)await collectOffline(url, browser, directory, report);
-    if(independentMatrix)report.omittedCoverage={kind:'shared-combat-unions',
+    if(independentMatrix||viewTracer)report.omittedCoverage={kind:'shared-combat-unions',
       reason:'Bounded current-source tracer retained earned throw and damage but natural death did not occur; independent segments proceed without retrying or qualifying this missing union',
       evidence:relative(path.join(EVIDENCE,'07-motion-review-tracer.json'))};
     else await collectCombat(url,browser,directory,report);
     report.creatorTracer.complete = report.matrix.some(entry => entry.completed && entry.media?.bytes > 0);
     const { collectMovingOnline } = await import('./moving-online.mjs');
-    if(!tracer&&!combatProbe)report.online = await collectMovingOnline(browser, directory);
+    if(!tracer&&!combatProbe&&!viewTracer)report.online = await collectMovingOnline(browser, directory);
     report.media.push(...report.online.media);
   } catch (error) { report.collectionErrors.push({ stage: 'creator-or-collection', error: error.message }); }
   finally {
@@ -702,6 +716,8 @@ export async function captureAnimationReview(getIdentities, { tracer = false, co
     &&report.offlineCombat[0].media?.bytes>0&&report.protectedBytesUnchanged&&!report.canceled&&!report.collectionErrors.length;
   report.independentCombatProbeComplete=combatProbe&&report.offlineCombat.length===1&&report.offlineCombat[0].complete
     &&report.offlineCombat[0].media?.bytes>0&&report.protectedBytesUnchanged&&!report.canceled&&!report.collectionErrors.length;
+  report.independentViewTracerComplete=viewTracer&&report.matrix.length===3&&report.matrix.every(e=>e.completed&&e.media?.bytes>0)
+    &&new Set(report.matrix.map(e=>e.view)).size===3&&report.protectedBytesUnchanged&&!report.canceled&&!report.collectionErrors.length;
   report.durationMs = Date.now() - start; report.directory = relative(directory);
   const links = report.media.map(m => {
     const contexts = [...report.matrix, ...report.previews, ...report.offlineCombat, ...report.offlineMovement]
@@ -712,7 +728,7 @@ export async function captureAnimationReview(getIdentities, { tracer = false, co
   await fs.writeFile(path.join(directory, 'index.html'), `<!doctype html><meta charset="utf-8"><title>Current moving review — ${report.status}</title><h1>Current moving review: ${report.status}</h1><p>Human verdict pending. Continuous full-pixel WebM; context and Preview — / Phase 5 labels are in each movie. Plan09 and missing coverage remain blocking.</p>${links}<a href="report.json">Exact identities and actual gate outcomes</a>`);
   report.index = relative(path.join(directory, 'index.html'));
   await fs.writeFile(path.join(directory, 'report.json'), JSON.stringify(report, null, 2) + '\n');
-  await fs.writeFile(path.join(EVIDENCE, combatProbe?'07-motion-review-combat-probe.json':tracer?'07-motion-review-tracer.json':'07-motion-review.json'), JSON.stringify(report, null, 2) + '\n');
+  await fs.writeFile(path.join(EVIDENCE, viewTracer?'07-motion-review-view-tracer.json':combatProbe?'07-motion-review-combat-probe.json':tracer?'07-motion-review-tracer.json':'07-motion-review.json'), JSON.stringify(report, null, 2) + '\n');
   console.log(JSON.stringify({ report: relative(path.join(EVIDENCE, '07-motion-review.json')), complete: report.complete, index: report.index }));
   if (!report.complete) { const error = Error('Current moving capture remains unqualified; see retained partial report'); error.report = report; throw error; }
   return report;
