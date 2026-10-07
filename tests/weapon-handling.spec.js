@@ -62,6 +62,13 @@ test('owner cache: loaded handling preserves original rotations, contacts and re
       owner.skeleton = replacement.mesh; h.updateWeaponHandling(owner, pose);
       const replaced = owner.boneLookup?.get('hand_r') === replacement.mesh.getObjectByName('hand_r')
         && ![...owner.boneLookup?.values() ?? []].includes(expectedHand);
+      const oldMagazine = owner.parts.magazine, newRoot = root.clone(true);
+      owner.root = newRoot; h.updateWeaponHandling(owner, { ...pose, alive: false });
+      const rootReplacement = owner.socketLookup?.get(newRoot.name) === newRoot
+        && (oldMagazine ? owner.parts.magazine !== oldMagazine
+          && owner.socketLookup?.get(owner.parts.magazine.name) === owner.parts.magazine
+          : !owner.parts.magazine);
+      owner.root = root; h.updateWeaponHandling(owner, { ...pose, alive: false });
       h.disposeWeaponHandling(owner); h.disposeWeaponHandling(owner);
       original.disposeWeaponHandling(uncached);
       const retired = owner.boneLookup?.size === 0 && owner.socketLookup?.size === 0 && oldLookup?.size === 0;
@@ -70,7 +77,7 @@ test('owner cache: loaded handling preserves original rotations, contacts and re
       h.updateWeaponHandling(keeperOwner, pose);
       const keeperUsable = keeperOwner.contacts?.supportWorld.every(Number.isFinite) === true;
       for (const a of [actor, baseline, replacement, keeper]) g.disposeEnemyMesh(a.mesh, a.mixer);
-      rows.push({ weapon, equal, rigLookups, socketLookups, identity, missing, replaced, retired, keeperUsable });
+      rows.push({ weapon, equal, rigLookups, socketLookups, identity, missing, replaced, rootReplacement, retired, keeperUsable });
     }
     return rows;
   });
@@ -79,7 +86,7 @@ test('owner cache: loaded handling preserves original rotations, contacts and re
   for (const row of result) {
     expect(row.equal, row.weapon).toEqual(Array(7).fill(true));
     expect(row.rigLookups, row.weapon).toBe(0); expect(row.socketLookups, row.weapon).toBe(0);
-    for (const key of ['identity', 'missing', 'replaced', 'retired', 'keeperUsable']) expect(row[key], `${row.weapon}/${key}`).toBe(true);
+    for (const key of ['identity', 'missing', 'replaced', 'rootReplacement', 'retired', 'keeperUsable']) expect(row[key], `${row.weapon}/${key}`).toBe(true);
   }
 });
 

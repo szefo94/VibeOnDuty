@@ -349,20 +349,23 @@ export function crossfade(e, to, dur = 0.16) {
 }
 
 const UPPER_TRACK = /(?:spine|neck|head|clavicle|upperarm|lowerarm|hand|finger|thumb|index|middle|ring|pinky)/i;
+const PRESENTATION_FALLBACK = { walk_forward: 'walk', run_forward: 'run', walk_left: 'strafe_l',
+  walk_right: 'strafe_r', run_left: 'strafe_l', run_right: 'strafe_r',
+  crouch_forward: 'crouch_walk', crouch_back: 'crouch_walk', crouch_left: 'crouch_walk',
+  crouch_right: 'crouch_walk', crouch_idle: 'crouch', sprint: 'run',
+  melee_cross: 'punch_cross', melee_jab: 'punch_jab', throw: 'nade' };
 /** Mask copies preserve shared prepared buffers and action aliases. */
 export function copyPresentationMask(clip, upper) {
   return new THREE.AnimationClip(`${clip.name}_${upper ? 'upper' : 'lower'}`, clip.duration,
     clip.tracks.filter(track => UPPER_TRACK.test(track.name) === upper).map(track => track.clone()));
 }
 function presentationAction(e, key, upper) {
-  const fallback = { walk_forward: 'walk', run_forward: 'run', walk_left: 'strafe_l',
-    walk_right: 'strafe_r', run_left: 'strafe_l', run_right: 'strafe_r',
-    crouch_forward: 'crouch_walk', crouch_back: 'crouch_walk', crouch_left: 'crouch_walk',
-    crouch_right: 'crouch_walk', crouch_idle: 'crouch', sprint: 'run',
-    melee_cross: 'punch_cross', melee_jab: 'punch_jab', throw: 'nade' };
-  const generic = key.endsWith('_reload') ? 'reload' : key.endsWith('_ads') ? 'attack'
-    : key.endsWith('_fire') ? 'shoot' : key.endsWith('_ready') ? 'idle' : null;
-  const source = e.actions[key] || e.actions[fallback[key]] || e.actions[generic] || e.actions.idle;
+  if (!e._presentationSources.has(key)) {
+    const generic = key.endsWith('_reload') ? 'reload' : key.endsWith('_ads') ? 'attack'
+      : key.endsWith('_fire') ? 'shoot' : key.endsWith('_ready') ? 'idle' : null;
+    e._presentationSources.set(key, e.actions[key] || e.actions[PRESENTATION_FALLBACK[key]] || e.actions[generic] || e.actions.idle);
+  }
+  const source = e._presentationSources.get(key);
   if (!source) return null;
   if (upper === null || !e._bones?.length) return source;
   e._presentationMasks ??= new Map();
@@ -372,16 +375,24 @@ function presentationAction(e, key, upper) {
   if (!pair[side]) {
     const clip = copyPresentationMask(source.getClip(), upper);
     pair[side] = clip.tracks.length ? e.mixer.clipAction(clip) : null;
+    // Masks are created lazily in this mixer generation. Collect immediately so
+    // the same frame's interruption/weight pass cannot miss a newly made layer.
+    if (pair[side]) e._presentationActions.add(pair[side]);
   }
   return pair[side];
 }
 function collectPresentationBones(e) {
-  if (e._bonesInit) return;
-  e._bonesInit = true; e._bones = [];
-  e.mesh?.traverse(obj => {
-    if (obj.isSkinnedMesh && obj.skeleton)
-      for (const bone of obj.skeleton.bones) if (!e._bones.includes(bone)) e._bones.push(bone);
-  });
+  if (!e._bonesInit) {
+    e._bonesInit = true; e._bones = [];
+    e.mesh?.traverse(obj => {
+      if (obj.isSkinnedMesh && obj.skeleton)
+        for (const bone of obj.skeleton.bones) if (!e._bones.includes(bone)) e._bones.push(bone);
+    });
+  }
+  if (e._presentationBones === e._bones) return;
+  e._presentationBones = e._bones;
+  e._presentationPelvis = e._bones.find(b => b.name === 'pelvis');
+  e._presentationSpine = e._bones.find(b => b.name === 'spine_03');
 }
 function restorePresentationCorrection(e) {
   if (e._presentationCorrection)
@@ -392,8 +403,8 @@ function correctPresentationBones(e, pose) {
   if (!pose.alive) return;
   const root = e.mesh;
   root?.updateMatrixWorld(true);
-  const pelvis = e._bones?.find(b => b.name === 'pelvis');
-  const spine = e._bones?.find(b => b.name === 'spine_03');
+  const pelvis = e._presentationPelvis;
+  const spine = e._presentationSpine;
   // Apply bounded deltas in the parent's space; authored rest rolls are retained.
   const apply = (bone, worldAxis, value) => {
     if (!bone || Math.abs(value) < 1e-6) return;
@@ -414,25 +425,37 @@ function correctPresentationBones(e, pose) {
   }
 }
 
+function retirePresentationReferences(e) {
+  restorePresentationCorrection(e);
+  for (const action of e._presentationActions ?? []) action.stop();
+  e._presentationActions?.clear(); e._presentationSources?.clear();
+  e._presentationMasks?.clear(); e._presentationCorrection?.clear(); e._presentationActive?.clear();
+  e._presentationHistory = null; e._presentationMixer = null; e._presentationRoot = null;
+  e._presentationAliases = null; e._presentationKey = null;
+  e._presentationPelvis = e._presentationSpine = null;
+  e._presentationBones = null;
+  e._handlingMesh = e._handlingMixer = e._handlingMount = null;
+  e._bones = []; e._bonesInit = false; e._inertia = null; e.presentation = null;
+  e._releasePresentation = null;
+}
+
 /** Read-only common rig driver. Order: restore -> mixer -> rest-aware correction -> inertia. */
 export function tickPresentation(e, raw, dt, updateMixer = true) {
   restoreWeaponHandlingBones(actorHandling(e));
-  if (e._presentationMixer !== e.mixer) {
+  if (e._presentationMixer !== e.mixer || e._presentationRoot !== e.mesh || e._presentationAliases !== e.actions) {
     e._releasePresentation?.();
-    if (e._presentationMixer) { e._bonesInit = false; e._bones = []; }
+    if (e._presentationMixer || e._presentationRoot || e._presentationAliases) retirePresentationReferences(e);
     e._presentationMixer = e.mixer;
+    e._presentationRoot = e.mesh; e._presentationAliases = e.actions;
+    e._presentationActions = new Set(Object.values(e.actions));
+    e._presentationSources = new Map();
     e._presentationMasks = new Map();
     e._presentationCorrection = new Map();
     e._presentationHistory = createPresentationHistory();
     e._presentationKey = null;
     e._presentationDamageRemaining = 0;
     e._inertia = null;
-    e._releasePresentation = registerCharacterDisposer(e.mesh, () => {
-      e._presentationMasks?.clear(); e._presentationCorrection?.clear(); e._presentationActive?.clear();
-      e._presentationHistory = null; e._presentationMixer = null; e._presentationKey = null;
-      e._bones = []; e._bonesInit = false; e._inertia = null; e.presentation = null;
-      e._releasePresentation = null;
-    });
+    e._releasePresentation = registerCharacterDisposer(e.mesh, () => retirePresentationReferences(e));
   }
   collectPresentationBones(e);
   e._presentationHistory ??= createPresentationHistory();
@@ -476,9 +499,7 @@ export function tickPresentation(e, raw, dt, updateMixer = true) {
     add(upperKey, true, 1, pose.upper === 'reload' || pose.upper === 'fire' && pose.action.total > 0
       ? pose.action.phase : null);
   }
-  const all = new Set(Object.values(e.actions));
-  for (const pair of e._presentationMasks?.values() ?? []) for (const action of Object.values(pair)) if (action) all.add(action);
-  for (const action of all) {
+  for (const action of e._presentationActions) {
     if (action === e.actions._breathing || action === e.actions._hitAdditive) continue;
     if (!selected.has(action)) action.stop();
   }
@@ -522,7 +543,13 @@ export function finishPresentation(e, dt, measurement = null) {
   }
 }
 function actorHandling(e) {
-  const root = e.mesh?.getObjectByName('enemyWeaponMount')?.children[0];
+  if (e._handlingMesh !== e.mesh || e._handlingMixer !== e.mixer) {
+    e._handlingMesh = e.mesh; e._handlingMixer = e.mixer;
+    e._handlingMount = e.mesh?.getObjectByName('enemyWeaponMount') ?? null;
+  }
+  // The mounted child can change independently of its stable mount. Resolve its
+  // current owner every call instead of retaining a replaced weapon handler.
+  const root = e._handlingMount?.children[0];
   return root ? getWeaponHandling(root) : null;
 }
 /** Observation of the actual contributing actions, without exposing live bindings. */

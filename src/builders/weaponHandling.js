@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import manifest from '../../tools/art/motion-manifest.json';
+import { registerCharacterDisposer } from './characterResources.js';
 
 const V = (...xyz) => new THREE.Vector3(...xyz);
 const clamp = value => Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
@@ -17,6 +18,46 @@ const definitions = {
 };
 const owners = new WeakMap();
 export function getWeaponHandling(root) { return owners.get(root) ?? null; }
+
+// Object3D lookup visits the root then its children depth first. Keep the first
+// match (including non-bones) and absence semantics, never a pose or transform.
+function indexNames(root, lookup) {
+  lookup.clear();
+  root?.traverse(node => { if (!lookup.has(node.name)) lookup.set(node.name, node); });
+}
+function handlingReferences(owner) {
+  if (owner.lookupRoot === owner.root && owner.lookupSkeleton === owner.skeleton
+    && owner.lookupWeapon === owner.weapon && owner.lookupMount === owner.root.parent) return;
+  owner.releaseSkeleton?.(); owner.releaseSkeleton = null;
+  const rootChanged = owner.lookupRoot && (owner.lookupRoot !== owner.root || owner.lookupWeapon !== owner.weapon);
+  if (rootChanged) {
+    for (const [part, rest] of owner.rest) {
+      part.position.copy(rest.position); part.quaternion.copy(rest.quaternion);
+    }
+    if (owners.get(owner.lookupRoot) === owner) owners.delete(owner.lookupRoot);
+  }
+  indexNames(owner.root, owner.socketLookup);
+  indexNames(owner.skeleton, owner.boneLookup);
+  if (rootChanged) {
+    owner.parts = Object.fromEntries(['receiver', 'grip', 'support', 'magazine', 'charging'].map(name =>
+      [name, owner.socketLookup.get(`${owner.weapon}_${name}`) ||
+        (name === 'charging' ? owner.socketLookup.get(owner.weapon === 'awp' ? 'awp_bolt' : 'pistol_slide') : null) ||
+        owner.socketLookup.get(name)]));
+    owner.rest = new Map(Object.values(owner.parts).filter(Boolean).map(part =>
+      [part, { position: part.position.clone(), quaternion: part.quaternion.clone() }]));
+    owners.set(owner.root, owner);
+  }
+  owner.lookupRoot = owner.root; owner.lookupSkeleton = owner.skeleton;
+  owner.lookupWeapon = owner.weapon; owner.lookupMount = owner.root.parent;
+  owner.mountRest = null;
+  const skeleton = owner.skeleton;
+  owner.releaseSkeleton = registerCharacterDisposer(skeleton, () => {
+    restoreWeaponHandlingBones(owner);
+    owner.boneLookup.clear(); owner.socketLookup.clear();
+    owner.lookupRoot = owner.lookupSkeleton = owner.lookupMount = null;
+    owner.skeleton = null; owner.mountRest = null; owner.releaseSkeleton = null;
+  });
+}
 
 /** Weapon-local, read-only phase sample. It never advances a gameplay clock. */
 export function sampleWeaponHandling(weapon, pose = {}) {
@@ -61,6 +102,7 @@ export function createWeaponHandling({ weapon, root, skeleton = null }) {
       (name === 'charging' ? root.getObjectByName(weapon === 'awp' ? 'awp_bolt' : 'pistol_slide') : null) ||
       root.getObjectByName(name)]));
   const owner = { weapon, root, skeleton, parts, props: [], disposed: false, sample: null,
+    boneLookup: new Map(), socketLookup: new Map(), lookupRoot: null, lookupSkeleton: null,
     corrections: new Map(), updates: 0, contacts: null,
     rest: new Map(Object.values(parts).filter(Boolean).map(part =>
       [part, { position: part.position.clone(), quaternion: part.quaternion.clone() }])) };
@@ -94,10 +136,9 @@ function align(owner, bone, from, to) {
 // Analytic two-segment solve; authored elbow plane is retained and reach clamps.
 // Exactly two rotations, no iterative unbounded CCD, no bone translations/scales.
 function solveArm(owner, side, target, orientation) {
-  const root = owner.skeleton;
-  const upper = root.getObjectByName(`upperarm_${side}`);
-  const lower = root.getObjectByName(`lowerarm_${side}`);
-  const hand = root.getObjectByName(`hand_${side}`);
+  const upper = owner.boneLookup.get(`upperarm_${side}`);
+  const lower = owner.boneLookup.get(`lowerarm_${side}`);
+  const hand = owner.boneLookup.get(`hand_${side}`);
   if (!upper || !lower || !hand) return null;
   const a = upper.getWorldPosition(V()), b = lower.getWorldPosition(V()), c = hand.getWorldPosition(V());
   const l1 = a.distanceTo(b), l2 = b.distanceTo(c);
@@ -121,7 +162,7 @@ function solveArm(owner, side, target, orientation) {
 }
 
 function closeFingers(owner, side) {
-  const hand = owner.skeleton.getObjectByName(`hand_${side}`);
+  const hand = owner.boneLookup.get(`hand_${side}`);
   if (!hand) return;
   const axis = V(1, 0, 0).applyQuaternion(hand.getWorldQuaternion(new THREE.Quaternion()));
   for (const name of ['index', 'middle', 'ring', 'pinky', 'thumb']) {
@@ -130,8 +171,8 @@ function closeFingers(owner, side) {
       // differs from the four fingers. Aim across the palm, not along finger X.
       const center = hand.localToWorld(V(side === 'l' ? -.012 : .012, .095, .03));
       for (const segment of [1, 2, 3]) {
-        const bone = owner.skeleton.getObjectByName(`thumb_0${segment}_${side}`);
-        const next = owner.skeleton.getObjectByName(segment === 3 ? `thumb_04_leaf_${side}` : `thumb_0${segment + 1}_${side}`);
+        const bone = owner.boneLookup.get(`thumb_0${segment}_${side}`);
+        const next = owner.boneLookup.get(segment === 3 ? `thumb_04_leaf_${side}` : `thumb_0${segment + 1}_${side}`);
         if (!bone || !next) continue;
         const origin = bone.getWorldPosition(V());
         const from = next.getWorldPosition(V()).sub(origin).normalize();
@@ -144,7 +185,7 @@ function closeFingers(owner, side) {
       continue;
     }
     for (let segment = 1; segment <= 3; segment++) {
-      const bone = owner.skeleton.getObjectByName(`${name}_0${segment}_${side}`);
+      const bone = owner.boneLookup.get(`${name}_0${segment}_${side}`);
       if (!bone) continue;
       const angle = name === 'index' && side === 'r' ? [.15, .35, .4][segment - 1] : [.45, .8, .65][segment - 1];
       worldRotate(owner, bone, new THREE.Quaternion().setFromAxisAngle(axis, angle));
@@ -155,6 +196,7 @@ function closeFingers(owner, side) {
 export function updateWeaponHandling(owner, pose) {
   if (!owner || owner.disposed) return null;
   restoreWeaponHandlingBones(owner);
+  handlingReferences(owner);
   // Capture after the asynchronous canonical hand attachment, never at module
   // construction while the weapon mount still has its procedural identity basis.
   if (!owner.fixedAnchor && !owner.mountRest && owner.skeleton && owner.root.parent) {
@@ -173,7 +215,7 @@ export function updateWeaponHandling(owner, pose) {
   owner.sample = sample; owner.contacts = null;
   if (!sample) return null;
   for (const name of ['grip', 'support', 'magazine', 'charging']) {
-    owner.root.getObjectByName(`${owner.weapon}_${name}Socket`)?.position.fromArray(sample[name]);
+    owner.socketLookup.get(`${owner.weapon}_${name}Socket`)?.position.fromArray(sample[name]);
   }
   const def = definitions[owner.weapon];
   if (owner.parts.magazine) owner.parts.magazine.position.add(V(...sample.magazine).sub(V(...def.magazine)));
@@ -181,8 +223,8 @@ export function updateWeaponHandling(owner, pose) {
   if (owner.skeleton && pose.alive !== false && pose.weapon === owner.weapon
     && !['throw', 'melee', 'dance', 'roll'].includes(pose.upper)) {
     owner.skeleton.updateMatrixWorld(true);
-    const right = owner.skeleton.getObjectByName('hand_r');
-    const shoulder = owner.skeleton.getObjectByName('upperarm_l');
+    const right = owner.boneLookup.get('hand_r');
+    const shoulder = owner.boneLookup.get('upperarm_l');
     if (!owner.fixedAnchor && right && shoulder) {
       // Bounded carry fit moves the authored firing wrist towards the other
       // shoulder by at most 10cm. The mounted gun stays in that hand's grip.
@@ -231,5 +273,9 @@ export function disposeWeaponHandling(owner) {
   }
   for (const prop of owner.props) prop.removeFromParent();
   owner.props.length = 0; owner.disposed = true;
+  owner.releaseSkeleton?.(); owner.releaseSkeleton = null;
+  owner.boneLookup.clear(); owner.socketLookup.clear();
+  owner.lookupRoot = owner.lookupSkeleton = owner.lookupMount = null;
+  owner.skeleton = null; owner.mountRest = null;
   if (owners.get(owner.root) === owner) owners.delete(owner.root);
 }

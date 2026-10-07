@@ -17,7 +17,7 @@ const ORIGINAL = {
   budgetSha256: '66722a272115cdc1145cf1af97a1cb583389d7ea5adb75a4534445c15a14e1ff',
 };
 const MUTABLE_RUNTIME = ['src/builders/characterResources.js', 'src/builders/enemyGLTF.js',
-  'src/builders/firstPersonRig.js'];
+  'src/builders/firstPersonRig.js', 'src/builders/enemyAnimations.js', 'src/builders/weaponHandling.js'];
 export const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 export function canonical(value) {
   if (Array.isArray(value)) return '[' + value.map(canonical).join(',') + ']';
