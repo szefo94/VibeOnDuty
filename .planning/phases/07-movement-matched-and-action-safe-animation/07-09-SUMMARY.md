@@ -10,7 +10,8 @@ requires:
 provides:
   - Qualified generation/resource retirement and exact-equal world palettes
   - Owned first-person bone lookup cache with actual lifetime regression
-  - Complete independent V2 candidate with135 fixed numeric failures
+  - Complete earlier V2 candidate with135 fixed numeric failures
+  - Exact generation-owned handling/presentation caches and current failed smoke
 affects: [07-10, ANIM-02, ANIM-03, ANIM-05]
 tech-stack:
   added: []
@@ -21,8 +22,10 @@ key-files:
 key-decisions:
   - "Preserve failed/noncomparable legacy evidence separately from the immutable source-eye V2 contract."
   - "Reuse exact-equal world palettes only per instance; view caches preserve bone identities and retire before foreign callbacks."
-  - "Actual V2 failure blocks task2; proposed protected-owner work requires independent scope review without producer or numeric widening."
-requirements-completed: [ANIM-02, ANIM-03, ANIM-05]
+  - "Binding owner review permits exactly two reference-cache owners; all producer/numeric/protected-unit predicates remain fixed."
+  - "Current smoke fails14 fixed Low/one statistics; no unchanged expensive full matrix is launched without readiness."
+requirements-completed: []
+requirements-mapped: [ANIM-02, ANIM-03, ANIM-05]
 requirements-status: pending
 coverage:
   - id: D1
@@ -31,32 +34,33 @@ coverage:
     human_judgment: false
   - id: D2
     description: Actual offline action/view/review ownership, exact palettes and owned lookup retirement
-    verification: [{kind: e2e, ref: "44 actual resource/action/handling cases and2 legacy keepers", status: pass}]
-    human_judgment: false
+    verification: [{kind: e2e, ref: "45/46 current distinct resource/action/handling cases qualified; legacy1/2 qualified", status: fail}]
+    human_judgment: true
+    rationale: Two original checks did not reach assertions in setup; targeted verification remains open, not human-rubber-stampable.
   - id: D3
     description: Complete actual candidate passes the frozen numerical envelope
-    verification: [{kind: integration, ref: "evidence/07-09-budget-postopt-result.json#applicableBudgetPass", status: fail}]
+    verification: [{kind: integration, ref: "evidence/07-09-owner-cache-pilot-result.json#actualV2Cli exit1 Incomplete report", status: fail}]
     human_judgment: true
-    rationale: Numerical acceptance remains unmet; concrete owner-scope review is pending. No failure is auto-approved.
+    rationale: Current source has an incomplete pilot with14 fixed Low/one overruns; no fresh complete candidate or numerical acceptance is qualified.
   - id: D4
     description: Human moving contact/anatomy and representative hardware acceptance
     verification: []
     human_judgment: true
     rationale: Agent pixels and SwiftShader measurements establish neither human motion acceptance nor phone/iGPU/Pi/60FPS qualification.
-actuals: {tokens: 163367, tasks: 1, commits: 19}
-commits: 19
+actuals: {tokens: 223269, tasks: 1, commits: 25}
+commits: 25
 plan_head_before: b64b594c5316fba4d3e19d04314618e726d458b1
-plan_head_after: 1e252aed501ef5bf90bf54d53fd77d004257283f
-duration: approximately41min this continuation, including19.5min capture; prior spans retained in history
+plan_head_after: 1dea2c242b8520d20d21fb47f8bfbfc526302c89
+duration: approximately30min owner-cache continuation; prior spans retained in history
 completed: null
 last_verified: 2026-10-07
 ---
 
-# Phase 7 Plan 9: Frozen V2 Resource and Cost Checkpoint
+# Phase 7 Plan 9: Bounded Owner Caches and Failed Pilot Checkpoint
 
-**Owners retire safely and world palettes reduce350 textures per eight-source profile; the complete independent V2 candidate fails135 unchanged numeric limits.**
+**Exact loaded-rig caches remove repeated traversal without changing poses; the current unchanged-producer smoke fails14 fixed Low/one statistics and cannot qualify a complete V2 candidate.**
 
-## Execution Position
+## Historical Execution Position — Before Approved Owner Extension
 
 Task1 is complete. Task2's ownership/contract/runtime work is qualified, but required applicable-budget acceptance is **not complete**. This is a technical checkpoint, not PLAN COMPLETE. `status: halted` prevents summary existence from implying that dependent plan10 is runnable. Phase7 stays executing on plan9. Assigned requirement IDs above do not mark requirements accepted; human moving acceptance remains pending.
 
@@ -84,7 +88,7 @@ Original owner/tracer work: `bca7619` and `b3f8bde` RED; `948657c` and `e0f78d7`
 
 Both new RED records pass SDK `RED_EVIDENCE_OK`: `.planning/research/.cache/07-09-handling-cache-red.json` and `07-09-view-cache-red.json`. The handling record needed parser-compatible normalized output before GREEN authorization; its genuine failing assertion is retained. Its synthetic reach assertion was corrected to unchanged contact comparison before restoring the probe. Invalid fixture/setup failures were not credited as RED.
 
-## Checks Run
+## Checks Run — Historical View-Cache Continuation
 
 | Check | Actual result |
 | --- | --- |
@@ -134,7 +138,7 @@ Display rounding does not alter JSON limits or epsilon1e-7. The135 flags compris
 - Sampler: `2720e51eed272c40fe9e12ff561e4d63072f9b7548b5c270a71ec0ae527ab83f`.
 - Actual candidate: `799b7217d1e1120fac2d16442accfadfa578a7d5cec14bb75d57faef58742c39`.
 
-## Deviations and Concrete Remaining Checkpoint
+## Historical Deviations and Prior Scope Checkpoint
 
 The approved scope amendment repairs external-camera versus source-eye comparison; it does not waive a numeric failure. Original legacyBudgetPass=false, cameraWorkloadComparable=false and every old failed flag remain immutable. No bound/reference was replaced after tuning.
 
@@ -146,6 +150,69 @@ An unrelated software GPU process used29.65625 CPU seconds in3.0522724 wall seco
 
 WINDOWS41 records the actual V2 unmet truth; WINDOWS40 retains historical checkpoint evidence. No new stub, missing essential limb, placeholder, skipped test, auth gate, endpoint, schema or outcome permission was introduced. Inherited asset terms, human motion and representative device/Pi/60FPS acceptance remain separate pending work.
 
-## Self-Check: PASSED — Artifacts and Qualified Behavior Only
+## Historical Self-Check: PASSED — Artifacts and Qualified Behavior Only
 
 All new task/evidence commits, both new RED records, the complete12-profile report and36 referenced PNGs, actual failed CLI result, golden identities and owner-scope proposal exist. Qualified behavioral checks pass. **Numerical acceptance fails; task2, plan09 and Phase7 remain incomplete.**
+
+## Approved Owner Extension — Current 2026-10-07 Checkpoint
+
+The sections above retain the earlier `2a5b7ef` source and actual complete failed attempt. Their earlier owner restriction/proposal is superseded only by binding `07-09-OWNER-SCOPE-REVIEW.md` at `1e537a4`. Current source is `f89d820`; task1 stays complete and task2 stays open. No plan10/requirement/phase advancement occurs. Actuals above are ceiling(realized Git diff characters/4), with25 commits measured from the persisted ledger through `1dea2c2`, before current metadata closeout.
+
+| New commit | Outcome |
+| --- | --- |
+| `116f9ba` | Loaded-rig/allowlist RED; three SDK `RED_EVIDENCE_OK` records. |
+| `f89d820` | Exact reviewed owner reference/collection caches, lazy-mask inclusion and bounded retirement GREEN. |
+| `1dea2c2` | Earlier complete failure/source identity archived byte-identically; current actual failed pilot and named CLI rejection retained. |
+
+Only `src/builders/enemyAnimations.js` and `src/builders/weaponHandling.js` change in `src/` after owner approval. Runtime caches contain references or stable collections only. Installed r160 root-first depth-first duplicate/missing-name semantics remain exact. Every arm/finger rotation, original rest restoration, contact target/part movement, eligibility, phase, weight, authoritative cue and action priority still executes; no transform/matrix/target/solver result is cached. Newly created lower/upper mask actions enter the collection immediately in the same mixer generation. Actor/mixer/action-map and handling rig/root replacement clear stale references; current mounted weapon children are resolved each call, actors/views own independent caches, and retirement is idempotent.
+
+Loaded-rig RED measured920 handling rig lookups in20 updates and960 presentation rig lookups plus20 action enumerations in20 ticks. Five original full pose/layer snapshots and28 handling snapshots already matched before optimization. GREEN performs zero warmed rig/socket lookups or action enumerations while preserving all comparisons. Actual checks include duplicate/missing references, first-time reload masks followed by interruption/death, root/mixer/current-weapon replacement, old-root disposal, retirement, live keepers and later clones. Loaded pistol FBX has no named magazine part; the fixture preserves original absence semantics rather than fabricating a part. The first presentation fixture crashed before its assertion and is invalid RED; its corrected assertion failure is the accepted RED. Normalized records and actual logs remain under `.planning/research/.cache/07-09-owner-*-red.*`.
+
+**[Rule1 - Bug]** The initial implementation cleared a caller-supplied bone list on first initialization; an unchanged mask unit caught it. First initialization now preserves that original behavior and caches its references once. The17 unchanged units and final loaded presentation check pass. No protected source-unit file changed. The later pistol root-replacement failure was a fixture assumption about an absent original part; its correction changes no runtime behavior.
+
+### Checks Run — Current Owner-Cache Continuation
+
+| Check | Actual result |
+| --- | --- |
+| New loaded-rig presentation/handling regressions |2 passed in1.5min; final presentation passed in broader run, final corrected all-weapon/root replacement retry passed in10.4s. |
+| Unchanged animation/handling/view units |17 passed in3 files. |
+| V2 controls |41 passed. Exactly two new owner mutations allowed; combat/art/sampler/weapon and protected source-unit mutations reject. |
+| Broader resource/action/all-weapon suite |44 passed,2 failed in8.9min. Corrected handling retry passes, yielding45/46 distinct current cases qualified. |
+| Original throw1ms assertion |Not reached in3 setup/asset-loading or initial-click timeout attempts. Test/assertion/timeouts unchanged; no further unchanged retries. |
+| Legacy keepers |1 passed (character-art resource/tier keeper);1 failed in asset-loading setup before repeated-removal assertion. |
+| Lint, root types, strict MP types, build, whitespace |Passed; existing large-chunk build warning remains. |
+| Actual unchanged-producer Low/one smoke |Exit0,83,037ms,1 profile,214 timed frames,3 full PNGs; `complete:false` is intentional. |
+| Actual named V2 CLI on current pilot |Exit1: `Incomplete report`. Separate fixed-profile diagnostic records14 overruns among16 statistics. |
+
+All-tier zero/one/eight retirement, deterministic plateaus, exact shared buffers, actual posed vertices/pixels/binds, callback-failure cleanup, stale review loads, borrowed source material, keeper and later clone checks passed. Moving M4/P90/AWP/M9 contacts and bolt/slide/interruption checks passed. Current setup-limited nonpasses are not a passing full browser suite. Artifacts were copied before shared output reuse to `07-09-owner-qualified-initial/`, `07-09-owner-qualified-retry/`, `07-09-owner-throw-selfhosted/` and `07-09-owner-legacy-keepers/` under `.planning/research/.cache/`. Owned free root-base listeners/browser suites ran sequentially;5173 and unrelated processes remain untouched.
+
+### Actual Current Pilot — Diagnostic Only
+
+`evidence/07-09-owner-cache-smoke.json` SHA256 is `3bf8ae8972a4a429075a61e56f3877d93d84650a42527adad0f6bbd58051bc78`, source `f89d82082dfea6ee5ce4544011745e1bfbba0ff1`. Raw metrics and3 PNGs: `.planning/research/.cache/06-art/animation-candidate/capture-1791359694832-10580/`. `evidence/07-09-owner-cache-pilot-result.json` retains the actual named CLI command/exit/stderr, exact statistics/bounds and source/host facts.
+
+| Low/one component | Actual median/p95 ms | Frozen median/p95 upper ms |
+| --- | --- | --- |
+| Frame interval |300.8 /410.3|244.7 /261.4|
+| Mixer |.1 /.2|0 /.1|
+| Inertia |0 /.1|0 /.2|
+| Total correction |1.4 /1.9|.9 /1.2|
+| Render |1.2 /1.6|.7 /.9|
+| Selection |.2 /.3|.1 /.2|
+| Core correction |.5 /.7|.3 /.5|
+| View |.7 /1.1|.6 /.8|
+
+Rounding here changes neither exact JSON bounds nor epsilon1e-7. A one-profile diagnostic cannot replace two runs/all tiers/one-eight actors. Its14 flags are not a fresh full-matrix failure count. Essential arms/body/gun draws, full pixels, keeper survival, zero retired ownership/shared disposals and owned browser/listener cleanup pass. Protected source identities outside the exact reviewed owners remain unchanged. Removed repeated traversal is proven; applicable frame/CPU improvement is not accepted.
+
+An unrelated `node tests/browser-probes.mjs` (PID31152), browser23584 and GPU28780 were observed. That GPU accumulated16.109375 CPU seconds over3.1812703 wall seconds; it was never stopped or altered. No causal inference or performance waiver follows. Parent owns host-condition followup. No known-unready unchanged twelve-profile matrix was launched.
+
+### Preserved Earlier Complete Failure
+
+`07-09-cost-view-cache-failed.json` matches the earlier complete canonical report SHA799b7217d1e1120fac2d16442accfadfa578a7d5cec14bb75d57faef58742c39. `07-09-budget-view-cache-failed.json` matches its actual exit1 result SHA6735152e4810f4ad37a95b8f9f4a7b02c668ef941f6b65c6c643764ba464e31d. `07-09-view-cache-failure-archive.json` records exact source `2a5b7ef`, identity97d77c14a822357f7ea82ba6739f605c43beb34819ba4dda104e71e93b0c21b5,12 profiles/36 PNGs/1,170,050ms and135 numeric failures. All four golden hashes, producer and sampler listed above remain unchanged; old legacy false/noncomparable flags and earlier interrupted evidence remain untouched.
+
+### Remaining Gate
+
+Task2, plan09 and dependent plan10 remain open. After justified host readiness or independently reviewed scoped work, capture a fresh complete twelve-profile matrix and run the actual unchanged V2 CLI. Never splice/reuse profiles/reference, re-freeze bounds, widen zero/timer allowances, alter producer/settings or remove required geometry/layers/corrections. Two original setup-limited assertions require targeted qualification. WINDOWS41 retains the full numeric unmet truth; WINDOWS42/43 record those unrun assertions. No requirements or roadmap completion is advanced. No new stub, endpoint, schema, authority permission, asset export/install, global trust, reset/stash/push/blanket restore occurred. Root-owned temporary config remains unstaged; human motion and representative hardware/Pi/60FPS acceptance remain pending.
+
+## Self-Check: PASSED — Current Artifacts and Qualified Cache Behavior Only
+
+Current RED/GREEN/evidence commits and records, exact protected/golden identities, byte-identical earlier archive, actual current pilot/3 full1280×960 PNGs, actual CLI exit1 and final corrected loaded-rig proofs exist. Cache behavior is qualified. **The numerical gate and two setup-limited assertions remain unqualified; task2, plan09 and Phase7 are incomplete.**
