@@ -1,0 +1,285 @@
+{
+  "purpose": "Actual unchanged-producer smoke diagnosis only; never full V2 acceptance",
+  "sourceRevision": "f89d82082dfea6ee5ce4544011745e1bfbba0ff1",
+  "sourceIdentitySha256": "f68f64788e2ce501483143ac3f7719958d5f89777029639ba46fa8f7642ee946",
+  "report": ".planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-09-owner-cache-smoke.json",
+  "reportSha256": "3bf8ae8972a4a429075a61e56f3877d93d84650a42527adad0f6bbd58051bc78",
+  "budgetSha256": "6f0bf775eda9061b601023d5890a50248668a3bccbec48eeaeb7f84e7a64ba34",
+  "producerContractSha256": "035432f721cb0661a82c288d3b5e92ce4d631a48da5bc6fbb73022897960f5e0",
+  "complete": false,
+  "profiles": 1,
+  "timedFrames": 214,
+  "fullPixels": 3,
+  "durationMs": 83037,
+  "cleanup": {
+    "browserClosed": true,
+    "serverClosed": true
+  },
+  "protectedSourcesUnchanged": true,
+  "ownership": {
+    "sharedGeometries": 51,
+    "sharedMaps": 9,
+    "actorGeometries": 14,
+    "actorSkeletons": 1,
+    "actorMixers": 1,
+    "listeners": 60,
+    "mixerListeners": 0,
+    "callbacks": 0,
+    "props": 1,
+    "view": {
+      "geometries": 131,
+      "skeletons": 2,
+      "sharedMaps": 9,
+      "ownedMaterials": 10,
+      "mixers": 0,
+      "sourceCallbacks": 4
+    }
+  },
+  "afterRetirement": {
+    "listeners": 0,
+    "callbacks": 0,
+    "props": 0,
+    "actors": 0,
+    "activeBindings": 0,
+    "resources": {
+      "geometries": 58,
+      "textures": 8,
+      "programs": 9
+    }
+  },
+  "sharedDisposals": 0,
+  "keeperIntact": true,
+  "fixedProfileTimings": [
+    {
+      "component": "frameIntervalMs",
+      "statistic": "median",
+      "actualMs": 300.79999999701977,
+      "upperMs": 244.70000000018626,
+      "pass": false
+    },
+    {
+      "component": "frameIntervalMs",
+      "statistic": "p95",
+      "actualMs": 410.30000000447035,
+      "upperMs": 261.40000000130385,
+      "pass": false
+    },
+    {
+      "component": "mixerMs",
+      "statistic": "median",
+      "actualMs": 0.09999999403953552,
+      "upperMs": 0,
+      "pass": false
+    },
+    {
+      "component": "mixerMs",
+      "statistic": "p95",
+      "actualMs": 0.19999999552965164,
+      "upperMs": 0.10000000149011612,
+      "pass": false
+    },
+    {
+      "component": "inertiaMs",
+      "statistic": "median",
+      "actualMs": 0,
+      "upperMs": 0,
+      "pass": true
+    },
+    {
+      "component": "inertiaMs",
+      "statistic": "p95",
+      "actualMs": 0.10000000149011612,
+      "upperMs": 0.09999999962747097,
+      "pass": true
+    },
+    {
+      "component": "correctionMs",
+      "statistic": "median",
+      "actualMs": 1.3999999985098839,
+      "upperMs": 0.900000000372529,
+      "pass": false
+    },
+    {
+      "component": "correctionMs",
+      "statistic": "p95",
+      "actualMs": 1.9000000059604645,
+      "upperMs": 1.2000000020489097,
+      "pass": false
+    },
+    {
+      "component": "renderMs",
+      "statistic": "median",
+      "actualMs": 1.2000000029802322,
+      "upperMs": 0.7000000020489097,
+      "pass": false
+    },
+    {
+      "component": "renderMs",
+      "statistic": "p95",
+      "actualMs": 1.6000000014901161,
+      "upperMs": 0.900000000372529,
+      "pass": false
+    },
+    {
+      "component": "selectionMs",
+      "statistic": "median",
+      "actualMs": 0.19999999552965164,
+      "upperMs": 0.10000000149011612,
+      "pass": false
+    },
+    {
+      "component": "selectionMs",
+      "statistic": "p95",
+      "actualMs": 0.30000000447034836,
+      "upperMs": 0.20000000204890966,
+      "pass": false
+    },
+    {
+      "component": "coreCorrectionMs",
+      "statistic": "median",
+      "actualMs": 0.5,
+      "upperMs": 0.30000000167638063,
+      "pass": false
+    },
+    {
+      "component": "coreCorrectionMs",
+      "statistic": "p95",
+      "actualMs": 0.7000000029802322,
+      "upperMs": 0.5,
+      "pass": false
+    },
+    {
+      "component": "viewMs",
+      "statistic": "median",
+      "actualMs": 0.6999999955296516,
+      "upperMs": 0.599999999627471,
+      "pass": false
+    },
+    {
+      "component": "viewMs",
+      "statistic": "p95",
+      "actualMs": 1.1000000014901161,
+      "upperMs": 0.7999999988824129,
+      "pass": false
+    }
+  ],
+  "fixedProfileOverruns": [
+    {
+      "component": "frameIntervalMs",
+      "statistic": "median",
+      "actualMs": 300.79999999701977,
+      "upperMs": 244.70000000018626,
+      "pass": false
+    },
+    {
+      "component": "frameIntervalMs",
+      "statistic": "p95",
+      "actualMs": 410.30000000447035,
+      "upperMs": 261.40000000130385,
+      "pass": false
+    },
+    {
+      "component": "mixerMs",
+      "statistic": "median",
+      "actualMs": 0.09999999403953552,
+      "upperMs": 0,
+      "pass": false
+    },
+    {
+      "component": "mixerMs",
+      "statistic": "p95",
+      "actualMs": 0.19999999552965164,
+      "upperMs": 0.10000000149011612,
+      "pass": false
+    },
+    {
+      "component": "correctionMs",
+      "statistic": "median",
+      "actualMs": 1.3999999985098839,
+      "upperMs": 0.900000000372529,
+      "pass": false
+    },
+    {
+      "component": "correctionMs",
+      "statistic": "p95",
+      "actualMs": 1.9000000059604645,
+      "upperMs": 1.2000000020489097,
+      "pass": false
+    },
+    {
+      "component": "renderMs",
+      "statistic": "median",
+      "actualMs": 1.2000000029802322,
+      "upperMs": 0.7000000020489097,
+      "pass": false
+    },
+    {
+      "component": "renderMs",
+      "statistic": "p95",
+      "actualMs": 1.6000000014901161,
+      "upperMs": 0.900000000372529,
+      "pass": false
+    },
+    {
+      "component": "selectionMs",
+      "statistic": "median",
+      "actualMs": 0.19999999552965164,
+      "upperMs": 0.10000000149011612,
+      "pass": false
+    },
+    {
+      "component": "selectionMs",
+      "statistic": "p95",
+      "actualMs": 0.30000000447034836,
+      "upperMs": 0.20000000204890966,
+      "pass": false
+    },
+    {
+      "component": "coreCorrectionMs",
+      "statistic": "median",
+      "actualMs": 0.5,
+      "upperMs": 0.30000000167638063,
+      "pass": false
+    },
+    {
+      "component": "coreCorrectionMs",
+      "statistic": "p95",
+      "actualMs": 0.7000000029802322,
+      "upperMs": 0.5,
+      "pass": false
+    },
+    {
+      "component": "viewMs",
+      "statistic": "median",
+      "actualMs": 0.6999999955296516,
+      "upperMs": 0.599999999627471,
+      "pass": false
+    },
+    {
+      "component": "viewMs",
+      "statistic": "p95",
+      "actualMs": 1.1000000014901161,
+      "upperMs": 0.7999999988824129,
+      "pass": false
+    }
+  ],
+  "actualV2Cli": {
+    "command": "node tools/art/animation-budget-v2.mjs verify --budget .planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-budget-view-v2.json --candidate .planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-09-owner-cache-smoke.json",
+    "exitCode": 1,
+    "stdout": "",
+    "stderr": "Incomplete report\n\nfalse !== true\n\n"
+  },
+  "acceptance": "unmet: incomplete matrix; diagnostic Low/one profile also overruns fixed limits",
+  "hostObservation": {
+    "unrelatedNodePid": 31152,
+    "command": "node tests/browser-probes.mjs",
+    "browserPid": 23584,
+    "gpuPid": 28780,
+    "gpuCpuSeconds": 16.109375,
+    "wallSeconds": 3.1812703,
+    "processStoppedOrAltered": false,
+    "inferenceOfCausation": false
+  },
+  "certification": false,
+  "humanMotionAcceptance": "pending"
+}

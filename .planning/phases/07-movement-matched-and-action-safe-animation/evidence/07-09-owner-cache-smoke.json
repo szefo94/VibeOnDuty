@@ -1,0 +1,602 @@
+{
+  "schemaVersion": 1,
+  "complete": false,
+  "capturedAt": "2026-10-07T07:56:18.035Z",
+  "revision": "f89d82082dfea6ee5ce4544011745e1bfbba0ff1",
+  "identities": {
+    "index.html": "1f89a54e697b4f2bf2bf5b47ff15d09782514d327c0caf7f81e39cae430f6e77",
+    "public/models/enemy.glb": "8503964441a36d54d9dada52911f4869ce48bf4e32cf403a7836b9cf53c3b936",
+    "public/textures/comic-slice.png": "7faae7a58bb4669af51c5081c772be671af8544681c762af54f9263995a4c31e",
+    "src/ai/difficultyAdapter.js": "8ac49dc6fa2d40e9f8c8e431d70e354826457af99207e832c8e3d88bcaf9bc30",
+    "src/ai/enemyStates.js": "5958b97ee40b481e42894edd1f8122613991275ee7411ee30f7ddbdc92cde911",
+    "src/artMaterials.js": "6533cc881ae4759261c5277c38eca44e0d868e50aa09c93243e82cb01cd8ddb9",
+    "src/astar.js": "350569201146718cec7c5257149fedf062ac1a6dff8cd351de2dc8f174362f77",
+    "src/astar.test.js": "ed67c5c592fa6c17fa4b0ad17f3310c51872ec8b91a8d919b0f9673969f63992",
+    "src/builders/animationPresentation.js": "7897baf224b766c0fffd3fa269fdae4a0c0042e546b5ec3de1cf2cc9b0796351",
+    "src/builders/animationPresentation.test.js": "4449552d789c58befa606c0a2fb10fe4ae61d14e663f02dd35dad06822dfd7cc",
+    "src/builders/assetManager.js": "4bd3f7be2842e62987cdda42e0d221d3d00dcc0fc931d06eccb764c55125a92c",
+    "src/builders/characterAppearance.js": "c76293f0e83160269b503f991683e8871aeeb7c2d1649de079b0427521e0b74b",
+    "src/builders/characterAppearance.test.js": "b376d6e18ad9de849366d12c5ea89646558fa4bf2b13eb86cdeae9514ab08563",
+    "src/builders/characterResources.js": "094c1a9a4bca24ee4e163fe864e139ed0ba3b43384d8c31364c1b22c740f42c4",
+    "src/builders/drone.js": "c9a4326b178d09c4a92b752c7e54046ae9a58fb1b07ceac975667e49a3270e85",
+    "src/builders/enemy.js": "c18299fad3fca2ee4d52736e3f7ce355e52bfee91ff855072002a320a418dae7",
+    "src/builders/enemyAnimations.js": "73723ae78e77fe261f2be7996748db2df2000117eccd9ec4b2f8458b2eab9260",
+    "src/builders/enemyAnimations.test.js": "7241d52a949c520439958eab3d2b7800d2663f5d04c84c287341a33db76fbaab",
+    "src/builders/enemyGLTF.js": "d4197ffc7522a7f420e1b01692beace0d92be1632e6e04f8aa6606a1a7457a5f",
+    "src/builders/enemyGLTF.test.js": "990e0a628dafab497e6ccc74c20b3fbd82fcf19ccb1bd590e4e37ca2bfa33c3c",
+    "src/builders/enemyWeapon.js": "187266c1204072e3884eb4dd3651a9bbcc7d9ac1a844bdae595fa666ff4729fd",
+    "src/builders/firstPersonRig.js": "fa3a2b0c59787949bdbf09da837253d9cc62441cf2b832acb3d1834a650c3e1f",
+    "src/builders/firstPersonRig.test.js": "9dce4bc64e8cd3e3c6ff69f2d710ab6fa9848bc78a71f5fa3f5594d4001c9ea9",
+    "src/builders/playerBody.js": "f7c4614278efa8c4fadbaef8c07b878611885168fd9c0e736a75d8aad56ae496",
+    "src/builders/rifleClips.js": "115456084fdda7b62eb21cdd9f00595de380f37220ffdd93253c8e8a0e2b8090",
+    "src/builders/rifleClips.test.js": "25dfd8ac8defc68aaad82e20824b447bda0c7c75523bc36a3bafb9b46c017782",
+    "src/builders/weapon.js": "4425869c1a215c3d67b93bf05404632d1795186c7471b910ac46059d25359473",
+    "src/builders/weapon3pTransform.js": "4e7917834ffbf4c1b5eaab9d2fe8a86f63444e743d006142c3299a0fde6f378c",
+    "src/builders/weapon3pTransform.test.js": "c6cba9cf98bf64c96c5baa6382a3255e7c3f063455326edbf30471187b9d4fa3",
+    "src/builders/weaponFBX.js": "86731fe249589e72c1ecc2e76e087717ab9281b24a6465f7a9a9691f4ed01a0a",
+    "src/builders/weaponHandling.js": "f9bc2d430653f7bbd765f7ea0d910fe8c09c7671434cc8a0589ccfb9bb31eeb1",
+    "src/builders/weaponHandling.test.js": "ec1b7a465ae3752fdbde1641596f1e66a9761bf080d9219f59c38ff4e2d01479",
+    "src/combat/damage.js": "6dab1ffddb00a50824a1b638ca558a0a069ceb2fb68654a09bd790f70d8d477f",
+    "src/combat/damage.test.js": "64cae2a2bd46cdca806d4bc9d8bd00409fe32e523a569f31016e0101a691aa0b",
+    "src/combat/shoot.js": "f69c6edce7ac9702ab849f20cd9d012c9b37cdf0b4fd6122c315587eac233694",
+    "src/comicOutline.js": "60c152bd7d778bce021989c178aef5619f9e2ffd65368355525284c333c2954b",
+    "src/comicOutline.test.js": "21e2cc6b048d2d17f746c1148a7097db7156aa5d08388eaf5fc8f06b603c5048",
+    "src/config.js": "e88b770a32b3a816360940db95730cc89e592cc8a9b5e1a4075c32e24b9d24f9",
+    "src/dev/animationReview.js": "ebf277b03e6eacbd2c921f056b93e0f78a85e6e24d197b5042bb4f99a253e821",
+    "src/dev/animationReview.test.js": "4ce7e1c4a5071f08ce675442cdc14091e409882102bbcd44ed988c247a4e8c7f",
+    "src/difficulty.js": "4305ca68095885c2f231359212f9f46cadbdd9e3a1b4c07f50e44f8c01de0d74",
+    "src/editor/mapEditor.js": "66eef9c31aafa8a2e1838981c7ca938486b0cd42a5e8d2a600276d17c9ee7be2",
+    "src/entities/actionLifecycle.js": "526662f169f8cb826fccf29d361c414cba9d71361906736bc2c6908cb2001963",
+    "src/entities/actionLifecycle.test.js": "78537b26c9c8069df721f2c2b1845e3ff582615ae3f9d69254db219ab9a2df07",
+    "src/entities/ammoDrops.js": "a9625db354027fb489ff53ce13513642afc37ca8d1cac2f80d43d99fe1fd9b63",
+    "src/entities/drone.js": "ae9e1d9cdae49ca6fc181e9baf1a02a5fcd481de8077d9e1d596a1c1e657e5dd",
+    "src/entities/enemies.js": "0e5048be8f829695b51da91a15a64898b911d55bb1ead69cba86aba54ba5e587",
+    "src/entities/enemySpawning.js": "e1de5b9d1d7f759d64b2bd669e0d27ada3bdaf5b8631391b6d93d69dd5ad1c24",
+    "src/entities/enemyUpdate.js": "8c66041c4e22c1893ddecfc4fa06736a58826ad5ce6785942f0c6498916a69f2",
+    "src/entities/entityBase.js": "a03851bbf22472847b6c62a0a1f467ec36403c1967d2b2915761eedb6a775a3e",
+    "src/entities/friendlyBots.js": "1a69785061d8c938c34d8d061d8e065f05cf2c96099e6fcd2e861a6196069df6",
+    "src/entities/grenades.js": "76a3d5166b8f55086bfed164168b80926a81075db02812a9654f99dd0d31bbe7",
+    "src/entities/groundSync.test.js": "58c971d37dc93e9cb35df1081b41d43bcc074cdd66607b1f68938f691b8dc773",
+    "src/entities/player.js": "f1c26deeda12ed05c269a9e4350c6a9c7aa03288f8b2fd9fbef798a1acfb9a30",
+    "src/entities/targetDummy.js": "8151195088a2b82369a0ce23f3f50490347c5bb4a2fdac518ae59606b315e04b",
+    "src/entities/waveSystem.js": "765cb309040265d640541025d0e33f48a4690ecb8a549b2a68cd2c4e0c4f6a93",
+    "src/events.js": "fc9ec1f582eae9ca1a5ddd92f0ec0c1c1f80cc5feae6ade2dcab0ef9f2327294",
+    "src/fx/damageNumbers.js": "19d880ca7e068d89510bff3e211a190e7a868a949d9a8971295304ac0dae647e",
+    "src/fx/impacts.js": "fe2a97ff69efccf04e9b76468faad742bf91fbdc08c6479d3bfbbf77c859a2c6",
+    "src/fx/meleeRange.js": "51af6e8bc399220b02f87a92be508b69f59ac8eb919c718019387e30646ae8de",
+    "src/fx/particles.js": "2b2293763e1061f0d93c29e01c6670e5eff287d0d238d05629875b35e2cabd3d",
+    "src/fx/screenShake.js": "5ce8eb4c849019a30355d62989e517accae6fdb3917a855dc4fa5b2d5dbf214e",
+    "src/fx/tracers.js": "227cc61e0858426da38edf65f140339ffa40692a09b6298eb99e859ce7ef83ea",
+    "src/gamepad.js": "6f75ff66961b3577d2f503a63bc2f71a8ae35dcd30ebc406ab0649d4596587e8",
+    "src/graphicsQuality.js": "85bb9d014fa3e5602ca4a289caaedce16e9c70f0aaf2b68b49af44acb9f59553",
+    "src/graphicsQuality.test.js": "b739e64fd0b2cf18697386cfd8341f263131a7d53e811be9ad3ec0a73bc9cec1",
+    "src/hud/enemyBars.js": "dc8354c16798697824f93d0413907733f1d6de965620ef3ffe053122dc81aae1",
+    "src/hud/hitmarker.js": "8657c25881b61ddc06f85bc0aa31e3ce4cd563abb410325d5ad4193ee63740a5",
+    "src/hud/hud.js": "1fa17249dc1bb34feaea65d9a748c876002843fb955bb41e2ab62c56ccb8106e",
+    "src/hud/overlay.js": "b692449845a2814e8ef919fefd5f4ded64c93e5e827a8761ce8e5a6055efe07f",
+    "src/hud/radar.js": "975a1b590f47b364966921c18c3073ffa7c5fc12ed276a7d9f67ba2106823b2e",
+    "src/hud/rings.js": "5a91045bdb4f35708ed44e03b3fcc74eda5a5f02035d54838bddbef9f036052b",
+    "src/hud/sndHud.js": "aa45c6f56563e813dad6de8984e231d463ec269151137c42281d2ef4088babe6",
+    "src/input.js": "d279d07eff5d05fd63e8acfee2e37c940d7720958392948c5b74f25b279f5074",
+    "src/level.js": "b69b4267c55c08a5c832b1a5c316ebd5d8b0f2082999bec729c15a8d7f46dc0b",
+    "src/lighting.js": "2b16856115f16e6e07c890da8c28ff4af9f898e7cad660ddc2fdc2dbe5ec2fbb",
+    "src/loop.js": "5c28b979a75d5ed843513e774d685ca73586daa3d9cd91a81d7a0bffe7397cbe",
+    "src/main.js": "c762044675702688313ce81c7812153bdb30bc95951aa1995e69337414a882d3",
+    "src/map.js": "b23d2501b0d76e8a59ce84018f2ff2aff7251919ee6a7f940978cfa293b01cb1",
+    "src/map.test.js": "bad26cef43b3822eb9a3f0f35e37d72c2f63d1514112e527f48b500bf714530f",
+    "src/maps/bunker.js": "cfa888065a9d27527ac629d97576a4fb5f00976850488f3c57cc37d8d11c0f08",
+    "src/maps/concept.js": "511277ce6047d0088a2fdc08e8276fd1564d2a91ff1ea8893f0bf5d000994422",
+    "src/maps/range.js": "a00ceb46d456b444d68342bda8c81e6006cd6ca339427bae20be4883369e7cc5",
+    "src/maps/rooftop.js": "8b041e6c51e0bc11156889772b2bfd956debbbc635fb5cb5c5c7450fd0cdbed3",
+    "src/maps/vanguard.js": "1bbe9b6316ca68740d85de80174513e13f1cc77f1f0a74255726955e879202b9",
+    "src/materials.js": "e78297505e0f5ae06f54d78a4b6b03b5c3ea9957d13e6209d9671b3ac2c63562",
+    "src/math.js": "8ed5d5bc769cc410442551c79e7196c08e457bd698127e1fb403de6f5c6bd569",
+    "src/math.test.js": "9a224b308568b1dd3727070cea8d3bde1172f24a763c2e00b697d6c9cb933bce",
+    "src/modes/buyMenu.js": "a8b0ced7b15ccbd12cc51d229e898847e0807a48ed9a043d87b15f8131eb5a94",
+    "src/modes/economy.js": "2a024a799243a1f221f0dd299574db9dc5a9d17f36e6b9c792b91fde6b10751f",
+    "src/modes/modeManager.js": "30998c3531aca7cd3492a23fa2f1fdc6ca816849510422226b8eb0e50cd18f64",
+    "src/modes/snd.js": "1553ceb66b0438655d6d39504a7e3a05ef7b13068fad7664c15b72a707f0dee9",
+    "src/modes/snd.test.js": "d33a5363aebe5ca10fe442e3dd882919cbe3b523018414f1988f299ecd764d87",
+    "src/modes/tdm.js": "a9d34d3d57fa650468cfc40d8e0288dba54936143ff91d536c7a4c7718e9cc47",
+    "src/modes/trainingRange.js": "dd75c967582b9089c946210ec695e30cd235566da07c9b09aa9a40dde7d3e1b6",
+    "src/network/onlineSession.js": "968b2814d5878d67521b27941479567b804cba22ea737ed24e0fc3e6d65b8666",
+    "src/network/onlineUi.js": "2df9096e2558a42ef50c7d769f9114e853dcfa9ac22c00988883782e406577b6",
+    "src/network/onlineUi.test.js": "bc478ef3966d066cf463660fe26cdfb1b025a1243150e61c6bba96a6a8bf9605",
+    "src/network/remoteActors.js": "858d27dc021b3558ca2bc6335fe2d9e9d9bbbcc79c9796ef962301115b0f99e8",
+    "src/network/remoteActors.test.js": "e023e45543d1ac6e4816b71661b2f18cb2434a0a9bcda6ba3664fe4f0da03ab4",
+    "src/rampMath.js": "648f924feb0a86bbed75ed7c2e98ba80fbae3caa6d1a8376c8ad56e6378e31cc",
+    "src/replay/damageTracker.js": "2680e75e4e5fc57fd44f64149ba8763c032d866dd4e23196d37a211861228bc6",
+    "src/replay/killcam.js": "17a12c1e3ce558e533db9112e5b88ba3caf686b6e97b947b7d4c38295d87b27b",
+    "src/replay/killcam.test.js": "df611cc610db4f7d54f536eaf4e356c3dec0c61e0f09a47a76cbed3260883a33",
+    "src/scene.js": "c7ec6d2d52b02b66a5f1125926456617a809fe7cc77c1945c5cf8c9074713db9",
+    "src/shared/combat.js": "38d1ed184a56168ee229ae514a09e730722edd3d6e6dfc63b3f784300904bc9a",
+    "src/shared/combat.test.js": "471e697609c085c171f08af447f925b12af50c95ae77671faee5a29f03ba21f8",
+    "src/shared/maps/bunker.js": "c980d5fb53b719a37b9b899bfe50ced52afa7bebd479c7fd025d047efdb99164",
+    "src/shared/movement.js": "b436d3f1edf35b32cfdd6384b2714c54b68f74f480ad16199b0119f2c15de742",
+    "src/shared/movement.test.js": "492c9681ac190378f49c8f75c4a44d230e90b9eab80d334a0bb924c88a0f31ef",
+    "src/shared/protocol.js": "8a9f2111a27d83472364055e2b4bba6bab580075c3214b3d965775a8c1534c03",
+    "src/shared/protocol.test.js": "808a8a992885592833adf61c4f31cbf5916f53cf482310f48016c0c4f843d764",
+    "src/shared/tdmRules.js": "4e3f42bbe138e2272ae41f134a38fc98ddf8b976f329f7cfd10967877d86d00b",
+    "src/shared/tdmRules.test.js": "a174662bfe7258c2a67b8f2dad02e1f5fb5f6bd1d8e61f43eb58e856902b1b1d",
+    "src/shared/tdmSimulation.js": "342f04851921e1c616ebf223e11d06fcc44a3dd4d9e626dffabff43ee87c7286",
+    "src/shared/world.js": "11efd5fed3423ce7f8ffa2c27a9953b3cfaaffb8e40bc8975c1b88145f68e189",
+    "src/shared/world.test.js": "372a4556f44f43e80344276fcb06d4009e776e4939af18774cd04414f96f92c8",
+    "src/tiles.js": "f5f1f02d4474a6a250419246d0853da1370f025bcecfe63de7791c3f15a2e1f4",
+    "src/tiles.test.js": "57e1e79f4f733123496b6338d782c1ae235f940c0b7e424736db9cd32d913109",
+    "src/touch.js": "1defa68747f8d5c0125ce2ce3feb8b7ee603fdc0cab7d26b932a77a8a21e9ef1",
+    "src/utils/los.js": "4242e3739e2f763c1eba8918097a1bee56fbe82e30a8271dacbfbfdcf4131291",
+    "src/version.js": "8e29534e9782846f15339431c564d9dd9c28268f956bdd047348ceee9f423bc1",
+    "style.css": "3cf82a6907773d93b90ec980492ec9f0563cd5a804afb82eb97da4e126fa2332",
+    "tools/art/build_soldier.py": "1461595dbf47907671aa0a867f742c4ee35b758636a1fcb55dc571220300f432",
+    "tools/art/character-params.json": "2b74289e18fd68cacece69af7fde7fe694e5fb6f6d5912ac412dc3c2899eb236",
+    "tools/art/provenance.json": "7b8b9b5cfb2f86c2d0890dbc7042c1d010a9196ac6fed75b21a54318e4c451f6",
+    "tools/art/sources/soldier.blend": "d657f3d906a23e344e0188b9b060ca57f7e19d860530fe0618a6dd6a1178a4f7",
+    "captureSampler": "2720e51eed272c40fe9e12ff561e4d63072f9b7548b5c270a71ec0ae527ab83f"
+  },
+  "samples": [
+    {
+      "run": 1,
+      "browser": "147.0.7727.15",
+      "sourceIdentitySha256": "f68f64788e2ce501483143ac3f7719958d5f89777029639ba46fa8f7642ee946",
+      "restored": true,
+      "tier": "low",
+      "actorCount": 1,
+      "human": true,
+      "packedMaps": 9,
+      "keeperIntact": true,
+      "sharedDisposals": 0,
+      "movingPoseCount": 85,
+      "sequence": [
+        {
+          "frame": 0,
+          "clip": "idle",
+          "simulationTime": 0,
+          "viewEvidence": {
+            "draws": {
+              "arms": 232,
+              "body": 783,
+              "weapon": 232
+            },
+            "attached": true,
+            "allocatedBoneTextures": 2,
+            "selectedVisibleMeshes": [
+              8,
+              27
+            ],
+            "cameraEye": [
+              26.875,
+              1.5999999999999999,
+              10
+            ],
+            "cameraPitch": -1.3,
+            "fov": 75,
+            "drawCalls": 51,
+            "sourceRoot": [
+              26.875,
+              -0.050000000000000044,
+              10
+            ],
+            "cameraYaw": 3.141592653589793,
+            "eyeHeight": 1.65,
+            "sourceScale": [
+              1,
+              1,
+              1
+            ],
+            "sourceActorCount": 1,
+            "proxyEntityCount": 1,
+            "cameraColocatedXZ": true
+          },
+          "image": ".planning/research/.cache/06-art/animation-candidate/capture-1791359694832-10580/run-0-low-1-0000.png",
+          "sha256": "7ca39471ce8e09043e598855c028e5d169db6b730311a578b9511443581c9695"
+        },
+        {
+          "frame": 100,
+          "clip": "run",
+          "simulationTime": 5,
+          "viewEvidence": {
+            "draws": {
+              "arms": 1032,
+              "body": 3483,
+              "weapon": 1032
+            },
+            "attached": true,
+            "allocatedBoneTextures": 2,
+            "selectedVisibleMeshes": [
+              8,
+              27
+            ],
+            "cameraEye": [
+              26.875,
+              1.5999999999999999,
+              10
+            ],
+            "cameraPitch": -1.3,
+            "fov": 75,
+            "drawCalls": 51,
+            "sourceRoot": [
+              26.875,
+              -0.050000000000000044,
+              10
+            ],
+            "cameraYaw": 3.141592653589793,
+            "eyeHeight": 1.65,
+            "sourceScale": [
+              1,
+              1,
+              1
+            ],
+            "sourceActorCount": 1,
+            "proxyEntityCount": 1,
+            "cameraColocatedXZ": true
+          },
+          "image": ".planning/research/.cache/06-art/animation-candidate/capture-1791359694832-10580/run-0-low-1-0100.png",
+          "sha256": "3bea6305eb00d62b44f760fc6adaf735b0527c4726e347a9e9279f56243287e8"
+        },
+        {
+          "frame": 180,
+          "clip": "reload",
+          "simulationTime": 9,
+          "viewEvidence": {
+            "draws": {
+              "arms": 1672,
+              "body": 5643,
+              "weapon": 1672
+            },
+            "attached": true,
+            "allocatedBoneTextures": 2,
+            "selectedVisibleMeshes": [
+              8,
+              27
+            ],
+            "cameraEye": [
+              26.875,
+              1.5999999999999999,
+              10
+            ],
+            "cameraPitch": -1.3,
+            "fov": 75,
+            "drawCalls": 51,
+            "sourceRoot": [
+              26.875,
+              -0.050000000000000044,
+              10
+            ],
+            "cameraYaw": 3.141592653589793,
+            "eyeHeight": 1.65,
+            "sourceScale": [
+              1,
+              1,
+              1
+            ],
+            "sourceActorCount": 1,
+            "proxyEntityCount": 1,
+            "cameraColocatedXZ": true
+          },
+          "image": ".planning/research/.cache/06-art/animation-candidate/capture-1791359694832-10580/run-0-low-1-0180.png",
+          "sha256": "6f36bf9eb3871263bee7e1d163cb6d5af5175ad4184777a9629ecd3c14e631c5"
+        }
+      ],
+      "transitions": [
+        "idle",
+        "walk",
+        "walk_back",
+        "strafe_l",
+        "strafe_r",
+        "run",
+        "crouch",
+        "crouch_walk",
+        "jump_start",
+        "jump_loop",
+        "jump_land",
+        "reload",
+        "idle"
+      ],
+      "timings": {
+        "frameIntervalMs": {
+          "median": 300.79999999701977,
+          "p95": 410.30000000447035,
+          "min": 5.899999998509884,
+          "max": 432
+        },
+        "mixerMs": {
+          "median": 0.09999999403953552,
+          "p95": 0.19999999552965164,
+          "min": 0,
+          "max": 0.7000000029802322
+        },
+        "inertiaMs": {
+          "median": 0,
+          "p95": 0.10000000149011612,
+          "min": 0,
+          "max": 0.19999999552965164
+        },
+        "correctionMs": {
+          "median": 1.3999999985098839,
+          "p95": 1.9000000059604645,
+          "min": 0.7999999970197678,
+          "max": 67.79999999701977
+        },
+        "renderMs": {
+          "median": 1.2000000029802322,
+          "p95": 1.6000000014901161,
+          "min": 0.7999999970197678,
+          "max": 2.0999999940395355
+        },
+        "selectionMs": {
+          "median": 0.19999999552965164,
+          "p95": 0.30000000447034836,
+          "min": 0,
+          "max": 0.7999999970197678
+        },
+        "coreCorrectionMs": {
+          "median": 0.5,
+          "p95": 0.7000000029802322,
+          "min": 0.20000000298023224,
+          "max": 66
+        },
+        "viewMs": {
+          "median": 0.6999999955296516,
+          "p95": 1.1000000014901161,
+          "min": 0.3999999985098839,
+          "max": 7
+        }
+      },
+      "frameCount": 214,
+      "warmupFrames": 12,
+      "simulationStepSeconds": 0.05,
+      "durationMs": 78078.79999999702,
+      "viewport": [
+        1280,
+        960
+      ],
+      "dpr": 1,
+      "renderer": "WebKit WebGL",
+      "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "renderScope": "source-eye-down-view-replaces-source-0",
+      "viewEvidence": {
+        "draws": {
+          "arms": 1672,
+          "body": 5643,
+          "weapon": 1672
+        },
+        "attached": true,
+        "allocatedBoneTextures": 2,
+        "selectedVisibleMeshes": [
+          8,
+          27
+        ],
+        "cameraEye": [
+          26.875,
+          1.5999999999999999,
+          10
+        ],
+        "cameraPitch": -1.3,
+        "fov": 75,
+        "drawCalls": 51,
+        "sourceRoot": [
+          26.875,
+          -0.050000000000000044,
+          10
+        ],
+        "cameraYaw": 3.141592653589793,
+        "eyeHeight": 1.65,
+        "sourceScale": [
+          1,
+          1,
+          1
+        ],
+        "sourceActorCount": 1,
+        "proxyEntityCount": 1,
+        "cameraColocatedXZ": true
+      },
+      "resourceSamples": [
+        {
+          "geometries": 102,
+          "textures": 10,
+          "programs": 10
+        },
+        {
+          "geometries": 102,
+          "textures": 10,
+          "programs": 10
+        },
+        {
+          "geometries": 102,
+          "textures": 10,
+          "programs": 10
+        },
+        {
+          "geometries": 102,
+          "textures": 10,
+          "programs": 10
+        },
+        {
+          "geometries": 102,
+          "textures": 10,
+          "programs": 10
+        },
+        {
+          "geometries": 102,
+          "textures": 10,
+          "programs": 10
+        },
+        {
+          "geometries": 102,
+          "textures": 10,
+          "programs": 10
+        },
+        {
+          "geometries": 102,
+          "textures": 10,
+          "programs": 10
+        }
+      ],
+      "ownership": {
+        "sharedGeometries": 51,
+        "sharedMaps": 9,
+        "actorGeometries": 14,
+        "actorSkeletons": 1,
+        "actorMixers": 1,
+        "listeners": 60,
+        "mixerListeners": 0,
+        "callbacks": 0,
+        "props": 1,
+        "view": {
+          "geometries": 131,
+          "skeletons": 2,
+          "sharedMaps": 9,
+          "ownedMaterials": 10,
+          "mixers": 0,
+          "sourceCallbacks": 4
+        }
+      },
+      "afterRetirement": {
+        "listeners": 0,
+        "callbacks": 0,
+        "props": 0,
+        "actors": 0,
+        "activeBindings": 0,
+        "resources": {
+          "geometries": 58,
+          "textures": 8,
+          "programs": 9
+        }
+      }
+    }
+  ],
+  "cleanup": {
+    "browserClosed": true,
+    "serverClosed": true
+  },
+  "durationMs": 83037,
+  "device": {
+    "hostname": "DESKTOP-NUH2KOI",
+    "os": "Windows_NT",
+    "release": "10.0.19045",
+    "arch": "x64",
+    "cpu": "AMD Ryzen 5 5600 6-Core Processor              ",
+    "node": "v24.19.0",
+    "browser": "147.0.7727.15",
+    "rendererClass": "software"
+  },
+  "certification": false,
+  "humanMotionAcceptance": "pending",
+  "limits": "Controlled actual Training Range loaded scene, retained rig and current transitions; fixed 20 Hz simulation clock, native RAF pacing, 214 measured frames per profile, 12 warmup frames and 8 clone loops. PNG encoding is a separate playback, excluded from timings. Browser timer quantization may report zero for short components. Synchronous GPU completion includes rendering; no input/network/whole-game FPS certification. Full-pixel continuous sequence belongs to run 1 low/1. No phone, integrated GPU, gaming GPU, Pi or 60 FPS qualification. Candidate uses current phase-driven masks/handling and one essential local view, replacing source0 visually. All source roots/layout/scales stay fixed; the full view uses source0 eye plus1.65m standing/.85m crouched,75deg FOV and down-look1.3rad with source torso pitch clamped1.1rad. This camera/workload is not comparable to the external3P baseline frame improvement; old absolute frame-limit flags remain explicit. Selection, source correction and view copying/fitting are separately measured. Required moving charging geometry adds1/actor; numeric legacy overruns are never widened.",
+  "baselineSha256": "177686a0759ca5b7dc4311e2a6e4bdba15b6c9a844546d51ad1690c00b1b0b20",
+  "comparison": {
+    "matched": false,
+    "budgetPass": false,
+    "reason": "Incomplete smoke proof only"
+  },
+  "producerContract": {
+    "contractVersion": "source-eye-view-v2",
+    "captureSamplerSha256": "2720e51eed272c40fe9e12ff561e4d63072f9b7548b5c270a71ec0ae527ab83f",
+    "components": [
+      "frameIntervalMs",
+      "mixerMs",
+      "inertiaMs",
+      "correctionMs",
+      "renderMs",
+      "selectionMs",
+      "coreCorrectionMs",
+      "viewMs"
+    ],
+    "acceptedStatistics": [
+      "median",
+      "p95"
+    ],
+    "statistics": {
+      "median": "sorted[floor(n/2)]",
+      "p95": "sorted[ceil(n*.95)-1]"
+    },
+    "correctionSum": "per-frame selectionMs + coreCorrectionMs + viewMs; statistics taken after sum",
+    "componentDefinitions": {
+      "selectionMs": "sum tickPresentation across source actors",
+      "coreCorrectionMs": "sum finishPresentation correction across source actors",
+      "viewMs": "source-eye setup plus updateFirstPersonRig and watchView",
+      "mixerMs": "sum finishPresentation mixer across source actors",
+      "inertiaMs": "sum finishPresentation inertia across source actors",
+      "renderMs": "renderComicScene/renderFirstPersonRig plus gl.finish",
+      "frameIntervalMs": "native RAF interval through completed rendering; PNG encoding excluded"
+    },
+    "workload": {
+      "seed": 67245,
+      "mode": "Training Range",
+      "sourceCounts": [
+        1,
+        8
+      ],
+      "proxyEntities": 1,
+      "tiers": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "runs": 2,
+      "timedFrames": 214,
+      "warmupFrames": 12,
+      "cloneCycles": 8,
+      "simulationStepSeconds": 0.05,
+      "sampleClock": "simulation-native-RAF",
+      "actorLayout": "savedEyeXZ + (index%4-1.5)*.75 X, floor(index/4)*.8 Z; Y=savedEyeY-1.7",
+      "sourceScale": [
+        1,
+        1,
+        1
+      ],
+      "sourceRoots": "fixed through moving-pose playback",
+      "renderScope": "source-eye-down-view-replaces-source-0",
+      "viewport": [
+        1280,
+        960
+      ],
+      "dpr": 1,
+      "fov": 75,
+      "pitch": -1.3,
+      "sourcePitchClamp": -1.1,
+      "sourceEyeHeightPolicy": {
+        "standing": 1.65,
+        "crouched": 0.85,
+        "colocatedXZ": true
+      },
+      "transitions": [
+        "idle",
+        "walk",
+        "walk_back",
+        "strafe_l",
+        "strafe_r",
+        "run",
+        "crouch",
+        "crouch_walk",
+        "jump_start",
+        "jump_loop",
+        "jump_land",
+        "reload",
+        "idle"
+      ],
+      "drawPredicate": "main camera; material visible, colorWrite!=false, opacity>0, nonempty group",
+      "pixelFrames": [
+        0,
+        100,
+        180
+      ],
+      "viewBoneTextures": 2
+    },
+    "timer": {
+      "limitation": "Browser quantization can report zero; binary cancellation in millisecond deltas",
+      "comparisonEpsilonMs": 1e-7,
+      "zeroLimitsAreBinding": true
+    }
+  },
+  "v2Lineage": {
+    "contractVersion": "source-eye-view-v2",
+    "referenceReportSha256": "6d5fd41136766209445b9694dfb0ffdf269d4a1887cffadba868dcad8a8b6aef",
+    "budgetSha256": "6f0bf775eda9061b601023d5890a50248668a3bccbec48eeaeb7f84e7a64ba34",
+    "producerContractSha256": "035432f721cb0661a82c288d3b5e92ce4d631a48da5bc6fbb73022897960f5e0",
+    "original": {
+      "baselineSha256": "177686a0759ca5b7dc4311e2a6e4bdba15b6c9a844546d51ad1690c00b1b0b20",
+      "budgetSha256": "66722a272115cdc1145cf1af97a1cb583389d7ea5adb75a4534445c15a14e1ff"
+    }
+  }
+}
