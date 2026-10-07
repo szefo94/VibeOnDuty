@@ -8,7 +8,7 @@ const bytes = await fs.readFile(new URL('../../public/models/enemy.glb', import.
 const inspect = candidate => pipeline.inspectArtCandidate
   ? pipeline.inspectArtCandidate(candidate) : inspectCharacter(candidate);
 const fixture = edit => {
-  const asset = parseGLB(bytes);
+  const asset = parseGLB(Buffer.from(bytes));
   edit(asset);
   return encodeGLB(asset.json, asset.binary);
 };
@@ -36,5 +36,5 @@ test('current art recovery rejects a changing approved-motion quaternion', async
     const acc = a.json.accessors[clip.samplers[0].output];
     const view = a.json.bufferViews[acc.bufferView];
     a.binary.writeFloatLE(.2, (view.byteOffset || 0) + (acc.byteOffset || 0));
-  })), /motion|quaternion|protected/i);
+  })), /motion|quaternion|protected|action transforms/i);
 });

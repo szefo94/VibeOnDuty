@@ -239,7 +239,91 @@ export async function exportSource(source, output, extra = []) {
   const raw = output + '.raw.glb';
   await blender(['--mode', 'export', '--source', source, '--out', raw, ...extra]);
   const { preserveCompatibility } = await import('./inspect-character.mjs');
+  const current = await approvedArtMotion();
+  // Keep the historical art exporter and inherited index checks unchanged, then
+  // append only the validated approved manifest actions through the motion seam.
   await preserveCompatibility(raw, path.join(CACHE, 'baseline.glb'), output);
+  const { parseGLB, encodeGLB } = await import('./inspect-character.mjs');
+  const combined = appendApprovedMotion(parseGLB(await fs.readFile(output)),
+    parseGLB(await fs.readFile(current.publication)), current.check.inheritedOccurrences);
+  await fs.writeFile(output, encodeGLB(combined.json, combined.binary));
+  await inspectArtCandidate(output);
+}
+
+function appendApprovedMotion(art, approved, inheritedCount) {
+  // Already approved floats must not be normalized/resampled a second time.
+  // Copy the actual sampled bytes, preserving stride/offset and action metadata.
+  const views = new Map(), accessors = new Map();
+  const copyAccessor = index => {
+    if (accessors.has(index)) return accessors.get(index);
+    const source = approved.json.accessors[index];
+    assert.equal(source.sparse, undefined, 'Sparse approved motion is unsupported');
+    if (!views.has(source.bufferView)) {
+      const view = approved.json.bufferViews[source.bufferView];
+      assert.equal(view.buffer ?? 0, 0);
+      const start = view.byteOffset || 0, offset = Math.ceil(art.binary.length / 4) * 4;
+      art.binary = Buffer.concat([art.binary, Buffer.alloc(offset - art.binary.length),
+        approved.binary.subarray(start, start + view.byteLength)]);
+      views.set(source.bufferView, art.json.bufferViews.push({ ...view, byteOffset: offset }) - 1);
+    }
+    const result = art.json.accessors.push({ ...source, bufferView: views.get(source.bufferView) }) - 1;
+    accessors.set(index, result); return result;
+  };
+  const joints = new Map(art.json.skins[0].joints.map(index => [art.json.nodes[index].name, index]));
+  for (const original of approved.json.animations.slice(inheritedCount)) {
+    const clip = structuredClone(original);
+    for (const sampler of clip.samplers) {
+      sampler.input = copyAccessor(sampler.input); sampler.output = copyAccessor(sampler.output);
+    }
+    for (const channel of clip.channels) {
+      const target = joints.get(approved.json.nodes[channel.target.node].name);
+      assert.notEqual(target, undefined, 'Approved motion target missing from inherited rig');
+      channel.target.node = target;
+    }
+    art.json.animations.push(clip);
+  }
+  art.json.buffers = [{ byteLength: art.binary.length }];
+  return art;
+}
+
+// Art edits may change the two reviewed art domains. Motion edits remain owned
+// by motion-pipeline's separate bounded validator and never enter this seam.
+export async function approvedArtMotion() {
+  const { MANIFEST, BASELINE, MOTION_CACHE, parseManifest, validateMotionCandidate } =
+    await import('./motion-pipeline.mjs');
+  const manifest = parseManifest(await fs.readFile(MANIFEST, 'utf8'));
+  assert.equal(hash(await fs.readFile(path.join(ROOT, manifest.source))), manifest.sourceHash,
+    'Stale current motion donor');
+  const retained = JSON.parse(await fs.readFile(path.join(MOTION_CACHE, 'publication.json'), 'utf8'));
+  assert.equal(retained.complete, true, 'Incomplete approved motion publication');
+  assert.equal(hash(await fs.readFile(BASELINE)), retained.publishedHash, 'Stale approved publication');
+  await iterationPath([MOTION_CACHE], retained.baseline);
+  assert.equal(hash(await fs.readFile(retained.baseline)), manifest.baselineHash, 'Stale inherited baseline');
+  const check = await validateMotionCandidate(BASELINE, retained.baseline, manifest);
+  return { publication: BASELINE, inheritedBaseline: retained.baseline,
+    publicationHash: retained.publishedHash, sourceHash: manifest.sourceHash,
+    manifestHash: hash(await fs.readFile(MANIFEST)), check };
+}
+
+export async function inspectArtCandidate(candidate) {
+  const current = await approvedArtMotion();
+  const { inspectCharacter, parseGLB, encodeGLB, compareSemanticExports } =
+    await import('./inspect-character.mjs');
+  const { parseManifest, MANIFEST, validateListedMotion } = await import('./motion-pipeline.mjs');
+  const bytes = Buffer.isBuffer(candidate) ? candidate : await fs.readFile(candidate);
+  const asset = parseGLB(bytes), manifest = parseManifest(await fs.readFile(MANIFEST, 'utf8'));
+  assert.equal(asset.json.animations.length, current.check.inheritedOccurrences + manifest.actions.length,
+    'Current art candidate loses approved motion clips');
+  const inherited = structuredClone(asset.json);
+  inherited.animations = inherited.animations.slice(0, current.check.inheritedOccurrences);
+  // Historical exact inherited-occurrence/skin/bind/rest checks remain intact.
+  await inspectCharacter(encodeGLB(inherited, asset.binary), { baseline: path.join(CACHE, 'baseline.glb') });
+  validateListedMotion(asset, manifest, current.check.inheritedOccurrences);
+  const comparison = await compareSemanticExports(bytes, current.publication, { tolerance: 0 });
+  assert.equal(comparison.domains.skin, true, 'Protected current skin differs');
+  assert.equal(comparison.domains.motion, true, 'Protected approved motion differs');
+  const result = await inspectCharacter(bytes);
+  return { ...result, approvedMotionEqual: true, approvedMotion: current };
 }
 export async function refreshProvenance() {
   const filename = path.join(ROOT, 'tools/art/provenance.json');
@@ -378,8 +462,7 @@ export async function iterationDemo() {
   assert.equal(recovered.equal, true, 'Restored source must regenerate baseline semantics');
   const publishedComparison = await compareSemanticExports(published, before);
   assert.equal(publishedComparison.equal, true, 'Accepted editable source must match published asset');
-  for (const candidate of [before, changed, restored])
-    await inspectCharacter(candidate, { baseline: path.join(CACHE, 'baseline.glb') });
+  for (const candidate of [before, changed, restored]) await inspectArtCandidate(candidate);
   const { reviewIteration } = await import('./review.mjs');
   const review = await reviewIteration(directory, { before, changed, restored });
   assert.equal(hash(await fs.readFile(source)), beforeInputs.source);
@@ -396,7 +479,8 @@ export async function iterationDemo() {
       changedSource, changedSource + '.params.json', changedSource + '.operation.json', changed,
       restoredSource, restoredParams, restored].map(async (filename) =>
       [path.basename(filename), hash(await fs.readFile(filename))]))),
-    edited, recovered, publishedComparison, review, publishedAssetsUnchanged: true };
+    edited, recovered, publishedComparison, review, publishedAssetsUnchanged: true,
+    approvedMotion: await approvedArtMotion() };
   await fs.writeFile(path.join(directory, 'report.json'), JSON.stringify(report, null, 2));
   await fs.writeFile(path.join(CACHE, 'iteration-report.json'), JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report, null, 2));
@@ -404,6 +488,7 @@ export async function iterationDemo() {
 }
 async function selfTest() {
   await fs.mkdir(CACHE, { recursive: true });
+  await run(process.execPath, ['--test', 'tools/art/art-motion.test.mjs']);
   const { test } = await import('node:test');
   await test('bounded iteration accepts only the versioned reviewed edit before mutation', async () => {
     const directory = await fs.mkdtemp(path.join(CACHE, 'iteration-test-'));

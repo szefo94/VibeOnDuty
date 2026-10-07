@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { exportSource, CACHE, ROOT, SOURCES, PIN, hash, owned, bootstrap,
-  applyIteration, iterationPath } from './pipeline.mjs';
+  applyIteration, iterationPath, inspectArtCandidate, approvedArtMotion } from './pipeline.mjs';
 import { inspectCharacter, compareSemanticExports, parseGLB, accessor } from './inspect-character.mjs';
 
 function assertNumbersEqual(a, b, description) {
@@ -100,6 +100,7 @@ export async function verifyIteration() {
   assert.equal(hash(await fs.readFile(path.join(SOURCES, 'soldier.blend'))), record.beforeInputs.source);
   assert.equal(hash(await fs.readFile(path.join(ROOT, 'tools/art/character-params.json'))), record.beforeInputs.params);
   assert.equal(hash(await fs.readFile(path.join(ROOT, 'public/models/enemy.glb'))), record.beforeInputs.published);
+  assert.deepEqual(record.approvedMotion, await approvedArtMotion(), 'Current approved motion identity');
   const expectedFiles = ['baseline.blend', 'baseline.params.json', 'request.json', 'before.glb',
     'changed.blend', 'changed.blend.params.json', 'changed.blend.operation.json', 'changed.glb',
     'restored.blend', 'restored.params.json', 'restored.glb'];
@@ -143,7 +144,7 @@ export async function verifyIteration() {
   const output = path.join(verification, 'regenerated.glb');
   // New process opens the recovered editable file and its recovered parameter file.
   await exportSource(source, output, ['--params', params]);
-  await inspectCharacter(output, { baseline: path.join(CACHE, 'baseline.glb') });
+  await inspectArtCandidate(output);
   const regenerated = await compareSemanticExports(before, output);
   assert.equal(regenerated.semanticSchemaVersion, 2, 'Restoration includes canonical render graph');
   assert.equal(regenerated.equal, true, 'Independent restored-source semantic baseline');
@@ -213,7 +214,7 @@ export async function verifyRepeat() {
   await exportSource(source, a);
   await exportSource(source, b);
   const baseline = path.join(CACHE, 'baseline.glb');
-  const checks = [await inspectCharacter(a, { baseline }), await inspectCharacter(b, { baseline })];
+  const checks = [await inspectArtCandidate(a), await inspectArtCandidate(b)];
   const comparison = await compareSemanticExports(a, b);
   assert.equal(comparison.semanticSchemaVersion, 2, 'Repeat includes canonical render graph');
   const report = {
