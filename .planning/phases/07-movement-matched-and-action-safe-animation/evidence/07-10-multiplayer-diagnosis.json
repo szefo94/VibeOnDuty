@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "qualification": false,
+  "fullGate": {
+    "command": "node node_modules/@playwright/test/cli.js test --config tools/art/multiplayer-qualified.config.mjs --workers=1",
+    "exitCode": 1,
+    "passed": 5,
+    "failed": 12,
+    "skipped": 0,
+    "flaky": 0,
+    "durationMs": 1383400.772,
+    "report": ".planning/research/.cache/07-10-qualified/multiplayer-full-current.json",
+    "output": ".planning/research/.cache/07-10-qualified/multiplayer-full-current-output",
+    "log": ".planning/research/.cache/07-10-multiplayer-final.log"
+  },
+  "firstBoundedFollowup": {
+    "cases": ["HTTPS/WSS assets and same room", "tracer two browsers join and move"],
+    "passed": 1,
+    "failed": 1,
+    "httpsCase": "Passed unchanged full assertions in 12.9s; the earlier HTTPS root ECONNRESET is preserved and no cause is assigned",
+    "tracer": "Ordinary routing reached x47.904/z22.168, then original45s route deadline failed before x34/z22",
+    "observerRetrieval": "Tracer teardown exceeded the observer1500ms dump bound; no wire-age conclusion from the missing dump",
+    "log": ".planning/research/.cache/07-10-mp-observed-followup.log",
+    "output": ".planning/research/.cache/07-10-qualified/multiplayer-followup-output"
+  },
+  "changedObserverDiagnostic": {
+    "scope": "One tracer; transparent native WebSocket delegation, bounded64-record automation batches, one in flight; no extra game messages or production changes",
+    "exitCode": 1,
+    "durationSeconds": 44.2,
+    "failure": "Own player absent during original walk predicate; missing moving access failed",
+    "log": ".planning/research/.cache/07-10-mp-wire-stream.log",
+    "output": ".planning/research/.cache/07-10-qualified/multiplayer-wire-stream-output",
+    "analysis": ".planning/research/.cache/07-10-mp-wire-analysis.json",
+    "records": [512, 320],
+    "inputPackets": [254, 169],
+    "browserDroppedRecords": [47, 1],
+    "nodeDroppedRecords": [0, 0],
+    "observerErrors": [0, 0],
+    "ackVersusObservedSdkTickMismatches": [0, 0],
+    "maximumInputsPerBrowserSecond": [21, 10],
+    "staleRejectionsCaptured": [13, 7],
+    "queueRejectionsCaptured": [53, 59],
+    "maximumObservedStateDispatchGapMs": [7194.3, 5205],
+    "sameAck671InputCounts": [20, 47]
+  },
+  "sourceFacts": {
+    "ack": "onlineSession.sendIntent reads room.state.currentTick directly",
+    "sdk": "Pinned SDK Room.state delegates to SchemaSerializer.getState, which returns the live decoded state; no interpolated cursor was shown",
+    "sender": "No accumulator/catch-up sender; interval and render heartbeat share lastSentTime>=33.3ms; input events also send immediately",
+    "limits": { "pending": 8, "receiptAgeMs": 500, "ackAgeTicks": 15 },
+    "limitsChanged": false,
+    "productionChangedDuringDiagnosis": false
+  },
+  "limits": [
+    "Browser dispatch/automation timestamps are not server receipt or consume clock timestamps",
+    "The field named afterSdk is an observer microtask sample, not guaranteed to follow the SDK onmessage listener; do not treat it as a proven decoder-complete cursor",
+    "Dropped records prevent proof by absence and observer overhead is not a performance qualification",
+    "Scheduling/transport gap origin is unknown; no host cause or defensible protected-runtime fix is established",
+    "Passing a focused HTTPS case cannot promote the failed full17-case gate"
+  ],
+  "next": "Keep multiplayer qualification open; continue separate recovery and moving collection with strict nonpassing qualification",
+  "humanMotionAcceptance": "pending",
+  "certification": false
+}

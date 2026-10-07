@@ -1,0 +1,78 @@
+{
+  "purpose": "Current unchanged-producer one-profile diagnosis; never full V2 acceptance",
+  "complete": false,
+  "report": ".planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-10-current-source-smoke.json",
+  "reportSha256": "e0cd069fe56f5b013e296db95fe8cab0674b4ca461f89420f9d268e4c46b44f5",
+  "durationMs": 71011,
+  "timedFrames": 214,
+  "profiles": 1,
+  "sampler": "2720e51eed272c40fe9e12ff561e4d63072f9b7548b5c270a71ec0ae527ab83f",
+  "cleanup": {
+    "browserClosed": true,
+    "serverClosed": true
+  },
+  "overruns": [
+    {
+      "component": "frameIntervalMs",
+      "statistic": "median",
+      "actual": 253.70000000298023,
+      "bound": 244.70000000018626
+    },
+    {
+      "component": "frameIntervalMs",
+      "statistic": "p95",
+      "actual": 371.8999999910593,
+      "bound": 261.40000000130385
+    },
+    {
+      "component": "correctionMs",
+      "statistic": "median",
+      "actual": 1.0999999940395355,
+      "bound": 0.900000000372529
+    },
+    {
+      "component": "correctionMs",
+      "statistic": "p95",
+      "actual": 1.7000000029802322,
+      "bound": 1.2000000020489097
+    },
+    {
+      "component": "renderMs",
+      "statistic": "median",
+      "actual": 1,
+      "bound": 0.7000000020489097
+    },
+    {
+      "component": "renderMs",
+      "statistic": "p95",
+      "actual": 1.4000000059604645,
+      "bound": 0.900000000372529
+    },
+    {
+      "component": "selectionMs",
+      "statistic": "p95",
+      "actual": 0.29999999701976776,
+      "bound": 0.20000000204890966
+    },
+    {
+      "component": "coreCorrectionMs",
+      "statistic": "median",
+      "actual": 0.4000000059604645,
+      "bound": 0.30000000167638063
+    },
+    {
+      "component": "coreCorrectionMs",
+      "statistic": "p95",
+      "actual": 0.6000000089406967,
+      "bound": 0.5
+    }
+  ],
+  "actualV2": {
+    "exitCode": 1,
+    "result": "Incomplete report",
+    "log": ".planning/research/.cache/07-10-current-source-v2.log",
+    "logSha256": "51557ae99f06358a6f3bea426a506620452b3c12d6e4ad08f6f053637c44446d"
+  },
+  "humanMotionAcceptance": "pending",
+  "certification": false
+}
