@@ -2,6 +2,99 @@ import { test, expect } from '@playwright/test';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { compareAnimationCandidate } from '../tools/art/review.mjs';
 import { parseGLB } from '../tools/art/inspect-character.mjs';
+import { execFileSync } from 'node:child_process';
+
+const uncachedAnimation = execFileSync('git', ['-c', 'safe.directory=C:/Programowanie/VibeOnDuty',
+  'show', '1e537a4:src/builders/enemyAnimations.js'], { encoding: 'utf8' })
+  .replace("import * as THREE from 'three';", 'const THREE = window.__THREE;');
+
+test('owner cache: loaded presentation preserves layers and lazily created masks across interruptions and replacement', async ({ page }, info) => {
+  test.setTimeout(90000);
+  await page.route('**/src/builders/__uncachedAnimation.js', route =>
+    route.fulfill({ contentType: 'text/javascript', body: uncachedAnimation }));
+  await page.goto('/'); await expect(page.locator('#range-startbtn')).toBeEnabled({ timeout: 60000 });
+  await page.locator('#range-startbtn').click();
+  const result = await page.evaluate(async () => {
+    const T = window.__THREE, g = await import('/src/builders/enemyGLTF.js');
+    const a = await import('/src/builders/enemyAnimations.js');
+    const original = await import('/src/builders/__uncachedAnimation.js');
+    const h = await import('/src/builders/weaponHandling.js');
+    const r = await import('/src/builders/characterResources.js');
+    (await import('/src/input.js')).setGameRunning(false);
+    const actor = g.buildEnemyMesh(0, 0), baseline = g.buildEnemyMesh(0, 0);
+    for (const owner of [actor, baseline]) for (const action of new Set(Object.values(owner.actions))) action.time = 0;
+    const duplicate = new T.Group(); duplicate.name = 'enemyWeaponMount'; actor.mesh.add(duplicate);
+    const matched = [];
+    const snapshot = (e, driver) => {
+      const bones = []; e.mesh.traverse(n => { if (n.isBone) bones.push([n.name, n.quaternion.toArray()]); });
+      return { bones, layers: driver.inspectPresentationLayers(e), root: e.mesh.position.toArray(), pose: e.presentation };
+    };
+    const masks = () => [...actor._presentationMasks.values()].flatMap(pair => Object.values(pair)).filter(Boolean);
+    const outcomes = [];
+    const inputs = [
+      { weapon: 'm4', action: { kind: 'ready' } },
+      { weapon: 'm4', aiming: true, action: { kind: 'reload', total: 1.8, elapsed: .7 } },
+      { weapon: 'pistol', action: { kind: 'reload', total: 1.2, elapsed: .3 } },
+      { weapon: 'pistol', action: { kind: 'melee', total: .4, elapsed: .1 } },
+      { weapon: 'pistol', alive: false, action: { kind: 'ready' } },
+    ];
+    for (const [i, input] of inputs.entries()) {
+      const raw = { identity: 'cache-equivalence', generation: 'one', alive: true,
+        position: { x: i * .04, y: 0, z: -.1 * i }, sampleTimeSeconds: i * .05,
+        onGround: true, bodyYaw: .2, aimYaw: .4, pitch: -.2, ...input };
+      a.tickPresentation(actor, raw, .05); original.tickPresentation(baseline, raw, .05);
+      matched.push(JSON.stringify(snapshot(actor, a)) === JSON.stringify(snapshot(baseline, original)));
+      outcomes.push({ allMasksCollected: masks().every(action => actor._presentationActions?.has(action)),
+        interruptedStopped: i < 3 || masks().every(action => !action.isScheduled()) });
+    }
+    let lookups = 0, enumerations = 0;
+    const lookup = actor.mesh.getObjectByName;
+    actor.mesh.getObjectByName = function (...args) { lookups++; return lookup.apply(this, args); };
+    actor.actions = new Proxy(actor.actions, { ownKeys(target) { enumerations++; return Reflect.ownKeys(target); } });
+    const ready = { identity: 'cache-equivalence', generation: 'two', alive: true, onGround: true,
+      position: { x: 0, y: 0, z: 0 }, sampleTimeSeconds: 1, bodyYaw: 0, aimYaw: 0, weapon: 'm4', action: { kind: 'ready' } };
+    a.tickPresentation(actor, ready, .05); lookups = enumerations = 0;
+    for (let i = 0; i < 20; i++) a.tickPresentation(actor, { ...ready, sampleTimeSeconds: 1 + i * .05 }, .05);
+    const currentMount = actor._handlingMount === lookup.call(actor.mesh, 'enemyWeaponMount');
+    const old = { mesh: actor.mesh, mixer: actor.mixer, actions: actor._presentationActions, masks: masks() };
+    const replacement = g.buildEnemyMesh(0, 0);
+    Object.assign(actor, replacement); a.tickPresentation(actor, { ...ready, generation: 'three' }, .05);
+    const replaced = actor._handlingMount === replacement.mesh.getObjectByName('enemyWeaponMount')
+      && actor._presentationActions !== old.actions && old.actions?.size === 0
+      && old.masks.every(action => !action.isScheduled());
+    r.disposeCharacter(old.mesh, old.mixer); r.disposeCharacter(old.mesh, old.mixer);
+    const staleSafe = actor._presentationActions?.size > 0 && actor.presentation?.alive === true;
+    const mount = actor._handlingMount ?? actor.mesh.getObjectByName('enemyWeaponMount');
+    const firstWeapon = mount.children[0];
+    const sibling = g.buildEnemyMesh(0, 0), nextWeapon = sibling.mesh.getObjectByName('enemyWeaponMount').children[0];
+    firstWeapon.removeFromParent(); mount.add(nextWeapon);
+    const nextOwner = h.getWeaponHandling(nextWeapon); nextOwner.skeleton = actor.mesh;
+    a.tickPresentation(actor, { ...ready, generation: 'three' }, .05);
+    const weaponReplacement = nextOwner.updates > 0;
+    mount.add(firstWeapon); nextWeapon.removeFromParent();
+    sibling.mesh.getObjectByName('enemyWeaponMount').add(nextWeapon);
+    const oldCollection = actor._presentationActions;
+    const mixer = new T.AnimationMixer(actor.mesh), actions = {};
+    for (const [key, action] of Object.entries(actor.actions)) actions[key] = mixer.clipAction(action.getClip());
+    actor.mixer = mixer; actor.actions = actions; a.tickPresentation(actor, ready, .05);
+    const mixerReplacement = oldCollection?.size === 0 && actor._presentationMixer === mixer;
+    r.disposeCharacter(actor.mesh, actor.mixer); r.disposeCharacter(actor.mesh, actor.mixer);
+    const retired = actor._handlingMount === null && actor._presentationActions?.size === 0 && actor._bones.length === 0;
+    a.tickPresentation(sibling, ready, .05);
+    const keeper = sibling.presentation.alive && sibling._presentationActive.size > 0;
+    const next = g.buildEnemyMesh(0, 0); a.tickPresentation(next, ready, .05);
+    const nextUsable = next.presentation.alive && next._presentationActive.size > 0;
+    for (const e of [baseline, sibling, next]) r.disposeCharacter(e.mesh, e.mixer);
+    return { matched, outcomes, lookups, enumerations, currentMount, replaced, staleSafe,
+      weaponReplacement, mixerReplacement, retired, keeper, nextUsable };
+  });
+  await writeFile(info.outputPath('owner-cache-presentation.json'), JSON.stringify(result, null, 2));
+  await writeFile('.planning/research/.cache/07-09-owner-cache-presentation-latest.json', JSON.stringify(result, null, 2));
+  expect(result.matched).toEqual(Array(5).fill(true));
+  expect(result.outcomes.every(row => row.allMasksCollected && row.interruptedStopped)).toBe(true);
+  expect(result.lookups).toBe(0); expect(result.enumerations).toBe(0);
+  for (const key of ['currentMount', 'replaced', 'staleSafe', 'weaponReplacement', 'mixerReplacement', 'retired', 'keeper', 'nextUsable']) expect(result[key], key).toBe(true);
+});
 
 test('resources: a warmed first-person view reuses its exact bone lookup and releases it on retirement', async ({ page }) => {
   test.setTimeout(90000);

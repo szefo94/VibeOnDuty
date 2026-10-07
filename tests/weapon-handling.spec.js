@@ -4,6 +4,84 @@ import { createServer as portProbe } from 'node:net';
 import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
 import { writeFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
+
+const uncachedHandling = execFileSync('git', ['-c', 'safe.directory=C:/Programowanie/VibeOnDuty',
+  'show', '1e537a4:src/builders/weaponHandling.js'], { encoding: 'utf8' })
+  .replace("import * as THREE from 'three';", 'const THREE = window.__THREE;')
+  .replace('motion-manifest.json\';', 'motion-manifest.json?import\';');
+
+test('owner cache: loaded handling preserves original rotations, contacts and rest with bounded lookups', async ({ page }, info) => {
+  test.setTimeout(90000);
+  await page.route('**/src/builders/__uncachedHandling.js', route =>
+    route.fulfill({ contentType: 'text/javascript', body: uncachedHandling }));
+  const result = await page.evaluate(async () => {
+    const src = new URL('src/', location.href).href;
+    const g = await import(src + 'builders/enemyGLTF.js');
+    const h = await import(src + 'builders/weaponHandling.js');
+    const original = await import(src + 'builders/__uncachedHandling.js');
+    (await import(src + 'input.js')).setGameRunning(false);
+    const rows = [];
+    const snapshot = (actor, owner) => {
+      const bones = []; actor.mesh.traverse(n => { if (n.isBone) bones.push([n.name,
+        n.position.toArray(), n.quaternion.toArray(), n.scale.toArray()]); });
+      return { bones, parts: Object.entries(owner.parts).map(([key, part]) =>
+        [key, part?.position.toArray(), part?.quaternion.toArray()]),
+        sample: owner.sample, contacts: owner.contacts,
+        root: actor.mesh.position.toArray(), mount: owner.root.parent.quaternion.toArray() };
+    };
+    for (const [weapon, role] of [['m4', 'assault'], ['p90', 'smg'], ['awp', 'sniper'], ['pistol', 'pistol']]) {
+      const actor = g.buildEnemyMesh(0, 0, role), baseline = g.buildEnemyMesh(0, 0, role);
+      const root = actor.mesh.getObjectByName('enemyWeaponMount').children[0];
+      const baselineRoot = baseline.mesh.getObjectByName('enemyWeaponMount').children[0];
+      const owner = h.getWeaponHandling(root), uncached = original.createWeaponHandling({
+        weapon, root: baselineRoot, skeleton: baseline.mesh });
+      // Add a duplicate after the existing match and omit one leaf on both real rigs.
+      const duplicate = new window.__THREE.Bone(); duplicate.name = 'hand_r'; actor.mesh.add(duplicate);
+      const duplicateBase = new window.__THREE.Bone(); duplicateBase.name = 'hand_r'; baseline.mesh.add(duplicateBase);
+      actor.mesh.getObjectByName('thumb_04_leaf_l')?.removeFromParent();
+      baseline.mesh.getObjectByName('thumb_04_leaf_l')?.removeFromParent();
+      const equal = [];
+      for (const [upper, phase, alive] of [['ready', 1, true], ['reload', .35, true],
+        ['reload', .8, true], ['fire', .3, true], ['melee', .4, true], ['ready', 1, false], ['ready', 1, true]]) {
+        const pose = { weapon, upper, alive, action: { kind: upper, total: 1.8, phase } };
+        h.updateWeaponHandling(owner, pose); original.updateWeaponHandling(uncached, pose);
+        equal.push(JSON.stringify(snapshot(actor, owner)) === JSON.stringify(snapshot(baseline, uncached)));
+      }
+      const expectedHand = actor.mesh.getObjectByName('hand_r');
+      let rigLookups = 0, socketLookups = 0;
+      const rigLookup = actor.mesh.getObjectByName, socketLookup = root.getObjectByName;
+      actor.mesh.getObjectByName = function (...args) { rigLookups++; return rigLookup.apply(this, args); };
+      root.getObjectByName = function (...args) { socketLookups++; return socketLookup.apply(this, args); };
+      const pose = { weapon, alive: true, upper: 'ready', action: { kind: 'ready', phase: 1 } };
+      for (let i = 0; i < 20; i++) h.updateWeaponHandling(owner, pose);
+      const identity = owner.boneLookup?.get('hand_r') === expectedHand;
+      const missing = !owner.boneLookup?.has('thumb_04_leaf_l');
+      const oldLookup = owner.boneLookup;
+      const replacement = g.buildEnemyMesh(0, 0, role);
+      owner.skeleton = replacement.mesh; h.updateWeaponHandling(owner, pose);
+      const replaced = owner.boneLookup?.get('hand_r') === replacement.mesh.getObjectByName('hand_r')
+        && ![...owner.boneLookup?.values() ?? []].includes(expectedHand);
+      h.disposeWeaponHandling(owner); h.disposeWeaponHandling(owner);
+      original.disposeWeaponHandling(uncached);
+      const retired = owner.boneLookup?.size === 0 && owner.socketLookup?.size === 0 && oldLookup?.size === 0;
+      const keeper = g.buildEnemyMesh(0, 0, role);
+      const keeperOwner = h.getWeaponHandling(keeper.mesh.getObjectByName('enemyWeaponMount').children[0]);
+      h.updateWeaponHandling(keeperOwner, pose);
+      const keeperUsable = keeperOwner.contacts?.supportWorld.every(Number.isFinite) === true;
+      for (const a of [actor, baseline, replacement, keeper]) g.disposeEnemyMesh(a.mesh, a.mixer);
+      rows.push({ weapon, equal, rigLookups, socketLookups, identity, missing, replaced, retired, keeperUsable });
+    }
+    return rows;
+  });
+  await writeFile(info.outputPath('owner-cache-handling.json'), JSON.stringify(result, null, 2));
+  await writeFile('.planning/research/.cache/07-09-owner-cache-handling-latest.json', JSON.stringify(result, null, 2));
+  for (const row of result) {
+    expect(row.equal, row.weapon).toEqual(Array(7).fill(true));
+    expect(row.rigLookups, row.weapon).toBe(0); expect(row.socketLookups, row.weapon).toBe(0);
+    for (const key of ['identity', 'missing', 'replaced', 'retired', 'keeperUsable']) expect(row[key], `${row.weapon}/${key}`).toBe(true);
+  }
+});
 
 let server, url;
 test.beforeAll(async () => {

@@ -31,6 +31,26 @@ function fixture() {
 }
 const verify = candidate => verifyCandidate(frozen, budgetBytes, candidate, Buffer.from(JSON.stringify(candidate)));
 
+function changeIdentity(candidate, name) {
+  candidate.identities[name] = 'b'.repeat(64);
+  const identity = sha256(JSON.stringify(candidate.identities));
+  for (const sample of candidate.samples) sample.sourceIdentitySha256 = identity;
+}
+
+for (const name of ['src/builders/enemyAnimations.js', 'src/builders/weaponHandling.js'])
+  test(`reviewed owner mutation is permitted: ${name}`, () => {
+    const candidate = fixture(); changeIdentity(candidate, name);
+    assert.equal(verify(candidate).applicableBudgetPass, true);
+  });
+
+for (const name of ['src/shared/combat.js', 'src/artMaterials.js', 'captureSampler',
+  'src/builders/weapon.js', 'src/builders/weaponHandling.test.js', 'src/builders/enemyAnimations.test.js'])
+  test(`owner correction retains protection: ${name}`, () => {
+    assert.ok(Object.hasOwn(source.identities, name));
+    const candidate = fixture(); changeIdentity(candidate, name);
+    assert.throws(() => verify(candidate));
+  });
+
 test('freeze creates an immutable numeric source-eye contract from the qualified twelve profiles', async () => {
   const directory = await mkdtemp(path.join(tmpdir(), 'vod-budget-v2-'));
   try {
