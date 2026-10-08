@@ -16,4 +16,5 @@ game. Tests compare that implementation with the current cached owners on separa
 real loaded rigs. Fixtures do not run directly or update with current source.
 
 Checking them in makes test discovery independent of Git history, worktree trust,
-and checkout path. No CI history fetch is required.
+and checkout path. Fixture-local attributes force LF checkout bytes on Windows
+and Linux so the enforced SHA256 remains exact. No CI history fetch is required.
