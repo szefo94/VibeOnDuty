@@ -1,6 +1,8 @@
 {
   "command": "node --test tools/art/crouch-correction.test.mjs",
   "exitCode": 1,
+  "targetTest": "actual crouch channel buffers distinguish all four movement directions",
+  "output": "TAP version 13\n# Subtest: actual crouch channel buffers distinguish all four movement directions\nnot ok 1 - actual crouch channel buffers distinguish all four movement directions\n  ---\n  error: 'forward and back must have distinct sampled motion'\n  code: 'ERR_ASSERTION'\n  actual: false\n  expected: true\n  ---\n1..1\n# tests 1\n# pass 0\n# fail 1\n",
   "target_test": "actual crouch channel buffers distinguish all four movement directions",
   "tests": 1,
   "pass": 0,
