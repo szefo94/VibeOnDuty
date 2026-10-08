@@ -3,11 +3,14 @@ import { createServer } from 'vite';
 import { createServer as portProbe } from 'node:net';
 import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
-import { writeFile } from 'node:fs/promises';
-import { execFileSync } from 'node:child_process';
+import { readFile, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 
-const uncachedHandling = execFileSync('git', ['-c', 'safe.directory=C:/Programowanie/VibeOnDuty',
-  'show', '1e537a4:src/builders/weaponHandling.js'], { encoding: 'utf8' })
+const handlingBytes = await readFile(new URL('./fixtures/weaponHandling.uncached.js', import.meta.url));
+if (createHash('sha256').update(handlingBytes).digest('hex') !==
+  '15a060eeb4ea2ce4054293ea6737afe3c346e5bb01be6ef3cd7db90257c217ea')
+  throw Error('Immutable uncached handling fixture changed');
+const uncachedHandling = handlingBytes.toString('utf8')
   .replace("import * as THREE from 'three';", 'const THREE = window.__THREE;')
   .replace('motion-manifest.json\';', 'motion-manifest.json?import\';');
 

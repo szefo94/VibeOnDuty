@@ -2,10 +2,13 @@ import { test, expect } from '@playwright/test';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { compareAnimationCandidate } from '../tools/art/review.mjs';
 import { parseGLB } from '../tools/art/inspect-character.mjs';
-import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 
-const uncachedAnimation = execFileSync('git', ['-c', 'safe.directory=C:/Programowanie/VibeOnDuty',
-  'show', '1e537a4:src/builders/enemyAnimations.js'], { encoding: 'utf8' })
+const animationBytes = await readFile(new URL('./fixtures/enemyAnimations.uncached.js', import.meta.url));
+if (createHash('sha256').update(animationBytes).digest('hex') !==
+  '8217f32ff2c4a65613aadcf62442c092a3e0d604f8ff5f7c5dc361b730d4aee0')
+  throw Error('Immutable uncached animation fixture changed');
+const uncachedAnimation = animationBytes.toString('utf8')
   .replace("import * as THREE from 'three';", 'const THREE = window.__THREE;');
 
 test('owner cache: loaded presentation preserves layers and lazily created masks across interruptions and replacement', async ({ page }, info) => {
