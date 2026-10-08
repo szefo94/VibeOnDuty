@@ -25,35 +25,84 @@ test.beforeEach(async ({ page }) => {
   await page.locator('#range-startbtn').click();
 });
 
-test('local: held movement blocked by terrain plants the real loaded feet', async ({ page }) => {
+test('local: held movement blocked by terrain plants the real loaded feet', async ({ page }, info) => {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
+  await page.keyboard.down('KeyW');
   const result = await page.evaluate(async () => {
     const src = new URL('src/', location.href).href;
     const { player } = await import(src + 'entities/player.js');
     const input = await import(src + 'input.js');
     const { camera } = await import(src + 'scene.js');
-    const { playerActions, playerMesh } = await import(src + 'builders/enemyGLTF.js');
-    const { MAP } = await import(src + 'map.js');
+    const { playerMesh } = await import(src + 'builders/enemyGLTF.js');
+    const { MAP, groundElevation } = await import(src + 'map.js');
     input.setLocked(false);
+    const frame = () => new Promise(resolve => requestAnimationFrame(resolve));
+    const movementContribution = layers => layers.filter(layer => layer.scheduled &&
+      /(?:walk|run|crouch)_(?:forward|back|left|right)_lower$/.test(layer.clip))
+      .reduce((sum, layer) => sum + layer.weight, 0);
+    const observe = () => {
+      const pose = window.__presentationDebug();
+      return { speed: pose.speed, cadence: pose.cadence, phase: pose.phase,
+        moving: pose.moving, transition: pose.transition, layers: pose.layers,
+        travellingWeight: movementContribution(pose.layers),
+        feet: ['foot_l', 'foot_r'].map(name => playerMesh.getObjectByName(name).quaternion.toArray()) };
+    };
+    const sample = async count => {
+      const observations = [];
+      for (let i = 0; i < count; i++) { await frame(); observations.push(observe()); }
+      return observations;
+    };
+    // Positive control uses the same actual contributing-mask measurement on a
+    // walkable corridor. A permanently zero source-alias query cannot pass it.
+    let open;
+    for (let r = 1; r < MAP.length - 1 && !open; r++)
+      for (let c = 1; c < MAP[r].length - 1; c++)
+        if (MAP[r][c] === 0 && MAP[r - 1][c] === 0 && MAP[r + 1][c] === 0) { open = [c, r]; break; }
+    if (!open) throw Error('No actual walkable positive-control corridor');
+    camera.position.set(open[0] * 4 + 2, 0, open[1] * 4 + 2);
+    camera.position.y = groundElevation(camera.position.x, camera.position.z) + 1.65;
+    player.yaw = 0; player.onGround = true; player.velY = 0;
+    input.setGameRunning(true);
+    const movingStart = camera.position.clone();
+    await sample(4);
+    const moving = await sample(8), movingDisplacement = camera.position.distanceTo(movingStart);
     // Place within a solid cell: actual canMoveTo rejects the held W intention.
     const r = MAP.findIndex(row => row.some(v => v === 1));
     const c = MAP[r].findIndex(v => v === 1);
     camera.position.set(c * 4 + 2, 1.65, r * 4 + 2);
     player.yaw = 0; player.onGround = true;
-    input.keys.KeyW = true;
-    input.setGameRunning(true);
     const start = camera.position.clone();
-    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-    input.keys.KeyW = false; input.setGameRunning(false);
-    const travelling = new Set(['walk', 'run', 'strafe_l', 'strafe_r', 'walk_back', 'run_back']);
-    return { skinned: !!playerMesh, displacement: camera.position.distanceTo(start),
-      travellingWeight: [...travelling].reduce((sum, key) => sum + (playerActions[key]?.isScheduled() ? playerActions[key].getEffectiveWeight() : 0), 0) };
+    // Let the brief stop action and bone inertia settle before measuring feet.
+    await sample(20);
+    const blocked = await sample(8);
+    const maxFootChange = observations => Math.max(...observations.flatMap(observation =>
+      observation.feet.flatMap((q, foot) => q.map((value, axis) =>
+        Math.abs(value - observations[0].feet[foot][axis])))));
+    const held = input.keys.KeyW === true;
+    input.setGameRunning(false);
+    return { skinned: !!playerMesh, held, displacement: camera.position.distanceTo(start),
+      movingDisplacement, moving, blocked,
+      movingFootChange: maxFootChange(moving), blockedFootChange: maxFootChange(blocked) };
   });
+  await page.keyboard.up('KeyW');
   expect(result.skinned).toBe(true);
+  expect(result.held).toBe(true);
+  expect(result.movingDisplacement).toBeGreaterThan(0.1);
+  expect(result.moving.every(pose => pose.moving && pose.speed > .05 && pose.cadence > 0
+    && pose.travellingWeight > .5)).toBe(true);
+  expect(result.movingFootChange).toBeGreaterThan(.001);
   expect(result.displacement).toBeLessThan(0.01);
-  expect(result.travellingWeight).toBeLessThan(0.01);
+  for (const pose of result.blocked) {
+    expect(pose.travellingWeight).toBeLessThan(.01);
+    expect(pose.speed).toBeLessThan(.001); expect(pose.cadence).toBe(0);
+    expect(pose.moving).toBe(false); expect(pose.transition).toBe('');
+    expect(pose.phase).toBe(result.blocked[0].phase);
+  }
+  expect(result.blockedFootChange).toBeLessThan(.001);
   expect(errors).toEqual([]);
+  await info.attach('actual-moving-and-blocked-presentation', {
+    body: Buffer.from(JSON.stringify(result)), contentType: 'application/json' });
 });
 
 test('local: loaded directional masks and current action phase preserve gameplay roots', async ({ page }, info) => {
