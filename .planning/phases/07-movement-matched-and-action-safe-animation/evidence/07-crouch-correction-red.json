@@ -1,0 +1,16 @@
+{
+  "command": "node --test tools/art/crouch-correction.test.mjs",
+  "exitCode": 1,
+  "target_test": "actual crouch channel buffers distinguish all four movement directions",
+  "tests": 1,
+  "pass": 0,
+  "fail": 1,
+  "failing_tests": ["actual crouch channel buffers distinguish all four movement directions"],
+  "failing_test": "actual crouch channel buffers distinguish all four movement directions",
+  "expected_behavior": "Each of the four real directional crouch channel buffers differs",
+  "actual_behavior": "forward and back must have distinct sampled motion: actual false, expected true",
+  "failure_type": "assertion",
+  "intentional": true,
+  "phase": "07",
+  "finding": "CR-02"
+}
