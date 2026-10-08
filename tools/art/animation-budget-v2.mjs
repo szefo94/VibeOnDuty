@@ -4,6 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { inflateSync } from 'node:zlib';
+import { PROVENANCE_PATH, PROTECTED_PROVENANCE_SHA256, verifyRuntimeDependencies } from './runtime-dependencies.mjs';
 
 export const CONTRACT_VERSION = 'source-eye-view-v2';
 export const COMPONENTS = ['frameIntervalMs', 'mixerMs', 'inertiaMs', 'correctionMs',
@@ -158,7 +159,10 @@ export function candidateLineage(budget, budgetBytes, report) {
     budgetSha256: sha256(budgetBytes), producerContractSha256: digest(producerContract(report)), original: ORIGINAL };
 }
 
-export function verifyCandidate(budget, budgetBytes, candidate, candidateBytes) {
+export function verifyCandidate(budget, budgetBytes, candidate, candidateBytes, dependencyBytes) {
+  assert.equal(budget.referenceIdentities[PROVENANCE_PATH], PROTECTED_PROVENANCE_SHA256,
+    'Changed frozen protected provenance identity');
+  const runtimeDependencies = verifyRuntimeDependencies(candidate.identities, dependencyBytes);
   const producer = qualify(candidate);
   assert.equal(budget.contractVersion, CONTRACT_VERSION);
   assert.deepEqual(budget.original, ORIGINAL); assert.equal(budget.producerContractSha256, digest(budget.producerContract));
@@ -193,7 +197,7 @@ export function verifyCandidate(budget, budgetBytes, candidate, candidateBytes) 
       if (reduction) reductions.push({ run: s.run, tier: s.tier, actorCount: s.actorCount, resource: name, before, after: actual });
     }
   }
-  return { ...candidate.v2Lineage, candidateReportSha256: sha256(candidateBytes),
+  return { ...candidate.v2Lineage, runtimeDependencies, candidateReportSha256: sha256(candidateBytes),
     applicableBudgetPass: overruns.length === 0, legacyBudgetPass: false,
     legacyCameraWorkloadComparable: false, overruns, reductions, certification: false };
 }
@@ -250,6 +254,7 @@ async function cli() {
     const budgetBytes = await readFile(values['--budget']), budget = JSON.parse(budgetBytes);
     await verifyFrozen(budget);
     const bytes = await readFile(values['--candidate']), report = JSON.parse(bytes);
+    verifyRuntimeDependencies(report.identities);
     for (const [name, identity] of Object.entries(report.identities)) if (name !== 'captureSampler')
       assert.equal(sha256(await readFile(path.join(ROOT, name))), identity, `Stale current source hash: ${name}`);
     const result = verifyCandidate(budget, budgetBytes, report, bytes); await pixels(report);

@@ -8,6 +8,7 @@ import { promisify } from 'node:util';
 import { chromium } from '@playwright/test';
 import { createServer } from 'vite';
 import { ROOT, CACHE, hash, approvedArtMotion, iterationPath } from './pipeline.mjs';
+import { verifyRuntimeDependencies } from './runtime-dependencies.mjs';
 
 const EVIDENCE = path.join(ROOT, '.planning/phases/07-movement-matched-and-action-safe-animation/evidence');
 export const REQUIRED_ASSERTIONS = [
@@ -16,6 +17,7 @@ export const REQUIRED_ASSERTIONS = [
 ];
 export const REQUIRED_STABLE_GATES = ['lint', 'typecheck', 'typecheck:mp', 'build', 'unit', 'offline', 'multiplayer'];
 export function requireStableGates(identities, evidence) {
+  verifyRuntimeDependencies(identities);
   assert.deepEqual(evidence?.identities, identities, 'Stale or missing stable gate identities');
   for (const id of REQUIRED_STABLE_GATES) {
     const check = evidence.checks?.find(check => check.id === id);
@@ -34,6 +36,7 @@ export function requirePlan09(identities, summary, qualification) {
   const statuses = lines.filter(line => /^(?:status\b|['"]status['"])/.test(line));
   assert.ok(frontmatter && statuses.length === 1 && /^status: complete *$/.test(statuses[0])
     && !lines.some(line => /^<<\s*:|^\t/.test(line)), 'Plan09 is missing, halted or unqualified');
+  verifyRuntimeDependencies(identities);
   assert.equal(qualification?.complete, true, 'Missing complete plan09 qualification');
   assert.deepEqual(qualification.identities, identities, 'Stale plan09 qualification');
   assert.equal(qualification.applicableBudgetPass, true, 'Plan09 fixed-V2 acceptance is unqualified');

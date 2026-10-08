@@ -10,6 +10,7 @@ import { chromium } from '@playwright/test';
 import { createServer } from 'vite';
 import { ROOT, CACHE, hash, iterationPath } from './pipeline.mjs';
 import { producerContract, candidateLineage } from './animation-budget-v2.mjs';
+import { MANIFEST_PATH, verifyRuntimeDependencies } from './runtime-dependencies.mjs';
 
 // This owns a loopback-only Vite server and separate browser contexts. It never connects
 // to multiplayer or adds a production debug/mutation API. Only the model GET is routed.
@@ -385,9 +386,9 @@ async function reviewPort() {
 const ANIMATION_EVIDENCE = path.join(ROOT,
   '.planning/phases/07-movement-matched-and-action-safe-animation/evidence');
 
-async function animationIdentities() {
+export async function animationIdentities(read = filename => fs.readFile(filename)) {
   const names = ['index.html', 'style.css', 'public/models/enemy.glb',
-    'public/textures/comic-slice.png', 'tools/art/provenance.json',
+    'public/textures/comic-slice.png', 'tools/art/provenance.json', MANIFEST_PATH,
     'tools/art/sources/soldier.blend', 'tools/art/character-params.json', 'tools/art/build_soldier.py'];
   async function collect(directory) {
     for (const entry of await fs.readdir(path.join(ROOT, directory), { withFileTypes: true })) {
@@ -397,8 +398,14 @@ async function animationIdentities() {
     }
   }
   await collect('src');
-  const identities = {};
-  for (const name of names.sort()) identities[name] = hash(await fs.readFile(path.join(ROOT, name)));
+  const identities = {}, dependencyBytes = {};
+  for (const name of names.sort()) {
+    const bytes = await read(path.join(ROOT, name));
+    identities[name] = hash(bytes);
+    if (name === MANIFEST_PATH) dependencyBytes.manifestBytes = bytes;
+    if (name === 'tools/art/provenance.json') dependencyBytes.provenanceBytes = bytes;
+  }
+  verifyRuntimeDependencies(identities, dependencyBytes);
   identities.captureSampler = hash(sampleAnimationPage.toString());
   return identities;
 }
@@ -768,7 +775,8 @@ export async function captureAnimationBaseline({ smoke = false, failAt, onOwner,
     finally { await server.close(); cleanup.serverClosed = true; onCleanup?.(cleanup); }
   }
   const report = { schemaVersion: 1, complete: !smoke, capturedAt: new Date().toISOString(),
-    revision, identities, samples, cleanup, durationMs: Date.now() - start,
+    revision, identities, runtimeDependencies: verifyRuntimeDependencies(identities),
+    samples, cleanup, durationMs: Date.now() - start,
     device: { hostname: os.hostname(), os: os.type(), release: os.release(), arch: process.arch,
       cpu: os.cpus()[0]?.model, node: process.version, browser: browser.version(),
       rendererClass: samples.every(s => /swiftshader|software/i.test(s.gpu)) ? 'software' : 'physical-or-unidentified' },

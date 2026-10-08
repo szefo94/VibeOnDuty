@@ -1,10 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { freezeBudget, qualify, verifyCandidate, candidateLineage, producerContract, COMPONENTS, sha256 } from './animation-budget-v2.mjs';
+import { MANIFEST_PATH, PROVENANCE_PATH, runtimeDependencyBytes } from './runtime-dependencies.mjs';
 
 const cli = path.resolve('tools/art/animation-budget-v2.mjs');
 const reference = path.resolve('.planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-09-view-reference-v2.json');
@@ -19,6 +20,7 @@ function fixture() {
   const candidate = structuredClone(source);
   candidate.capturedAt = '2026-10-07T00:00:00.000Z';
   candidate.identities['src/builders/enemyGLTF.js'] = 'a'.repeat(64);
+  candidate.identities[MANIFEST_PATH] = sha256(runtimeDependencyBytes().manifestBytes);
   const identity = sha256(JSON.stringify(candidate.identities));
   for (const s of candidate.samples) {
     s.sourceIdentitySha256 = identity;
@@ -30,6 +32,77 @@ function fixture() {
   return candidate;
 }
 const verify = candidate => verifyCandidate(frozen, budgetBytes, candidate, Buffer.from(JSON.stringify(candidate)));
+
+for (const [name, value] of [['missing', undefined], ['stale', 'b'.repeat(64)]])
+  test('pure V2 rejects ' + name + ' runtime dependency even when old budget did not list it', () => {
+    assert.equal(frozen.referenceIdentities[MANIFEST_PATH], undefined);
+    const candidate = fixture(); delete candidate.identities[MANIFEST_PATH];
+    if (value) candidate.identities[MANIFEST_PATH] = value;
+    const identity = sha256(JSON.stringify(candidate.identities));
+    for (const sample of candidate.samples) sample.sourceIdentitySha256 = identity;
+    assert.throws(() => verify(candidate), /runtime manifest identity/);
+  });
+test('pure V2 rejects newly hashed cadence and forged acceptance fields', () => {
+  const bytes = runtimeDependencyBytes(), manifest = JSON.parse(bytes.manifestBytes);
+  manifest.actions.find(action => action.id === 'walk_forward').cycleDisplacement = 12;
+  const manifestBytes = Buffer.from(JSON.stringify(manifest)), candidate = fixture();
+  candidate.identities[MANIFEST_PATH] = sha256(manifestBytes);
+  const run = dependencyBytes => verifyCandidate(frozen, budgetBytes, candidate,
+    Buffer.from(JSON.stringify(candidate)), dependencyBytes);
+  assert.throws(() => run({ ...bytes, manifestBytes }), /differs from protected accepted bytes/);
+  const provenance = JSON.parse(bytes.provenanceBytes);
+  provenance.originalMotion.manifestSha256 = sha256(manifestBytes);
+  const provenanceBytes = Buffer.from(JSON.stringify(provenance));
+  candidate.identities[PROVENANCE_PATH] = sha256(provenanceBytes);
+  assert.throws(() => run({ manifestBytes, provenanceBytes }), /protected provenance identity/);
+});
+test('actual CLI rejects missing and stale manifest identities in historical candidates', async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), 'vod-budget-dependency-'));
+  try {
+    for (const identity of [undefined, 'b'.repeat(64)]) {
+      const report = structuredClone(source);
+      if (identity) report.identities[MANIFEST_PATH] = identity;
+      const candidate = path.join(directory, 'candidate.json');
+      await writeFile(candidate, JSON.stringify(report));
+      const result = spawnSync(process.execPath, [cli, 'verify', '--budget',
+        path.resolve('.planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-budget-view-v2.json'),
+        '--candidate', candidate], { encoding: 'utf8' });
+      assert.equal(result.status, 1); assert.match(result.stderr, /runtime manifest identity/);
+    }
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
+test('actual CLI rejects manifest-only mutation and forged accepted fields in an owned copy', async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), 'vod-budget-unaccepted-'));
+  try {
+    const art = path.join(directory, 'tools/art');
+    const evidence = '.planning/phases/07-movement-matched-and-action-safe-animation/evidence';
+    await mkdir(art, { recursive: true }); await mkdir(path.join(directory, evidence), { recursive: true });
+    for (const name of ['animation-budget-v2.mjs', 'runtime-dependencies.mjs', 'provenance.json', 'motion-manifest.json'])
+      await writeFile(path.join(art, name), await readFile(path.join('tools/art', name)));
+    for (const name of ['07-baseline.json', '07-budget.json', '07-budget-view-v2.json',
+      '07-09-view-reference-v2.json', '07-09-cost-report.json'])
+      await writeFile(path.join(directory, evidence, name), await readFile(path.join(evidence, name)));
+    const bytes = runtimeDependencyBytes(), manifest = JSON.parse(bytes.manifestBytes);
+    manifest.actions.find(action => action.id === 'walk_forward').cycleDisplacement = 12;
+    const manifestBytes = Buffer.from(JSON.stringify(manifest));
+    await writeFile(path.join(art, 'motion-manifest.json'), manifestBytes);
+    const report = fixture(); report.identities[MANIFEST_PATH] = sha256(manifestBytes);
+    const candidate = path.join(directory, 'candidate.json');
+    const run = () => spawnSync(process.execPath, [path.join(art, 'animation-budget-v2.mjs'), 'verify',
+      '--budget', path.join(directory, evidence, '07-budget-view-v2.json'), '--candidate', candidate], { encoding: 'utf8' });
+    await writeFile(candidate, JSON.stringify(report));
+    const changed = run(); assert.equal(changed.status, 1);
+    assert.match(changed.stderr, /differs from protected accepted bytes/);
+    const provenance = JSON.parse(bytes.provenanceBytes);
+    provenance.originalMotion.manifestSha256 = sha256(manifestBytes);
+    const provenanceBytes = Buffer.from(JSON.stringify(provenance));
+    await writeFile(path.join(art, 'provenance.json'), provenanceBytes);
+    report.identities[PROVENANCE_PATH] = sha256(provenanceBytes);
+    await writeFile(candidate, JSON.stringify(report));
+    const forged = run(); assert.equal(forged.status, 1);
+    assert.match(forged.stderr, /protected provenance identity/);
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
 
 function changeIdentity(candidate, name) {
   candidate.identities[name] = 'b'.repeat(64);
