@@ -34,8 +34,16 @@ export function requirePlan09(identities, summary, qualification) {
   const frontmatter = summary.replaceAll('\r\n', '\n').match(/^---\n([\s\S]*?)\n---(?:\n|$)/);
   const lines = frontmatter?.[1].split('\n') ?? [];
   const statuses = lines.filter(line => /^(?:status\b|['"]status['"])/.test(line));
+  // Restrict root keys to the summary's plain mapping form. Quoted/escaped or
+  // explicit YAML keys could otherwise hide a second root status. A scalar
+  // status cannot itself own an indented mapping/sequence.
+  const rootLines = lines.filter(line => line && !/^[ #]/.test(line));
+  const statusIndex = lines.indexOf(statuses[0]);
+  const statusChildren = lines.slice(statusIndex + 1).find(line => line.trim() && !/^ *#/.test(line));
   assert.ok(frontmatter && statuses.length === 1 && /^status: complete *$/.test(statuses[0])
-    && !lines.some(line => /^<<\s*:|^\t/.test(line)), 'Plan09 is missing, halted or unqualified');
+    && rootLines.every(line => /^[A-Za-z][A-Za-z0-9_-]*:/.test(line))
+    && !/^ /.test(statusChildren ?? '')
+    && !lines.some(line => /^\t/.test(line)), 'Plan09 is missing, halted or unqualified');
   verifyRuntimeDependencies(identities);
   assert.equal(qualification?.complete, true, 'Missing complete plan09 qualification');
   assert.deepEqual(qualification.identities, identities, 'Stale plan09 qualification');
