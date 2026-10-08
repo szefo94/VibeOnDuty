@@ -27,7 +27,13 @@ export function requireStableGates(identities, evidence) {
   return true;
 }
 export function requirePlan09(identities, summary, qualification) {
-  assert.match(summary, /^status: complete\s*$/m, 'Plan09 is missing, halted or unqualified');
+  // Accept the canonical root scalar only, never historical body text or a
+  // nested YAML status. Ambiguous/noncanonical status syntax fails closed.
+  const frontmatter = summary.replaceAll('\r\n', '\n').match(/^---\n([\s\S]*?)\n---(?:\n|$)/);
+  const lines = frontmatter?.[1].split('\n') ?? [];
+  const statuses = lines.filter(line => /^(?:status\b|['"]status['"])/.test(line));
+  assert.ok(frontmatter && statuses.length === 1 && /^status: complete *$/.test(statuses[0])
+    && !lines.some(line => /^<<\s*:|^\t/.test(line)), 'Plan09 is missing, halted or unqualified');
   assert.equal(qualification?.complete, true, 'Missing complete plan09 qualification');
   assert.deepEqual(qualification.identities, identities, 'Stale plan09 qualification');
   assert.equal(qualification.applicableBudgetPass, true, 'Plan09 fixed-V2 acceptance is unqualified');
