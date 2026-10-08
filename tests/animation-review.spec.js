@@ -1,12 +1,20 @@
 import { test, expect } from '@playwright/test';
 import { createServer } from 'vite';
 import { writeFile, mkdir } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createServer as portProbe } from 'node:net';
+import { once } from 'node:events';
 import { startMpFixture } from './helpers/mpServer.js';
 
+const ROOT = fileURLToPath(new URL('../', import.meta.url));
 let server, url;
 test.beforeAll(async () => {
-  server = await createServer({ root: 'C:/Programowanie/VibeOnDuty', base: '/',
-    server: { host: '127.0.0.1', port: 0, watch: { ignored: ['**/.planning/**', '**/tools/art/sources/**'] } } });
+  const probe = portProbe(); probe.listen(0, '127.0.0.1'); await once(probe, 'listening');
+  const port = probe.address().port; await new Promise(resolve => probe.close(resolve));
+  server = await createServer({ root: ROOT, base: '/',
+    server: { host: '127.0.0.1', port, strictPort: true,
+      watch: { ignored: ['**/.planning/**', '**/tools/art/sources/**'] } } });
   await server.listen(); url = `http://127.0.0.1:${server.httpServer.address().port}/`;
 });
 test.afterAll(async () => { await server?.close(); });
@@ -138,7 +146,7 @@ test('UI-09/16: sixteen actual scenarios and all three views use one accepted ac
     if(['supersprint','slide','dive','prone','sprint-reload'].includes(scenario))await expect(page.locator('#animation-review-status')).toContainText('Preview —');
   }
   for(const view of ['first','down','third']) {await page.getByLabel('View',{exact:true}).selectOption(view);await expect(page.getByRole('button',{name:'Play transition',exact:true})).toBeEnabled();}
-  const evidence='C:/Programowanie/VibeOnDuty/.planning/research/.cache/07-08-qualified';
+  const evidence=path.join(ROOT,'.planning/research/.cache/07-08-qualified');
   await mkdir(evidence,{recursive:true}); const observations=[];
   for(const tier of ['low','medium','high']) {
     await page.getByRole('button',{name:'Close review',exact:true}).click();
