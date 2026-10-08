@@ -1,0 +1,46 @@
+{
+  "observedAt": "2026-10-08T05:14:02.964Z",
+  "scope": "runtime-dependency binding only; no animation capture or full qualification",
+  "runtimeDependencies": {
+    "manifestPath": "tools/art/motion-manifest.json",
+    "manifestSha256": "af139b82f372c8b66c994a519fbe5a685cae23dc5b5153c8607578ef02f296c5",
+    "provenancePath": "tools/art/provenance.json",
+    "provenanceSha256": "7b8b9b5cfb2f86c2d0890dbc7042c1d010a9196ac6fed75b21a54318e4c451f6",
+    "acceptedManifestSha256": "af139b82f372c8b66c994a519fbe5a685cae23dc5b5153c8607578ef02f296c5"
+  },
+  "currentSourceIdentitySha256": "6d6c7f122e039d04d286202d0d5805f473c4d8047f8319cbb85318d0df0ba4dc",
+  "captureSampler": "2720e51eed272c40fe9e12ff561e4d63072f9b7548b5c270a71ec0ae527ab83f",
+  "producerContractSha256": "035432f721cb0661a82c288d3b5e92ce4d631a48da5bc6fbb73022897960f5e0",
+  "protectedEvidence": {
+    "07-baseline.json": "177686a0759ca5b7dc4311e2a6e4bdba15b6c9a844546d51ad1690c00b1b0b20",
+    "07-budget.json": "66722a272115cdc1145cf1af97a1cb583389d7ea5adb75a4534445c15a14e1ff",
+    "07-09-view-reference-v2.json": "6d5fd41136766209445b9694dfb0ffdf269d4a1887cffadba868dcad8a8b6aef",
+    "07-budget-view-v2.json": "6f0bf775eda9061b601023d5890a50248668a3bccbec48eeaeb7f84e7a64ba34"
+  },
+  "certification": false,
+  "humanMotionAcceptance": "pending",
+  "applicableBudgetPass": false,
+  "legacyBudgetPass": false,
+  "legacyCameraWorkloadComparable": false,
+  "plan09Status": "halted",
+  "plan10Status": "halted",
+  "fullSuiteQualification": false,
+  "historicalCollectorRed": {
+    "historicalRevision": "773dbb6",
+    "mutatedOnly": "walk_forward.cycleDisplacement=12",
+    "manifestReads": 0,
+    "manifestListed": false,
+    "identitiesEqual": true,
+    "scope": "in-memory historical collector regression reproduction; no capture or acceptance"
+  },
+  "verification": {
+    "environment": "main checkout; CLI mutation controls in owned OS-temp copies; shallow/portability probes in ignored owned checkout",
+    "tools": {
+      "command": "node --test tools/art/animation-capture.test.mjs tools/art/animation-budget-v2.test.mjs tools/art/runtime-dependencies.test.mjs",
+      "pass": 90,
+      "fail": 0,
+      "log": ".planning/research/.cache/07-review-fix-tools-final-green.log",
+      "logSha256": "27c92c9493ff6f3ebb0578ec6b801eee0650afa8d693b4dfa624068ef3dc1366"
+    }
+  }
+}
