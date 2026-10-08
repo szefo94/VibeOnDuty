@@ -12,7 +12,7 @@ import bpy
 from mathutils import Matrix, Quaternion, Vector
 
 p = argparse.ArgumentParser()
-p.add_argument('--mode', choices=['author', 'export', 'edit', 'script-fixture', 'invalid-fixture'], required=True)
+p.add_argument('--mode', choices=['author', 'export', 'edit', 'correct-crouch', 'script-fixture', 'invalid-fixture'], required=True)
 p.add_argument('--source')
 p.add_argument('--manifest', required=True)
 p.add_argument('--baseline', required=True)
@@ -78,6 +78,13 @@ def world_hinge(arm, name, axis, angle):
     local_axis = rest_world(arm, pb.name).to_quaternion().inverted() @ Vector(axis)
     pb.rotation_quaternion = Quaternion(local_axis, angle)
 
+def compose_world_hinge(arm, name, axis, angle):
+    """Add a world-plane stride to the existing crouch joint, including its parent pose."""
+    bpy.context.view_layer.update()
+    pb = arm.pose.bones['donor_' + name]
+    local_axis = pose_world(arm, pb).to_quaternion().inverted() @ Vector(axis)
+    pb.rotation_quaternion = pb.rotation_quaternion @ Quaternion(local_axis, angle)
+
 def place_arm(arm, side, hand_target):
     upper = arm.pose.bones['donor_upperarm_' + side]
     lower = arm.pose.bones['donor_lowerarm_' + side]
@@ -130,9 +137,18 @@ def original_pose(donor, spec, t):
             world_hinge(donor, 'foot_'+side, (1,0,0), .14 * stride)
             world_hinge(donor, 'ball_'+side, (1,0,0), -.16 * max(0, stride))
         if kind.startswith('crouch'):
-            world_hinge(donor, 'thigh_'+side, (1,0,0), .72 + (.13*stride if lower_body else 0))
+            direction = spec['direction']
+            sagittal = .13*stride if lower_body and direction=='forward' else -.13*stride if lower_body and direction=='back' else 0
+            world_hinge(donor, 'thigh_'+side, (1,0,0), .72 + sagittal)
             world_hinge(donor, 'calf_'+side, (1,0,0), -1.35)
             world_hinge(donor, 'foot_'+side, (1,0,0), .63)
+            if lower_body and direction in ['left', 'right']:
+                lateral = .13*stride * (1 if direction=='left' else -1)
+                compose_world_hinge(donor, 'thigh_'+side, (0,1,0), lateral)
+                # Counter-roll at the ankle keeps the crouch contact sole level.
+                compose_world_hinge(donor, 'foot_'+side, (0,1,0), -lateral)
+            if lower_body and direction=='back':
+                world_hinge(donor, 'ball_'+side, (1,0,0), -.16 * max(0, -stride))
         if kind.startswith('jump'):
             compress = math.sin(math.pi*t) if kind != 'jump_loop' else .55+.03*math.sin(phase)
             world_hinge(donor, 'thigh_'+side, (1,0,0), .4 * compress)
@@ -413,6 +429,32 @@ if args.mode == 'author':
     author()
 elif args.mode == 'export':
     export()
+elif args.mode == 'correct-crouch':
+    # Retain the inspectable original donor and all unrelated action curves.
+    # Only these three original actions are reauthored, never inherited actions.
+    donor, actions = load_donor()
+    corrected = []
+    for spec in manifest['actions']:
+        if spec['id'] not in ['crouch_back', 'crouch_left', 'crouch_right']:
+            continue
+        action = actions[spec['id']]
+        donor.animation_data.action = action
+        donor.animation_data.action_slot = action.slots[0]
+        for frame in range(spec['frames'][0], spec['frames'][1] + 1):
+            bpy.context.scene.frame_set(frame)
+            for pb in donor.pose.bones:
+                pb.rotation_mode = 'QUATERNION'
+                pb.rotation_quaternion = (1, 0, 0, 0)
+                pb.location = (0, 0, 0)
+            original_pose(donor, spec, (frame-spec['frames'][0])/(spec['frames'][1]-spec['frames'][0]))
+            for name, target_name in spec['boneMap'].items():
+                donor.pose.bones[name].keyframe_insert('rotation_quaternion', frame=frame, group=name)
+                if target_name=='pelvis' and spec['bodyDrop']:
+                    donor.pose.bones[name].keyframe_insert('location', frame=frame, group=name)
+        corrected.append(spec['id'])
+    if corrected != ['crouch_back', 'crouch_left', 'crouch_right']:
+        raise RuntimeError('Expected exact crouch correction actions')
+    bpy.ops.wm.save_as_mainfile(filepath=args.out, check_existing=False)
 elif args.mode == 'edit':
     donor, actions = load_donor()
     if not math.isfinite(args.gain) or not 1.01 <= args.gain <= 1.2:
