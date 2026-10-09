@@ -16,16 +16,69 @@ export const REQUIRED_ASSERTIONS = [
   'tests/animation-regressions.spec.js#repeated-removal-keeper',
 ];
 export const REQUIRED_STABLE_GATES = ['lint', 'typecheck', 'typecheck:mp', 'build', 'unit', 'offline', 'multiplayer'];
-// RED-phase stub (07-12): real implementation lands in the GREEN commit.
+// Natural death and respawn are bounded in observed game seconds (the sum of the
+// capped frame intervals the game itself applies), not wall time: a software
+// rendered game advances far fewer simulation seconds than wall seconds. The wall
+// guards only turn a stalled game into its own non-passing outcome.
 export const NATURAL_DEATH_SIM_SECONDS = 120;
 export const NATURAL_RESPAWN_SIM_SECONDS = 20;
 export const NATURAL_DEATH_WALL_GUARD_MS = 1200000;
 export const NATURAL_RESPAWN_WALL_GUARD_MS = 300000;
-export const COLLECTION_LIFETIME_PROJECTION = Object.freeze({ recordedMatrix: 0, fallbackRows: 0,
-  combatUnions: 0, energyAndThrow: 0, onlineUnions: 0 });
-export const COLLECTION_LIFETIME_MS = 90 * 60 * 1000;
-export function independentTracerComplete() { return undefined; }
-export function simulationBudget() { return { outcome: 'pending', simSeconds: 0, wallMs: 0 }; }
+// Frame-delta cap applied by src/loop.js (`Math.min(0.05, ...)`); a read only.
+const SIM_FRAME_CAP_SECONDS = 0.05;
+export const COLLECTION_LIFETIME_PROJECTION = Object.freeze({
+  recordedMatrix: 3754085, // 2026-10-07 independent matrix: 42 rows, 9 previews, gait unions, no combat union
+  fallbackRows: 358846, // separate Low/P90-fallback recovery of the three rows that matrix lacked
+  combatUnions: 3 * (NATURAL_DEATH_WALL_GUARD_MS + NATURAL_RESPAWN_WALL_GUARD_MS), // worst case: every guard expires
+  energyAndThrow: 3 * (120000 + 30000),
+  onlineUnions: 3 * 600000, // allowance per tier for a completed two-client union
+});
+const LIFETIME_STEP_MS = 600000;
+export const COLLECTION_LIFETIME_MS = Math.ceil(Object.values(COLLECTION_LIFETIME_PROJECTION)
+  .reduce((sum, value) => sum + value, 0) / LIFETIME_STEP_MS) * LIFETIME_STEP_MS;
+// samples: observer records { wallMs, simSeconds, ...fields } in time order, the first
+// being the start of the wait. Returns met / sim-expired / pending.
+export function simulationBudget(samples, limitSimSeconds, predicate) {
+  let previous = -Infinity;
+  for (const sample of samples) {
+    assert.ok(Number.isFinite(sample.simSeconds), 'Observer sample simSeconds must be finite');
+    assert.ok(sample.simSeconds >= previous, 'Observer sample simSeconds must not decrease');
+    previous = sample.simSeconds;
+  }
+  if (samples.length < 2) return { outcome: 'pending', simSeconds: 0, wallMs: 0 };
+  const first = samples[0];
+  for (const sample of samples) {
+    const simSeconds = sample.simSeconds - first.simSeconds, wallMs = sample.wallMs - first.wallMs;
+    if (simSeconds > limitSimSeconds) return { outcome: 'sim-expired', simSeconds, wallMs };
+    if (predicate(sample)) return { outcome: 'met', simSeconds, wallMs };
+  }
+  const last = samples.at(-1), simSeconds = last.simSeconds - first.simSeconds, wallMs = last.wallMs - first.wallMs;
+  return { outcome: simSeconds >= limitSimSeconds ? 'sim-expired' : 'pending', simSeconds, wallMs };
+}
+async function waitSimulation(page, { what, limitSimSeconds, wallGuardMs, sample }) {
+  const samples = [], began = Date.now();
+  for (;;) {
+    samples.push(await page.evaluate(sample.read, sample.argument));
+    const result = simulationBudget(samples, limitSimSeconds, sample.predicate);
+    if (result.outcome === 'met') return result;
+    if (result.outcome === 'sim-expired')
+      throw new Error(`Natural ${what} did not occur within ${limitSimSeconds} simulation seconds`
+        + ` (observed ${result.simSeconds.toFixed(1)} simulation seconds, ${result.wallMs.toFixed(0)} wall ms)`);
+    if (Date.now() - began >= wallGuardMs)
+      throw new Error(`Wall guard expired before the simulation bound (${what}): observed `
+        + `${result.simSeconds.toFixed(1)} simulation seconds in ${Date.now() - began} wall ms, guard ${wallGuardMs} ms`);
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+}
+export function independentTracerComplete(report) {
+  return !!(report.tracer && report.matrix.length === 1 && report.matrix[0].completed
+    && report.matrix[0].media?.bytes > 0 && report.offlineMovement.length === 1 && report.offlineMovement[0].complete
+    && report.sharedMovement.length === 1 && report.sharedMovement[0].complete
+    && report.previews.length === 1 && report.previews[0].completed && report.previews[0].media?.bytes > 0
+    && report.offlineCombat.length === 1 && report.offlineCombat[0].complete
+    && report.offlineCombat[0].media?.bytes > 0 && report.protectedBytesUnchanged && !report.canceled
+    && !report.collectionErrors.length);
+}
 export function requireStableGates(identities, evidence) {
   verifyRuntimeDependencies(identities);
   assert.deepEqual(evidence?.identities, identities, 'Stale or missing stable gate identities');
@@ -127,10 +180,10 @@ async function installObserver(page) {
     const p = await import('/src/entities/player.js'), g = await import('/src/builders/enemyGLTF.js');
     const world = await import('/src/scene.js'), view = await import('/src/loop.js');
     const quality = await import('/src/graphicsQuality.js'), mode = await import('/src/modes/modeManager.js');
-    const history = [], recentFrames = []; let frames = 0, dropped = 0, raf, key = '';
+    const history = [], recentFrames = []; let frames = 0, dropped = 0, raf, key = '', sim = 0, lastTs = null;
     const read = () => {
       const player = p.player;
-      return { wallMs: performance.now(), mixerTime: g.playerMixer?.time, mode: mode.getMode()?.name,
+      return { wallMs: performance.now(), simSeconds: sim, mixerTime: g.playerMixer?.time, mode: mode.getMode()?.name,
         weapon: player.weapon, ammo: player.ammo, reserve: player.reserve, hp: player.hp, energy: player.energy,
         dead: player.dead, reloadMs: player.reloadTimer, reloading: player.reloading,
         punching: player.punching, throwingNade: player.throwingNade, aiming: player.aiming, aimT:player.aimT,
@@ -142,6 +195,9 @@ async function installObserver(page) {
           .map(h => ({weapon: h.weapon, contacts: h.contacts ? structuredClone(h.contacts) : null})) };
     };
     const tick = () => {
+      const now = performance.now();
+      if (lastTs !== null) sim += Math.min((now - lastTs) / 1000, 0.05);
+      lastTs = now;
       frames++; const sample = read();
       recentFrames.push(sample);
       if (recentFrames.length > 16) recentFrames.shift();
@@ -153,6 +209,7 @@ async function installObserver(page) {
       raf = requestAnimationFrame(tick);
     };
     window.__movingRead = read;
+    window.__movingSim = () => sim;
     window.__movingSince = time => history.filter(s => s.wallMs >= time);
     window.__movingFrames = () => recentFrames;
     window.__movingObserverInfo = () => ({ frames, dropped, samples: history.length,
@@ -309,10 +366,20 @@ async function earnedCombatUnion(page, tier, recordStep) {
   const teams = await page.evaluate(async()=>(await import('/src/entities/enemies.js')).enemies.map(e=>e.sndTeam));
   await page.evaluate(()=>window.__combatDriverApproach());
   try {
-    await page.waitForFunction(time=>window.__movingSince(time).some(s=>s.dead),start,{timeout:60000});
-    await recordStep('natural-death',{observations:await page.evaluate(time=>window.__movingSince(time),start)});
-    await page.waitForFunction(()=>!window.__movingRead().dead,null,{timeout:45000});
-    await recordStep('natural-respawn',{sample:await observe(page,'respawn')});
+    const deathWait=await waitSimulation(page,{what:'death',limitSimSeconds:NATURAL_DEATH_SIM_SECONDS,
+      wallGuardMs:NATURAL_DEATH_WALL_GUARD_MS,sample:{argument:start,
+        read:since=>({wallMs:performance.now(),simSeconds:window.__movingSim(),dead:window.__movingSince(since).some(s=>s.dead)}),
+        predicate:s=>s.dead}});
+    console.log(`Moving combat ${tier} natural death: ${deathWait.simSeconds.toFixed(1)} simulation seconds, ${deathWait.wallMs.toFixed(0)} wall ms (guard ${NATURAL_DEATH_WALL_GUARD_MS} ms)`);
+    await recordStep('natural-death',{observations:await page.evaluate(time=>window.__movingSince(time),start),
+      wait:{simSeconds:deathWait.simSeconds,wallMs:deathWait.wallMs,limitSimSeconds:NATURAL_DEATH_SIM_SECONDS,wallGuardMs:NATURAL_DEATH_WALL_GUARD_MS}});
+    const respawnWait=await waitSimulation(page,{what:'respawn',limitSimSeconds:NATURAL_RESPAWN_SIM_SECONDS,
+      wallGuardMs:NATURAL_RESPAWN_WALL_GUARD_MS,sample:{argument:null,
+        read:()=>({wallMs:performance.now(),simSeconds:window.__movingSim(),dead:window.__movingRead().dead}),
+        predicate:s=>!s.dead}});
+    console.log(`Moving combat ${tier} natural respawn: ${respawnWait.simSeconds.toFixed(1)} simulation seconds, ${respawnWait.wallMs.toFixed(0)} wall ms (guard ${NATURAL_RESPAWN_WALL_GUARD_MS} ms)`);
+    await recordStep('natural-respawn',{sample:await observe(page,'respawn'),
+      wait:{simSeconds:respawnWait.simSeconds,wallMs:respawnWait.wallMs,limitSimSeconds:NATURAL_RESPAWN_SIM_SECONDS,wallGuardMs:NATURAL_RESPAWN_WALL_GUARD_MS}});
   }finally{await page.evaluate(()=>window.__combatDriverDispose());}
   return {tier,kind:'actual-earned-resource-combat-union',complete:true, earned,teams,
     aimProof:await page.evaluate(()=>window.__combatDriverProgress()),
@@ -662,7 +729,7 @@ export async function captureAnimationReview(getIdentities, { tracer = false, co
   process.once('SIGINT', cancel); process.once('SIGTERM', cancel);
   // Bound only the owned collection lifetime. Normal capped game clocks and
   // full-pixel video remain unchanged on slow, concurrently occupied hosts.
-  const deadline = setTimeout(cancel, 90 * 60 * 1000);
+  const deadline = setTimeout(cancel, COLLECTION_LIFETIME_MS);
   const cancellationFile=path.join(directory,'cancel.request');
   const cancellationPoll=setInterval(()=>{void fs.access(cancellationFile).then(cancel,()=>{});},1000);
   report.cancellationFile=relative(cancellationFile);
@@ -747,12 +814,7 @@ export async function captureAnimationReview(getIdentities, { tracer = false, co
   report.complete = report.matrixComplete && report.plan09Qualified && report.actualV2.passed
     && report.stableGatesPass && report.protectedBytesUnchanged && report.creatorTracer.complete && !report.collectionErrors.length;
   report.status = report.complete ? 'automated-qualified-human-pending' : 'partial';
-  report.independentTracerComplete=tracer&&report.matrix.length===1&&report.matrix[0].completed
-    &&report.matrix[0].media?.bytes>0&&report.offlineMovement.length===1&&report.offlineMovement[0].complete
-    &&report.sharedMovement.length===1&&report.sharedMovement[0].complete
-    &&report.previews.length===1&&report.previews[0].completed&&report.previews[0].media?.bytes>0
-    &&report.offlineCombat.length===1&&report.offlineCombat[0].complete
-    &&report.offlineCombat[0].media?.bytes>0&&report.protectedBytesUnchanged&&!report.canceled&&!report.collectionErrors.length;
+  report.independentTracerComplete=independentTracerComplete({...report,tracer});
   report.independentCombatProbeComplete=combatProbe&&report.offlineCombat.length===1&&report.offlineCombat[0].complete
     &&report.offlineCombat[0].media?.bytes>0&&report.protectedBytesUnchanged&&!report.canceled&&!report.collectionErrors.length;
   report.independentViewTracerComplete=viewTracer&&report.matrix.length===3&&report.matrix.every(e=>e.completed&&e.media?.bytes>0)
