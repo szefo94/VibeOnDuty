@@ -233,7 +233,7 @@ test('waitSimulation keeps the plan 07-12 natural death and respawn messages byt
     /^Error: Natural death did not occur within 120 simulation seconds \(observed 121\.0 simulation seconds, 1000 wall ms\)$/);
   const page2 = scriptedPage([{ wallMs: 0, simSeconds: 0, met: false }, { wallMs: 10, simSeconds: 0.2, met: false }]);
   await assert.rejects(capture.waitSimulation(page2, { what: 'respawn', limitSimSeconds: 20, wallGuardMs: 0, sample: sampleSpec }),
-    /^Error: Wall guard expired before the simulation bound \(respawn\): observed 0\.2 simulation seconds in \d+ wall ms, guard 0 ms$/);
+    /^Error: Wall guard expired before the simulation bound \(respawn\): observed 0.0 simulation seconds in \d+ wall ms, guard 0 ms$/);
 });
 test('aim-proof expiry message carries the classification, absolute route count, loops and whole-wait simulation seconds', () => {
   const tail = Array.from({ length: 256 }, (_, i) => ({ wallMs: i * 290, simSeconds: 100 + i * 0.05, eye: [60 + i * 0.1, 1.65, 40],

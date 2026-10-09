@@ -26,11 +26,23 @@ export const NATURAL_DEATH_WALL_GUARD_MS = 1200000;
 export const NATURAL_RESPAWN_WALL_GUARD_MS = 300000;
 // Frame-delta cap applied by src/loop.js (`Math.min(0.05, ...)`); a read only.
 const SIM_FRAME_CAP_SECONDS = 0.05;
+// Remaining game-time waits on the combat-union path and the per-row game-event waits
+// are bounded the same way. Sizing: 60 simulation seconds is more than three walks of
+// the 104 m route loop; wall guards are sized near seven wall seconds per simulation
+// second with slack.
+export const AIM_PROOF_SIM_SECONDS = 60;
+export const AIM_PROOF_WALL_GUARD_MS = 600000;
+export const ENERGY_SIM_SECONDS = 90;
+export const ENERGY_WALL_GUARD_MS = 900000;
+export const THROW_SIM_SECONDS = 10;
+export const THROW_WALL_GUARD_MS = 180000;
+export const ROW_ACTION_SIM_SECONDS = 10;
+export const ROW_ACTION_WALL_GUARD_MS = 180000;
 export const COLLECTION_LIFETIME_PROJECTION = Object.freeze({
   recordedMatrix: 3754085, // 2026-10-07 independent matrix: 42 rows, 9 previews, gait unions, no combat union
   fallbackRows: 358846, // separate Low/P90-fallback recovery of the three rows that matrix lacked
   combatUnions: 3 * (NATURAL_DEATH_WALL_GUARD_MS + NATURAL_RESPAWN_WALL_GUARD_MS), // worst case: every guard expires
-  energyAndThrow: 3 * (120000 + 30000),
+  acquisitionWaits: 3 * (AIM_PROOF_WALL_GUARD_MS + ENERGY_WALL_GUARD_MS + THROW_WALL_GUARD_MS), // worst case: every guard expires
   onlineUnions: 3 * 600000, // allowance per tier for a completed two-client union
 });
 const LIFETIME_STEP_MS = 600000;
@@ -55,20 +67,41 @@ export function simulationBudget(samples, limitSimSeconds, predicate) {
   const last = samples.at(-1), simSeconds = last.simSeconds - first.simSeconds, wallMs = last.wallMs - first.wallMs;
   return { outcome: simSeconds >= limitSimSeconds ? 'sim-expired' : 'pending', simSeconds, wallMs };
 }
-async function waitSimulation(page, { what, limitSimSeconds, wallGuardMs, sample }) {
+// sample.read runs in the page and returns { wallMs, simSeconds, ...fields }; sample.predicate
+// tests the fields. An optional label replaces the 'Natural <what>' prefix of the simulation
+// expiry message. The thrown error carries the final budget result as error.wait.
+export async function waitSimulation(page, { what, label, limitSimSeconds, wallGuardMs, sample }) {
   const samples = [], began = Date.now();
   for (;;) {
     samples.push(await page.evaluate(sample.read, sample.argument));
     const result = simulationBudget(samples, limitSimSeconds, sample.predicate);
     if (result.outcome === 'met') return result;
-    if (result.outcome === 'sim-expired')
-      throw new Error(`Natural ${what} did not occur within ${limitSimSeconds} simulation seconds`
-        + ` (observed ${result.simSeconds.toFixed(1)} simulation seconds, ${result.wallMs.toFixed(0)} wall ms)`);
-    if (Date.now() - began >= wallGuardMs)
-      throw new Error(`Wall guard expired before the simulation bound (${what}): observed `
-        + `${result.simSeconds.toFixed(1)} simulation seconds in ${Date.now() - began} wall ms, guard ${wallGuardMs} ms`);
+    if (result.outcome === 'sim-expired') {
+      const error = new Error((label ?? 'Natural ' + what) + ' did not occur within ' + limitSimSeconds + ' simulation seconds'
+        + ' (observed ' + result.simSeconds.toFixed(1) + ' simulation seconds, ' + result.wallMs.toFixed(0) + ' wall ms)');
+      error.wait = result; throw error;
+    }
+    if (Date.now() - began >= wallGuardMs) {
+      const error = new Error('Wall guard expired before the simulation bound (' + (label ?? what) + '): observed '
+        + result.simSeconds.toFixed(1) + ' simulation seconds in ' + (Date.now() - began) + ' wall ms, guard ' + wallGuardMs + ' ms');
+      error.wait = result; throw error;
+    }
     await new Promise(resolve => setTimeout(resolve, 250));
   }
+}
+// Per-row game-event wait: the awaited condition is computed in the page, unchanged, as one boolean.
+const rowWait = (page, label, read, argument = null) => waitSimulation(page, { what: label, label,
+  limitSimSeconds: ROW_ACTION_SIM_SECONDS, wallGuardMs: ROW_ACTION_WALL_GUARD_MS,
+  sample: { argument, read, predicate: s => s.met === true } });
+// Suffix for an aim-proof expiry: classifies the whole wait from the driver's absolute route
+// counter (not from the retained window) and names the wait's own total simulation seconds.
+export function describeAimProofExpiry(progress, wait) {
+  const d = diagnoseAcquisition(progress);
+  return ' - acquisition diagnosis: ' + d.classification + ', route count ' + d.routeCount + ', '
+    + (d.loopsWalked === null ? 'unknown' : Math.floor(d.loopsWalked)) + ' whole loops walked ('
+    + (d.loopsWalked === null ? 'n/a' : d.loopsWalked) + '), final-third displacement '
+    + (d.finalThirdDisplacementM === null ? 'n/a' : d.finalThirdDisplacementM.toFixed(1)) + ' m, wait total '
+    + (wait ? wait.simSeconds.toFixed(1) : 'n/a') + ' simulation seconds / ' + (wait ? wait.wallMs.toFixed(0) : 'n/a') + ' wall ms';
 }
 // Classifies why an aim-proof wait ended without a proof, from the driver's retained
 // progress samples (it keeps only the last 256). `route` is the driver's absolute
@@ -262,18 +295,21 @@ async function weaponSegment(page, specification) {
   await badge(page, `Actual ${specification.tier}/${specification.weapon}/${specification.view} · ADS/fire/physical reload · normal game clock`);
   const start = await observe(page, 'segment-start');
   await page.mouse.down({button:'right'});
-  await page.waitForFunction(({time,third})=>window.__movingFrames().some(s=>s.wallMs>=time
-    &&s.aiming&&s.aimT>=.99&&s.pose?.upper==='ads'&&s.pose.aiming&&s.thirdPerson===third),
+  await rowWait(page, 'ADS settle', ({time,third})=>({wallMs:performance.now(),simSeconds:window.__movingSim(),
+    met:window.__movingFrames().some(s=>s.wallMs>=time
+    &&s.aiming&&s.aimT>=.99&&s.pose?.upper==='ads'&&s.pose.aiming&&s.thirdPerson===third)}),
     {time:start.wallMs,third:specification.view==='third'});
   await page.mouse.down({button:'left'});
-  await page.waitForFunction(ammo => window.__movingRead().ammo < ammo, start.ammo);
+  await rowWait(page, 'Ammo decrease', ammo => ({wallMs:performance.now(),simSeconds:window.__movingSim(),
+    met:window.__movingRead().ammo < ammo}), start.ammo);
   await page.mouse.up({button:'left'}); await page.mouse.up({button:'right'});
   const beforeReload = await observe(page, 'reload-input');
   await page.keyboard.press('KeyR');
-  await page.waitForFunction(time => {
+  await rowWait(page, 'Reload completion', time => {
     const history = window.__movingSince(time), current = window.__movingRead();
-    return history.some(s => s.reloading) && !current.reloading && current.ammo > history.find(s => s.reloading).ammo;
-  }, beforeReload.wallMs, { timeout: 30000 });
+    return {wallMs:performance.now(), simSeconds:window.__movingSim(),
+      met:history.some(s => s.reloading) && !current.reloading && current.ammo > history.find(s => s.reloading).ammo};
+  }, beforeReload.wallMs);
   const observations = await page.evaluate(time => window.__movingSince(time), start.wallMs);
   const end = await observe(page, 'ready-after-reload'); observations.push(end);
   const coverage = { quality: observations.every(o => o.quality === specification.tier),
@@ -293,25 +329,30 @@ async function sharedMovementUnion(page, tier) {
   for (const code of ['KeyW','KeyS','KeyA','KeyD']) {
     const start = (await observe(page,'movement-input')).wallMs;
     await page.keyboard.down(code);
-    try { await page.waitForFunction(time => window.__movingSince(time).some(s => s.pose?.moving), start); }
+    try { await rowWait(page, 'Directional movement', time => ({wallMs:performance.now(),simSeconds:window.__movingSim(),
+      met:window.__movingSince(time).some(s => s.pose?.moving)}), start); }
     finally { await page.keyboard.up(code); }
     observations.push(await observe(page, code));
   }
   const sprintAt = (await observe(page,'sprint-input')).wallMs;
   await page.keyboard.down('ShiftLeft'); await page.keyboard.down('KeyW');
-  try { await page.waitForFunction(time => window.__movingSince(time).some(s => s.pose?.upper === 'sprint'), sprintAt); }
+  try { await rowWait(page, 'Sprint', time => ({wallMs:performance.now(),simSeconds:window.__movingSim(),
+    met:window.__movingSince(time).some(s => s.pose?.upper === 'sprint')}), sprintAt); }
   finally { await page.keyboard.up('KeyW'); await page.keyboard.up('ShiftLeft'); }
   const crouchAt = (await observe(page,'crouch-input')).wallMs;
   await page.keyboard.down('ControlLeft');
-  try { await page.waitForFunction(time => window.__movingSince(time).some(s => s.crouching), crouchAt); }
+  try { await rowWait(page, 'Crouch', time => ({wallMs:performance.now(),simSeconds:window.__movingSim(),
+    met:window.__movingSince(time).some(s => s.crouching)}), crouchAt); }
   finally { await page.keyboard.up('ControlLeft'); }
   const jumpAt = (await observe(page,'jump-input')).wallMs;
   await page.keyboard.press('Space');
-  await page.waitForFunction(time => window.__movingSince(time).some(s => !s.onGround) && window.__movingRead().onGround, jumpAt, {timeout:30000});
+  await rowWait(page, 'Jump and landing', time => ({wallMs:performance.now(),simSeconds:window.__movingSim(),
+    met:window.__movingSince(time).some(s => !s.onGround) && window.__movingRead().onGround}), jumpAt);
   for (const pitch of [-1.3,1.3,0]) { await ordinaryLook(page,Math.PI,pitch); observations.push(await observe(page,'pitch')); }
   const meleeAt = (await observe(page,'melee-reload-input')).wallMs;
   await page.mouse.click(640,480); await page.keyboard.press('KeyR'); await page.keyboard.press('KeyF');
-  await page.waitForFunction(time => window.__movingSince(time).some(s => s.punching && !s.reloading), meleeAt);
+  await rowWait(page, 'Melee', time => ({wallMs:performance.now(),simSeconds:window.__movingSim(),
+    met:window.__movingSince(time).some(s => s.punching && !s.reloading)}), meleeAt);
   const history = await page.evaluate(time => window.__movingSince(time), sprintAt);
   return {tier,kind:'actual-shared-gait-action-union',complete:true, observations,
     history, eligibleActions:['directional','sprint','crouch','jump','pitch','melee-reload-interruption'],
@@ -376,24 +417,44 @@ async function earnedCombatUnion(page, tier, recordStep) {
       window.__combatDriverApproach=()=>{approaching=true;raf=requestAnimationFrame(tick);};
       raf=requestAnimationFrame(tick);
   });
+  let energyWait;
+  const waitFigures=(wait,limit,guard)=>({simSeconds:wait.simSeconds,wallMs:wait.wallMs,limitSimSeconds:limit,wallGuardMs:guard});
+  const waitLog=(name,wait,limit,guard)=>console.log('Moving combat '+tier+' '+name+': '+wait.simSeconds.toFixed(1)
+    +' simulation seconds, '+wait.wallMs.toFixed(0)+' wall ms (bound '+limit+' s, guard '+guard+' ms)');
   try {
-    await page.waitForFunction(()=>window.__combatDriverProgress().some(s=>s.aimProof),null,{timeout:30000});
+    const aimWait=await waitSimulation(page,{what:'aim proof',label:'Aim proof',limitSimSeconds:AIM_PROOF_SIM_SECONDS,
+      wallGuardMs:AIM_PROOF_WALL_GUARD_MS,sample:{argument:null,
+        read:()=>({wallMs:performance.now(),simSeconds:window.__movingSim(),met:window.__combatDriverProgress().some(s=>s.aimProof)}),
+        predicate:s=>s.met===true}}).catch(async error=>{
+      if(error.wait)error.message+=describeAimProofExpiry(await page.evaluate(()=>window.__combatDriverProgress()),error.wait);
+      throw error;});
+    waitLog('accepted-aim',aimWait,AIM_PROOF_SIM_SECONDS,AIM_PROOF_WALL_GUARD_MS);
     const proof=await page.evaluate(()=>window.__combatDriverProgress().find(s=>s.aimProof));
     assert.ok(proof.aimProof.dot>.999,'Normal mouse aim did not align with the observed viable target');
     console.log('Moving combat accepted-aim proof: '+JSON.stringify(proof.aimProof));
-    await recordStep('accepted-aim',{proof});
-    await page.waitForFunction(()=>window.__movingRead().energy>=100,null,{timeout:120000});
+    await recordStep('accepted-aim',{proof,wait:waitFigures(aimWait,AIM_PROOF_SIM_SECONDS,AIM_PROOF_WALL_GUARD_MS)});
+    energyWait=await waitSimulation(page,{what:'grenade energy',label:'Grenade energy',limitSimSeconds:ENERGY_SIM_SECONDS,
+      wallGuardMs:ENERGY_WALL_GUARD_MS,sample:{argument:null,
+        read:()=>({wallMs:performance.now(),simSeconds:window.__movingSim(),met:window.__movingRead().energy>=100}),
+        predicate:s=>s.met===true}});
+    waitLog('earned-resource',energyWait,ENERGY_SIM_SECONDS,ENERGY_WALL_GUARD_MS);
   } catch(error){
     error.combatProgress=await page.evaluate(()=>window.__combatDriverProgress());throw error;
   } finally {await page.evaluate(()=>window.__combatDriverDispose());}
   const earned=await observe(page,'earned-grenade-resource');
   assert.ok(earned.energy>=100,'Normal combat did not earn grenade eligibility within its bound');
-  await recordStep('earned-resource',{earned});
+  await recordStep('earned-resource',{earned,wait:waitFigures(energyWait,ENERGY_SIM_SECONDS,ENERGY_WALL_GUARD_MS)});
   await page.keyboard.press('KeyR');
   const throwAt=(await observe(page,'throw-input')).wallMs;
   await page.mouse.click(640,480,{button:'middle'});
-  await page.waitForFunction(time=>window.__movingSince(time).some(s=>s.throwingNade&&!s.reloading&&s.energy===0),throwAt,{timeout:30000});
-  await recordStep('throw-canceled-reload',{observations:await page.evaluate(time=>window.__movingSince(time),throwAt)});
+  const throwWait=await waitSimulation(page,{what:'throw',label:'Grenade throw',limitSimSeconds:THROW_SIM_SECONDS,
+    wallGuardMs:THROW_WALL_GUARD_MS,sample:{argument:throwAt,
+      read:time=>({wallMs:performance.now(),simSeconds:window.__movingSim(),
+        met:window.__movingSince(time).some(s=>s.throwingNade&&!s.reloading&&s.energy===0)}),
+      predicate:s=>s.met===true}});
+  waitLog('throw-canceled-reload',throwWait,THROW_SIM_SECONDS,THROW_WALL_GUARD_MS);
+  await recordStep('throw-canceled-reload',{observations:await page.evaluate(time=>window.__movingSince(time),throwAt),
+    wait:waitFigures(throwWait,THROW_SIM_SECONDS,THROW_WALL_GUARD_MS)});
   const teams = await page.evaluate(async()=>(await import('/src/entities/enemies.js')).enemies.map(e=>e.sndTeam));
   await page.evaluate(()=>window.__combatDriverApproach());
   try {
@@ -448,12 +509,13 @@ async function blockedWalkUnion(page, tier) {
   await page.keyboard.down('KeyW');
   let blocked;
   try {
-    await page.waitForFunction(() => {
+    await rowWait(page, 'Blocked walk', () => {
       const frames = window.__movingFrames().slice(-3);
-      return frames.length === 3 && frames.every(sample => sample.eye[2] < 4.8
+      return {wallMs:performance.now(), simSeconds:window.__movingSim(),
+        met:frames.length === 3 && frames.every(sample => sample.eye[2] < 4.8
         && sample.pose?.speed < .05 && sample.pose.moving === false && sample.pose.cadence === 0)
-        && Math.hypot(frames[2].eye[0]-frames[0].eye[0],frames[2].eye[2]-frames[0].eye[2]) < .001;
-    }, null, { timeout: 30000 });
+        && Math.hypot(frames[2].eye[0]-frames[0].eye[0],frames[2].eye[2]-frames[0].eye[2]) < .001};
+    });
     const stationary = await page.evaluate(() => window.__movingFrames().slice(-3));
     blocked = {...stationary[0], label:'blocked-held-forward'};
     const stable = {...stationary[2], label:'blocked-still-held-forward'};
@@ -465,7 +527,8 @@ async function blockedWalkUnion(page, tier) {
   } finally {
     await page.keyboard.up('KeyW');
     await page.keyboard.down('KeyS');
-    try { await page.waitForFunction(async z => (await import('/src/scene.js')).camera.position.z >= z, before.eye[2], { timeout: 30000 }); }
+    try { await rowWait(page, 'Blocked walk return', async z => ({wallMs:performance.now(), simSeconds:window.__movingSim(),
+      met:(await import('/src/scene.js')).camera.position.z >= z}), before.eye[2]); }
     finally { await page.keyboard.up('KeyS'); }
   }
 }
@@ -593,7 +656,8 @@ async function previewChain(page, tier, view) {
     await badge(page, label);
     await page.getByRole('button', { name: 'Play transition', exact: true }).click();
     await page.locator('#animation-review').evaluate(node => { node.style.visibility = 'hidden'; });
-    await page.waitForFunction(() => window.__animationReviewDebug()?.phase >= .95, null, { timeout: 30000 });
+    await rowWait(page, 'Preview phase', () => ({wallMs:performance.now(), simSeconds:window.__movingSim(),
+      met:window.__animationReviewDebug()?.phase >= .95}));
     const actor = await page.evaluate(() => window.__animationReviewDebug());
     if (scenario === 'sprint-reload') {
       assert.equal(actor.actor.sample.reloadDurationSeconds, actor.actor.sample.baseReloadSeconds * 1.15);
