@@ -793,7 +793,6 @@
     },
     "registeredCorrectedEqualsWorkingFile": true,
     "registeredCorrectedEqualsCommittedBlob": true,
-    "notCheckedOnAnotherCheckout": "The controls were run on this Windows working copy only (core.autocrlf=true). They read tracked files and a path pinned to LF; no LF-only checkout or fresh clone was made in this plan.",
     "unchangedFrozenFiles": {
       "tools/art/animation-budget-v2.mjs": {
         "workingFileSha256": "65ed6f129f77e4098c32f9b227435a804a483087ee983014199d4834dd09e777",
@@ -818,6 +817,59 @@
       "command": "node tools/art/frozen-bytes.mjs verify",
       "verified": 26,
       "mismatched": 0
+    },
+    "freshCloneCheck": {
+      "recordedAt": "2026-10-09T21:33:14.118Z",
+      "commit": "f7bc7c4",
+      "method": "Two fresh clones of this repository at f7bc7c4 into an OS temp directory outside the project (git clone --no-hardlinks, one with core.autocrlf=true and one with core.autocrlf=false; core.longpaths=true was needed in the clone because of the deep temp path). The project working tree was not touched. The clones were deleted afterwards.",
+      "windowsAutocrlfTrue": {
+        "coreAutocrlf": "true",
+        "mainJsSha256": "51db511fd5249fed908d07ac90929da2e0e2fca11c9014808a332392e88b51f5",
+        "mainJsEqualsRegisteredCorrected": true,
+        "mainJsGitEol": "i/lf w/lf attr/text eol=lf",
+        "otherTextFilesForm": "CR LF (for example src/loop.js w/crlf)",
+        "controls": {
+          "command": "node --test tools/art/motion-promotion.test.mjs tools/art/frozen-bytes.test.mjs",
+          "tests": 18,
+          "pass": 17,
+          "fail": 0,
+          "skipped": 1,
+          "skippedTest": "sealed CR02 candidate and transaction controls (needs the gitignored candidate cache)",
+          "reviewedSourceExceptionTests": 7,
+          "reviewedSourceExceptionPassed": 7
+        },
+        "frozenBytesVerify": {
+          "verified": 26,
+          "mismatched": 0
+        },
+        "frozenReferenceFileIdentitiesEqualOnThisCheckout": 62,
+        "frozenReferenceFileIdentitiesDifferentOnThisCheckout": 65
+      },
+      "lfAutocrlfFalse": {
+        "coreAutocrlf": "false",
+        "mainJsSha256": "51db511fd5249fed908d07ac90929da2e0e2fca11c9014808a332392e88b51f5",
+        "mainJsEqualsRegisteredCorrected": true,
+        "mainJsGitEol": "i/lf w/lf attr/text eol=lf",
+        "otherTextFilesForm": "LF (for example src/loop.js w/lf)",
+        "controls": {
+          "command": "node --test tools/art/motion-promotion.test.mjs tools/art/frozen-bytes.test.mjs",
+          "tests": 18,
+          "pass": 17,
+          "fail": 0,
+          "skipped": 1,
+          "skippedTest": "sealed CR02 candidate and transaction controls (needs the gitignored candidate cache)",
+          "reviewedSourceExceptionTests": 7,
+          "reviewedSourceExceptionPassed": 7
+        },
+        "frozenBytesVerify": {
+          "verified": 26,
+          "mismatched": 0
+        },
+        "frozenReferenceFileIdentitiesEqualOnThisCheckout": 38,
+        "frozenReferenceFileIdentitiesDifferentOnThisCheckout": 89
+      },
+      "reading": "Both checkout forms give src/main.js the registered corrected hash, and all seven reviewed-source-exception controls pass on both. Same host and same git and node versions for both clones; no other operating system was used.",
+      "observationForLineEndingFollowUp": "Of the 127 frozen file identities, a fresh core.autocrlf=true clone reproduces 62 and a fresh core.autocrlf=false clone reproduces 38; src/main.js counts as different in both because it now holds the corrected content. No single fresh checkout form reproduces both the 38 committed-bytes identities and the 57 all-CRLF ones, because a CRLF checkout also converts text files whose frozen hash is of LF bytes. This is the standing property of the frozen gate recorded in lineEndingSurvey, measured here on fresh clones; this plan does not repair it."
     }
   },
   "reruns": null
