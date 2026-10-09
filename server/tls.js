@@ -10,6 +10,9 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { validateHostname } from './cli.js';
 
 const run = promisify(execFile);
+// Resolve Windows tools from System32: PATH may shadow them (Git Bash ships a
+// POSIX whoami) or point at an untrusted directory.
+const system32 = (/** @type {string} */ tool) => join(process.env.SystemRoot ?? process.env.SYSTEMROOT ?? 'C:/Windows', 'System32', tool);
 const day = 86400000;
 /** @typedef {{key:string,cert:string,hostname:string}} Pair */
 /** @typedef {{sid:string,inherited:boolean,type:string,rights:string}} AclRule */
@@ -19,7 +22,7 @@ async function readAcl(path) {
   for (const name of Object.keys(env)) if (name.toLowerCase() === 'psmodulepath') delete env[name];
   env.PSModulePath = join(process.env.SystemRoot ?? process.env.SYSTEMROOT ?? 'C:/Windows', 'System32/WindowsPowerShell/v1.0/Modules');
   env.VOD_ACL_PATH = path;
-  const { stdout } = await run('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
+  const { stdout } = await run(system32('WindowsPowerShell/v1.0/powershell.exe'), ['-NoProfile', '-NonInteractive', '-Command',
     "$ErrorActionPreference='Stop'; @( (Get-Acl -LiteralPath $env:VOD_ACL_PATH).Access | ForEach-Object { @{sid=$_.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value; inherited=$_.IsInherited; type=$_.AccessControlType.ToString(); rights=$_.FileSystemRights.ToString()} } ) | ConvertTo-Json -Compress"],
   // PowerShell7 module paths are incompatible with 5.1; remove case aliases too.
   { windowsHide: true, timeout: 5000, env });
@@ -28,7 +31,7 @@ async function readAcl(path) {
 }
 /** @returns {Promise<string>} */
 async function currentSid() {
-  const { stdout } = await run('whoami.exe', ['/user', '/fo', 'csv', '/nh'], { windowsHide: true, timeout: 5000 });
+  const { stdout } = await run(system32('whoami.exe'), ['/user', '/fo', 'csv', '/nh'], { windowsHide: true, timeout: 5000 });
   const sid = stdout.match(/S-1-\d+(?:-\d+)+/i)?.[0];
   if (!sid) throw new Error('Cannot identify current Windows account');
   return sid;
@@ -56,9 +59,9 @@ async function restrictAccess(path, directory) {
     const permissions = directory ? '(OI)(CI)F' : 'F';
     const args = [path, '/inheritance:r', '/grant:r',
       `*${sid}:${permissions}`, `*S-1-5-18:${permissions}`, `*S-1-5-32-544:${permissions}`];
-    await run('icacls.exe', args, { windowsHide: true, timeout: 5000 });
+    await run(system32('icacls.exe'), args, { windowsHide: true, timeout: 5000 });
     for (const rule of await readAcl(path)) if (!allowed.has(rule.sid))
-      await run('icacls.exe', [path, '/remove', `*${rule.sid}`], { windowsHide: true, timeout: 5000 });
+      await run(system32('icacls.exe'), [path, '/remove', `*${rule.sid}`], { windowsHide: true, timeout: 5000 });
   }
   await verifyPrivateAccess(path, directory);
 }
