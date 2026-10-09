@@ -1,12 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { MANIFEST_PATH, PROVENANCE_PATH, PROTECTED_PROVENANCE_SHA256 } from './runtime-dependencies.mjs';
-import { createHash } from 'node:crypto';
+import { runtimeDependencyIdentities } from './runtime-dependencies.mjs';
 import { requirePlan09, REQUIRED_ASSERTIONS, requireStableGates, REQUIRED_STABLE_GATES } from './animation-capture.mjs';
 const identities = { 'src/main.js': 'a'.repeat(64),
-  [PROVENANCE_PATH]: PROTECTED_PROVENANCE_SHA256,
-  [MANIFEST_PATH]: createHash('sha256').update(await readFile(new URL('./motion-manifest.json', import.meta.url))).digest('hex') };
+  ...runtimeDependencyIdentities() };
 const completeSummary = '---\nstatus: complete\n---\n';
 const good = () => ({ complete: true, identities, applicableBudgetPass: true,
   assertions: REQUIRED_ASSERTIONS.map(id => ({ id, status: 'pass', executed: true,

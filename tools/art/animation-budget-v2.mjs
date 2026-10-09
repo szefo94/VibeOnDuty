@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { inflateSync } from 'node:zlib';
 import { PROVENANCE_PATH, PROTECTED_PROVENANCE_SHA256, verifyRuntimeDependencies } from './runtime-dependencies.mjs';
+import { exactCorrectionException } from './motion-acceptance.mjs';
 
 export const CONTRACT_VERSION = 'source-eye-view-v2';
 export const COMPONENTS = ['frameIntervalMs', 'mixerMs', 'inertiaMs', 'correctionMs',
@@ -174,7 +175,9 @@ export function verifyCandidate(budget, budgetBytes, candidate, candidateBytes, 
   assert.ok(Date.parse(candidate.capturedAt) > Date.parse(budget.referenceCapturedAt), 'Reference reused as candidate');
   assert.notEqual(sha256(JSON.stringify(candidate.identities)), budget.referenceSourceIdentitySha256, 'Reference source reused as candidate');
   for (const [name, identity] of Object.entries(budget.referenceIdentities))
-    if (!MUTABLE_RUNTIME.includes(name)) assert.equal(candidate.identities[name], identity, `Protected source changed: ${name}`);
+    if (!MUTABLE_RUNTIME.includes(name) && !exactCorrectionException(name, identity,
+      candidate.identities[name], runtimeDependencies.motion))
+      assert.equal(candidate.identities[name], identity, `Protected source changed: ${name}`);
   const overruns = [], reductions = [];
   for (const s of candidate.samples) {
     const p = budget.profiles.find(p => p.tier === s.tier && p.actorCount === s.actorCount);

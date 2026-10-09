@@ -4,13 +4,14 @@ import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { createServer as createPortProbe } from 'node:net';
+import { ownedReviewPort } from './owned-review-port.mjs';
 import os from 'node:os';
 import { chromium } from '@playwright/test';
 import { createServer } from 'vite';
 import { ROOT, CACHE, hash, iterationPath } from './pipeline.mjs';
 import { producerContract, candidateLineage } from './animation-budget-v2.mjs';
 import { MANIFEST_PATH, verifyRuntimeDependencies } from './runtime-dependencies.mjs';
+import { ACCEPTANCE_PATH, TUPLE_PATHS, assertNoMotionTransaction } from './motion-acceptance.mjs';
 
 // This owns a loopback-only Vite server and separate browser contexts. It never connects
 // to multiplayer or adds a production debug/mutation API. Only the model GET is routed.
@@ -371,24 +372,18 @@ async function composeReviewSheets(directory, frames, browser) {
   } finally { await context.close(); }
 }
 
-// Vite 8 treats port 0 as its default 5173. Ask the OS for a free loopback port
-// explicitly so concurrent Playwright/dev/review owners keep separate listeners.
 async function reviewPort() {
-  return new Promise((resolve, reject) => {
-    const probe = createPortProbe(); probe.once('error', reject);
-    probe.listen(0, '127.0.0.1', () => {
-      const port = probe.address().port;
-      probe.close((error) => error ? reject(error) : resolve(port));
-    });
-  });
+  return ownedReviewPort();
 }
 
 const ANIMATION_EVIDENCE = path.join(ROOT,
   '.planning/phases/07-movement-matched-and-action-safe-animation/evidence');
 
 export async function animationIdentities(read = filename => fs.readFile(filename)) {
+  assertNoMotionTransaction();
   const names = ['index.html', 'style.css', 'public/models/enemy.glb',
     'public/textures/comic-slice.png', 'tools/art/provenance.json', MANIFEST_PATH,
+    'tools/art/sources/motion.blend',
     'tools/art/sources/soldier.blend', 'tools/art/character-params.json', 'tools/art/build_soldier.py'];
   async function collect(directory) {
     for (const entry of await fs.readdir(path.join(ROOT, directory), { withFileTypes: true })) {
@@ -398,14 +393,22 @@ export async function animationIdentities(read = filename => fs.readFile(filenam
     }
   }
   await collect('src');
+  try { await fs.access(path.join(ROOT, ACCEPTANCE_PATH)); names.push(ACCEPTANCE_PATH); }
+  catch (error) { if (error.code !== 'ENOENT') throw error; }
   const identities = {}, dependencyBytes = {};
   for (const name of names.sort()) {
     const bytes = await read(path.join(ROOT, name));
     identities[name] = hash(bytes);
     if (name === MANIFEST_PATH) dependencyBytes.manifestBytes = bytes;
     if (name === 'tools/art/provenance.json') dependencyBytes.provenanceBytes = bytes;
+    for (const [key, file] of Object.entries(TUPLE_PATHS)) if (name === file) dependencyBytes[key] = bytes;
+    if (name === ACCEPTANCE_PATH) dependencyBytes.acceptanceBytes = bytes;
   }
   verifyRuntimeDependencies(identities, dependencyBytes);
+  // Re-read actual tuple after collection as well. A transaction that started and
+  // completed between snapshots cannot make a historical snapshot current.
+  verifyRuntimeDependencies(identities);
+  assertNoMotionTransaction();
   identities.captureSampler = hash(sampleAnimationPage.toString());
   return identities;
 }

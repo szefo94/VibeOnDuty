@@ -32,9 +32,15 @@ describe('retained original motion repertoire', () => {
   it('binds motion provenance to the current editable source and published export', () => {
     const provenance=JSON.parse(readFileSync('tools/art/provenance.json','utf8')).originalMotion;
     const hash=file=>createHash('sha256').update(readFileSync(file)).digest('hex');
-    expect(provenance.sourceSha256).toBe(hash('tools/art/sources/motion.blend'));
-    expect(provenance.publishedSha256).toBe(hash('public/models/enemy.glb'));
-    expect(provenance.manifestSha256).toBe(hash('tools/art/motion-manifest.json'));
+    // Provenance keeps the historical original publication; the CR02 acceptance
+    // registry binds that tuple to the corrected current source and export.
+    const acceptance=JSON.parse(readFileSync('tools/art/motion-acceptance.json','utf8'));
+    const files={sourceSha256:'tools/art/sources/motion.blend',publishedSha256:'public/models/enemy.glb',
+      manifestSha256:'tools/art/motion-manifest.json'};
+    for(const [key,file] of Object.entries(files)){
+      expect(provenance[key]).toBe(acceptance.original[file]);
+      expect(hash(file)).toBe(acceptance.corrected[file]);
+    }
     expect(provenance.actionCount).toBe(manifest.actions.length);
     expect(provenance.inheritedOccurrences).toBe(48);
     expect(provenance.combinedLicenseCleared).toBe(false);

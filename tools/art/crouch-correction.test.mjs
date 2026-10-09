@@ -1,10 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { parseGLB, accessor } from './inspect-character.mjs';
 import { sampleCrouch, validateCorrection } from './crouch-correction.mjs';
 
-// The optional path is an unpublished candidate, never a replacement publication.
+// The exact historical original107 remains independently retained after promotion.
 const asset = parseGLB(readFileSync(process.env.VOD_CROUCH_CANDIDATE || 'public/models/enemy.glb'));
 const channels = (name) => {
   const clip = asset.json.animations.find((a) => a.name === 'vod7_crouch_' + name);
@@ -51,10 +51,12 @@ test('fixed-heading native mixer trajectories have sagittal/lateral signed strid
   }
 });
 
-test('exact correction guard rejects unchanged bad clips and unrelated or protected corruption', async () => {
-  const accepted = readFileSync('public/models/enemy.glb');
+// The retained original107 lives in the gitignored research cache; skip visibly without it.
+const retainedOriginal = '.planning/research/.cache/07-motion/crouch-correction-oaINDh/accepted107.glb';
+test('exact correction guard rejects unchanged bad clips and unrelated or protected corruption', {
+  skip: !existsSync(retainedOriginal) && 'requires ' + retainedOriginal }, async () => {
+  const accepted = readFileSync(retainedOriginal);
   await assert.rejects(validateCorrection(accepted, accepted), /Unchanged directional/);
-  if (!process.env.VOD_CROUCH_CANDIDATE) return; // RED baseline has no valid corrected fixture yet.
   const { encodeGLB } = await import('./inspect-character.mjs');
   const mutate = () => ({ json: structuredClone(asset.json), binary: Buffer.from(asset.binary) });
   await validateCorrection(encodeGLB(asset.json, asset.binary), accepted);

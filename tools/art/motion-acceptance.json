@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "revision": "07-CR02-directional-crouch",
+  "original": {
+    "public/models/enemy.glb": "8503964441a36d54d9dada52911f4869ce48bf4e32cf403a7836b9cf53c3b936",
+    "tools/art/sources/motion.blend": "5a9e8c4c160cd4d7bb072f724e28dbb52b902f05d75d68a37c68d98449470903",
+    "tools/art/motion-manifest.json": "af139b82f372c8b66c994a519fbe5a685cae23dc5b5153c8607578ef02f296c5"
+  },
+  "corrected": {
+    "public/models/enemy.glb": "2a6bbab2034b01b1722f35e8afbdac2948978226d780fd43eb9d6df117196e4e",
+    "tools/art/sources/motion.blend": "3d1702ccb3915a14f3647e3db9f08ea14fef25ac9eccc696057b401a6471c463",
+    "tools/art/motion-manifest.json": "2b5712506a3c9bb9d76f6f9823bd4f07bea0c283613c0f2ea3a21c125d4e60a5"
+  },
+  "permittedActions": [
+    "vod7_crouch_back",
+    "vod7_crouch_left",
+    "vod7_crouch_right"
+  ],
+  "candidateProof": {
+    "path": ".planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-crouch-correction-candidate.json",
+    "sha256": "a940064e30d5cdab323459b7828f63e225b1e0a8cbc379d08dd3e7ca56f64f6e"
+  },
+  "inheritedOccurrences": 48,
+  "unchangedOccurrences": 104,
+  "totalOccurrences": 107,
+  "humanMotionAcceptance": "pending",
+  "phaseQualification": "open",
+  "provenance": "historical originalMotion publication retained unchanged"
+}

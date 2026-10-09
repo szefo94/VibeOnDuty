@@ -7,13 +7,17 @@ import { ROOT, PIN, hash, run, bootstrap, iterationPath } from './pipeline.mjs';
 import { MOTION_CACHE, MANIFEST, BASELINE, parseManifest, exportMotion, validateListedMotion } from './motion-pipeline.mjs';
 import { parseGLB, encodeGLB, accessor, compareSemanticExports } from './inspect-character.mjs';
 import { verifyRuntimeDependencies } from './runtime-dependencies.mjs';
+import { ACCEPTANCE_PATH } from './motion-acceptance.mjs';
 
 export const CHANGED = ['vod7_crouch_back', 'vod7_crouch_left', 'vod7_crouch_right'];
 const PROTECTED = ['public/models/enemy.glb', 'tools/art/sources/motion.blend',
   'tools/art/motion-manifest.json', 'tools/art/provenance.json', 'tools/art/sources/soldier.blend',
   'tools/art/character-params.json', 'tools/art/build_soldier.py', 'public/textures/comic-slice.png'];
 export async function identities() {
-  return Object.fromEntries(await Promise.all(PROTECTED.map(async (file) =>
+  const names = [...PROTECTED];
+  try { await fs.access(path.join(ROOT, ACCEPTANCE_PATH)); names.push(ACCEPTANCE_PATH); }
+  catch (error) { if (error.code !== 'ENOENT') throw error; }
+  return Object.fromEntries(await Promise.all(names.map(async (file) =>
     [file, hash(await fs.readFile(path.join(ROOT, file)))])));
 }
 export function clipChannels(asset, clip) {

@@ -5,7 +5,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { freezeBudget, qualify, verifyCandidate, candidateLineage, producerContract, COMPONENTS, sha256 } from './animation-budget-v2.mjs';
-import { MANIFEST_PATH, PROVENANCE_PATH, runtimeDependencyBytes } from './runtime-dependencies.mjs';
+import { MANIFEST_PATH, PROVENANCE_PATH, runtimeDependencyBytes, runtimeDependencyIdentities } from './runtime-dependencies.mjs';
+import { TUPLE_PATHS, acceptanceRecordBytes } from './motion-acceptance.mjs';
 
 const cli = path.resolve('tools/art/animation-budget-v2.mjs');
 const reference = path.resolve('.planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-09-view-reference-v2.json');
@@ -20,7 +21,7 @@ function fixture() {
   const candidate = structuredClone(source);
   candidate.capturedAt = '2026-10-07T00:00:00.000Z';
   candidate.identities['src/builders/enemyGLTF.js'] = 'a'.repeat(64);
-  candidate.identities[MANIFEST_PATH] = sha256(runtimeDependencyBytes().manifestBytes);
+  Object.assign(candidate.identities, runtimeDependencyIdentities());
   const identity = sha256(JSON.stringify(candidate.identities));
   for (const s of candidate.samples) {
     s.sourceIdentitySha256 = identity;
@@ -32,6 +33,27 @@ function fixture() {
   return candidate;
 }
 const verify = candidate => verifyCandidate(frozen, budgetBytes, candidate, Buffer.from(JSON.stringify(candidate)));
+
+test('registered corrected tuple changes lineage without permitting source or numerical relaxation', async () => {
+  const candidate = fixture(), directory = '.planning/research/.cache/07-motion/crouch-correction-oaINDh';
+  const bytes = { ...runtimeDependencyBytes(), glbBytes: await readFile(directory + '/candidate.glb'),
+    donorBytes: await readFile(directory + '/motion.blend'), manifestBytes: await readFile(directory + '/candidate.manifest.json'),
+    acceptanceBytes: acceptanceRecordBytes() };
+  Object.assign(candidate.identities, runtimeDependencyIdentities(bytes));
+  const refresh = () => {
+    const identity = sha256(JSON.stringify(candidate.identities));
+    for (const sample of candidate.samples) sample.sourceIdentitySha256 = identity;
+  };
+  refresh();
+  const run = () => verifyCandidate(frozen, budgetBytes, candidate, Buffer.from(JSON.stringify(candidate)), bytes);
+  assert.equal(run().applicableBudgetPass, true);
+  candidate.samples[0].timings.inertiaMs.median = .1;
+  assert.equal(run().applicableBudgetPass, false);
+  candidate.identities['src/artMaterials.js'] = 'b'.repeat(64); refresh();
+  assert.throws(run, /Protected source changed/);
+  candidate.identities[TUPLE_PATHS.glbBytes] = 'b'.repeat(64); refresh();
+  assert.throws(run, /tuple identity/);
+});
 
 for (const [name, value] of [['missing', undefined], ['stale', 'b'.repeat(64)]])
   test('pure V2 rejects ' + name + ' runtime dependency even when old budget did not list it', () => {
@@ -77,8 +99,14 @@ test('actual CLI rejects manifest-only mutation and forged accepted fields in an
     const art = path.join(directory, 'tools/art');
     const evidence = '.planning/phases/07-movement-matched-and-action-safe-animation/evidence';
     await mkdir(art, { recursive: true }); await mkdir(path.join(directory, evidence), { recursive: true });
-    for (const name of ['animation-budget-v2.mjs', 'runtime-dependencies.mjs', 'provenance.json', 'motion-manifest.json'])
+    for (const name of ['animation-budget-v2.mjs', 'runtime-dependencies.mjs', 'motion-acceptance.mjs', 'provenance.json', 'motion-manifest.json'])
       await writeFile(path.join(art, name), await readFile(path.join('tools/art', name)));
+    for (const file of ['public/models/enemy.glb', 'tools/art/sources/motion.blend']) {
+      await mkdir(path.dirname(path.join(directory, file)), { recursive: true });
+      await writeFile(path.join(directory, file), await readFile(file));
+    }
+    if (runtimeDependencyBytes().acceptanceBytes)
+      await writeFile(path.join(art, 'motion-acceptance.json'), runtimeDependencyBytes().acceptanceBytes);
     for (const name of ['07-baseline.json', '07-budget.json', '07-budget-view-v2.json',
       '07-09-view-reference-v2.json', '07-09-cost-report.json'])
       await writeFile(path.join(directory, evidence, name), await readFile(path.join(evidence, name)));

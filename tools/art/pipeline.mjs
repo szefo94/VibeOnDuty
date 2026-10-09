@@ -6,6 +6,8 @@ import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { inflateRawSync } from 'node:zlib';
 import assert from 'node:assert/strict';
+import { excludeGenericPublication } from './motion-acceptance.mjs';
+import { runtimeDependencyBytes, verifyRuntimeDependencies } from './runtime-dependencies.mjs';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 export const CACHE = path.join(ROOT, '.planning/research/.cache/06-art');
@@ -289,6 +291,12 @@ function appendApprovedMotion(art, approved, inheritedCount) {
 // Art edits may change the two reviewed art domains. Motion edits remain owned
 // by motion-pipeline's separate bounded validator and never enter this seam.
 export async function approvedArtMotion() {
+  const dependencies = runtimeDependencyBytes();
+  const { TUPLE_PATHS, ACCEPTANCE_PATH } = await import('./motion-acceptance.mjs');
+  const identities = Object.fromEntries(Object.entries(TUPLE_PATHS).map(([key, file]) => [file, hash(dependencies[key])]));
+  identities['tools/art/provenance.json'] = hash(dependencies.provenanceBytes);
+  if (dependencies.acceptanceBytes) identities[ACCEPTANCE_PATH] = hash(dependencies.acceptanceBytes);
+  const binding = verifyRuntimeDependencies(identities, dependencies);
   const { MANIFEST, BASELINE, MOTION_CACHE, parseManifest, validateMotionCandidate } =
     await import('./motion-pipeline.mjs');
   const manifest = parseManifest(await fs.readFile(MANIFEST, 'utf8'));
@@ -296,12 +304,13 @@ export async function approvedArtMotion() {
     'Stale current motion donor');
   const retained = JSON.parse(await fs.readFile(path.join(MOTION_CACHE, 'publication.json'), 'utf8'));
   assert.equal(retained.complete, true, 'Incomplete approved motion publication');
-  assert.equal(hash(await fs.readFile(BASELINE)), retained.publishedHash, 'Stale approved publication');
+  const publicationHash = binding.motion.tuple['public/models/enemy.glb'];
+  assert.equal(hash(await fs.readFile(BASELINE)), publicationHash, 'Stale approved publication');
   await iterationPath([MOTION_CACHE], retained.baseline);
   assert.equal(hash(await fs.readFile(retained.baseline)), manifest.baselineHash, 'Stale inherited baseline');
   const check = await validateMotionCandidate(BASELINE, retained.baseline, manifest);
   return { publication: BASELINE, inheritedBaseline: retained.baseline,
-    publicationHash: retained.publishedHash, sourceHash: manifest.sourceHash,
+    publicationHash, sourceHash: manifest.sourceHash, motionBinding: binding.motion,
     manifestHash: hash(await fs.readFile(MANIFEST)), check };
 }
 
@@ -326,6 +335,7 @@ export async function inspectArtCandidate(candidate) {
   return { ...result, approvedMotionEqual: true, approvedMotion: current };
 }
 export async function refreshProvenance() {
+  excludeGenericPublication();
   const filename = path.join(ROOT, 'tools/art/provenance.json');
   owned(ROOT, filename);
   let ledger;
@@ -596,6 +606,7 @@ async function selfTest() {
   );
 }
 async function main() {
+  if (['build', 'build-slice'].includes(process.argv[2])) excludeGenericPublication();
   const command = process.argv[2],
     args = process.argv.slice(3);
   if (command === 'self-test') return selfTest();

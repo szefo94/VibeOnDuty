@@ -245,6 +245,9 @@ async function unique(label) {
   return fs.mkdtemp(path.join(MOTION_CACHE, label + '-'));
 }
 async function acceptedBaseline() {
+  // The retained inherited48 seam stays historical; current publication trust
+  // comes from the registered actual tuple, including its editable donor.
+  await (await import('./pipeline.mjs')).approvedArtMotion();
   const m = parseManifest(await fs.readFile(MANIFEST, 'utf8'));
   if (hash(await fs.readFile(BASELINE)) === m.baselineHash) return BASELINE;
   const publication = path.join(MOTION_CACHE, 'publication.json');
@@ -325,11 +328,12 @@ async function scriptHashes() {
     'inspect-character.mjs'].map(async (name) => [name, hash(await fs.readFile(path.join(ROOT, 'tools/art', name)))])));
 }
 async function retained(label) {
+  const publication = await (await import('./pipeline.mjs')).approvedArtMotion();
   const directory = await unique(label);
   const source = path.join(directory, 'baseline.blend'), manifest = path.join(directory, 'baseline.manifest.json');
   const baseline = path.join(directory, 'baseline.glb');
   await fs.copyFile(SOURCE, source); await fs.copyFile(MANIFEST, manifest); await fs.copyFile(await acceptedBaseline(), baseline);
-  return { directory, source, manifest, baseline };
+  return { directory, source, manifest, baseline, publicationBinding: publication.motionBinding };
 }
 async function saveReport(name, report) {
   await fs.writeFile(path.join(report.directory, 'report.json'), JSON.stringify(report, null, 2));
@@ -344,6 +348,9 @@ export async function repeatMotion() {
   const checks = [await exportMotion(r.source, r.manifest, r.baseline, first),
     await exportMotion(r.source, r.manifest, r.baseline, second)];
   const m = parseManifest(await fs.readFile(r.manifest, 'utf8'));
+  assert.equal(hash(await fs.readFile(first)), r.publicationBinding.tuple['public/models/enemy.glb'], 'Reopened export must reproduce current publication exactly');
+  assert.equal(hash(await fs.readFile(second)), r.publicationBinding.tuple['public/models/enemy.glb']);
+  assert.deepEqual((await (await import('./pipeline.mjs')).approvedArtMotion()).motionBinding, r.publicationBinding);
   return saveReport('repeat', { schemaVersion: 1, complete: true, ...r, first, second, checks,
     comparison: await compareMotionExports(first, second, m), scriptHashes: await scriptHashes(),
     sourceHash: hash(await fs.readFile(r.source)), manifestHash: hash(await fs.readFile(r.manifest)),
@@ -370,10 +377,13 @@ export async function recoverMotion() {
   await exportMotion(restoredSource, restoredManifest, r.baseline, restored);
   await exportMotion(restoredSource, restoredManifest, r.baseline, regenerated);
   const comparison = await compareMotionExports(before, regenerated, m);
+  for (const filename of [before, restored, regenerated])
+    assert.equal(hash(await fs.readFile(filename)), r.publicationBinding.tuple['public/models/enemy.glb'], 'Editable recovery must reproduce exact current publication');
   await compareMotionExports(restored, regenerated, m);
   assert.equal(hash(await fs.readFile(SOURCE)), m.sourceHash, 'Accepted source changed');
   assert.equal(hash(await fs.readFile(MANIFEST)), hash(await fs.readFile(r.manifest)), 'Accepted manifest changed');
   assert.equal(hash(await fs.readFile(BASELINE)), publicationHash, 'Publication changed');
+  assert.deepEqual((await (await import('./pipeline.mjs')).approvedArtMotion()).motionBinding, r.publicationBinding);
   return saveReport('recovery', { schemaVersion: 1, complete: true, ...r, before, changed, restored,
     regenerated, restoredSource, restoredManifest, changedCheck, comparison, sourceHash: m.sourceHash,
     manifestHash: hash(await fs.readFile(r.manifest)), scriptHashes: await scriptHashes(),
@@ -403,6 +413,7 @@ export async function validateLatest(report) {
   return m;
 }
 export async function publishLatest() {
+  (await import('./motion-acceptance.mjs')).excludeGenericPublication();
   await iterationPath([MOTION_CACHE], path.join(MOTION_CACHE, 'latest.json'));
   const r = JSON.parse(await fs.readFile(path.join(MOTION_CACHE, 'latest.json'), 'utf8'));
   const manifest = await validateLatest(r);

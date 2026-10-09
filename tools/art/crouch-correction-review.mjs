@@ -1,25 +1,29 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-import { createServer as portProbe } from 'node:net';
-import { once } from 'node:events';
+import { ownedReviewPort } from './owned-review-port.mjs';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
 import { createServer } from 'vite';
 import { ROOT, hash, iterationPath } from './pipeline.mjs';
 import { MOTION_CACHE } from './motion-pipeline.mjs';
 import { identities } from './crouch-correction.mjs';
+import { CORRECTED_TUPLE, ACCEPTANCE_PATH, ACCEPTANCE_SHA256 } from './motion-acceptance.mjs';
+import { verifyRuntimeDependencies } from './runtime-dependencies.mjs';
 
-export async function reviewCorrection(directory) {
+export async function reviewCorrection(directory, { currentPublication = false } = {}) {
   await iterationPath([MOTION_CACHE], directory);
   assert.ok(path.basename(directory).startsWith('crouch-correction-'));
   const report = JSON.parse(await fs.readFile(path.join(directory, 'candidate-report.json'), 'utf8'));
   const before = await identities();
-  assert.deepEqual(before, report.acceptedBefore);
+  if (currentPublication) {
+    verifyRuntimeDependencies(before);
+    for (const [file, value] of Object.entries(CORRECTED_TUPLE)) assert.equal(before[file], value);
+    assert.equal(before[ACCEPTANCE_PATH], ACCEPTANCE_SHA256);
+  } else assert.deepEqual(before, report.acceptedBefore);
   for (const file of [report.output, report.accepted]) await iterationPath([directory], file);
   const mediaDirectory = await fs.mkdtemp(path.join(directory, 'review-'));
-  const probe = portProbe(); probe.listen(0, '127.0.0.1'); await once(probe, 'listening');
-  const port = probe.address().port; await new Promise((resolve) => probe.close(resolve));
+  const port = await ownedReviewPort();
   assert.notEqual(port, 5173, 'Leave user server untouched');
   const server = await createServer({ root: ROOT, base: '/', cacheDir: path.join(directory, 'vite-cache'),
     server: { host: '127.0.0.1', port, strictPort: true, open: false, hmr: false,
@@ -29,7 +33,10 @@ export async function reviewCorrection(directory) {
   try {
     await server.listen(port);
     browser = await chromium.launch({ headless: true, timeout: 45000, args: ['--use-gl=swiftshader'] });
-    for (const [label, file] of [['accepted-broken', report.accepted], ['candidate-unpublished', report.output]]) {
+    const contexts = currentPublication ? [['historical-original107', report.accepted],
+      ['current-corrected-publication', path.join(ROOT, 'public/models/enemy.glb')]] :
+      [['accepted-broken', report.accepted], ['candidate-unpublished', report.output]];
+    for (const [label, file] of contexts) {
       const bytes = await fs.readFile(file), errors = [];
       const context = await browser.newContext({ viewport: { width: 1280, height: 960 }, deviceScaleFactor: 1,
         recordVideo: { dir: path.join(mediaDirectory, 'media'), size: { width: 1280, height: 960 } } });
@@ -83,7 +90,7 @@ export async function reviewCorrection(directory) {
           const liveViews = [gltf.playerFirstPersonRig?.arms, gltf.playerFirstPersonRig?.body,
             gltf.playerFirstPersonRig?.weapon, wpn].filter(Boolean);
           const viewVisibility = liveViews.map((node) => node.visible);
-          const labelNode = document.createElement('div'); labelNode.textContent = `${label} — isolated fixed-heading crouch / Not published / human review pending`;
+          const labelNode = document.createElement('div'); labelNode.textContent = `${label} — isolated fixed-heading crouch / human review pending`;
           labelNode.style.cssText = 'position:fixed;top:5px;left:5px;padding:8px;background:#111;color:white;z-index:100000;font:18px sans-serif;';
           document.body.append(labelNode);
           const shared = new Set(); keeper.traverse((n) => { if (n.geometry) shared.add(n.geometry); for (const m of Array.isArray(n.material) ? n.material : [n.material]) for (const texture of [m?.map, m?.normalMap]) if (texture) shared.add(texture); });
@@ -158,11 +165,12 @@ export async function reviewCorrection(directory) {
     }
   } finally { await browser?.close(); await server.close(); }
   assert.deepEqual(await identities(), before, 'Accepted inputs changed during visual proof');
-  const result = { complete: true, candidateOnly: true, published: false, humanAcceptance: 'pending',
+  const result = { complete: true, candidateOnly: !currentPublication, published: currentPublication,
+    publicationBinding: currentPublication ? verifyRuntimeDependencies(before) : null, humanAcceptance: 'pending',
     representativeDeviceFps: 'unqualified', viewport: [1280, 960], dpr: 1, tier: 'medium',
     port, ownedListenerClosed: true, durationMs: Date.now() - start, mediaDirectory, media, acceptedBefore: before, acceptedAfter: await identities() };
   await fs.writeFile(path.join(mediaDirectory, 'visual-report.json'), JSON.stringify(result, null, 2));
-  await fs.writeFile(path.join(mediaDirectory, 'index.html'), '<!doctype html><meta charset="utf-8"><title>CR-02 isolated candidate</title><h1>CR-02 candidate — Not published; human review pending</h1>' + media.map((r) => `<h2>${r.label}</h2><video controls width="960" src="${r.label}.webm"></video>` + r.rows.map((row) => `<h3>${row.direction}</h3>` + row.images.map((i) => `<img width="640" src="${i.file}">`).join('')).join('')).join(''));
+  await fs.writeFile(path.join(mediaDirectory, 'index.html'), '<!doctype html><meta charset="utf-8"><title>CR-02 isolated source review</title><h1>CR-02 fixed-heading source review; human review pending</h1>' + media.map((r) => `<h2>${r.label}</h2><video controls width="960" src="${r.label}.webm"></video>` + r.rows.map((row) => `<h3>${row.direction}</h3>` + row.images.map((i) => `<img width="640" src="${i.file}">`).join('')).join('')).join(''));
   console.log(JSON.stringify({ complete: true, directory, mediaDirectory, port, videos: media.map((r) => r.video.file) }));
   return result;
 }

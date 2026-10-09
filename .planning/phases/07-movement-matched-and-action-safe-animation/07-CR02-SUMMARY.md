@@ -5,7 +5,7 @@ subsystem: motion-authoring
 tags: [directional-crouch, original-donor, isolated-candidate, exact-motion, native-browser]
 status: complete
 completion_scope: isolated_candidate_proof_only
-publication_status: candidate_fixed_not_promoted
+publication_status: promoted_locally
 requires:
   - phase: 07-03
     provides: Accepted107 publication, original59-action donor and retained inherited48 seam
@@ -84,6 +84,53 @@ Reproduce candidate checks with `VOD_CROUCH_CANDIDATE` pointing to the owned `ca
 ## Threat flags
 
 The new local helper reads trusted saved donor data and writes only bounded owned cache candidates/evidence. Source scripts remain disabled; fresh export uses the existing original-action/slot/world-rest parents-first validator. Loopback Vite/browser routing is test-only with explicit free/strict root-base ports. No production endpoint, gameplay outcome hook, infrastructure or rights claim is introduced.
+
+## Local promotion (2026-10-09)
+
+`node tools/art/promote-motion.mjs promote` published the sealed candidate under the
+reviewed exact-tuple transaction. Current identities:
+
+- `public/models/enemy.glb` → `2a6bbab2034b01b1722f35e8afbdac2948978226d780fd43eb9d6df117196e4e`
+- `tools/art/sources/motion.blend` → `3d1702ccb3915a14f3647e3db9f08ea14fef25ac9eccc696057b401a6471c463`
+- `tools/art/motion-manifest.json` → `2b5712506a3c9bb9d76f6f9823bd4f07bea0c283613c0f2ea3a21c125d4e60a5`
+- `tools/art/motion-acceptance.json` (pinned, written last) → `8f3c519d8fd87a5c1efcf8add162e30be52257534ec7b960b9c2f4c3d88fe155`
+- `tools/art/provenance.json` unchanged → `7b8b9b5cfb2f86c2d0890dbc7042c1d010a9196ac6fed75b21a54318e4c451f6`
+
+Promotion transaction directory: `.planning/research/.cache/07-motion/promotion-8U75fp`
+(backups of the original tuple). No lock or staging files remain.
+
+Checks on the promoted publication:
+
+| Check | Result |
+|---|---|
+| Independent technical review (read-only, own GLB parser) | No blocker. Exactly 3 clips differ; 104 occurrences, meshes, skin, inverse binds, images and materials identical; V2 bounds untouched; generic writers excluded. |
+| Blender reopen of promoted donor (`motion-pipeline.mjs repeat`, `repeat-Fsk9rW`) | Two fresh exports byte-identical to the publication `2a6bbab2...`. |
+| Candidate-only editable recovery (`recover --demo`, `recovery-vS14WK`) | Changed export differs; restored source `3d1702cc...` and restored export byte-identical. |
+| Browser render of promoted `public/models/enemy.glb` (`reviewCorrection`, `currentPublication`, `review-2NvQlA`) | Exit 0, complete, owned listener closed, protected identities equal before/after. |
+| `node --test tools/art/*.test.mjs` | 156/156. Without the gitignored cache: 133 pass, 2 visible skips, 0 fail (simulated). |
+| lint, `typecheck`, `typecheck:mp`, `build` | Pass. |
+| `npm run test:unit` | 323/323. `server/cli.test.js` and `server/tdmRoom.test.js` timed out intermittently while Blender/browser jobs loaded the machine; both pass alone and in the final full run. |
+
+Follow-up changes made with the promotion:
+
+- Recovery (`promote-motion.mjs`): retryable rollback stages; an untouched original tuple
+  releases the lock without restore; a committed tuple with the pinned record is finalised
+  after the protected-input check instead of reverted; changed provenance stops before any
+  restore; a missing tuple file takes the backup rollback; reports are `recovery-<id>.json`
+  with fixed fields; the CLI prints the outcome. A second independent review of the first
+  recovery patch found no blocker; its findings 1-6 are addressed and covered by tests.
+- `server/tls.js` calls `whoami`, `icacls` and PowerShell from System32. From Git Bash,
+  `PATH` resolved Git's POSIX `whoami`, which failed 10 TLS/hosting unit tests.
+- `src/builders/enemyGLTF.test.js` binds historical provenance to the acceptance registry's
+  original tuple and the current files to its corrected tuple.
+- Cache-dependent art tests skip visibly when `.planning/research/.cache/07-motion/` is absent.
+
+Known limits: an empty lock file (crash between lock creation and its first write) still needs
+manual removal. `tools/art` tests are not part of `npm test` or CI. The recovery hardening
+that followed the second review has not itself been independently re-reviewed.
+
+Still open: human motion acceptance, Phase 7 and plans 09/10 qualification, full offline and
+multiplayer browser suites, the frozen V2 performance gate and representative-device FPS.
 
 ## Self-Check: PASSED
 
