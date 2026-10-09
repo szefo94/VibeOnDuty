@@ -547,7 +547,196 @@
       "reading": "In all three attempts the 50 ms timer grant was delivered after mouseup, with animation frames about 200 ms apart under the headless software renderer. On this host the timer-deferred adapter therefore does not reproduce the defect even for a 150 ms press. This is a property of this host and adapter, not a measurement of a real browser or of real players."
     }
   },
-  "decision": null,
-  "green": null,
+  "decision": "register-exception",
+  "green": {
+    "command": "PLAYWRIGHT_JSON_OUTPUT_FILE=.planning/research/.cache/07-21/green.json npm run test:e2e -- tests/pause-menu-pointer-lock.spec.js --workers=1 --reporter=line,json",
+    "runs": 1,
+    "startedAt": "2026-10-09T21:25:30Z",
+    "endedAt": "2026-10-09T21:26:47Z",
+    "exitCode": 0,
+    "reportPath": ".planning/research/.cache/07-21/green.json",
+    "reportSha256": "e5f7c8c27695077ce98023bffb85f4d27934f2e74833e9585a82a7a7bf691fe4",
+    "consoleLogPath": ".planning/research/.cache/07-21/green-console.log",
+    "consoleLogSha256": "c100e82998773df56edad800f302d8bbfdd1835c81c778b31575407bf6f711af",
+    "reportNote": "The report directory is gitignored; the hashes bind this record to the files on the executing host.",
+    "specSha256": "bdbec9b54f2b04a609a6730f95d75069660bbb2b07dfd7b539f67aa76e90731e",
+    "specUnchangedSinceRedRun": true,
+    "mainJsSha256DuringRun": "51db511fd5249fed908d07ac90929da2e0e2fca11c9014808a332392e88b51f5",
+    "stats": {
+      "startTime": "2026-10-09T21:25:31.548Z",
+      "duration": 75484.845,
+      "expected": 6,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "cases": [
+      {
+        "title": "pause menu: Main Menu press returns to the menu under a synchronous lock grant",
+        "status": "passed",
+        "outcome": "expected",
+        "expectedStatus": "passed",
+        "firstErrorLine": null,
+        "durationMs": 8689,
+        "retries": 0,
+        "redStatus": "failed"
+      },
+      {
+        "title": "pause menu: a 150 ms Main Menu press returns to the menu under a deferred lock grant",
+        "status": "passed",
+        "outcome": "expected",
+        "expectedStatus": "passed",
+        "firstErrorLine": null,
+        "durationMs": 9418,
+        "retries": 0,
+        "redStatus": "passed"
+      },
+      {
+        "title": "pause menu: an immediate Main Menu click returns to the menu under a deferred lock grant",
+        "status": "passed",
+        "outcome": "expected",
+        "expectedStatus": "passed",
+        "firstErrorLine": null,
+        "durationMs": 8922,
+        "retries": 0,
+        "redStatus": "passed"
+      },
+      {
+        "title": "pause menu: the graphics-quality control stays usable while paused",
+        "status": "passed",
+        "outcome": "expected",
+        "expectedStatus": "passed",
+        "firstErrorLine": null,
+        "durationMs": 11344,
+        "retries": 0,
+        "redStatus": "passed"
+      },
+      {
+        "title": "pause menu: Resume re-captures the pointer",
+        "status": "passed",
+        "outcome": "expected",
+        "expectedStatus": "passed",
+        "firstErrorLine": null,
+        "durationMs": 10124,
+        "retries": 0,
+        "redStatus": "passed"
+      },
+      {
+        "title": "pause menu: a canvas press re-captures the pointer while unlocked and running",
+        "status": "passed",
+        "outcome": "expected",
+        "expectedStatus": "passed",
+        "firstErrorLine": null,
+        "durationMs": 10200,
+        "retries": 0,
+        "redStatus": "passed"
+      }
+    ],
+    "expectedFailures": 0
+  },
+  "hashBasis": "pinned-lf",
+  "decisionRecord": {
+    "path": ".planning/phases/07-movement-matched-and-action-safe-animation/07-21-SOURCE-CHANGE-DECISION.md",
+    "sha256": "3d69c3f539db17ad94d5432f55de786d163542a219ddb81b9ef988d9822da0a1",
+    "decidedBy": "owner",
+    "followupLineEndings": "yes",
+    "selectionBasis": "The owner did not type an option name. The orchestrator stated its recommendation (register-exception-pinned-lf, followup yes); the owner replied \"ok, continue, do the rational thing\"; the orchestrator read that as delegation to its recommendation and told the owner so. Relayed to the executor by the orchestrator."
+  },
+  "mainJsSha256After": "51db511fd5249fed908d07ac90929da2e0e2fca11c9014808a332392e88b51f5",
+  "mainJsAfter": {
+    "bytes": 25818,
+    "carriageReturns": 0,
+    "lineFeeds": 567,
+    "gitEol": "i/lf w/lf attr/text eol=lf src/main.js",
+    "gitAttributes": [
+      "src/main.js: text: set",
+      "src/main.js: eol: lf"
+    ]
+  },
+  "addedLines": [
+    {
+      "line": 275,
+      "text": "      // A press on a menu control must reach it, not re-capture the pointer."
+    },
+    {
+      "line": 276,
+      "text": "      if (e.target?.closest?.('#pause-menu, #kc-skip')) return;"
+    }
+  ],
+  "guardLines": 2,
+  "mainJsSha256AfterEqualsLfNormalisedCommittedContent": true,
+  "byteRelations": {
+    "note": "All values computed from bytes, not from git diff output. \"staged\" is the index blob :src/main.js that the task commit records.",
+    "preservedFrozenSha256": "c762044675702688313ce81c7812153bdb30bc95951aa1995e69337414a882d3",
+    "preservedCorrectedSha256": "51db511fd5249fed908d07ac90929da2e0e2fca11c9014808a332392e88b51f5",
+    "workingFileSha256": "51db511fd5249fed908d07ac90929da2e0e2fca11c9014808a332392e88b51f5",
+    "stagedBlobSha256": "51db511fd5249fed908d07ac90929da2e0e2fca11c9014808a332392e88b51f5",
+    "previousCommittedBlobSha256": "cb7c2f54c37ddda5ced3e39d1f4753f0a9b9d8e509b2f9998b6ffb33816d7dc0",
+    "preservedCorrectedEqualsWorkingFile": true,
+    "workingFileEqualsStagedBlob": true,
+    "frozenWithoutCarriageReturnsEqualsPreviousCommittedBlob": true,
+    "correctedHasNoCarriageReturn": true,
+    "correctedBytesMinusFrozenWithoutCarriageReturns": 142,
+    "addedLinesBytesIncludingLineEnds": 142,
+    "frozenPlusGuardLinesEqualsCorrected": true
+  },
+  "sourceChange": {
+    "recordedAt": "2026-10-09T21:27:47.856Z",
+    "file": "src/main.js",
+    "handler": "document.addEventListener('mousedown', ...) (offline branch), lines 271 to 284 of the corrected file",
+    "selector": "#pause-menu, #kc-skip",
+    "expression": "if (e.target?.closest?.('#pause-menu, #kc-skip')) return;",
+    "placement": "Inside the existing `!locked && gameRunning && !isBuyPanelOpen()` branch, before the lock request. That branch already ended in `return`, so the only behaviour removed is the lock request for a press inside the selector.",
+    "idiom": "Same `event.target.closest(...)` shape as the online path in src/network/onlineSession.js. `?.closest?.` is used because tools/art/animation-capture.mjs line 373 dispatches mousedown on `document`, whose target has no `closest`.",
+    "unchanged": [
+      "online early return and requestOnlineAction",
+      "tryShoot for a locked left press",
+      "middle-button tryThrowGrenade",
+      "right-button ADS",
+      "the canvas click handler and the Resume click handler"
+    ],
+    "selectorSurfaces": [
+      {
+        "selector": "#pause-menu",
+        "source": "task 1 surface rows 1 to 4",
+        "effect": "A left press anywhere inside the pause box no longer requests the lock: Main Menu reaches its click handler; Resume still captures through its own click handler; the graphics-quality control was already covered by its capture listener.",
+        "behaviourChange": "A press on the empty part of the box (title, hint, padding) used to re-capture the pointer and now does nothing. Not exercised by a test.",
+        "browserEvidence": "green cases 1, 2, 3, 4 and 5"
+      },
+      {
+        "selector": "#kc-skip",
+        "source": "task 1 surface row \"#killcam-wrap\", marked \"needs the fix\"",
+        "effect": "A left press on the killcam Skip button while the player is dead and the pointer is unlocked no longer requests the lock; its click handler ends the killcam as before. #killcam-wrap itself takes no pointer events, so only the button is named.",
+        "behaviourChange": "In wave modes a press on Skip no longer leaves a captured pointer on the KILLED IN ACTION screen. In TDM and S&D the result callback released the pointer anyway.",
+        "browserEvidence": "none: source reading only; no test presses #kc-skip",
+        "forReview": "The plan sets the selector to #pause-menu plus the surfaces task 1 marked \"needs the fix\", and task 1 made this row conditional on the task 3 review confirming it."
+      }
+    ],
+    "forReview": [
+      "#kc-skip is in the selector on source reading alone; no browser test presses it.",
+      "The blank area of #pause-menu no longer acts as an unlabelled resume.",
+      "Still open and unchanged by this plan: with the player dead in TDM or S&D a canvas press re-captures the pointer during the respawn wait (surfaceNotes)."
+    ],
+    "gitattributes": {
+      "addedPathLines": [
+        "src/main.js text eol=lf"
+      ],
+      "addedCommentLines": [
+        "# Reviewed plan 07-21 correction, registered by exact hash; LF on every checkout."
+      ],
+      "filesWhoseWorkingFormChanged": [
+        "src/main.js"
+      ],
+      "method": "git ls-files --eol for all 477 tracked files before and after; the only differing line is src/main.js (w/mixed, no attribute -> w/lf, text eol=lf)."
+    },
+    "unchangedProtectedFiles": {
+      "index.html": "1f89a54e697b4f2bf2bf5b47ff15d09782514d327c0caf7f81e39cae430f6e77",
+      "style.css": "3cf82a6907773d93b90ec980492ec9f0563cd5a804afb82eb97da4e126fa2332",
+      "src/loop.js": "5c28b979a75d5ed843513e774d685ca73586daa3d9cd91a81d7a0bffe7397cbe",
+      "src/input.js": "d279d07eff5d05fd63e8acfee2e37c940d7720958392948c5b74f25b279f5074"
+    },
+    "writeMethod": "A node script read the file as a buffer, checked it against the frozen hash, the preserved copy and the committed blob, removed carriage returns, inserted the two lines once at a unique anchor, checked addedLines, and wrote the buffer. No editor tool and no git command wrote the file. restore was not run.",
+    "registryEntryAddedIn": "task 07-21-03"
+  },
   "reruns": null
 }

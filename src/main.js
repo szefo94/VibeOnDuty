@@ -272,6 +272,8 @@ document.addEventListener('mousedown', (e) => {
   if (isOnline()) { if (e.button === 0) requestOnlineAction('fire'); return; }
   if (e.button === 0) {
     if (!locked && gameRunning && !isBuyPanelOpen()) {
+      // A press on a menu control must reach it, not re-capture the pointer.
+      if (e.target?.closest?.('#pause-menu, #kc-skip')) return;
       document.getElementById('c').requestPointerLock();
       return;
     }

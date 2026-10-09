@@ -1,2 +1,4 @@
 # Pinned by exact hash in tools/art/motion-acceptance.mjs; keep checkout bytes stable.
 src/builders/enemyGLTF.test.js text eol=lf
+# Reviewed plan 07-21 correction, registered by exact hash; LF on every checkout.
+src/main.js text eol=lf
