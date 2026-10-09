@@ -738,5 +738,87 @@
     "writeMethod": "A node script read the file as a buffer, checked it against the frozen hash, the preserved copy and the committed blob, removed carriage returns, inserted the two lines once at a unique anchor, checked addedLines, and wrote the buffer. No editor tool and no git command wrote the file. restore was not run.",
     "registryEntryAddedIn": "task 07-21-03"
   },
+  "registration": {
+    "recordedAt": "2026-10-09T21:31:42.927Z",
+    "commitBeforeRegistration": "6f33df7d11bb033dd42f1168e3a8276d1195185c",
+    "registry": "REVIEWED_SOURCE_EXCEPTIONS in tools/art/motion-acceptance.mjs",
+    "entry": {
+      "name": "src/main.js",
+      "original": "c762044675702688313ce81c7812153bdb30bc95951aa1995e69337414a882d3",
+      "corrected": "51db511fd5249fed908d07ac90929da2e0e2fca11c9014808a332392e88b51f5",
+      "hashBasis": "pinned-lf",
+      "guardLines": 2,
+      "review": ".planning/phases/07-movement-matched-and-action-safe-animation/07-21-SOURCE-EXCEPTION-REVIEW.md"
+    },
+    "rule": "exactCorrectionException returns true for a name in REVIEWED_SOURCE_EXCEPTIONS only when reference === original, current === corrected and binding.revision === '07-CR02-directional-crouch'. The existing CORRECTION_DEPENDENTS and CORRECTED_TUPLE branches are unchanged.",
+    "reviewRecord": {
+      "path": ".planning/phases/07-movement-matched-and-action-safe-animation/07-21-SOURCE-EXCEPTION-REVIEW.md",
+      "exists": false,
+      "note": "Written by the independent opus/high reviewer, not by the executor."
+    },
+    "controlsFile": "tools/art/motion-promotion.test.mjs",
+    "controls": [
+      "reviewed source exception: registry holds one exact pair for src/main.js",
+      "reviewed source exception: rule accepts only the exact pair under the corrected binding",
+      "reviewed source exception: no other name gains an exception",
+      "reviewed source exception: registry hashes are the preserved bytes",
+      "reviewed source exception: preserved corrected bytes are the reviewed content",
+      "reviewed source exception: frozen bytes plus the guard lines are the corrected bytes",
+      "reviewed source exception: pinned-lf content is the registered hash on every checkout"
+    ],
+    "controlsPlacement": "Outside the block gated on the gitignored CR02 candidate cache, so they run on a fresh clone. They build the binding from its revision string, the only field the rule reads.",
+    "controlsFirst": "Run before the registry existed: the test file failed to load with \"does not provide an export named 'REVIEWED_SOURCE_EXCEPTIONS'\" (1 test, 0 pass, 1 fail).",
+    "controlRun": {
+      "command": "node --test tools/art/motion-promotion.test.mjs tools/art/animation-budget-v2.test.mjs tools/art/frozen-bytes.test.mjs",
+      "exitCode": 0,
+      "tests": 86,
+      "pass": 86,
+      "fail": 0,
+      "skipped": 0,
+      "reviewedSourceExceptionTests": 7
+    },
+    "testArt": {
+      "command": "npm run test:art",
+      "exitCode": 0,
+      "tests": 194,
+      "pass": 194,
+      "fail": 0,
+      "skipped": 0,
+      "beforeRegistration": {
+        "tests": 187,
+        "pass": 187,
+        "fail": 0,
+        "skipped": 0
+      }
+    },
+    "registeredCorrectedEqualsWorkingFile": true,
+    "registeredCorrectedEqualsCommittedBlob": true,
+    "notCheckedOnAnotherCheckout": "The controls were run on this Windows working copy only (core.autocrlf=true). They read tracked files and a path pinned to LF; no LF-only checkout or fresh clone was made in this plan.",
+    "unchangedFrozenFiles": {
+      "tools/art/animation-budget-v2.mjs": {
+        "workingFileSha256": "65ed6f129f77e4098c32f9b227435a804a483087ee983014199d4834dd09e777",
+        "committedAtPlanStartSha256": "65ed6f129f77e4098c32f9b227435a804a483087ee983014199d4834dd09e777",
+        "committedAtHeadSha256": "65ed6f129f77e4098c32f9b227435a804a483087ee983014199d4834dd09e777",
+        "unchangedSincePlanStart": true,
+        "statusClean": true
+      },
+      ".planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-budget-view-v2.json": {
+        "workingFileSha256": "6f0bf775eda9061b601023d5890a50248668a3bccbec48eeaeb7f84e7a64ba34",
+        "committedAtPlanStartSha256": "6f0bf775eda9061b601023d5890a50248668a3bccbec48eeaeb7f84e7a64ba34",
+        "committedAtHeadSha256": "6f0bf775eda9061b601023d5890a50248668a3bccbec48eeaeb7f84e7a64ba34",
+        "unchangedSincePlanStart": true,
+        "statusClean": true
+      }
+    },
+    "filesChanged": [
+      "tools/art/motion-acceptance.mjs",
+      "tools/art/motion-promotion.test.mjs"
+    ],
+    "preservedBytesVerify": {
+      "command": "node tools/art/frozen-bytes.mjs verify",
+      "verified": 26,
+      "mismatched": 0
+    }
+  },
   "reruns": null
 }

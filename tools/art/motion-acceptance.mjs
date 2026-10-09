@@ -84,8 +84,22 @@ export function verifyMotionTuple(identities, bytes, { historicalOriginal = fals
 export const CORRECTION_DEPENDENTS = Object.freeze({ 'src/builders/enemyGLTF.test.js': Object.freeze({
   original: '990e0a628dafab497e6ccc74c20b3fbd82fcf19ccb1bd590e4e37ca2bfa33c3c',
   corrected: '220594a2af5b7c8ff8d74d593b2e170ebc7e95bbc217adcbf35d08ff4767221f' }) });
+// Plan 07-21: the reviewed pause-menu pointer-lock correction to one protected source
+// file. One exact pair of hashes and nothing else. `corrected` is the committed content:
+// the path is pinned with `text eol=lf`, so every checkout holds these bytes. `guardLines`
+// is the number of lines the fix added to the frozen content (carriage returns aside);
+// the controls in motion-promotion.test.mjs bind both hashes to the preserved copies in
+// evidence/07-21-frozen-bytes.json.
+export const REVIEWED_SOURCE_EXCEPTIONS = Object.freeze({ 'src/main.js': Object.freeze({
+  original: 'c762044675702688313ce81c7812153bdb30bc95951aa1995e69337414a882d3',
+  corrected: '51db511fd5249fed908d07ac90929da2e0e2fca11c9014808a332392e88b51f5',
+  hashBasis: 'pinned-lf', guardLines: 2,
+  review: '.planning/phases/07-movement-matched-and-action-safe-animation/07-21-SOURCE-EXCEPTION-REVIEW.md' }) });
 export function exactCorrectionException(name, reference, current, binding) {
   if (binding.revision !== '07-CR02-directional-crouch') return false;
+  if (Object.hasOwn(REVIEWED_SOURCE_EXCEPTIONS, name))
+    return reference === REVIEWED_SOURCE_EXCEPTIONS[name].original &&
+      current === REVIEWED_SOURCE_EXCEPTIONS[name].corrected;
   if (Object.hasOwn(CORRECTION_DEPENDENTS, name))
     return reference === CORRECTION_DEPENDENTS[name].original && current === CORRECTION_DEPENDENTS[name].corrected;
   return Object.hasOwn(CORRECTED_TUPLE, name) && reference === ORIGINAL_TUPLE[name] &&
