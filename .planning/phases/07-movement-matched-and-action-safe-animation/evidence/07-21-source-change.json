@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "plan": "07-21",
-  "task": "07-21-01 to 07-21-03, and the review follow-up (reviewFollowUp)",
+  "task": "07-21-01 to 07-21-03, the review follow-up (reviewFollowUp) and the final step (finalStep)",
   "recordedAt": "2026-10-09T21:17:21.648Z",
   "sourceCommit": "8d714738b9c72338fc62a3d89bebd885caccd38c",
   "sourceNote": "No file under src/, index.html or style.css differs from this commit; the spec under test was not yet committed when the RED run was made.",
@@ -645,7 +645,8 @@
         "redStatus": "passed"
       }
     ],
-    "expectedFailures": 0
+    "expectedFailures": 0,
+    "status": "historical: this run was made on the superseded bytes 51db511fd5249fed908d07ac90929da2e0e2fca11c9014808a332392e88b51f5 (mainJsSha256DuringRun) with the six-case spec. Those bytes are accepted nowhere now. The GREEN run for the registered bytes f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393 is reviewFollowUp.green (eleven cases); the final reruns on that identity are under reruns."
   },
   "hashBasis": "pinned-lf",
   "decisionRecord": {
@@ -1819,5 +1820,123 @@
       "Write 07-21-SUMMARY.md with the \"For post-execution review\" section and a deviations section stating that this follow-up went beyond the plan's blocker-only fix rule on the orchestrator's instruction.",
       "Update STATE.md and ROADMAP.md."
     ]
+  },
+  "finalStep": {
+    "recordedAt": "2026-10-09T22:43:55.771Z",
+    "purpose": "Closes the plan after the delta review: the review record is committed as its reviewer wrote it, the two findings that concern test code (D-01, D-02) are settled, superseded evidence is marked (D-07), the findings left open are stated as limitations (D-03 to D-06), and the final reruns are recorded under reruns. No file under src/, index.html, style.css, the frozen gate or the frozen evidence was changed in this step.",
+    "mainJsSha256": "f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393",
+    "reviewRecord": {
+      "path": ".planning/phases/07-movement-matched-and-action-safe-animation/07-21-SOURCE-EXCEPTION-REVIEW.md",
+      "sha256": "f14c0894c62b7f0a9a977df47c3c48d58628214141068ac05f1eee6d5723bd0a",
+      "status": "pass-with-notes",
+      "statusAppliesTo": "f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393",
+      "reviewedHead": "a9f3d019511c14d8cc14bf7aa304d10099af1206",
+      "committedUnchangedIn": "5c03d1f",
+      "note": "Second pass by the same reviewer (delta review). The executor did not edit it. Its line references to the spec and to motion-promotion.test.mjs are those of a9f3d01 and predate the two commits below.",
+      "supersedes": "reviewFollowUp.reviewRecord (the first review, sha256 66371523..., for the superseded hash) and reviewFollowUp.limitations.reviewOfTheNewHash: the review-record control no longer fails."
+    },
+    "reviewRecordLineEnds": {
+      "concern": "core.autocrlf is true and the record's path carries no attribute, so a later git rewrite of the working copy would give it CR LF line ends. The record is LF in the working copy and in the committed blob today.",
+      "measured": "The plan's frontmatter checks are JavaScript multiline patterns of the form ^key: value *$. A carriage return is a line terminator in JavaScript, so $ matches before it: the plan's status, reviewer_model, reviewer_effort and decision patterns each matched a CR LF text in a direct test in this step. In the delta review's core.autocrlf=true clone the decision-record pattern of the same form had already passed.",
+      "choice": "No .gitattributes line was added and no plan text was changed. The review-record control now reads its fields from trimmed frontmatter lines and asserts the same result for the record converted in memory to CR LF and to LF.",
+      "why": "Smaller, and it leaves the root .gitattributes with the single src/main.js line that the plan's acceptance criterion names."
+    },
+    "settled": {
+      "D-01": {
+        "finding": "With PAUSE_SPEC_GUARD_SELECTOR set the spec ran against substituted source under unchanged titles and could exit 0.",
+        "commit": "592e5f4",
+        "file": "tests/pause-menu-pointer-lock.spec.js",
+        "specSha256": "4ef92d70a04b2ac04d3e0ce9b06d8968a48df875403cad5615789e21b7486177",
+        "change": [
+          "With the variable set, every case title ends with [GUARD VARIANT \"<selector>\": substituted source, not a result].",
+          "With the variable set, every case fails in afterEach on a marker error naming the served selector, under any filter or selection, so the exit code is never 0.",
+          "A case whose own assertions held fails on the marker alone. A new annotation, guard-variant-own-outcome (passed or failed), and the marker's text keep its own outcome, so the aid still shows what the guard prevents.",
+          "With the variable unset nothing changes: the same eleven titles, no route, no annotation, no marker."
+        ],
+        "cost": "Every failing case restarts the Playwright worker, so a variant run repeats the file's server start and warm-up for each case.",
+        "demonstration": {
+          "command": "PAUSE_SPEC_GUARD_SELECTOR='#mp-error-banner, #kc-skip' PLAYWRIGHT_JSON_OUTPUT_FILE=.planning/research/.cache/07-21/seg4-variant-demo.json npx playwright test tests/pause-menu-pointer-lock.spec.js --workers=1 --reporter=line,json -g \"Resume re-captures|empty part of the box\"",
+          "runs": 1,
+          "startedAt": "2026-10-09T22:39:06Z",
+          "endedAt": "2026-10-09T22:40:01Z",
+          "exitCode": 1,
+          "reportPath": ".planning/research/.cache/07-21/seg4-variant-demo.json",
+          "reportSha256": "04a098bfd5f4c65f52e21e100bb2d21220b6b9d090597cfe06a44cb8ddfe22c4",
+          "consoleLogPath": ".planning/research/.cache/07-21/seg4-variant-demo-console.log",
+          "consoleLogSha256": "d5ce21a1506ccb3c2e7c0329611c31df3293f77fe89b1a63e79d4e85a215c5ec",
+          "stats": {
+            "startTime": "2026-10-09T22:39:08.549Z",
+            "duration": 52410.492999999995,
+            "expected": 0,
+            "skipped": 0,
+            "unexpected": 2,
+            "flaky": 0
+          },
+          "cases": [
+            {
+              "title": "pause menu: Resume re-captures the pointer [GUARD VARIANT \"#mp-error-banner, #kc-skip\": substituted source, not a result]",
+              "status": "failed",
+              "ownOutcome": "passed",
+              "errors": 1
+            },
+            {
+              "title": "pause menu: a press on the empty part of the box does not capture the pointer [GUARD VARIANT \"#mp-error-banner, #kc-skip\": substituted source, not a result]",
+              "status": "failed",
+              "ownOutcome": "failed",
+              "errors": 2
+            }
+          ],
+          "reading": "A filtered variant run of two cases. Resume re-captures: own assertions passed, the case failed on the marker alone. Empty part of the box: own assertion failed (#pause-menu hidden, the box being served out of the guard) and the marker was added. Exit code 1. Before this change the first of the two would have been reported as passed. This run is a record of the aid, not a result for the shipped source."
+        },
+        "earlierVariantReports": "The reports under reviewFollowUp.guardVariantRuns were made before this change and show cases passing in a variant run. A run of that shape can no longer be produced."
+      },
+      "D-02": {
+        "finding": "The review-record control accepted the registered hash anywhere in the record's text.",
+        "commit": "b7c2791",
+        "file": "tools/art/motion-promotion.test.mjs",
+        "fileSha256": "10d02211fad702847e2a923486b5ba9755a122a23bc7bf5eabf521c4aa8f0030",
+        "control": "reviewed source exception: the review record is non-blocking and its reviewed hash is the registered one",
+        "replaces": "reviewed source exception: the review record is non-blocking and covers the registered hash (the title in registration.controls and reviewFollowUp.registration.controls)",
+        "change": "The frontmatter field reviewed_corrected_sha256 is compared for equality with the registry's corrected hash. status (pass or pass-with-notes), reviewer_model opus and reviewer_effort high are still required, each as exactly one top-level frontmatter line.",
+        "negativeControls": [
+          "field names the superseded hash, registered hash still in the body",
+          "field names a one-character neighbour, registered hash still in the body",
+          "field absent, registered hash only in the body",
+          "field only in the body",
+          "field only inside a nested block",
+          "field given twice",
+          "status blocker",
+          "status given twice",
+          "another reviewer model",
+          "another reviewer effort",
+          "no frontmatter"
+        ],
+        "negativeControlsHow": "Altered copies of the record held in memory inside the test; the record on disk is not written.",
+        "directCheck": "A separate one-off script in this step applied the old form (status pattern plus a text search) and the new comparison to an in-memory copy whose field names 51db511f... while its body still names the registered hash: the old form accepted it, the new one rejected it. The record as committed is accepted by both.",
+        "controlRun": {
+          "command": "node --test tools/art/motion-promotion.test.mjs tools/art/frozen-bytes.test.mjs",
+          "exitCode": 0,
+          "tests": 42,
+          "pass": 42,
+          "fail": 0,
+          "skipped": 0,
+          "logPath": ".planning/research/.cache/07-21/seg4-controls.log",
+          "logSha256": "66d5cd078673c78efca3856554b60cf080c93ae06d82c9ab45a18959d2a61202"
+        },
+        "staleText": "reviewFollowUp.forDeltaReview.whatMakesTheReviewControlPass describes the earlier form of the control."
+      },
+      "D-07": {
+        "finding": "One GREEN run on these bytes; reruns null; the top-level green block described the superseded bytes with no marker.",
+        "done": "green.status marks that block historical and points to reviewFollowUp.green. The final reruns are under reruns.",
+        "notChanged": "The two killcam cases still have to press within the killcam's 2.8 s of simulated time. If that is missed a case fails on a hidden button; it cannot pass falsely."
+      }
+    },
+    "statedLimitations": {
+      "D-03": "Not fixed. The Skip guard hides #pause-menu on mousedown (src/main.js line 279), so a press that is abandoned hides the pause menu for the rest of the killcam, at most 2.8 s of simulated time; Skip stays visible, [K] still works and a canvas press still captures. The comment's \"so that none stays over the round result\" holds for a Skip press only: the [K] key, or the killcam expiring while paused, still leaves the pause menu over the result. The lasting fix is in the result callbacks in src/modes/snd.js and src/modes/tdm.js, which are protected files outside this plan.",
+      "D-04": "Not fixed. #mp-error-banner is in the guard on a measured capture on press. A lost click on its buttons was not shown, and the disconnect route to the banner was not pressed. The banner still stays up over an offline match, because no offline start clears it (src/network/onlineUi.js, src/main.js); the guard treats the press, not that.",
+      "D-05": "Not fixed. The control \"the frozen gate rejects the corrected src/main.js under the original tuple\" reads three blobs from git history and is skipped, visibly, on a shallow history, which is the default on CI. It is not CI coverage. The rule-level control for the original binding always runs.",
+      "D-06": "For plans 07-13 and 07-18. The gate-level control calls verifyCandidate, which under the corrected motion tuple accepts src/main.js at the frozen hash c7620446... or at the registered corrected hash. It does not exercise the command's own check that every reported identity equals the file on disk (tools/art/animation-budget-v2.mjs lines 261 to 262). A pass of the gate, or of that control, does not show that the fix is in the measured build. Plans 07-13 and 07-18 must check that the candidate's src/main.js identity equals the registered corrected hash f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393. See also reviewFollowUp.limitations.gateAcceptsEitherHash.",
+      "whyNotFixed": "D-03 and D-04 have their causes in protected files; a change there would need another registered hash and another review. D-05 and D-06 are properties of the frozen gate and of CI checkout depth, outside this plan."
+    }
   }
 }
