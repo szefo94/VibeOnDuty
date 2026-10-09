@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { runtimeDependencyIdentities } from './runtime-dependencies.mjs';
+import * as capture from './animation-capture.mjs';
 import { requirePlan09, REQUIRED_ASSERTIONS, requireStableGates, REQUIRED_STABLE_GATES, simulationBudget,
   NATURAL_DEATH_WALL_GUARD_MS, NATURAL_RESPAWN_WALL_GUARD_MS, COLLECTION_LIFETIME_MS,
   COLLECTION_LIFETIME_PROJECTION, NATURAL_DEATH_SIM_SECONDS, NATURAL_RESPAWN_SIM_SECONDS,
@@ -119,14 +120,19 @@ test('simulation budget constants keep the planned bounds', () => {
 });
 test('collection lifetime admits the full strict capture projection', () => {
   const p = COLLECTION_LIFETIME_PROJECTION;
-  const sum = p.recordedMatrix + p.fallbackRows + p.combatUnions + p.energyAndThrow + p.onlineUnions;
+  const sum = p.recordedMatrix + p.fallbackRows + p.combatUnions + p.acquisitionWaits + p.onlineUnions;
+  const acquisition = capture.AIM_PROOF_WALL_GUARD_MS + capture.ENERGY_WALL_GUARD_MS + capture.THROW_WALL_GUARD_MS;
+  const natural = NATURAL_DEATH_WALL_GUARD_MS + NATURAL_RESPAWN_WALL_GUARD_MS;
   assert.equal(Object.keys(p).length, 5);
+  assert.equal(p.energyAndThrow, undefined);
   assert.ok(COLLECTION_LIFETIME_MS >= sum);
-  assert.ok(sum >= p.recordedMatrix + p.fallbackRows
-    + 3 * (NATURAL_DEATH_WALL_GUARD_MS + NATURAL_RESPAWN_WALL_GUARD_MS));
-  assert.equal(p.combatUnions, 3 * (NATURAL_DEATH_WALL_GUARD_MS + NATURAL_RESPAWN_WALL_GUARD_MS));
-  assert.equal(sum, 10862931);
-  assert.equal(COLLECTION_LIFETIME_MS, 11400000);
+  assert.ok(sum >= p.recordedMatrix + p.fallbackRows + 3 * natural + 3 * acquisition);
+  assert.equal(p.combatUnions, 3 * natural);
+  assert.equal(p.acquisitionWaits, 3 * acquisition);
+  assert.equal(p.acquisitionWaits, 5040000);
+  assert.equal(acquisition + natural, 3180000);
+  assert.equal(sum, 15452931);
+  assert.equal(COLLECTION_LIFETIME_MS, 15600000);
 });
 test('independent tracer stays incomplete when the combat entry lacks natural-respawn', () => {
   const full = ['accepted-aim', 'earned-resource', 'throw-canceled-reload', 'natural-death', 'natural-respawn'];
@@ -189,4 +195,67 @@ test('acquisition diagnosis is undetermined for too few or malformed samples', (
   assert.equal(diagnoseAcquisition(noRoute).classification, 'undetermined');
   const noSim = progressRun(10); delete noSim[0].simSeconds;
   assert.equal(diagnoseAcquisition(noSim).classification, 'undetermined');
+});
+
+test('simulation bounds and wall guards for the combat path and rows keep the planned values', () => {
+  assert.equal(capture.AIM_PROOF_SIM_SECONDS, 60);
+  assert.equal(capture.AIM_PROOF_WALL_GUARD_MS, 600000);
+  assert.equal(capture.ENERGY_SIM_SECONDS, 90);
+  assert.equal(capture.ENERGY_WALL_GUARD_MS, 900000);
+  assert.equal(capture.THROW_SIM_SECONDS, 10);
+  assert.equal(capture.THROW_WALL_GUARD_MS, 180000);
+  assert.equal(capture.ROW_ACTION_SIM_SECONDS, 10);
+  assert.equal(capture.ROW_ACTION_WALL_GUARD_MS, 180000);
+});
+// A scripted page: each evaluate() returns the next scripted observer sample.
+const scriptedPage = rows => { let i = 0; return { evaluate: async () => rows[Math.min(i++, rows.length - 1)] }; };
+const sampleSpec = { argument: null, read: () => null, predicate: s => s.met === true };
+test('waitSimulation returns met when the condition holds within the simulation limit', async () => {
+  const page = scriptedPage([{ wallMs: 0, simSeconds: 0, met: false }, { wallMs: 900, simSeconds: 2, met: true }]);
+  assert.equal(typeof capture.waitSimulation, 'function');
+  const result = await capture.waitSimulation(page, { what: 'x', label: 'Reload', limitSimSeconds: 10, wallGuardMs: 60000, sample: sampleSpec });
+  assert.equal(result.outcome, 'met');
+  assert.equal(result.simSeconds, 2);
+});
+test('waitSimulation names the stage and the limit when the simulation bound passes first', async () => {
+  const page = scriptedPage([{ wallMs: 0, simSeconds: 0, met: false }, { wallMs: 50000, simSeconds: 11, met: false }]);
+  await assert.rejects(capture.waitSimulation(page, { what: 'x', label: 'Reload completion', limitSimSeconds: 10, wallGuardMs: 600000, sample: sampleSpec }),
+    /^Error: Reload completion did not occur within 10 simulation seconds \(observed 11\.0 simulation seconds, 50000 wall ms\)$/);
+});
+test('waitSimulation reports wall-guard expiry as its own outcome, distinct from simulation expiry', async () => {
+  const page = scriptedPage([{ wallMs: 0, simSeconds: 0, met: false }, { wallMs: 10, simSeconds: 0.2, met: false }]);
+  await assert.rejects(capture.waitSimulation(page, { what: 'x', label: 'Reload completion', limitSimSeconds: 10, wallGuardMs: 0, sample: sampleSpec }),
+    /^Error: Wall guard expired before the simulation bound \(Reload completion\)/);
+});
+test('waitSimulation keeps the plan 07-12 natural death and respawn messages byte for byte', async () => {
+  const page = scriptedPage([{ wallMs: 0, simSeconds: 0, met: false }, { wallMs: 1000, simSeconds: 121, met: false }]);
+  await assert.rejects(capture.waitSimulation(page, { what: 'death', limitSimSeconds: 120, wallGuardMs: 600000, sample: sampleSpec }),
+    /^Error: Natural death did not occur within 120 simulation seconds \(observed 121\.0 simulation seconds, 1000 wall ms\)$/);
+  const page2 = scriptedPage([{ wallMs: 0, simSeconds: 0, met: false }, { wallMs: 10, simSeconds: 0.2, met: false }]);
+  await assert.rejects(capture.waitSimulation(page2, { what: 'respawn', limitSimSeconds: 20, wallGuardMs: 0, sample: sampleSpec }),
+    /^Error: Wall guard expired before the simulation bound \(respawn\): observed 0\.2 simulation seconds in \d+ wall ms, guard 0 ms$/);
+});
+test('aim-proof expiry message carries the classification, absolute route count, loops and whole-wait simulation seconds', () => {
+  const tail = Array.from({ length: 256 }, (_, i) => ({ wallMs: i * 290, simSeconds: 100 + i * 0.05, eye: [60 + i * 0.1, 1.65, 40],
+    route: i < 128 ? 12 : 13, input: { walking: true }, target: { visible: false }, aimProof: null }));
+  assert.equal(typeof capture.describeAimProofExpiry, 'function');
+  const message = capture.describeAimProofExpiry(tail, { simSeconds: 60.2, wallMs: 350000 });
+  assert.match(message, /driver-stalled/);
+  assert.match(message, /route count 13/);
+  assert.match(message, /3 whole loops/);
+  assert.match(message, /60\.2 simulation seconds/);
+});
+function functionBody(source, name) {
+  const start = source.indexOf('async function ' + name + '(');
+  assert.ok(start >= 0, name + ' must exist');
+  const next = source.indexOf('\nasync function ', start + 10);
+  return source.slice(start, next < 0 ? undefined : next);
+}
+test('combat-union and row waits no longer use wall-only waitForFunction', async () => {
+  const source = (await readFile(new URL('./animation-capture.mjs', import.meta.url), 'utf8')).replace(/\r\n/g, '\n');
+  const combat = functionBody(source, 'earnedCombatUnion');
+  assert.doesNotMatch(combat, /waitForFunction/);
+  assert.equal((combat.match(/waitSimulation\(/g) ?? []).length, 5);
+  for (const name of ['weaponSegment', 'sharedMovementUnion', 'blockedWalkUnion'])
+    assert.doesNotMatch(functionBody(source, name), /waitForFunction/, name + ' has a wall-only game-event wait');
 });
