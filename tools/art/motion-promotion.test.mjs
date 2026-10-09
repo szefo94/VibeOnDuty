@@ -68,18 +68,68 @@ for (const key of ['glbBytes', 'donorBytes']) test('actual ' + key + ' corruptio
     assert.equal(entry.review, PHASE_DIR + '07-21-SOURCE-EXCEPTION-REVIEW.md');
   });
 
-  test('reviewed source exception: the review record is non-blocking and covers the registered hash', () => {
+  // One top-level frontmatter scalar by exact key: undefined when absent, null when
+  // repeated. Indented keys of a nested block are not top-level and are not read.
+  const field = (head, key) => {
+    const rows = head.split(/\r?\n/).filter(row => row.startsWith(key + ':'));
+    return rows.length === 1 ? rows[0].slice(key.length + 1).trim() : rows.length ? null : undefined;
+  };
+  // What the exception requires of its review record, as text in and a failure out, so
+  // the negative controls below can feed it altered copies without touching the record.
+  // The status is tied to the bytes by one frontmatter field compared for equality; the
+  // hash occurring somewhere in the text proves nothing.
+  function assertReviewCovers(text, corrected) {
+    assert.match(text, /^---\r?\n/, 'review record has no frontmatter');
+    const head = text.split(/\r?\n---\r?\n/)[0];
+    assert.ok(['pass', 'pass-with-notes'].includes(field(head, 'status')),
+      'review status is missing, repeated or blocking');
+    assert.equal(field(head, 'reviewer_model'), 'opus');
+    assert.equal(field(head, 'reviewer_effort'), 'high');
+    assert.equal(field(head, 'reviewed_corrected_sha256'), corrected,
+      'the review record does not give the registered corrected hash ' + corrected +
+      ' as its reviewed_corrected_sha256: these bytes have no recorded review yet');
+  }
+
+  test('reviewed source exception: the review record is non-blocking and its reviewed hash is the registered one', () => {
     // Tracked files only. The exception stands on an independent review of these exact
-    // bytes: a record with a non-blocking status that names the registered corrected hash.
-    // A re-registered hash therefore fails here until its own review is recorded.
+    // bytes. A re-registered hash therefore fails here until its own review is recorded.
     assert.ok(existsSync(entry.review), 'review record is missing');
-    const head = frontmatter(entry.review);
-    assert.match(head, /^status: (pass|pass-with-notes) *$/m, 'review status is missing or blocking');
-    assert.match(head, /^reviewer_model: opus *$/m);
-    assert.match(head, /^reviewer_effort: high *$/m);
-    assert.ok(readFileSync(entry.review, 'utf8').includes(entry.corrected),
-      'the review record does not name the registered corrected hash ' + entry.corrected +
-      ': these bytes have no recorded review yet');
+    const text = readFileSync(entry.review, 'utf8');
+    assertReviewCovers(text, entry.corrected);
+    // The same record as a checkout with either line ending would hold it.
+    assertReviewCovers(text.replace(/\r?\n/g, '\r\n'), entry.corrected);
+    assertReviewCovers(text.replace(/\r\n/g, '\n'), entry.corrected);
+
+    // Negative controls on altered copies held in memory.
+    const end = text.search(/\r?\n---\r?\n/);
+    const head = text.slice(0, end), body = text.slice(end);
+    const line = key => { const rows = head.split(/\r?\n/).filter(row => row.startsWith(key + ':'));
+      assert.equal(rows.length, 1, key); return rows[0]; };
+    const reviewed = line('reviewed_corrected_sha256');
+    const withLine = (from, to) => head.replace(from, to) + body;
+    const neighbour = entry.corrected.slice(0, -1) + (entry.corrected.endsWith('0') ? '1' : '0');
+    const mention = '\nReviewed bytes: ' + entry.corrected + '\n';
+    const altered = {
+      // The registered hash still occurs in the text in each of the next five.
+      'field names the superseded hash': withLine(reviewed, 'reviewed_corrected_sha256: ' + SUPERSEDED_CORRECTED) + mention,
+      'field names a one-character neighbour': withLine(reviewed, 'reviewed_corrected_sha256: ' + neighbour) + mention,
+      'field absent, hash only in the body': withLine(reviewed + '\n', '').replace(reviewed + '\r\n', '') + mention,
+      'field only in the body': withLine(reviewed + '\n', '').replace(reviewed + '\r\n', '') + '\n' + reviewed + '\n',
+      'field only inside a nested block': withLine(reviewed, 'earlier_round:\n  ' + reviewed),
+      'field given twice': withLine(reviewed, reviewed + '\nreviewed_corrected_sha256: ' + SUPERSEDED_CORRECTED),
+      'status blocker': withLine(line('status'), 'status: blocker'),
+      'status given twice': withLine(line('status'), 'status: blocker\nstatus: pass'),
+      'another reviewer model': withLine(line('reviewer_model'), 'reviewer_model: sonnet'),
+      'another reviewer effort': withLine(line('reviewer_effort'), 'reviewer_effort: medium'),
+      'no frontmatter': body + mention,
+    };
+    for (const [why, copy] of Object.entries(altered)) {
+      assert.notEqual(copy, text, why + ': the copy was not altered');
+      assert.throws(() => assertReviewCovers(copy, entry.corrected), assert.AssertionError, why);
+    }
+    // The old form of this control, a search of the whole text, accepted the first three.
+    for (const why of ['field names the superseded hash', 'field names a one-character neighbour',
+      'field absent, hash only in the body']) assert.ok(altered[why].includes(entry.corrected), why);
   });
 
   test('reviewed source exception: rule accepts only the exact pair under the corrected binding', () => {
