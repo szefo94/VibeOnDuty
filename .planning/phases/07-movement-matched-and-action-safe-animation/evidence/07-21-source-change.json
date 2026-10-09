@@ -1690,6 +1690,134 @@
         "exitCode": 0,
         "note": "One file only. The full lint, typecheck, unit and offline browser reruns belong to the final step; reruns is still null."
       }
-    }
+    },
+    "freshCloneCheck": {
+      "recordedAt": "2026-10-09T22:20:48.842Z",
+      "commit": "91ab1af",
+      "method": "Three fresh clones of this repository at 91ab1af into the session scratch directory outside the project (core.longpaths=true): two full clones with core.autocrlf true and false, and one --depth 1 clone. The project working tree was not touched. The clones were deleted afterwards. Hashes and counts below were read from the commands' output in that run.",
+      "fullCloneAutocrlfTrue": {
+        "coreAutocrlf": "true",
+        "shallow": false,
+        "otherTextFilesForm": "CR LF (src/loop.js w/crlf)",
+        "mainJsSha256": "f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393",
+        "mainJsEqualsRegisteredCorrected": true,
+        "mainJsGitEol": "i/lf w/lf attr/text eol=lf",
+        "controls": {
+          "command": "node --test tools/art/motion-promotion.test.mjs tools/art/frozen-bytes.test.mjs",
+          "tests": 21,
+          "pass": 19,
+          "fail": 1,
+          "skipped": 1,
+          "failing": [
+            "reviewed source exception: the review record is non-blocking and covers the registered hash"
+          ],
+          "skippedTests": [
+            "sealed CR02 candidate and transaction controls"
+          ],
+          "reviewedSourceExceptionPassed": 9
+        },
+        "frozenBytesVerify": {
+          "verified": 26,
+          "mismatched": 0
+        }
+      },
+      "fullCloneAutocrlfFalse": {
+        "coreAutocrlf": "false",
+        "shallow": false,
+        "otherTextFilesForm": "LF (src/loop.js w/lf)",
+        "mainJsSha256": "f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393",
+        "mainJsEqualsRegisteredCorrected": true,
+        "mainJsGitEol": "i/lf w/lf attr/text eol=lf",
+        "controls": {
+          "command": "node --test tools/art/motion-promotion.test.mjs tools/art/frozen-bytes.test.mjs",
+          "tests": 21,
+          "pass": 19,
+          "fail": 1,
+          "skipped": 1,
+          "failing": [
+            "reviewed source exception: the review record is non-blocking and covers the registered hash"
+          ],
+          "skippedTests": [
+            "sealed CR02 candidate and transaction controls"
+          ],
+          "reviewedSourceExceptionPassed": 9
+        },
+        "frozenBytesVerify": {
+          "verified": 26,
+          "mismatched": 0
+        }
+      },
+      "shallowCloneAutocrlfFalse": {
+        "coreAutocrlf": "false",
+        "shallow": true,
+        "otherTextFilesForm": "LF (src/loop.js w/lf)",
+        "mainJsSha256": "f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393",
+        "mainJsEqualsRegisteredCorrected": true,
+        "mainJsGitEol": "i/lf w/lf attr/text eol=lf",
+        "controls": {
+          "command": "node --test tools/art/motion-promotion.test.mjs tools/art/frozen-bytes.test.mjs",
+          "tests": 21,
+          "pass": 18,
+          "fail": 1,
+          "skipped": 2,
+          "failing": [
+            "reviewed source exception: the review record is non-blocking and covers the registered hash"
+          ],
+          "skippedTests": [
+            "reviewed source exception: the frozen gate rejects the corrected src/main.js under the original tuple",
+            "sealed CR02 candidate and transaction controls"
+          ],
+          "reviewedSourceExceptionPassed": 8
+        },
+        "frozenBytesVerify": {
+          "verified": 26,
+          "mismatched": 0
+        }
+      },
+      "reading": [
+        "All three checkouts give src/main.js the registered corrected hash.",
+        "The gate-level control runs in all three with no gitignored cache present.",
+        "The original-tuple control runs in the full clones from git history and is skipped, visibly, in the shallow clone. CI checks out with actions/checkout@v4 at its default depth, so it is expected to be skipped there too; that was not observed.",
+        "The one failing test in each clone is the review-record control, for the reason given under registration.expectedFailure.",
+        "Same host, same git and node for all three; no other operating system was used."
+      ]
+    },
+    "notVerified": [
+      "Real-browser behaviour. Every browser result here is headless Chromium under an adapter that models pointer lock; headless Chromium grants no real lock. Whether a real browser loses a click on a banner button or on Skip once a lock is granted mid-press was not measured.",
+      "The disconnect route to the banner (a session lost while online, then an offline start). Only the failed-join route was pressed. Both reach the same banner through the same code.",
+      "The S&D round-end form of the paused Skip corner. Only the lost TDM match end was pressed; S&D uses the same killcam and a result callback of the same shape.",
+      "The paused Skip corner by a played-out match. The match end was reached by calling the mode's tick with 601 seconds from page script.",
+      "Lint, typecheck, unit tests and the six other offline specs on the final identity. Only src/main.js was linted and only this spec and the art tests were run. reruns is null.",
+      "CI. No hosted run was observed."
+    ],
+    "forDeltaReview": {
+      "commits": [
+        "f0e0b8f (review record, unchanged)",
+        "9b87860 (RED cases and evidence)",
+        "9dfebbb (controls)",
+        "91ab1af (final src/main.js, registry, preserved copy, evidence)",
+        "the commit that adds this block (fresh-clone record only)"
+      ],
+      "registeredPair": {
+        "original": "c762044675702688313ce81c7812153bdb30bc95951aa1995e69337414a882d3",
+        "corrected": "f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393"
+      },
+      "supersededCorrected": "51db511fd5249fed908d07ac90929da2e0e2fca11c9014808a332392e88b51f5",
+      "whatMakesTheReviewControlPass": "The record at the registry's review path must carry status pass or pass-with-notes, reviewer_model opus and reviewer_effort high in its frontmatter, and contain the full hash f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393 somewhere in its text. The executor did not and must not edit that record.",
+      "questions": [
+        "Is the src/main.js change from the reviewed bytes confined to lines 275 to 280 of the corrected file, and is the corrected file still the frozen bytes without carriage returns plus inserted lines inside the one mousedown handler?",
+        "Is hiding #pause-menu on a Skip mousedown acceptable where the press is not completed, and is there a state in which hiding it is wrong (a killcam whose callback keeps the game running)?",
+        "Is adding #mp-error-banner justified on a measured capture-on-press without a measured lost click?",
+        "Do the gate-level controls exercise the real verifyCandidate faithfully, and is the visible skip of the original-tuple case on a shallow history acceptable?",
+        "Is a hard control that fails until the review names the hash the right form for F-07, given that it makes npm run test:art fail between registration and review?",
+        "Does the PAUSE_SPEC_GUARD_SELECTOR measurement aid in the spec carry any risk for normal runs?"
+      ]
+    },
+    "remainingForFinalStep": [
+      "After the delta review: confirm the review-record control passes, then run, one at a time, npm run lint, npm run typecheck, npm run test:unit and the seven offline specs in one sequential Playwright run; record them under reruns with exit code, counts, duration, log path and SHA-256.",
+      "Run the plan's verify commands for tasks 2 and 3 and npm run test:art.",
+      "Write 07-21-SUMMARY.md with the \"For post-execution review\" section and a deviations section stating that this follow-up went beyond the plan's blocker-only fix rule on the orchestrator's instruction.",
+      "Update STATE.md and ROADMAP.md."
+    ]
   }
 }
