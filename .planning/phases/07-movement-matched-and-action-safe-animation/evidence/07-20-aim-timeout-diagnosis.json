@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "path": ".planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-motion-review-tracer.json",
+    "sha256": "f552736407d579a273f2b45d8a4d84b7bc67b5f2071f15f3bc604a6ab87eea74",
+    "capturedAt": "2026-10-09T19:29:06.828Z",
+    "error": "page.waitForFunction: Timeout 30000ms exceeded.",
+    "stage": "eligible-combat",
+    "tier": "low"
+  },
+  "classification": "still-searching",
+  "simSpanSeconds": 5.249999999999982,
+  "wallSpanMs": 30228.10000000149,
+  "routeCount": 2,
+  "loopsWalked": 0.5,
+  "finalThirdDisplacementM": 7.398648834008191,
+  "samples": 106,
+  "wallToSimulationRatio": 5.757733333333636,
+  "earlierRun": {
+    "path": ".planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-motion-review-tracer-third.json",
+    "stage": "accepted-aim",
+    "acquisitionEye": [
+      62.329805246779216,
+      1.65,
+      42.10010500683102
+    ],
+    "route": 1,
+    "target": {
+      "x": 35.98965184466886,
+      "z": 49.62160598880357,
+      "y": 1.5231211301314933,
+      "distance": 27.400953601444595,
+      "visible": true
+    },
+    "wallMs": 32880.90000000596
+  },
+  "lastSample": {
+    "eye": [
+      57.51076890876145,
+      1.65,
+      22.500163023421262
+    ],
+    "route": 2,
+    "target": {
+      "x": 43.916236952457,
+      "z": 50.14211673967117,
+      "y": 2.363768405464344,
+      "distance": 30.80406636082783,
+      "visible": false
+    }
+  },
+  "limits": "still-searching shows only that the driver was moving and had not finished its first route loop when the wall bound ended; it does not prove that a target would have been acquired with more simulation time. The single fresh tracer is the measurement that settles it."
+}
