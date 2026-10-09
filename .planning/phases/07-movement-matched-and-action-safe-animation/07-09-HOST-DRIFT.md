@@ -75,3 +75,40 @@ reviewed decision; it was not changed here.
    source and candidate interleaved in one session and bound the ratio. Robust to host
    drift; needs a reviewed budget amendment and a byte-exact reference source decision.
 3. Keep the gate as it is and leave plan 09 halted.
+
+## Full recapture under High performance plan (2026-10-09)
+
+Owner chose option 1 once. Source `2e2f90f`, all 12 profiles, High performance power plan
+for the run (Balanced restored afterwards); VS Code, Brave and Claude were not closed.
+Report: `.planning/research/.cache/06-art/animation-candidate/07-09-candidate.json`,
+SHA256 `c884065f9152a639b7cf2ca8159e05799d75dcc0707fda987c27270fec45c6fa`.
+
+**Actual V2 CLI: exit 1, "Ownership/essential resource changed"** — `view.sourceCallbacks`
+is 4, the frozen profile expects 3. Timings were not evaluated by the gate. This is not a
+pass and is not a complete qualification.
+
+Cause of the fourth callback: `f89d820` (owner caches) made `handlingReferences()` in
+`src/builders/weaponHandling.js` register a character disposer on the handling owner's
+skeleton. For the third-person player weapon that skeleton is the source actor, which
+already carried three disposers. The last capture that passed the ownership check was at
+`2a5b7ef`, before that commit; no full capture had been run since.
+
+Diagnostic timing comparison of the same report against the frozen limits (computed outside
+the gate, so it carries no acceptance weight): 72 of 192 statistics over, ratios 1.03-1.62
+(the 2026-10-07 capture had 135 over, up to 1.77 on JS components and 2x on frame interval).
+Frame-interval medians, actual|limit ms:
+
+| Profile | Run 1 | Run 2 |
+|---|---|---|
+| Low / 1 | 223 \| 245 | 253 \| 245 |
+| Low / 8 | 358 \| 361 | 397 \| 361 |
+| Medium / 1 | 258 \| 243 | 259 \| 243 |
+| Medium / 8 | 424 \| 410 | 438 \| 410 |
+| High / 1 | 264 \| 240 | 275 \| 240 |
+| High / 8 | 451 \| 411 | 597 \| 411 |
+
+Run 2 is slower than run 1 in every profile, so conditions also drifted within the session.
+
+Outcome: option 1 did not pass. Two separate problems remain: the structural ownership
+mismatch from `f89d820`, which fails the gate regardless of timing, and host-dependent
+absolute limits.
