@@ -16,6 +16,16 @@ export const REQUIRED_ASSERTIONS = [
   'tests/animation-regressions.spec.js#repeated-removal-keeper',
 ];
 export const REQUIRED_STABLE_GATES = ['lint', 'typecheck', 'typecheck:mp', 'build', 'unit', 'offline', 'multiplayer'];
+// RED-phase stub (07-12): real implementation lands in the GREEN commit.
+export const NATURAL_DEATH_SIM_SECONDS = 120;
+export const NATURAL_RESPAWN_SIM_SECONDS = 20;
+export const NATURAL_DEATH_WALL_GUARD_MS = 1200000;
+export const NATURAL_RESPAWN_WALL_GUARD_MS = 300000;
+export const COLLECTION_LIFETIME_PROJECTION = Object.freeze({ recordedMatrix: 0, fallbackRows: 0,
+  combatUnions: 0, energyAndThrow: 0, onlineUnions: 0 });
+export const COLLECTION_LIFETIME_MS = 90 * 60 * 1000;
+export function independentTracerComplete() { return undefined; }
+export function simulationBudget() { return { outcome: 'pending', simSeconds: 0, wallMs: 0 }; }
 export function requireStableGates(identities, evidence) {
   verifyRuntimeDependencies(identities);
   assert.deepEqual(evidence?.identities, identities, 'Stale or missing stable gate identities');

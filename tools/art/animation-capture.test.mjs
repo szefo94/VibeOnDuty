@@ -2,7 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { runtimeDependencyIdentities } from './runtime-dependencies.mjs';
-import { requirePlan09, REQUIRED_ASSERTIONS, requireStableGates, REQUIRED_STABLE_GATES } from './animation-capture.mjs';
+import { requirePlan09, REQUIRED_ASSERTIONS, requireStableGates, REQUIRED_STABLE_GATES, simulationBudget,
+  NATURAL_DEATH_WALL_GUARD_MS, NATURAL_RESPAWN_WALL_GUARD_MS, COLLECTION_LIFETIME_MS,
+  COLLECTION_LIFETIME_PROJECTION, NATURAL_DEATH_SIM_SECONDS, NATURAL_RESPAWN_SIM_SECONDS,
+  independentTracerComplete } from './animation-capture.mjs';
 const identities = { 'src/main.js': 'a'.repeat(64),
   ...runtimeDependencyIdentities() };
 const completeSummary = '---\nstatus: complete\n---\n';
@@ -77,4 +80,62 @@ test('all stable gates require actual full passing current-source logs', () => {
   }
   assert.throws(() => requireStableGates({}, evidence));
   assert.throws(() => requireStableGates(identities, null));
+});
+
+const dead = sample => sample.dead === true;
+const run = (rows) => rows.map(([wallMs, simSeconds, isDead = false]) => ({ wallMs, simSeconds, dead: isDead }));
+test('simulation budget is met when a satisfying sample exists at or before the limit', () => {
+  const result = simulationBudget(run([[0, 0], [5000, 40], [9000, 120, true]]), 120, dead);
+  assert.equal(result.outcome, 'met');
+  assert.equal(result.simSeconds, 120);
+  assert.equal(result.wallMs, 9000);
+});
+test('simulation budget expires when the limit passes with no satisfying sample', () => {
+  const result = simulationBudget(run([[0, 0], [5000, 60], [11000, 121]]), 120, dead);
+  assert.equal(result.outcome, 'sim-expired');
+});
+test('simulation budget does not accept a satisfying sample after the limit', () => {
+  const result = simulationBudget(run([[0, 0], [5000, 60], [11000, 121, true]]), 120, dead);
+  assert.equal(result.outcome, 'sim-expired');
+});
+test('simulation budget stays pending while neither the predicate nor the limit is reached', () => {
+  const result = simulationBudget(run([[0, 0], [5000, 30]]), 120, dead);
+  assert.equal(result.outcome, 'pending');
+  assert.equal(result.simSeconds, 30);
+  assert.equal(result.wallMs, 5000);
+});
+test('simulation budget is pending for empty or single-sample input and never met', () => {
+  assert.equal(simulationBudget([], 120, dead).outcome, 'pending');
+  assert.equal(simulationBudget(run([[0, 0, true]]), 120, dead).outcome, 'pending');
+});
+test('simulation budget rejects non-finite or decreasing simulation seconds', () => {
+  assert.throws(() => simulationBudget(run([[0, 0], [1, Number.NaN]]), 120, dead), assert.AssertionError);
+  assert.throws(() => simulationBudget(run([[0, 0], [1, Infinity]]), 120, dead), assert.AssertionError);
+  assert.throws(() => simulationBudget(run([[0, 5], [1, 4]]), 120, dead), assert.AssertionError);
+});
+test('simulation budget constants keep the planned bounds', () => {
+  assert.equal(NATURAL_DEATH_SIM_SECONDS, 120);
+  assert.equal(NATURAL_RESPAWN_SIM_SECONDS, 20);
+});
+test('collection lifetime admits the full strict capture projection', () => {
+  const p = COLLECTION_LIFETIME_PROJECTION;
+  const sum = p.recordedMatrix + p.fallbackRows + p.combatUnions + p.energyAndThrow + p.onlineUnions;
+  assert.equal(Object.keys(p).length, 5);
+  assert.ok(COLLECTION_LIFETIME_MS >= sum);
+  assert.ok(sum >= p.recordedMatrix + p.fallbackRows
+    + 3 * (NATURAL_DEATH_WALL_GUARD_MS + NATURAL_RESPAWN_WALL_GUARD_MS));
+  assert.equal(p.combatUnions, 3 * (NATURAL_DEATH_WALL_GUARD_MS + NATURAL_RESPAWN_WALL_GUARD_MS));
+  assert.equal(sum, 10862931);
+  assert.equal(COLLECTION_LIFETIME_MS, 11400000);
+});
+test('independent tracer stays incomplete when the combat entry lacks natural-respawn', () => {
+  const full = ['accepted-aim', 'earned-resource', 'throw-canceled-reload', 'natural-death', 'natural-respawn'];
+  const report = stages => ({ tracer: true, canceled: false, protectedBytesUnchanged: true, collectionErrors: [],
+    matrix: [{ completed: true, media: { bytes: 1 } }],
+    offlineMovement: [{ complete: true }], sharedMovement: [{ complete: true }],
+    previews: [{ completed: true, media: { bytes: 1 } }],
+    offlineCombat: [{ complete: stages.length === full.length, media: { bytes: 1 },
+      stages: stages.map(name => ({ name })) }] });
+  assert.equal(independentTracerComplete(report(full)), true);
+  assert.equal(independentTracerComplete(report(full.slice(0, 4))), false);
 });

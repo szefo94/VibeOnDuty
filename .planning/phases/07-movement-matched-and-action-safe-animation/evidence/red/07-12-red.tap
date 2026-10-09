@@ -1,0 +1,430 @@
+TAP version 13
+# Subtest: capture accepts only current complete09 with both executed browser qualifications
+ok 1 - capture accepts only current complete09 with both executed browser qualifications
+  ---
+  duration_ms: 42.7649
+  type: 'test'
+  ...
+# Subtest: successful collection/recovery cannot bypass halted09
+ok 2 - successful collection/recovery cannot bypass halted09
+  ---
+  duration_ms: 0.7843
+  type: 'test'
+  ...
+# Subtest: successful collection/recovery cannot bypass partial09
+ok 3 - successful collection/recovery cannot bypass partial09
+  ---
+  duration_ms: 0.1815
+  type: 'test'
+  ...
+# Subtest: successful collection/recovery cannot bypass missing09
+ok 4 - successful collection/recovery cannot bypass missing09
+  ---
+  duration_ms: 0.1331
+  type: 'test'
+  ...
+# Subtest: capture rejects missing qualification even with collection/recovery success
+ok 5 - capture rejects missing qualification even with collection/recovery success
+  ---
+  duration_ms: 45.5048
+  type: 'test'
+  ...
+# Subtest: capture rejects stale qualification even with collection/recovery success
+ok 6 - capture rejects stale qualification even with collection/recovery success
+  ---
+  duration_ms: 42.3643
+  type: 'test'
+  ...
+# Subtest: capture rejects numeric qualification even with collection/recovery success
+ok 7 - capture rejects numeric qualification even with collection/recovery success
+  ---
+  duration_ms: 40.6144
+  type: 'test'
+  ...
+# Subtest: capture rejects assertion qualification even with collection/recovery success
+ok 8 - capture rejects assertion qualification even with collection/recovery success
+  ---
+  duration_ms: 44.5154
+  type: 'test'
+  ...
+# Subtest: capture rejects unrun qualification even with collection/recovery success
+ok 9 - capture rejects unrun qualification even with collection/recovery success
+  ---
+  duration_ms: 41.4057
+  type: 'test'
+  ...
+# Subtest: capture rejects logs qualification even with collection/recovery success
+ok 10 - capture rejects logs qualification even with collection/recovery success
+  ---
+  duration_ms: 42.3412
+  type: 'test'
+  ...
+# Subtest: tests/action-lifecycle.spec.js\#throw1ms cannot bypass qualification when missing
+ok 11 - tests/action-lifecycle.spec.js\#throw1ms cannot bypass qualification when missing
+  ---
+  duration_ms: 43.8703
+  type: 'test'
+  ...
+# Subtest: tests/action-lifecycle.spec.js\#throw1ms cannot bypass qualification when unrun
+ok 12 - tests/action-lifecycle.spec.js\#throw1ms cannot bypass qualification when unrun
+  ---
+  duration_ms: 41.0288
+  type: 'test'
+  ...
+# Subtest: tests/action-lifecycle.spec.js\#throw1ms cannot bypass qualification when failed
+ok 13 - tests/action-lifecycle.spec.js\#throw1ms cannot bypass qualification when failed
+  ---
+  duration_ms: 43.172
+  type: 'test'
+  ...
+# Subtest: tests/action-lifecycle.spec.js\#throw1ms cannot bypass qualification when exit
+ok 14 - tests/action-lifecycle.spec.js\#throw1ms cannot bypass qualification when exit
+  ---
+  duration_ms: 41.289
+  type: 'test'
+  ...
+# Subtest: tests/action-lifecycle.spec.js\#throw1ms cannot bypass qualification when log
+ok 15 - tests/action-lifecycle.spec.js\#throw1ms cannot bypass qualification when log
+  ---
+  duration_ms: 43.2339
+  type: 'test'
+  ...
+# Subtest: tests/animation-regressions.spec.js\#repeated-removal-keeper cannot bypass qualification when missing
+ok 16 - tests/animation-regressions.spec.js\#repeated-removal-keeper cannot bypass qualification when missing
+  ---
+  duration_ms: 43.4691
+  type: 'test'
+  ...
+# Subtest: tests/animation-regressions.spec.js\#repeated-removal-keeper cannot bypass qualification when unrun
+ok 17 - tests/animation-regressions.spec.js\#repeated-removal-keeper cannot bypass qualification when unrun
+  ---
+  duration_ms: 40.5339
+  type: 'test'
+  ...
+# Subtest: tests/animation-regressions.spec.js\#repeated-removal-keeper cannot bypass qualification when failed
+ok 18 - tests/animation-regressions.spec.js\#repeated-removal-keeper cannot bypass qualification when failed
+  ---
+  duration_ms: 41.5198
+  type: 'test'
+  ...
+# Subtest: tests/animation-regressions.spec.js\#repeated-removal-keeper cannot bypass qualification when exit
+ok 19 - tests/animation-regressions.spec.js\#repeated-removal-keeper cannot bypass qualification when exit
+  ---
+  duration_ms: 46.4742
+  type: 'test'
+  ...
+# Subtest: tests/animation-regressions.spec.js\#repeated-removal-keeper cannot bypass qualification when log
+ok 20 - tests/animation-regressions.spec.js\#repeated-removal-keeper cannot bypass qualification when log
+  ---
+  duration_ms: 41.7636
+  type: 'test'
+  ...
+# Subtest: only unambiguous leading frontmatter can qualify09: historical
+ok 21 - only unambiguous leading frontmatter can qualify09: historical
+  ---
+  duration_ms: 0.6976
+  type: 'test'
+  ...
+# Subtest: only unambiguous leading frontmatter can qualify09: fenced
+ok 22 - only unambiguous leading frontmatter can qualify09: fenced
+  ---
+  duration_ms: 0.1639
+  type: 'test'
+  ...
+# Subtest: only unambiguous leading frontmatter can qualify09: trailing
+ok 23 - only unambiguous leading frontmatter can qualify09: trailing
+  ---
+  duration_ms: 0.1147
+  type: 'test'
+  ...
+# Subtest: only unambiguous leading frontmatter can qualify09: duplicate
+ok 24 - only unambiguous leading frontmatter can qualify09: duplicate
+  ---
+  duration_ms: 0.1457
+  type: 'test'
+  ...
+# Subtest: only unambiguous leading frontmatter can qualify09: duplicateComplete
+ok 25 - only unambiguous leading frontmatter can qualify09: duplicateComplete
+  ---
+  duration_ms: 0.1279
+  type: 'test'
+  ...
+# Subtest: only unambiguous leading frontmatter can qualify09: quotedDuplicate
+ok 26 - only unambiguous leading frontmatter can qualify09: quotedDuplicate
+  ---
+  duration_ms: 0.0948
+  type: 'test'
+  ...
+# Subtest: only unambiguous leading frontmatter can qualify09: escapedDuplicate
+ok 27 - only unambiguous leading frontmatter can qualify09: escapedDuplicate
+  ---
+  duration_ms: 0.0943
+  type: 'test'
+  ...
+# Subtest: only unambiguous leading frontmatter can qualify09: explicitDuplicate
+ok 28 - only unambiguous leading frontmatter can qualify09: explicitDuplicate
+  ---
+  duration_ms: 0.0936
+  type: 'test'
+  ...
+# Subtest: only unambiguous leading frontmatter can qualify09: malformedStatusChild
+ok 29 - only unambiguous leading frontmatter can qualify09: malformedStatusChild
+  ---
+  duration_ms: 0.1003
+  type: 'test'
+  ...
+# Subtest: only unambiguous leading frontmatter can qualify09: malformed
+ok 30 - only unambiguous leading frontmatter can qualify09: malformed
+  ---
+  duration_ms: 0.1009
+  type: 'test'
+  ...
+# Subtest: only unambiguous leading frontmatter can qualify09: invalid
+ok 31 - only unambiguous leading frontmatter can qualify09: invalid
+  ---
+  duration_ms: 0.1152
+  type: 'test'
+  ...
+# Subtest: only unambiguous leading frontmatter can qualify09: unterminated
+ok 32 - only unambiguous leading frontmatter can qualify09: unterminated
+  ---
+  duration_ms: 0.0926
+  type: 'test'
+  ...
+# Subtest: only unambiguous leading frontmatter can qualify09: absent
+ok 33 - only unambiguous leading frontmatter can qualify09: absent
+  ---
+  duration_ms: 0.0868
+  type: 'test'
+  ...
+# Subtest: only unambiguous leading frontmatter can qualify09: nestedOnly
+ok 34 - only unambiguous leading frontmatter can qualify09: nestedOnly
+  ---
+  duration_ms: 0.0919
+  type: 'test'
+  ...
+# Subtest: only unambiguous leading frontmatter can qualify09: merged
+ok 35 - only unambiguous leading frontmatter can qualify09: merged
+  ---
+  duration_ms: 0.118
+  type: 'test'
+  ...
+# Subtest: real summary held at halted plus historical completion remains unqualified
+ok 36 - real summary held at halted plus historical completion remains unqualified
+  ---
+  duration_ms: 12.0096
+  type: 'test'
+  ...
+# Subtest: canonical complete frontmatter permits nested historical status and irrelevant body
+ok 37 - canonical complete frontmatter permits nested historical status and irrelevant body
+  ---
+  duration_ms: 43.6879
+  type: 'test'
+  ...
+# Subtest: all stable gates require actual full passing current-source logs
+ok 38 - all stable gates require actual full passing current-source logs
+  ---
+  duration_ms: 1295.769
+  type: 'test'
+  ...
+# Subtest: simulation budget is met when a satisfying sample exists at or before the limit
+not ok 39 - simulation budget is met when a satisfying sample exists at or before the limit
+  ---
+  duration_ms: 0.4357
+  type: 'test'
+  location: 'C:\\Programowanie\\VibeOnDuty\\tools\\art\\animation-capture.test.mjs:87:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    'pending' !== 'met'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'met'
+  actual: 'pending'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Programowanie/VibeOnDuty/tools/art/animation-capture.test.mjs:89:10)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1382:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+    Test.postRun (node:internal/test_runner/test:1522:19)
+    Test.run (node:internal/test_runner/test:1447:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+  ...
+# Subtest: simulation budget expires when the limit passes with no satisfying sample
+not ok 40 - simulation budget expires when the limit passes with no satisfying sample
+  ---
+  duration_ms: 0.167
+  type: 'test'
+  location: 'C:\\Programowanie\\VibeOnDuty\\tools\\art\\animation-capture.test.mjs:93:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'pending'
+    - 'sim-expired'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'sim-expired'
+  actual: 'pending'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Programowanie/VibeOnDuty/tools/art/animation-capture.test.mjs:95:10)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1382:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+    Test.postRun (node:internal/test_runner/test:1522:19)
+    Test.run (node:internal/test_runner/test:1447:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+  ...
+# Subtest: simulation budget does not accept a satisfying sample after the limit
+not ok 41 - simulation budget does not accept a satisfying sample after the limit
+  ---
+  duration_ms: 0.1448
+  type: 'test'
+  location: 'C:\\Programowanie\\VibeOnDuty\\tools\\art\\animation-capture.test.mjs:97:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'pending'
+    - 'sim-expired'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'sim-expired'
+  actual: 'pending'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Programowanie/VibeOnDuty/tools/art/animation-capture.test.mjs:99:10)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1382:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+    Test.postRun (node:internal/test_runner/test:1522:19)
+    Test.run (node:internal/test_runner/test:1447:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+  ...
+# Subtest: simulation budget stays pending while neither the predicate nor the limit is reached
+not ok 42 - simulation budget stays pending while neither the predicate nor the limit is reached
+  ---
+  duration_ms: 0.1422
+  type: 'test'
+  location: 'C:\\Programowanie\\VibeOnDuty\\tools\\art\\animation-capture.test.mjs:101:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 30
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 30
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Programowanie/VibeOnDuty/tools/art/animation-capture.test.mjs:104:10)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1382:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+    Test.postRun (node:internal/test_runner/test:1522:19)
+    Test.run (node:internal/test_runner/test:1447:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+  ...
+# Subtest: simulation budget is pending for empty or single-sample input and never met
+ok 43 - simulation budget is pending for empty or single-sample input and never met
+  ---
+  duration_ms: 0.0849
+  type: 'test'
+  ...
+# Subtest: simulation budget rejects non-finite or decreasing simulation seconds
+not ok 44 - simulation budget rejects non-finite or decreasing simulation seconds
+  ---
+  duration_ms: 0.1635
+  type: 'test'
+  location: 'C:\\Programowanie\\VibeOnDuty\\tools\\art\\animation-capture.test.mjs:111:1'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected exception (AssertionError).'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Programowanie/VibeOnDuty/tools/art/animation-capture.test.mjs:112:10)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1382:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+    Test.postRun (node:internal/test_runner/test:1522:19)
+    Test.run (node:internal/test_runner/test:1447:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+  ...
+# Subtest: simulation budget constants keep the planned bounds
+ok 45 - simulation budget constants keep the planned bounds
+  ---
+  duration_ms: 0.0641
+  type: 'test'
+  ...
+# Subtest: collection lifetime admits the full strict capture projection
+not ok 46 - collection lifetime admits the full strict capture projection
+  ---
+  duration_ms: 5.0445
+  type: 'test'
+  location: 'C:\\Programowanie\\VibeOnDuty\\tools\\art\\animation-capture.test.mjs:120:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+    
+      assert.ok(sum >= p.recordedMatrix + p.fallbackRows
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Programowanie/VibeOnDuty/tools/art/animation-capture.test.mjs:125:10)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1382:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+    Test.postRun (node:internal/test_runner/test:1522:19)
+    Test.run (node:internal/test_runner/test:1447:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+  ...
+# Subtest: independent tracer stays incomplete when the combat entry lacks natural-respawn
+not ok 47 - independent tracer stays incomplete when the combat entry lacks natural-respawn
+  ---
+  duration_ms: 0.2297
+  type: 'test'
+  location: 'C:\\Programowanie\\VibeOnDuty\\tools\\art\\animation-capture.test.mjs:131:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Programowanie/VibeOnDuty/tools/art/animation-capture.test.mjs:139:10)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1382:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+    Test.postRun (node:internal/test_runner/test:1522:19)
+    Test.run (node:internal/test_runner/test:1447:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+  ...
+1..47
+# tests 47
+# suites 0
+# pass 40
+# fail 7
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2617.7961
