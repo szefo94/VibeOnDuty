@@ -9,7 +9,7 @@ import { spawnSync } from 'node:child_process';
 import { runtimeDependencyBytes, verifyRuntimeDependencies } from './runtime-dependencies.mjs';
 import { ACCEPTANCE_PATH, LOCK_PATH, ACCEPTANCE_SHA256, TUPLE_PATHS, ORIGINAL_TUPLE,
   CORRECTED_TUPLE, PROOF_PATH, acceptanceRecordBytes, verifyMotionTuple, boundedPath,
-  assertNoMotionTransaction, exactCorrectionException } from './motion-acceptance.mjs';
+  assertNoMotionTransaction, exactCorrectionException, CORRECTION_DEPENDENTS } from './motion-acceptance.mjs';
 import { transactPromotion, recoverInterruptedPromotion } from './promote-motion.mjs';
 
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -80,6 +80,13 @@ if (!existsSync(candidateRoot + '/candidate.glb')) {
       assert.equal(exactCorrectionException(file, ORIGINAL_TUPLE[file], 'b'.repeat(64), binding), false);
     }
     assert.equal(exactCorrectionException('src/artMaterials.js', 'a', 'b', binding), false);
+    for (const [file, pin] of Object.entries(CORRECTION_DEPENDENTS)) {
+      assert.equal(hash(readFileSync(file)), pin.corrected, 'Pinned dependent matches the checked-in file');
+      assert.equal(exactCorrectionException(file, pin.original, pin.corrected, binding), true);
+      assert.equal(exactCorrectionException(file, pin.original, 'b'.repeat(64), binding), false);
+      assert.equal(exactCorrectionException(file, 'a'.repeat(64), pin.corrected, binding), false);
+      assert.equal(exactCorrectionException(file, pin.original, pin.corrected, verifyMotionTuple(ids(original), original, { historicalOriginal: true })), false);
+    }
     const manifest = JSON.parse(corrected.manifestBytes); manifest.actions[0].cycleDisplacement += .1;
     const b = { ...corrected, manifestBytes: Buffer.from(JSON.stringify(manifest)) };
     assert.throws(() => verifyRuntimeDependencies(ids(b), b), /registered|accepted/);

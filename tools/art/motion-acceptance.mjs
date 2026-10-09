@@ -78,8 +78,16 @@ export function verifyMotionTuple(identities, bytes, { historicalOriginal = fals
   return { revision: corrected ? '07-CR02-directional-crouch' : 'original107', tuple,
     acceptanceSha256: corrected ? ACCEPTANCE_SHA256 : null, candidateProofSha256: corrected ? PROOF_SHA256 : null };
 }
+// The frozen form of this unit test asserts that historical provenance equals the
+// current donor, export and manifest, which the correction makes false by design.
+// Its one reviewed replacement is pinned the same way as the tuple itself.
+export const CORRECTION_DEPENDENTS = Object.freeze({ 'src/builders/enemyGLTF.test.js': Object.freeze({
+  original: '990e0a628dafab497e6ccc74c20b3fbd82fcf19ccb1bd590e4e37ca2bfa33c3c',
+  corrected: '220594a2af5b7c8ff8d74d593b2e170ebc7e95bbc217adcbf35d08ff4767221f' }) });
 export function exactCorrectionException(name, reference, current, binding) {
   if (binding.revision !== '07-CR02-directional-crouch') return false;
+  if (Object.hasOwn(CORRECTION_DEPENDENTS, name))
+    return reference === CORRECTION_DEPENDENTS[name].original && current === CORRECTION_DEPENDENTS[name].corrected;
   return Object.hasOwn(CORRECTED_TUPLE, name) && reference === ORIGINAL_TUPLE[name] &&
     current === CORRECTED_TUPLE[name];
 }
