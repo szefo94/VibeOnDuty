@@ -1,12 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
-import { runtimeDependencyBytes, verifyRuntimeDependencies } from './runtime-dependencies.mjs';
+import { runtimeDependencyBytes, runtimeDependencyIdentities, verifyRuntimeDependencies } from './runtime-dependencies.mjs';
+import { verifyCandidate, candidateLineage, producerContract, sha256 as gateSha256 } from './animation-budget-v2.mjs';
 import { ACCEPTANCE_PATH, LOCK_PATH, ACCEPTANCE_SHA256, TUPLE_PATHS, ORIGINAL_TUPLE,
   CORRECTED_TUPLE, PROOF_PATH, acceptanceRecordBytes, verifyMotionTuple, boundedPath,
   assertNoMotionTransaction, exactCorrectionException, CORRECTION_DEPENDENTS,
@@ -34,9 +35,11 @@ for (const key of ['glbBytes', 'donorBytes']) test('actual ' + key + ' corruptio
 {
   const SOURCE = 'src/main.js';
   const FROZEN_MAIN = 'c762044675702688313ce81c7812153bdb30bc95951aa1995e69337414a882d3';
+  const PHASE_DIR = '.planning/phases/07-movement-matched-and-action-safe-animation/';
   const correctedBinding = { revision: '07-CR02-directional-crouch' };
   const originalBinding = { revision: 'original107' };
   const entry = REVIEWED_SOURCE_EXCEPTIONS[SOURCE];
+  const frontmatter = file => readFileSync(file, 'utf8').split(/\r?\n---\r?\n/)[0];
   const store = JSON.parse(readFileSync(STORE_PATH, 'utf8'));
   const frozenBytes = decodeBytes(store.frozen[SOURCE]);
   const correctedBytes = decodeBytes(store.corrected[SOURCE]);
@@ -50,10 +53,25 @@ for (const key of ['glbBytes', 'donorBytes']) test('actual ' + key + ' corruptio
     assert.equal(entry.original, reference[SOURCE], 'original is the frozen reference identity');
     assert.match(entry.corrected, /^[0-9a-f]{64}$/);
     assert.notEqual(entry.corrected, entry.original);
-    assert.ok(['pinned-lf', 'working-bytes'].includes(entry.hashBasis));
+    // The basis is the owner's recorded one, as a literal. A registry that named another
+    // basis would otherwise switch off the comparison with the working file below.
+    assert.equal(entry.hashBasis, 'pinned-lf');
+    assert.match(frontmatter(PHASE_DIR + '07-21-SOURCE-CHANGE-DECISION.md'), /^hash_basis: pinned-lf *$/m);
     assert.ok(Number.isInteger(entry.guardLines) && entry.guardLines > 0);
-    assert.equal(entry.review,
-      '.planning/phases/07-movement-matched-and-action-safe-animation/07-21-SOURCE-EXCEPTION-REVIEW.md');
+    assert.equal(entry.review, PHASE_DIR + '07-21-SOURCE-EXCEPTION-REVIEW.md');
+  });
+
+  test('reviewed source exception: the review record is non-blocking and covers the registered hash', () => {
+    // Tracked files only. The exception stands on an independent review of these exact
+    // bytes: a record with a non-blocking status that names the registered corrected hash.
+    // A re-registered hash therefore fails here until its own review is recorded.
+    assert.ok(existsSync(entry.review), 'review record is missing');
+    const head = frontmatter(entry.review);
+    assert.match(head, /^status: (pass|pass-with-notes) *$/m, 'review status is missing or blocking');
+    assert.match(head, /^reviewer_model: opus *$/m);
+    assert.match(head, /^reviewer_effort: high *$/m);
+    assert.ok(readFileSync(entry.review, 'utf8').includes(entry.corrected),
+      'the review record does not name the registered corrected hash ' + entry.corrected);
   });
 
   test('reviewed source exception: rule accepts only the exact pair under the corrected binding', () => {
@@ -69,6 +87,9 @@ for (const key of ['glbBytes', 'donorBytes']) test('actual ' + key + ' corruptio
     // The original binding, and any binding that is not the corrected one.
     for (const binding of [originalBinding, { revision: undefined }, {}])
       assert.equal(exactCorrectionException(SOURCE, original, corrected, binding), false);
+    // No binding at all fails closed: the rule throws and the gate stops.
+    for (const binding of [undefined, null])
+      assert.throws(() => exactCorrectionException(SOURCE, original, corrected, binding), TypeError);
     // Swapped arguments.
     assert.equal(exactCorrectionException(SOURCE, corrected, original, correctedBinding), false);
     // Every other frozen reference identity, and near-miss spellings, given the same hashes.
@@ -113,21 +134,101 @@ for (const key of ['glbBytes', 'donorBytes']) test('actual ' + key + ' corruptio
     assert.ok(open !== -1 && lines.indexOf(lines[open], open + 1) === -1);
     const close = lines.indexOf('});', open);
     for (const line of added) assert.ok(line.line - 1 > open && line.line - 1 < close, line.text);
-    const record = JSON.parse(readFileSync(
-      '.planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-21-source-change.json', 'utf8'));
+    const record = JSON.parse(readFileSync(PHASE_DIR + 'evidence/07-21-source-change.json', 'utf8'));
     assert.equal(record.addedLines.length, entry.guardLines);
     assert.deepEqual(record.addedLines, added);
     assert.equal(record.mainJsSha256After, entry.corrected);
     assert.equal(record.hashBasis, entry.hashBasis);
   });
 
-  test('reviewed source exception: pinned-lf content is the registered hash on every checkout',
-    { skip: entry.hashBasis === 'pinned-lf' ? false : 'hash basis is ' + entry.hashBasis }, () => {
-      assert.equal(correctedBytes.indexOf(0x0d), -1, 'corrected copy contains a carriage return');
-      // Safe on every checkout: the path is pinned to LF by the exact-path attribute below.
-      assert.equal(hash(readFileSync(SOURCE)), entry.corrected);
-      const attributes = readFileSync('.gitattributes', 'utf8').split(/\r?\n/);
-      assert.equal(attributes.filter(line => line === SOURCE + ' text eol=lf').length, 1);
+  // Never skipped: the registry test above holds the basis to the literal 'pinned-lf'.
+  test('reviewed source exception: pinned-lf content is the registered hash on every checkout', () => {
+    assert.equal(correctedBytes.indexOf(0x0d), -1, 'corrected copy contains a carriage return');
+    // Safe on every checkout: the path is pinned to LF by the exact-path attribute below.
+    assert.equal(hash(readFileSync(SOURCE)), entry.corrected);
+    const attributes = readFileSync('.gitattributes', 'utf8').split(/\r?\n/);
+    assert.equal(attributes.filter(line => line === SOURCE + ' text eol=lf').length, 1);
+  });
+
+  // Gate level: the real verifyCandidate, the tracked frozen budget and a synthetic
+  // candidate built the way animation-budget-v2.test.mjs builds its own. Synthetic
+  // candidates exercise validator branches only and qualify nothing.
+  const budgetBytes = readFileSync(BUDGET_PATH), budget = JSON.parse(budgetBytes);
+  const referenceReport = JSON.parse(readFileSync(budget.referencePath, 'utf8'));
+  function gate(change, dependencyBytes = bytes) {
+    const candidate = structuredClone(referenceReport);
+    candidate.capturedAt = '2026-10-07T00:00:00.000Z';
+    candidate.identities['src/builders/enemyGLTF.js'] = 'a'.repeat(64);
+    Object.assign(candidate.identities, runtimeDependencyIdentities(dependencyBytes));
+    change(candidate.identities);
+    const identity = gateSha256(JSON.stringify(candidate.identities));
+    for (const sample of candidate.samples) {
+      sample.sourceIdentitySha256 = identity;
+      sample.ownership.actorSkeletons = sample.actorCount;
+      for (const resources of sample.resourceSamples) resources.textures -= 50 * (sample.actorCount - 1);
+    }
+    candidate.producerContract = producerContract(candidate);
+    candidate.v2Lineage = candidateLineage(budget, budgetBytes, candidate);
+    return verifyCandidate(budget, budgetBytes, candidate, Buffer.from(JSON.stringify(candidate)), dependencyBytes);
+  }
+  // The gate's message ends its line with the file name; strict assert appends a diff after it.
+  const changed = name => new RegExp('Protected source changed: ' + name.replaceAll('.', '\\.') + '$', 'm');
+  const near = entry.corrected.slice(0, -1) + (entry.corrected.endsWith('0') ? '1' : '0');
+
+  // The published motion tuple comes from tracked files, so this needs no gitignored cache.
+  test('reviewed source exception: the frozen gate accepts the corrected src/main.js and rejects any other', () => {
+    assert.equal(budget.referenceIdentities[SOURCE], entry.original);
+    const accepted = gate(identities => { identities[SOURCE] = entry.corrected; });
+    assert.equal(accepted.runtimeDependencies.motion.revision, '07-CR02-directional-crouch');
+    assert.equal(accepted.applicableBudgetPass, true);
+    // Any other identity for the file, a one-character neighbour and a missing one.
+    for (const identity of ['b'.repeat(64), near, entry.corrected.toUpperCase(), ''])
+      assert.throws(() => gate(identities => { identities[SOURCE] = identity; }), changed(SOURCE));
+    assert.throws(() => gate(identities => { delete identities[SOURCE]; }), changed(SOURCE));
+    // The exception does not cover another protected file, with or without the corrected
+    // src/main.js beside it, and its hash is not transferable to another name.
+    assert.throws(() => gate(identities => { identities[SOURCE] = entry.corrected;
+      identities['src/loop.js'] = 'b'.repeat(64); }), changed('src/loop.js'));
+    for (const name of ['src/input.js', 'index.html'])
+      assert.throws(() => gate(identities => { identities[name] = entry.corrected; }), changed(name));
+    // Stated limitation, not a defect of the rule: the exception is additive, so the gate
+    // also passes with the frozen src/main.js. A gate pass does not show the fix is present.
+    assert.equal(gate(() => {}).applicableBudgetPass, true);
+  });
+
+  // The original tuple's bytes are no longer in a checkout. They are read from git history
+  // by blob id, or from the research cache when the history is shallow, and each is checked
+  // against its registered original hash before use.
+  const ORIGINAL_BLOBS = { glbBytes: '517925f6d5e5132f0186412d6740cedec4761a33',
+    donorBytes: 'd07463c766bbe19fb06f30f22f59293bde5fd3f6', manifestBytes: '171a32112ed9fe805cc56dea97989f143aa6dd8b' };
+  const cache = '.planning/research/.cache/07-motion/';
+  function originalTuple() {
+    const tuple = { provenanceBytes: bytes.provenanceBytes };
+    for (const [key, file] of Object.entries(TUPLE_PATHS)) {
+      const names = key === 'glbBytes' ? ['accepted107.glb', key + '.backup'] : [key + '.backup'];
+      const cached = !existsSync(cache) ? [] : readdirSync(cache)
+        .flatMap(directory => names.map(name => cache + directory + '/' + name)).filter(existsSync);
+      const sources = [() => {
+        const fromGit = spawnSync('git', ['cat-file', 'blob', ORIGINAL_BLOBS[key]], { maxBuffer: 2 ** 30 });
+        return fromGit.status === 0 ? fromGit.stdout : null;
+      }, ...cached.map(name => () => readFileSync(name))];
+      for (const read of sources) {
+        const buffer = read();
+        if (buffer && hash(buffer) === ORIGINAL_TUPLE[file]) { tuple[key] = buffer; break; }
+      }
+      if (!tuple[key]) return null;
+    }
+    return tuple;
+  }
+  const original = originalTuple();
+  test('reviewed source exception: the frozen gate rejects the corrected src/main.js under the original tuple',
+    { skip: original ? false : 'original tuple bytes need full git history or the research cache' }, () => {
+      const run = change => gate(identities => { delete identities[ACCEPTANCE_PATH]; change(identities); }, original);
+      // Under the original tuple the frozen identity passes and the corrected one does not.
+      const unchanged = run(() => {});
+      assert.equal(unchanged.runtimeDependencies.motion.revision, 'original107');
+      assert.equal(unchanged.applicableBudgetPass, true);
+      assert.throws(() => run(identities => { identities[SOURCE] = entry.corrected; }), changed(SOURCE));
     });
 }
 
