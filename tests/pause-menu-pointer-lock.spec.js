@@ -20,9 +20,16 @@ const GRANT_DELAY_MS = 50;
 // value, so a case can be recorded as it behaves without part of the guard:
 // '#pause-menu' leaves the banner and Skip unguarded, ':not(*)' matches nothing.
 // The file on disk is not written. A run made this way is a record of what the
-// guard prevents, never a result for the shipped source.
+// guard prevents, never a result for the shipped source, and it cannot be taken for
+// one: every case title carries the variant, and every case fails, whatever filter,
+// retry or selection the run was started with. A case whose own assertions held
+// fails on the variant marker alone; its `guard-variant-own-outcome` annotation and
+// the marker's text give its own outcome, so the aid still shows what the guard prevents.
 const GUARD_SELECTOR = process.env.PAUSE_SPEC_GUARD_SELECTOR;
+const GUARD_VARIANT = GUARD_SELECTOR !== undefined;
 const GUARD_CALL = /closest\?\.\('[^']*'\)/g;
+const titled = title => GUARD_VARIANT
+  ? `${title} [GUARD VARIANT ${JSON.stringify(GUARD_SELECTOR)}: substituted source, not a result]` : title;
 let guardVariantError = null;
 
 let server, url;
@@ -46,7 +53,7 @@ test.beforeAll(async ({ browser }) => {
 test.afterAll(async () => { await server?.close(); });
 
 test.beforeEach(async ({ context }, testInfo) => {
-  if (GUARD_SELECTOR === undefined) return;
+  if (!GUARD_VARIANT) return;
   testInfo.annotations.push({ type: 'guard-variant', description: GUARD_SELECTOR });
   await context.route(/\/src\/main\.js(\?.*)?$/, async route => {
     const response = await route.fetch();
@@ -60,7 +67,16 @@ test.beforeEach(async ({ context }, testInfo) => {
     await route.fulfill({ response, body: body.replace(GUARD_CALL, `closest?.(${JSON.stringify(GUARD_SELECTOR)})`) });
   });
 });
-test.afterEach(() => { expect(guardVariantError).toBeNull(); });
+test.afterEach(async ({}, testInfo) => {
+  expect(guardVariantError).toBeNull();
+  if (!GUARD_VARIANT) return;
+  // Unconditional in a variant run, so its exit code is never 0.
+  const own = testInfo.status === 'passed' && testInfo.errors.length === 0 ? 'passed' : 'failed';
+  testInfo.annotations.push({ type: 'guard-variant-own-outcome', description: own });
+  throw new Error('GUARD VARIANT RUN: src/main.js was served with its press guard selector replaced by ' +
+    `${JSON.stringify(GUARD_SELECTOR)}. This case's own assertions ${own}. A run with ` +
+    'PAUSE_SPEC_GUARD_SELECTOR set never passes and is not a result for the shipped source.');
+});
 
 // The collector's three overrides, copied as they are from collectCombat in
 // tools/art/animation-capture.mjs: the lock is granted inside the request.
@@ -189,28 +205,28 @@ async function expectPlayingCaptured(page) {
   expect(await readState(page)).toEqual({ mode: 'tdm', gameRunning: true, pointerLocked: true });
 }
 
-test('pause menu: Main Menu press returns to the menu under a synchronous lock grant', async ({ context, page }) => {
+test(titled('pause menu: Main Menu press returns to the menu under a synchronous lock grant'), async ({ context, page }) => {
   await context.addInitScript(synchronousGrant);
   await startTdmAndPause(page);
   await page.locator('#pause-mainmenu-btn').click();
   await expectMenuReturned(page);
 });
 
-test('pause menu: a 150 ms Main Menu press returns to the menu under a deferred lock grant', async ({ context, page }) => {
+test(titled('pause menu: a 150 ms Main Menu press returns to the menu under a deferred lock grant'), async ({ context, page }) => {
   await context.addInitScript(deferredGrant, GRANT_DELAY_MS);
   await startTdmAndPause(page);
   await page.locator('#pause-mainmenu-btn').click({ delay: 150 });
   await expectMenuReturned(page);
 });
 
-test('pause menu: an immediate Main Menu click returns to the menu under a deferred lock grant', async ({ context, page }) => {
+test(titled('pause menu: an immediate Main Menu click returns to the menu under a deferred lock grant'), async ({ context, page }) => {
   await context.addInitScript(deferredGrant, GRANT_DELAY_MS);
   await startTdmAndPause(page);
   await page.locator('#pause-mainmenu-btn').click();
   await expectMenuReturned(page);
 });
 
-test('pause menu: the graphics-quality control stays usable while paused', async ({ context, page }) => {
+test(titled('pause menu: the graphics-quality control stays usable while paused'), async ({ context, page }) => {
   await context.addInitScript(synchronousGrant);
   await startTdmAndPause(page);
   await page.locator('#graphics-quality-pause').click();
@@ -222,14 +238,14 @@ test('pause menu: the graphics-quality control stays usable while paused', async
   expect(await readState(page)).toEqual({ mode: 'tdm', gameRunning: true, pointerLocked: false });
 });
 
-test('pause menu: Resume re-captures the pointer', async ({ context, page }) => {
+test(titled('pause menu: Resume re-captures the pointer'), async ({ context, page }) => {
   await context.addInitScript(synchronousGrant);
   await startTdmAndPause(page);
   await page.locator('#pause-resume-btn').click();
   await expectPlayingCaptured(page);
 });
 
-test('pause menu: a canvas press re-captures the pointer while unlocked and running', async ({ context, page }) => {
+test(titled('pause menu: a canvas press re-captures the pointer while unlocked and running'), async ({ context, page }) => {
   await context.addInitScript(synchronousGrant);
   await startTdmAndPause(page);
   // Left edge at mid height: outside the centred pause box, on the game canvas.
@@ -237,7 +253,7 @@ test('pause menu: a canvas press re-captures the pointer while unlocked and runn
   await expectPlayingCaptured(page);
 });
 
-test('pause menu: a press on the empty part of the box does not capture the pointer', async ({ context, page }) => {
+test(titled('pause menu: a press on the empty part of the box does not capture the pointer'), async ({ context, page }) => {
   await context.addInitScript(synchronousGrant);
   await startTdmAndPause(page);
   // The title is inside the box and is not a control. Before the guard such a press
@@ -247,7 +263,7 @@ test('pause menu: a press on the empty part of the box does not capture the poin
   expect(await readState(page)).toEqual({ mode: 'tdm', gameRunning: true, pointerLocked: false });
 });
 
-test('online error banner: a Return to menu press over an offline match returns to the menu without capturing the pointer', async ({ context, page }) => {
+test(titled('online error banner: a Return to menu press over an offline match returns to the menu without capturing the pointer'), async ({ context, page }) => {
   await context.addInitScript(synchronousGrant);
   await context.addInitScript(pressLog);
   await failJoinThenStartTdmAndPause(page);
@@ -258,7 +274,7 @@ test('online error banner: a Return to menu press over an offline match returns 
   await expect(page.locator('#mp-error-banner')).toBeHidden();
 });
 
-test('online error banner: a Retry press over an offline match starts a fresh join attempt without capturing the pointer first', async ({ context, page }) => {
+test(titled('online error banner: a Retry press over an offline match starts a fresh join attempt without capturing the pointer first'), async ({ context, page }) => {
   await context.addInitScript(synchronousGrant);
   await context.addInitScript(pressLog);
   const attempts = await failJoinThenStartTdmAndPause(page);
@@ -274,7 +290,7 @@ test('online error banner: a Retry press over an offline match starts a fresh jo
   expect(await readState(page)).toEqual({ mode: 'tdm', gameRunning: true, pointerLocked: false });
 });
 
-test('killcam: a Skip press after a wave death shows the death screen with the pointer released', async ({ context, page }) => {
+test(titled('killcam: a Skip press after a wave death shows the death screen with the pointer released'), async ({ context, page }) => {
   await context.addInitScript(synchronousGrant);
   await context.addInitScript(pressLog);
   await page.goto(url);
@@ -300,7 +316,7 @@ test('killcam: a Skip press after a wave death shows the death screen with the p
   expect(await readState(page)).toEqual({ mode: null, gameRunning: false, pointerLocked: false });
 });
 
-test('killcam: a Skip press while paused at a lost TDM match end leaves no pause menu over the result', async ({ context, page }) => {
+test(titled('killcam: a Skip press while paused at a lost TDM match end leaves no pause menu over the result'), async ({ context, page }) => {
   await context.addInitScript(synchronousGrantSilentRelease);
   await context.addInitScript(pressLog);
   await page.goto(url);
