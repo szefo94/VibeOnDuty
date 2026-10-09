@@ -4,15 +4,359 @@ plan: "21"
 status: pass-with-notes
 reviewer_model: opus
 reviewer_effort: high
-reviewed: 2026-10-09T21:46:00Z
-reviewed_head: 14ff711591c793f14fe8b213903732c03f41eaed
+reviewed: 2026-10-09T22:30:00Z
+reviewed_head: a9f3d019511c14d8cc14bf7aa304d10099af1206
+reviewed_corrected_sha256: f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393
+status_applies_to: the bytes named in reviewed_corrected_sha256, and to no other
 plan_base: e0663dc6f3dca20904b7509f04c4fc20465ec3d3
-commits_reviewed: [8d71473, 68bf214, 6f33df7, f7bc7c4, 14ff711]
-findings:
+commits_reviewed: [8d71473, 68bf214, 6f33df7, f7bc7c4, 14ff711, f0e0b8f, 9b87860, 9dfebbb, 91ab1af, a9f3d01]
+first_review:
+  reviewed: 2026-10-09T21:46:00Z
+  reviewed_head: 14ff711591c793f14fe8b213903732c03f41eaed
+  verdict: pass-with-notes
+  superseded: true
+delta_findings:
   blocker: 0
-  warning: 3
-  note: 12
+  warning: 1
+  note: 7
 ---
+
+# Plan 07-21: delta review of the re-registered `src/main.js` exception
+
+Dated 2026-10-09T22:30:00Z, at `HEAD` `a9f3d01`. Second pass by the same reviewer, read-only
+except for this record. The first review (dated 2026-10-09T21:46:00Z, at `14ff711`) is kept
+unchanged at the end of this file; it covered a corrected hash that is now superseded and
+accepted nowhere. Where the two parts disagree, this part is the current one.
+
+## Verdict for the current registered bytes
+
+`pass-with-notes`, for exactly these bytes of `src/main.js`:
+
+`f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393`
+
+(26,122 bytes, no carriage return, 571 line feeds; the committed blob at `a9f3d01`, the working
+file, and the decoded preserved `corrected` copy, each hashed by my own code.)
+
+| Blocker condition | Result | Basis |
+|---|---|---|
+| Diff not confined as claimed | not met | Frozen bytes minus carriage returns plus one contiguous 446-byte insertion at line 275 column 6; against the bytes I reviewed before, only old lines 275-276 are replaced |
+| A legitimate capture path is broken | not met | The lock request, Resume and canvas paths are byte-identical; the guard still sits in a branch that ends in `return` |
+| Exception accepts anything but the exact pair | not met | 67,431 input tuples against the rule at `e0663dc`, at `14ff711` and at `HEAD` |
+| A frozen file changed | not met | Blob ids unchanged since `e0663dc` for the gate, its test, budget, reference, baseline and cost report; 119 of 127 identities equal their frozen hash, the same 8 differ |
+| Registered hash not bound to the committed bytes | not met | Registry, `HEAD` blob, working file and preserved copy agree; three fresh clones reproduce the hash |
+| Another file changed line-ending form | not met | Same four attribute-carrying paths; `.gitattributes` blob unchanged since `14ff711`; the 25 frozen store entries are identical to `8d71473` |
+| The Skip hide leaves no visible way to resume or leave | not met | See question 2 |
+| A new spec case cannot fail | not met | Each of the five has a recorded failing run (question 8) |
+| `51db511f...` still accepted anywhere | not met | Rejected by the rule in every position and by the real gate; absent from the registry module and from the store |
+
+One new warning (D-01, the spec's source-substitution switch) and seven notes. None of them
+needs a change to a protected file, so none needs another registered hash.
+
+## Disposition of the first review's findings
+
+| id | First-review finding | Now | Basis |
+|---|---|---|---|
+| F-01 | `#mp-error-banner` misclassified, same defect offline | resolved, with a stated limit | Banner is in the selector (`src/main.js:278`); two real-press cases, failing on the superseded bytes and passing on these (`tests/pause-menu-pointer-lock.spec.js:250-275`); surface row split and corrected (`evidence/07-21-source-change.json:378`). Limit: only the capture was measured, not a lost click (D-04) |
+| F-02 | `#kc-skip` untested; stale pause menu in one corner | resolved for the Skip route | Wave case and paused-at-match-end case (`spec:277-333`); the corner is fixed by `src/main.js:279`. The S&D form was not pressed, and the `[K]` and expiry routes to the same stale menu remain (D-03) |
+| F-03 | No gate-level control | resolved | `tools/art/motion-promotion.test.mjs:160-241`, through the real `verifyCandidate`; passes here and in both full clones; the original-tuple half skips on a shallow history (D-05) |
+| F-04 | Blank-area change disclosed only in evidence | resolved except the summary | Comment rewritten (`src/main.js:275-277`); case at `spec:240-248`, shown failing with a guard that matches nothing; summary text is still to be written |
+| F-05 | `guardLines` is only a count | unchanged, accepted | Now 6; the hash pair pins content |
+| F-06 | `hashBasis` flip could skip the disk comparison | resolved | Literal assertion and decision-record check (`motion-promotion.test.mjs:65-66`); the disk comparison is no longer skippable (`:153-159`) |
+| F-07 | Exception live with no tie to a review | partially resolved | Control at `motion-promotion.test.mjs:71-83`; it is a tripwire, not proof (question 6, D-02) |
+| F-08 | Gate accepts either hash | recorded | Limitation text (`evidence:1462`) and an assertion (`motion-promotion.test.mjs:204`); the rule is unchanged, as it should be |
+| F-09 | Missing binding throws, uncontrolled | resolved | `motion-promotion.test.mjs:99-100` |
+| F-10 | Decision provenance | not changed | For the owner |
+| F-11 | `reruns` null; stale line numbers; `task` field | partially | `task` corrected and a line-number note added; `reruns` is still `null` (`evidence:933`) |
+| F-12 | Cases 2 and 3 do not detect the defect | not changed | Still true; no action needed |
+| F-13 | `animation-budget-v2.test.mjs` fails on a fresh clone | not changed | Pre-existing and outside this plan; recorded under limitations |
+| F-14 | Captured pointer after a canvas press in a wave killcam; stale pause menu | partially | Fixed for a Skip press only; the rest is in files this plan must not touch |
+| F-15 | Controls read `.planning/` by relative path; `.gitattributes` line count | not changed | Fails closed as written |
+
+## The ten questions
+
+### 1. Confined to lines 275-280? Still frozen bytes plus insertions inside the one handler?
+
+Yes to both.
+
+- Decoded with my own code again (`Buffer.from(rows.join(''), 'base64')`, nothing imported from
+  `tools/art/frozen-bytes.mjs`). Frozen copy: 26,035 bytes, `c7620446...882d3`. Corrected copy:
+  26,122 bytes, the hash above, byte-equal to the working file and to
+  `git cat-file blob HEAD:src/main.js`.
+- Frozen copy without carriage returns (25,676 bytes, byte-equal to the `e0663dc` blob) against
+  the corrected copy: common prefix 13,464 bytes, common suffix 12,212 bytes, 13,464 + 12,212 =
+  25,676, nothing removed, 446 bytes inserted at line 275 column 6. The inserted run is exactly
+  the three comment lines and three statements at `src/main.js:275-280`.
+- Against the blob I reviewed at `14ff711` (`51db511f...`): common prefix 13,475, common suffix
+  12,228; 115 bytes removed (the old comment tail and the old `if (...closest...)` head on old
+  lines 275-276) and 419 inserted. Nothing else differs.
+- Untouched, by the comparison above: the online early return (`src/main.js:272`), `tryShoot()`
+  (`:284`), grenade (`:286`), ADS (`:287`), `mouseup` (`:289-292`), the canvas click handler
+  (`:316-318`), `returnToMainMenu` (`:323-372`), `pointerlockchange` (`:374-384`), Resume and Main
+  Menu listeners (`:386-390`), the graphics-quality capture listener (`:78-87`), every touch branch.
+- `npx eslint src/main.js --max-warnings 0`: exit 0.
+
+### 2. Is hiding `#pause-menu` on a Skip `mousedown` correct in every reachable state?
+
+Yes. I found no state it makes worse and no dead end.
+
+- Online: unreachable. `src/main.js:272` returns for every button while `isOnline()`, before
+  line 273. Joining online also stops any killcam (`src/network/onlineSession.js:319`).
+- Locked, buy panel open, or game not running: the branch at `src/main.js:274` is not entered.
+- What the hide can affect is bounded by the killcam. `#kc-skip` is visible only while a killcam
+  runs (`src/replay/killcam.js:58-74`). The killcam ticks every frame whatever the lock state
+  (`src/loop.js:236-237`) and ends by timer after 2.8 s of simulated time (`killcam.js:8`, `:36`).
+  There are three callers, and every callback sets `gameRunning` false before showing its screen:
+  `_showWaveOver` (`src/entities/enemies.js:258-259`), `doResult` (`src/modes/snd.js:361-362`),
+  `_show` (`src/modes/tdm.js:52-53`). A second `startKillcam` while one runs is ignored
+  (`killcam.js:13`). So after any killcam the pause menu has no purpose, and hiding it early
+  never removes a menu that should stay.
+
+| State at the Skip press | Before this delta | Now |
+|---|---|---|
+| Wave death, player dead, pause hidden | no lock, death screen | same; the hide is a no-op |
+| Killed while already paused (the release is silent, so the pause menu was left up) | stale pause menu over the death or result screen | hidden; better |
+| TDM lost at time-up or S&D round end, alive, Esc pressed, pause menu up | stale pause menu over `#snd-result` | hidden, result shown; this is the regression the first review reported |
+| Same, press abandoned (pointer dragged off, no click) | pause menu stays | pause menu hidden for the rest of the killcam, at most 2.8 s of simulated time; Skip stays visible, `[K]` still works, a canvas press still captures; then the result screen with its button appears |
+| Not paused, alive, pointer locked | cannot press a button while locked | same |
+
+- Running, unlocked, no visible way to resume or leave: only the abandoned-press row comes
+  close, and it is bounded, shows Skip throughout, and ends by itself in a screen with a control.
+  Not a blocker.
+- `document.getElementById('pause-menu')` cannot be null here: the element is static
+  (`index.html:182`) and the same file already dereferences it unguarded (`src/main.js:321`, `:380`).
+- Side effect on the collector: its `document`-targeted `mousedown`
+  (`tools/art/animation-capture.mjs:373`) gives `control` undefined, so neither new statement acts.
+
+### 3. Is `#mp-error-banner` justified on a measured capture without a measured lost click?
+
+Yes as a low-risk consistency fix; the record is right not to claim more.
+
+- What was measured (cached report, hash matches the evidence): on the superseded bytes both
+  banner cases failed on one observation, "the pointer was captured before the click was
+  delivered"; the click itself arrived. Under these adapters a click on a control that stays
+  visible always arrives, so a lost click could not have shown either way. The author says this
+  (`evidence:1262` onward, and `settled` at `:1430`).
+- A press on the banner is never a press that should capture: the banner is an alert with two
+  buttons, and the canvas around it still captures.
+- Pointer state afterwards. Return to menu: its click calls the Main Menu button's handler
+  (`onlineSession.js:622-624`), `returnToMainMenu` clears the banner through `leaveOnline`
+  (`src/main.js:326`) and releases the pointer (`:366`). Retry: `joinOnline` asks for the lock
+  itself from the click (`onlineSession.js:250-258`) and releases it when the join fails (`:352`);
+  the case ends with the offline match still running, paused, banner up, pointer released
+  (`spec:270-274`). The guard only removes the earlier capture on `mousedown`.
+- While genuinely online the banner can also show (`onlineSession.js:305-307`); that path returns
+  at `src/main.js:272` and is unaffected.
+- Left as it was: no offline start clears the banner, so it still sits over an offline match.
+  The guard treats the press, not that (D-04).
+
+### 4. Do the gate-level controls exercise `verifyCandidate` faithfully?
+
+Yes for the identity loop, which is all the exception touches.
+
+- `gate()` (`motion-promotion.test.mjs:166-181`) calls the real `verifyCandidate` with the tracked
+  frozen budget file, the tracked reference report as candidate body, and the published tuple
+  bytes read from tracked files (`:21-22`). It builds the candidate the way the CR-02 control does
+  (`tools/art/animation-budget-v2.test.mjs:20-33`). The gate file and its test are unchanged
+  (blobs `c23e1429`, `af8ca8f6`).
+- The assertions match the gate's own message, anchored at the end of the name
+  (`:183`), so `src/main.js` cannot be satisfied by a longer name.
+- My own probe of the real gate, written before these controls existed and rerun now, agrees:
+  corrected hash accepted; `51db511f...`, another hash, a one-character neighbour and a missing
+  identity rejected with `Protected source changed: src/main.js`; a changed `src/loop.js` beside
+  the corrected file rejected on `src/loop.js`; the corrected hash on `src/input.js` or
+  `index.html` rejected on that file; corrected hash under the original tuple rejected.
+- Can the control pass while the real gate rejects? Only for reasons outside the exception
+  (timings, pixels, the frozen reference). One real difference is worth knowing: the command-line
+  gate also requires every reported identity to equal the file on disk
+  (`tools/art/animation-budget-v2.mjs:261-262`), which `verifyCandidate` alone does not. On this
+  tree that makes the command accept only the corrected hash, while the function accepts the
+  frozen one too. The disk half is covered separately (`motion-promotion.test.mjs:153-159`) (D-06).
+- The visible skip is acceptable. The original-tuple case needs three blobs from history
+  (`:210-229`), each checked against its registered hash before use. On a shallow history it
+  reports as skipped with a reason (`:232-233`); I saw exactly that in a `--depth 1` clone. The
+  rule-level control for the original binding always runs (`:96-97`).
+
+### 5. Does the rule still accept exactly one tuple for `src/main.js`?
+
+Yes.
+
+- `tools/art/motion-acceptance.mjs` differs from `14ff711` on two lines only, 95 and 96 (the
+  `corrected` value and `guardLines`). The rule body (`:98-107`) is unchanged.
+- Enumeration over 133 name entries (the 128 reference names, the three tuple file names, one
+  of which is already among the 128, and two near-misses), 13 by 13 hashes (frozen, new corrected, superseded, every CR-02 and dependent
+  hash, `undefined`, an unrelated hash) and three bindings, 67,431 tuples:
+  - `e0663dc` to working module: one difference, `('src/main.js', c7620446..., f768954f..., corrected binding)` false to true.
+  - `14ff711` to working module: two differences, that tuple false to true and
+    `('src/main.js', c7620446..., 51db511f..., corrected binding)` true to false.
+  - `HEAD` blob to working module: none.
+- Every accepted tuple in the whole enumeration: the three CR-02 tuple files, the one dependent,
+  and `src/main.js` with the pair above. Nothing else is widened.
+- `51db511f...` is rejected as current hash, as reference hash and as the target of the new
+  hash; it does not occur in `motion-acceptance.mjs`; the store's `corrected` section has one
+  key and it decodes to the new bytes. In tracked files the old hash now occurs only in this
+  record (first review text), in the evidence record, and in the control that rejects it
+  (`motion-promotion.test.mjs:40`).
+
+### 6. Is a control that fails until the review names the hash a sound form?
+
+It is a sound tripwire and a weak proof. Both halves matter.
+
+- What it does well: a re-registered hash cannot pass `npm run test:art` until this record
+  changes, and the status is read from the frontmatter only (`motion-promotion.test.mjs:45`,
+  `:76-79`), so body text cannot fake a status. It did fail before this update, here and in all
+  three clones, with the message naming the hash.
+- How it can be satisfied trivially: the hash is searched for anywhere in the file (`:80`). A
+  sentence such as "I did not review f768..." beside an older `status: pass` would pass. A record
+  with several rounds also has one status line for all of them. And nothing binds the record's
+  own content: anyone who can commit can add the string.
+- What ties the status to these bytes beyond the string, in this record: the frontmatter line
+  `reviewed_corrected_sha256` carries the hash, `status_applies_to` says the status is for those
+  bytes only, `reviewed_head` names a commit whose `src/main.js` blob has that hash, and the
+  verdict section above states it in words. The control should compare that frontmatter field
+  for equality with the registry value instead of searching the text (D-02).
+- The cost is intended and acceptable: `test:art` is red between a registration and its review.
+
+### 7. Does `PAUSE_SPEC_GUARD_SELECTOR` carry risk for normal runs or CI?
+
+For normal runs and CI as configured, no. As a property of the test file, yes (D-01).
+
+- Unset, the hook returns at once (`spec:49`) and no route is installed. The variable is named
+  nowhere else in tracked files, and `.github/workflows/test.yml` sets no such variable.
+- Set, the page is served a copy of `src/main.js` with the guard selector replaced (`spec:51-61`);
+  the file on disk is not written. A wrong match count aborts and fails every later case
+  (`spec:55-58`, `:63`), which is the right direction.
+- The gap: a variant run keeps the same case titles and can exit 0, for example with a selector
+  that is a superset of the shipped one. The only mark is a per-case annotation (`spec:50`) that
+  the line reporter does not print. So a green run can be a run against substituted source, and
+  the only way to tell is to read the JSON report. The cached GREEN report for these bytes
+  carries no such annotation on any of its 11 cases; the two variant reports carry it on all four.
+
+### 8. Do the five new cases fail for the stated reason on the old bytes and pass for the right one?
+
+Yes, from the cached reports (all nine cached hashes recomputed and equal to the record). I ran
+no browser.
+
+| Case | Failing run | Reason recorded in the report | Why it passes now |
+|---|---|---|---|
+| Empty part of the box (`spec:240`) | served a guard matching nothing | `#pause-menu` expected visible, received hidden | the `#pause-menu` selector; it also passed on the superseded bytes, so it is a pin, not a RED case |
+| Banner, Return to menu (`:250`) | superseded bytes | pointer captured before the click | `#mp-error-banner` in the selector |
+| Banner, Retry (`:261`) | superseded bytes | pointer captured before the click | same |
+| Skip after a wave death (`:277`) | served `#pause-menu` only | pointer captured before the click, and `pointerLocked: true` at the end | `#kc-skip` in the selector; passed on the superseded bytes too |
+| Skip while paused at a lost TDM end (`:303`) | superseded bytes | `#pause-menu` expected hidden, received visible | `src/main.js:279`; with no capture and a silent release nothing else can hide it |
+
+- Presses are real: each goes through `locator.click()` (`spec:127`), and the press log is read
+  only (`:102-110`). No `dispatchEvent` and no `element.click()` is used for a press.
+- Shortened setups are disclosed in the spec (`:282-283`, `:308-310`) and in the evidence
+  (`method.setupShortenedFromPageScript`). `triggerDeath()` is the routine a fatal hit calls
+  (`enemies.js:245`); `getMode().tick(601)` runs the mode's own time-up path
+  (`tdm.js:101-142`, `:47-76`). They shorten how the state is reached, not the press or what
+  follows it. They do leave two claims unmeasured, which the author lists: a played-out match,
+  and the S&D form.
+- The silent-release adapter (`spec:78-84`) is what makes the paused Skip case able to fail; the
+  collector's adapter would have hidden it, as the first review said.
+- Both killcam cases must press within the killcam's 2.8 s of simulated time. If that is ever
+  missed the case fails on a hidden button; it cannot pass falsely (D-07).
+
+### 9. Frozen files, line-ending forms, `.gitattributes`, the 25 frozen store entries
+
+Unchanged.
+
+- `git diff 14ff711..HEAD --name-status`: this record (added), the two 07-21 evidence files,
+  `src/main.js`, the spec, `motion-acceptance.mjs`, `motion-promotion.test.mjs`. Nothing else.
+- Blob ids equal at `e0663dc`, `14ff711` and `HEAD` for `animation-budget-v2.mjs`, its test,
+  `runtime-dependencies.mjs`, `animation-capture.mjs`, `review.mjs`, `promote-motion.mjs`,
+  `motion-acceptance.json`, `07-budget-view-v2.json`, `07-budget.json`, `07-baseline.json`,
+  `07-09-cost-report.json`, `07-09-view-reference-v2.json`, `index.html`, `style.css`,
+  `src/input.js`, `src/replay/killcam.js`, `src/network/onlineSession.js`, `src/network/onlineUi.js`,
+  `src/modes/tdm.js`, `src/modes/snd.js`, `src/entities/enemies.js`. The three `.gitattributes`
+  files and `frozen-bytes.mjs` with its test are unchanged since `14ff711`.
+- `git ls-files --eol`: the same summary as in the first review with one more `i/lf w/lf` file
+  (this record), and the same four paths carrying `text eol=lf`.
+- Store: the `frozen` section is identical, as parsed JSON, to the one committed in `8d71473`
+  and in `14ff711`; 25 entries, each decoding to its frozen hash, and the 24 other than
+  `src/main.js` byte-equal to their working files. `corrected` has the single key `src/main.js`.
+- 119 of 127 file identities equal their frozen hash; the 8 that differ are the same as before.
+
+### 10. Any remaining surface with the same defect?
+
+None found. I went through everything that can take a pointer press while the game runs
+unlocked offline.
+
+- Guarded now: `#pause-menu`, `#mp-error-banner`, `#kc-skip`.
+- Stop the press themselves: the graphics-quality controls (`src/main.js:78-87`), the buy panel
+  (`src/modes/buyMenu.js:39`), the range preset panel (`src/modes/trainingRange.js:413`), the
+  developer review opener and panel (`src/dev/animationReview.js:294-303`).
+- Not reachable in that state: `#snd-result` and the wave death screen (shown only after
+  `gameRunning` is false), the main menu and the editor overlays, and `#mp-match-controls`, which
+  is hidden again by `leaveOnline` on every route out of a session (`onlineSession.js:379`).
+- Take no pointer events: everything in `#hud` except the developer host (`style.css:26`, `:369`),
+  `#range-hud` (`:240`), `#ed-preview-hint` (`:333`), `#killcam-wrap` itself (`:263`).
+- Not controls: `#buy-banner`, `#kc-label`, the canvas.
+- Buttons created from script: only the review panel, the wave death screen and Skip.
+- Still open and not a menu-press defect: a canvas press while dead, or during a wave killcam,
+  still captures (F-14); the stale pause menu after `[K]` or expiry while paused (D-03).
+
+## New findings
+
+| id | severity | file:line | finding | required change |
+|---|---|---|---|---|
+| D-01 | warning | `tests/pause-menu-pointer-lock.spec.js:18-63` | With `PAUSE_SPEC_GUARD_SELECTOR` set, the cases run against substituted source under unchanged titles and can exit 0; only a report annotation marks the run. | Make a variant run impossible to mistake for a result: fail the file unconditionally at the end when the variable is set, or put the variant in the case titles. In the final rerun record, state that the variable was unset. No protected file is involved. |
+| D-02 | note | `tools/art/motion-promotion.test.mjs:71-83` | The review control accepts the hash anywhere in the record and reads one status for a record with several rounds. | Compare the frontmatter field `reviewed_corrected_sha256` (present in this record) with `entry.corrected` for equality. |
+| D-03 | note | `src/main.js:276-279`; `src/modes/snd.js:361-365`; `src/modes/tdm.js:52-69` | The hide happens on `mousedown`, so an abandoned press hides the pause menu for the rest of the killcam; and the comment's "so that none stays over the round result" holds for a Skip press only: `[K]` or expiry while paused still leaves it. Both are disclosed in the evidence. | None in this plan. The lasting fix is in the result callbacks, which are protected files. |
+| D-04 | note | `src/main.js:278`; `src/network/onlineUi.js:116-128` | The banner entry rests on a measured capture; a lost click was not shown and the disconnect route was not pressed. The banner still stays up over an offline match because no offline start clears it. | None required. Keep the limit in the summary as the evidence states it. |
+| D-05 | note | `tools/art/motion-promotion.test.mjs:210-241` | The original-tuple gate control is skipped on a shallow history, which is the default on CI. | None required; the rule-level control at `:96-97` always runs. Do not count the skipped case as CI coverage. |
+| D-06 | note | `tools/art/motion-promotion.test.mjs:166-205`; `tools/art/animation-budget-v2.mjs:261-262` | The gate control exercises `verifyCandidate`, not the command's disk-identity check; `:204` records that the function also accepts the frozen hash. | None. For plans 07-13 and 07-18, check the candidate's `src/main.js` identity against the registered hash, as the limitation text says. |
+| D-07 | note | `tests/pause-menu-pointer-lock.spec.js:293-295`, `:321-326`; `evidence/07-21-source-change.json:933`, `:564`, `:1785` | One GREEN run on these bytes; both killcam cases have a 2.8 s simulated-time window before the press; `reruns` is still `null`; the top-level `green` block still describes the superseded bytes with no historical marker, unlike `registration`. | Complete and record the final-step reruns on this identity before the plan is marked done; mark the top-level `green` block historical. |
+
+## What I ran and what I saw
+
+From `C:\Programowanie\VibeOnDuty` at `a9f3d01`, Node v24.19.0, git 2.39.1.windows.1.
+
+- `git log`, `git status --short`, `git diff 14ff711..HEAD --stat`, `--name-status`, and the full
+  diff of `src/main.js`, `motion-acceptance.mjs` and `motion-promotion.test.mjs`.
+- `indep2.mjs` (my own decode and byte comparison): figures in question 1 and question 9.
+- `probe2.mjs` (rule at three revisions): figures in question 5.
+- `gate3.mjs` (real `verifyCandidate`, synthetic candidates): results in question 4.
+- `node --test tools/art/motion-promotion.test.mjs tools/art/frozen-bytes.test.mjs` before this
+  update: 42 tests, 41 pass, 1 fail, 0 skipped. The one failure was the review-record control,
+  with the message that the record does not name the registered hash.
+- `node tools/art/frozen-bytes.mjs verify`: 26 verified, 0 mismatched.
+- Three clones of `a9f3d01` under the scratch `review-clone` directory, deleted afterwards: full
+  with `core.autocrlf=true`, full with `false`, and `--depth 1`. In all three `src/main.js` is
+  `i/lf w/lf attr/text eol=lf` and hashes to the registered value, and `verify` reports 26 and 0.
+  Controls: 21 tests; full clones 19 pass, 1 fail (the review-record control), 1 skipped (the
+  cache-gated CR-02 block); shallow clone 18 pass, 1 fail, 2 skipped (also the original-tuple
+  gate case, with its reason printed).
+- Cached reports under `.planning/research/.cache/07-21/`: nine hashes recomputed and equal to
+  the record; `seg3-red` 8 expected and 3 unexpected, `seg3-variant-noskip` 2 unexpected,
+  `seg3-variant-noguard` 2 unexpected, `seg3-green` 11 expected, 0 unexpected, 0 flaky, 0 skipped.
+- Blob-id comparison across `e0663dc`, `14ff711` and `HEAD`; `git ls-files --eol`; `git grep` for
+  both hashes in tracked files at `HEAD`.
+- `npx eslint src/main.js --max-warnings 0`: exit 0.
+- Afterwards: `git status --short` shows the same two pre-existing modified files and one
+  untracked file as before, plus this record as modified.
+
+## What I could not verify
+
+- Any browser behaviour at first hand. I ran no browser suite; questions 2, 3 and 8 rest on
+  source reading and on the author's cached reports.
+- That the cached GREEN report was produced from these bytes. The report holds no source hash;
+  the link is the record's own `mainJsSha256DuringRun` and the absence of a variant annotation.
+- Real-browser pointer lock: whether a click is lost once a lock is granted mid-press, on the
+  banner or on Skip. Every browser result in the range uses a model adapter.
+- The disconnect route to the banner, the S&D form of the paused Skip corner, and a played-out
+  match end. None was pressed by anyone.
+- Lint, typecheck, unit tests and the other offline specs on this identity as a whole; `reruns`
+  is `null`. I linted `src/main.js` only.
+- CI, and any other operating system.
+- The owner's reply behind the decision record, as before.
+- My own effort setting; the frontmatter records what the review was dispatched with.
+
+# First review (2026-10-09T21:46:00Z, at `14ff711`), unchanged below
+
+The text from here to the end of the file is the first review as committed in `f0e0b8f`,
+without its frontmatter (status `pass-with-notes`, 0 blockers, 3 warnings, 12 notes, for the
+superseded hash). It is kept for the record and is not the current verdict.
 
 # Plan 07-21: independent review of the `src/main.js` exact-hash exception
 
