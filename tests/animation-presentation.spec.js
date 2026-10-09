@@ -3,7 +3,7 @@ import { createServer } from 'vite';
 import { createServer as portProbe } from 'node:net';
 import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
-import { writeFile } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 
 let server, url;
 test.beforeAll(async () => {
@@ -150,6 +150,8 @@ test('local: loaded directional masks and current action phase preserve gameplay
   expect(result.turn).toBe('turn_right'); expect(result.feetChange).toBe(true);
   expect(result.rootSame && result.eyeSame && result.aimSame && result.finite).toBe(true);
   await info.attach('presentation-driver-observation', {body:Buffer.from(JSON.stringify(result.measurement)),contentType:'application/json'});
+  // The research cache is gitignored, so a fresh checkout does not have it.
+  await mkdir(new URL('../.planning/research/.cache/',import.meta.url),{recursive:true});
   await writeFile(new URL('../.planning/research/.cache/07-05-driver-observation.json',import.meta.url),
     JSON.stringify({capturedAt:new Date().toISOString(),...result.measurement},null,2)+'\n');
 });

@@ -92,6 +92,8 @@ test('owner cache: loaded presentation preserves layers and lazily created masks
       weaponReplacement, mixerReplacement, retired, keeper, nextUsable };
   });
   await writeFile(info.outputPath('owner-cache-presentation.json'), JSON.stringify(result, null, 2));
+  // The research cache is gitignored, so a fresh checkout does not have it.
+  await mkdir('.planning/research/.cache', { recursive: true });
   await writeFile('.planning/research/.cache/07-09-owner-cache-presentation-latest.json', JSON.stringify(result, null, 2));
   expect(result.matched).toEqual(Array(5).fill(true));
   expect(result.outcomes.every(row => row.allMasksCollected && row.interruptedStopped)).toBe(true);

@@ -3,7 +3,7 @@ import { createServer } from 'vite';
 import { createServer as portProbe } from 'node:net';
 import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
-import { readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 
 const handlingBytes = await readFile(new URL('./fixtures/weaponHandling.uncached.js', import.meta.url));
@@ -85,6 +85,8 @@ test('owner cache: loaded handling preserves original rotations, contacts and re
     return rows;
   });
   await writeFile(info.outputPath('owner-cache-handling.json'), JSON.stringify(result, null, 2));
+  // The research cache is gitignored, so a fresh checkout does not have it.
+  await mkdir('.planning/research/.cache', { recursive: true });
   await writeFile('.planning/research/.cache/07-09-owner-cache-handling-latest.json', JSON.stringify(result, null, 2));
   for (const row of result) {
     expect(row.equal, row.weapon).toEqual(Array(7).fill(true));

@@ -54,9 +54,12 @@ for (const [name, summary] of Object.entries({
 })) test('only unambiguous leading frontmatter can qualify09: ' + name, () => {
   assert.throws(() => requirePlan09(identities, summary, good()), /halted|unqualified/);
 });
-test('current real halted summary plus historical completion remains unqualified', async () => {
+test('real summary held at halted plus historical completion remains unqualified', async () => {
   const summary = await readFile(new URL('../../.planning/phases/07-movement-matched-and-action-safe-animation/07-09-SUMMARY.md', import.meta.url), 'utf8');
-  assert.throws(() => requirePlan09(identities, summary + '\n```yaml\nstatus: complete\n```\n', good()));
+  // Pin the root status so this control survives the plan legitimately completing.
+  const halted = summary.replace(/^status:.*$/m, 'status: halted');
+  assert.match(halted, /^status: halted$/m);
+  assert.throws(() => requirePlan09(identities, halted + '\n```yaml\nstatus: complete\n```\n', good()));
 });
 test('canonical complete frontmatter permits nested historical status and irrelevant body', () => {
   assert.equal(requirePlan09(identities, '---\r\nstatus: complete\r\nhistory:\r\n  status: halted\r\n---\r\nstatus: halted\r\n', good()), true);
