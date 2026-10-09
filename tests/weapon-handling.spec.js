@@ -23,6 +23,7 @@ test('owner cache: loaded handling preserves original rotations, contacts and re
     const g = await import(src + 'builders/enemyGLTF.js');
     const h = await import(src + 'builders/weaponHandling.js');
     const original = await import(src + 'builders/__uncachedHandling.js');
+    const resources = await import(src + 'builders/characterResources.js');
     (await import(src + 'input.js')).setGameRunning(false);
     const rows = [];
     const snapshot = (actor, owner) => {
@@ -65,6 +66,15 @@ test('owner cache: loaded handling preserves original rotations, contacts and re
       owner.skeleton = replacement.mesh; h.updateWeaponHandling(owner, pose);
       const replaced = owner.boneLookup?.get('hand_r') === replacement.mesh.getObjectByName('hand_r')
         && ![...owner.boneLookup?.values() ?? []].includes(expectedHand);
+      // Holding a skeleton adds no disposer to that character, and a retired
+      // skeleton is dropped on the next use with no later lookup traversal.
+      const spare = g.buildEnemyMesh(0, 0, role), spareCallbacks = resources.inspectCharacterResources(spare.mesh).callbacks;
+      owner.skeleton = spare.mesh; h.updateWeaponHandling(owner, pose);
+      const noExtraDisposer = resources.inspectCharacterResources(spare.mesh).callbacks === spareCallbacks
+        && owner.boneLookup?.get('hand_r') === spare.mesh.getObjectByName('hand_r');
+      g.disposeEnemyMesh(spare.mesh, spare.mixer); h.updateWeaponHandling(owner, pose);
+      const skeletonRetired = owner.skeleton === null && owner.boneLookup?.size === 0 && owner.corrections?.size === 0;
+      owner.skeleton = replacement.mesh; h.updateWeaponHandling(owner, pose);
       const oldMagazine = owner.parts.magazine, newRoot = root.clone(true);
       owner.root = newRoot; h.updateWeaponHandling(owner, { ...pose, alive: false });
       const rootReplacement = owner.socketLookup?.get(newRoot.name) === newRoot
@@ -80,7 +90,7 @@ test('owner cache: loaded handling preserves original rotations, contacts and re
       h.updateWeaponHandling(keeperOwner, pose);
       const keeperUsable = keeperOwner.contacts?.supportWorld.every(Number.isFinite) === true;
       for (const a of [actor, baseline, replacement, keeper]) g.disposeEnemyMesh(a.mesh, a.mixer);
-      rows.push({ weapon, equal, rigLookups, socketLookups, identity, missing, replaced, rootReplacement, retired, keeperUsable });
+      rows.push({ weapon, equal, rigLookups, socketLookups, identity, missing, replaced, noExtraDisposer, skeletonRetired, rootReplacement, retired, keeperUsable });
     }
     return rows;
   });
@@ -91,7 +101,7 @@ test('owner cache: loaded handling preserves original rotations, contacts and re
   for (const row of result) {
     expect(row.equal, row.weapon).toEqual(Array(7).fill(true));
     expect(row.rigLookups, row.weapon).toBe(0); expect(row.socketLookups, row.weapon).toBe(0);
-    for (const key of ['identity', 'missing', 'replaced', 'rootReplacement', 'retired', 'keeperUsable']) expect(row[key], `${row.weapon}/${key}`).toBe(true);
+    for (const key of ['identity', 'missing', 'replaced', 'noExtraDisposer', 'skeletonRetired', 'rootReplacement', 'retired', 'keeperUsable']) expect(row[key], `${row.weapon}/${key}`).toBe(true);
   }
 });
 

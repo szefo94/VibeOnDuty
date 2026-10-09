@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import manifest from '../../tools/art/motion-manifest.json';
-import { registerCharacterDisposer } from './characterResources.js';
+import { isCharacterDisposed } from './characterResources.js';
 
 const V = (...xyz) => new THREE.Vector3(...xyz);
 const clamp = value => Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
@@ -26,9 +26,12 @@ function indexNames(root, lookup) {
   root?.traverse(node => { if (!lookup.has(node.name)) lookup.set(node.name, node); });
 }
 function handlingReferences(owner) {
+  // A retired skeleton is observed here, on the next use, instead of through an
+  // extra disposer on the character: the caller's restore has already run, and
+  // the identity check below then drops every cached bone reference.
+  if (isCharacterDisposed(owner.skeleton)) owner.skeleton = null;
   if (owner.lookupRoot === owner.root && owner.lookupSkeleton === owner.skeleton
     && owner.lookupWeapon === owner.weapon && owner.lookupMount === owner.root.parent) return;
-  owner.releaseSkeleton?.(); owner.releaseSkeleton = null;
   const rootChanged = owner.lookupRoot && (owner.lookupRoot !== owner.root || owner.lookupWeapon !== owner.weapon);
   if (rootChanged) {
     for (const [part, rest] of owner.rest) {
@@ -50,13 +53,6 @@ function handlingReferences(owner) {
   owner.lookupRoot = owner.root; owner.lookupSkeleton = owner.skeleton;
   owner.lookupWeapon = owner.weapon; owner.lookupMount = owner.root.parent;
   owner.mountRest = null;
-  const skeleton = owner.skeleton;
-  owner.releaseSkeleton = registerCharacterDisposer(skeleton, () => {
-    restoreWeaponHandlingBones(owner);
-    owner.boneLookup.clear(); owner.socketLookup.clear();
-    owner.lookupRoot = owner.lookupSkeleton = owner.lookupMount = null;
-    owner.skeleton = null; owner.mountRest = null; owner.releaseSkeleton = null;
-  });
 }
 
 /** Weapon-local, read-only phase sample. It never advances a gameplay clock. */
@@ -273,7 +269,6 @@ export function disposeWeaponHandling(owner) {
   }
   for (const prop of owner.props) prop.removeFromParent();
   owner.props.length = 0; owner.disposed = true;
-  owner.releaseSkeleton?.(); owner.releaseSkeleton = null;
   owner.boneLookup.clear(); owner.socketLookup.clear();
   owner.lookupRoot = owner.lookupSkeleton = owner.lookupMount = null;
   owner.skeleton = null; owner.mountRest = null;

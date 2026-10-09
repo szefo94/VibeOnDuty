@@ -86,6 +86,9 @@ export function disposeCharacter(root, mixer) {
   if (failures.length) throw new AggregateError(failures, 'Character retirement failed after cleanup');
 }
 
+/** Allocation-free retirement query for owners that hold references into a character. */
+export function isCharacterDisposed(root) { return !!root && disposed.has(root); }
+
 /** Scalar ownership diagnostics; never expose resources or count shared maps as retired. */
 export function inspectCharacterResources(root) {
   return { disposed: !!root && disposed.has(root), callbacks: disposers.get(root)?.size ?? 0,
