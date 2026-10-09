@@ -70,6 +70,8 @@ async function waitSimulation(page, { what, limitSimSeconds, wallGuardMs, sample
     await new Promise(resolve => setTimeout(resolve, 250));
   }
 }
+// RED stub: replaced by the real rule in the GREEN commit.
+export function diagnoseAcquisition() { return { classification: 'unimplemented' }; }
 export function independentTracerComplete(report) {
   return !!(report.tracer && report.matrix.length === 1 && report.matrix[0].completed
     && report.matrix[0].media?.bytes > 0 && report.offlineMovement.length === 1 && report.offlineMovement[0].complete

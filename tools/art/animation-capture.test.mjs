@@ -5,7 +5,7 @@ import { runtimeDependencyIdentities } from './runtime-dependencies.mjs';
 import { requirePlan09, REQUIRED_ASSERTIONS, requireStableGates, REQUIRED_STABLE_GATES, simulationBudget,
   NATURAL_DEATH_WALL_GUARD_MS, NATURAL_RESPAWN_WALL_GUARD_MS, COLLECTION_LIFETIME_MS,
   COLLECTION_LIFETIME_PROJECTION, NATURAL_DEATH_SIM_SECONDS, NATURAL_RESPAWN_SIM_SECONDS,
-  independentTracerComplete } from './animation-capture.mjs';
+  independentTracerComplete, diagnoseAcquisition } from './animation-capture.mjs';
 const identities = { 'src/main.js': 'a'.repeat(64),
   ...runtimeDependencyIdentities() };
 const completeSummary = '---\nstatus: complete\n---\n';
@@ -138,4 +138,55 @@ test('independent tracer stays incomplete when the combat entry lacks natural-re
       stages: stages.map(name => ({ name })) }] });
   assert.equal(independentTracerComplete(report(full)), true);
   assert.equal(independentTracerComplete(report(full.slice(0, 4))), false);
+});
+
+// Synthetic progress samples: one per 0.05 s frame; the eye moves along x at `speed` m per sample.
+const progressRun = (count, { route = () => 0, speed = 0.1, visible = false, walking = true, aimAt = -1, simStart = 1.8 } = {}) =>
+  Array.from({ length: count }, (_, i) => ({ wallMs: 1000 + i * 290, simSeconds: simStart + i * 0.05,
+    eye: [60 + i * speed, 1.65, 40], route: route(i), input: { walking }, target: { visible },
+    aimProof: i === aimAt ? { dot: 1 } : null }));
+test('acquisition diagnosis reports acquired when any sample has a visible target', () => {
+  const rows = progressRun(20); rows[7].target.visible = true;
+  assert.equal(diagnoseAcquisition(rows).classification, 'acquired');
+});
+test('acquisition diagnosis reports acquired when any sample carries an aim proof', () => {
+  assert.equal(diagnoseAcquisition(progressRun(20, { aimAt: 12 })).classification, 'acquired');
+});
+test('acquisition diagnosis reports still-searching for a moving driver below one loop', () => {
+  const result = diagnoseAcquisition(progressRun(106, { route: i => (i < 40 ? 0 : i < 80 ? 1 : 2) }));
+  assert.equal(result.classification, 'still-searching');
+  assert.equal(result.routeCount, 2);
+  assert.equal(result.loopsWalked, 0.5);
+  assert.equal(result.samples, 106);
+  assert.ok(Math.abs(result.simSpanSeconds - 5.25) < 1e-9);
+  assert.ok(result.finalThirdDisplacementM >= 1);
+  assert.ok(result.wallSpanMs > 0);
+});
+test('acquisition diagnosis reports driver-stalled when the final third barely moves while walking', () => {
+  const rows = progressRun(60, { route: () => 1, speed: 0.001 });
+  assert.equal(diagnoseAcquisition(rows).classification, 'driver-stalled');
+});
+test('acquisition diagnosis reports driver-stalled after a whole loop with nothing visible', () => {
+  const result = diagnoseAcquisition(progressRun(60, { route: i => 3 + (i > 30 ? 1 : 0) }));
+  assert.equal(result.classification, 'driver-stalled');
+  assert.equal(result.routeCount, 4);
+  assert.equal(result.loopsWalked, 1);
+});
+test('acquisition diagnosis uses the absolute route counter over a 256-sample retained window', () => {
+  const stalled = diagnoseAcquisition(progressRun(256, { route: i => (i < 128 ? 12 : 13) }));
+  assert.equal(stalled.classification, 'driver-stalled');
+  assert.equal(stalled.routeCount, 13);
+  assert.equal(stalled.loopsWalked, 3.25);
+  const searching = diagnoseAcquisition(progressRun(256, { route: i => (i < 128 ? 1 : 2) }));
+  assert.equal(searching.classification, 'still-searching');
+});
+test('acquisition diagnosis is undetermined for too few or malformed samples', () => {
+  assert.equal(diagnoseAcquisition(progressRun(2)).classification, 'undetermined');
+  assert.equal(diagnoseAcquisition([]).classification, 'undetermined');
+  const noEye = progressRun(10); delete noEye[4].eye;
+  assert.equal(diagnoseAcquisition(noEye).classification, 'undetermined');
+  const noRoute = progressRun(10); delete noRoute[9].route;
+  assert.equal(diagnoseAcquisition(noRoute).classification, 'undetermined');
+  const noSim = progressRun(10); delete noSim[0].simSeconds;
+  assert.equal(diagnoseAcquisition(noSim).classification, 'undetermined');
 });
