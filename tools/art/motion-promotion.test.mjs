@@ -35,6 +35,9 @@ for (const key of ['glbBytes', 'donorBytes']) test('actual ' + key + ' corruptio
 {
   const SOURCE = 'src/main.js';
   const FROZEN_MAIN = 'c762044675702688313ce81c7812153bdb30bc95951aa1995e69337414a882d3';
+  // The corrected hash registered first by this plan and replaced after its review. It was
+  // a reviewed state once; it is accepted nowhere now.
+  const SUPERSEDED_CORRECTED = '51db511fd5249fed908d07ac90929da2e0e2fca11c9014808a332392e88b51f5';
   const PHASE_DIR = '.planning/phases/07-movement-matched-and-action-safe-animation/';
   const correctedBinding = { revision: '07-CR02-directional-crouch' };
   const originalBinding = { revision: 'original107' };
@@ -53,6 +56,10 @@ for (const key of ['glbBytes', 'donorBytes']) test('actual ' + key + ' corruptio
     assert.equal(entry.original, reference[SOURCE], 'original is the frozen reference identity');
     assert.match(entry.corrected, /^[0-9a-f]{64}$/);
     assert.notEqual(entry.corrected, entry.original);
+    // One pair only: the superseded corrected hash is held nowhere in the registry module.
+    assert.notEqual(entry.corrected, SUPERSEDED_CORRECTED);
+    assert.equal(readFileSync(new URL('./motion-acceptance.mjs', import.meta.url), 'utf8')
+      .includes(SUPERSEDED_CORRECTED), false);
     // The basis is the owner's recorded one, as a literal. A registry that named another
     // basis would otherwise switch off the comparison with the working file below.
     assert.equal(entry.hashBasis, 'pinned-lf');
@@ -71,7 +78,8 @@ for (const key of ['glbBytes', 'donorBytes']) test('actual ' + key + ' corruptio
     assert.match(head, /^reviewer_model: opus *$/m);
     assert.match(head, /^reviewer_effort: high *$/m);
     assert.ok(readFileSync(entry.review, 'utf8').includes(entry.corrected),
-      'the review record does not name the registered corrected hash ' + entry.corrected);
+      'the review record does not name the registered corrected hash ' + entry.corrected +
+      ': these bytes have no recorded review yet');
   });
 
   test('reviewed source exception: rule accepts only the exact pair under the corrected binding', () => {
@@ -79,10 +87,10 @@ for (const key of ['glbBytes', 'donorBytes']) test('actual ' + key + ' corruptio
     assert.equal(exactCorrectionException(SOURCE, original, corrected, correctedBinding), true);
     // Any other current hash, including the unchanged one and a one-character neighbour.
     const near = corrected.slice(0, -1) + (corrected.endsWith('0') ? '1' : '0');
-    for (const current of ['b'.repeat(64), near, original, '', undefined, null])
+    for (const current of ['b'.repeat(64), near, original, '', undefined, null, SUPERSEDED_CORRECTED])
       assert.equal(exactCorrectionException(SOURCE, original, current, correctedBinding), false);
     // Any other reference hash.
-    for (const other of ['a'.repeat(64), corrected, undefined])
+    for (const other of ['a'.repeat(64), corrected, undefined, SUPERSEDED_CORRECTED])
       assert.equal(exactCorrectionException(SOURCE, other, corrected, correctedBinding), false);
     // The original binding, and any binding that is not the corrected one.
     for (const binding of [originalBinding, { revision: undefined }, {}])
@@ -182,7 +190,7 @@ for (const key of ['glbBytes', 'donorBytes']) test('actual ' + key + ' corruptio
     assert.equal(accepted.runtimeDependencies.motion.revision, '07-CR02-directional-crouch');
     assert.equal(accepted.applicableBudgetPass, true);
     // Any other identity for the file, a one-character neighbour and a missing one.
-    for (const identity of ['b'.repeat(64), near, entry.corrected.toUpperCase(), ''])
+    for (const identity of ['b'.repeat(64), near, entry.corrected.toUpperCase(), '', SUPERSEDED_CORRECTED])
       assert.throws(() => gate(identities => { identities[SOURCE] = identity; }), changed(SOURCE));
     assert.throws(() => gate(identities => { delete identities[SOURCE]; }), changed(SOURCE));
     // The exception does not cover another protected file, with or without the corrected

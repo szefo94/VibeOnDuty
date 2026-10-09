@@ -272,8 +272,12 @@ document.addEventListener('mousedown', (e) => {
   if (isOnline()) { if (e.button === 0) requestOnlineAction('fire'); return; }
   if (e.button === 0) {
     if (!locked && gameRunning && !isBuyPanelOpen()) {
-      // A press on a menu control must reach it, not re-capture the pointer.
-      if (e.target?.closest?.('#pause-menu, #kc-skip')) return;
+      // A press inside the pause box or the online error banner, or on killcam Skip, must
+      // reach it, not re-capture the pointer. Skip also hides a pause menu left up by Esc,
+      // so that none stays over the round result.
+      const control = e.target?.closest?.('#pause-menu, #mp-error-banner, #kc-skip');
+      if (control?.id === 'kc-skip') document.getElementById('pause-menu').style.display = 'none';
+      if (control) return;
       document.getElementById('c').requestPointerLock();
       return;
     }

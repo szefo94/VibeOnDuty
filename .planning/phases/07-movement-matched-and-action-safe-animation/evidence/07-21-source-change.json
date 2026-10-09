@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "plan": "07-21",
-  "task": "07-21-01",
+  "task": "07-21-01 to 07-21-03, and the review follow-up (reviewFollowUp)",
   "recordedAt": "2026-10-09T21:17:21.648Z",
   "sourceCommit": "8d714738b9c72338fc62a3d89bebd885caccd38c",
   "sourceNote": "No file under src/, index.html or style.css differs from this commit; the spec under test was not yet committed when the RED run was made.",
@@ -259,21 +259,21 @@
       "visibleWhileRunningUnlocked": "yes",
       "pressReachesDocumentMousedown": "yes",
       "pressCanRecapturePointer": "yes: a press on the empty part of the box re-captures and hides the menu, which acts as an unlabelled resume",
-      "coverage": "changes with the fix",
-      "coverageReason": "Not a defect today. A guard written as closest('#pause-menu') also stops this press from capturing; Resume and a canvas press still capture.",
-      "coveredByThisPlan": "yes as a side effect of the #pause-menu selector; stated so the owner sees the behaviour change",
-      "basis": "source reading only"
+      "coverage": "covered by the guard; behaviour change pinned",
+      "coverageReason": "The #pause-menu selector covers the whole box, so a press on its empty part no longer captures. Resume and a canvas press still capture.",
+      "coveredByThisPlan": "yes",
+      "basis": "browser: the empty-box case passes on the registered source and fails when the page is served a guard that matches nothing"
     },
     {
       "surface": "#killcam-wrap",
       "controls": "#kc-skip ([K] SKIP)",
       "visibleWhileRunningUnlocked": "yes: src/replay/killcam.js:58-68 shows it; the killcam runs while gameRunning is still true (wave death: src/entities/enemies.js:257 releases the pointer and 266-268 start the killcam before _showWaveOver sets gameRunning false at 259; S&D: src/modes/snd.js:367-369; TDM: src/modes/tdm.js:71-73); the button takes pointer events (style.css:265)",
       "pressReachesDocumentMousedown": "yes: nothing stops mousedown for it",
-      "pressCanRecapturePointer": "yes when the pointer is unlocked (player dead): src/main.js:274-276. In wave modes _showWaveOver (src/entities/enemies.js:258-264) does not release the pointer, so a granted lock stays on the KILLED IN ACTION screen; the S&D and TDM result callbacks release it (src/modes/snd.js:363, src/modes/tdm.js:54)",
+      "pressCanRecapturePointer": "yes without the guard, whenever the pointer is unlocked while the killcam runs: with the player dead, and with the player alive after Esc during an end-of-round killcam (S&D round end, lost TDM match end), where the pause menu is up beside Skip. In wave modes _showWaveOver does not release the pointer, so the lock stays on the KILLED IN ACTION screen; the S&D and TDM result callbacks release it.",
       "coverage": "needs the fix",
-      "coverageReason": "Same handler, same missing target check. The wrap is not hidden by pointerlockchange, so the click itself is lost only if a real browser redirects mouseup to the lock element; that was not measured. The [K] key (src/replay/killcam.js:66) is unaffected.",
-      "coveredByThisPlan": "only if the owner chooses a register-exception option and the task 3 review confirms this row",
-      "basis": "source reading only; not exercised in a browser in this task"
+      "coverageReason": "Measured: with #kc-skip out of the guard a Skip press after a wave death is delivered and leaves the pointer captured on the death screen. The wrap is not hidden by pointerlockchange, so under the test adapter the click is always delivered; whether a real browser loses it was not measured. The [K] key is unaffected.",
+      "coveredByThisPlan": "yes: #kc-skip is in the guard, and a Skip press also hides a pause menu left up by Esc",
+      "basis": "browser: the two killcam cases (setup shortened from page script; the press is a real click), and their runs with #kc-skip served out of the guard"
     },
     {
       "surface": "#buy-panel",
@@ -364,15 +364,26 @@
       "basis": "source reading only"
     },
     {
-      "surface": "#mp-match-controls, #mp-error-banner, #mp-leave-btn",
+      "surface": "#mp-match-controls, #mp-leave-btn",
       "controls": "online match controls",
-      "visibleWhileRunningUnlocked": "online only (hidden attribute offline: index.html:10-25, 188)",
+      "visibleWhileRunningUnlocked": "online only: #mp-match-controls loses its hidden attribute on a successful join and regains it in leaveOnline (src/network/onlineSession.js:593-596, 379); #mp-leave-btn is hidden offline (index.html:188, src/main.js:365)",
       "pressReachesDocumentMousedown": "no for the offline branch: the handler returns early when online (src/main.js:272); the online capture handler exempts buttons (src/network/onlineSession.js:134-136)",
       "pressCanRecapturePointer": "no",
       "coverage": "online-only",
       "coverageReason": "The online path already has the exemption this fix would mirror.",
       "coveredByThisPlan": "no change needed",
       "basis": "source reading only"
+    },
+    {
+      "surface": "#mp-error-banner",
+      "controls": "#mp-retry-btn (Retry), #mp-error-return-btn (Return to menu)",
+      "visibleWhileRunningUnlocked": "yes, offline: showConnectionError un-hides it (src/network/onlineUi.js:100-115) when a join fails (src/network/onlineSession.js:349-353) or a session disconnects (309-316), which is when the session is no longer online; only reset() hides it (onlineUi.js:116-128), called from joinOnline and leaveOnline (onlineSession.js:273, 375); no offline start handler clears it. It sits above everything (style.css:95)",
+      "pressReachesDocumentMousedown": "yes: nothing stops mousedown for it, and the handler's online early return does not apply once the join has failed",
+      "pressCanRecapturePointer": "yes without the guard: measured, the press captures the pointer on mousedown. Under the test adapter the click is still delivered, because the banner is not hidden by pointerlockchange",
+      "coverage": "needs the fix",
+      "coverageReason": "Same handler, same missing target check as the Main Menu button. Misclassified as online only in task 1; found by the review (F-01).",
+      "coveredByThisPlan": "yes: #mp-error-banner is in the guard (review follow-up)",
+      "basis": "browser: the two banner cases, RED on the first registered state and GREEN on the final one"
     },
     {
       "surface": "#c (game canvas)",
@@ -388,7 +399,9 @@
   ],
   "surfaceNotes": [
     "Rows marked \"source reading only\" were checked against the cited lines and were not pressed in a browser in this task.",
-    "Not a menu surface and unchanged by this plan: while the player is dead in TDM or S&D the pointer is released (src/entities/enemies.js:250) and gameRunning stays true, so a canvas press re-captures the pointer during the respawn wait; the mousedown branch has no player.dead check, the canvas click handler at src/main.js:310-312 has one."
+    "Not a menu surface and unchanged by this plan: while the player is dead in TDM or S&D the pointer is released (src/entities/enemies.js:250) and gameRunning stays true, so a canvas press re-captures the pointer during the respawn wait; the mousedown branch has no player.dead check, the canvas click handler at src/main.js:310-312 has one.",
+    "Rows written in task 1 cite src/main.js line numbers of the frozen file; from line 275 on the corrected file is six lines lower.",
+    "Three rows were corrected after the review (reviewFollowUp.surfaceCorrections holds what they said before)."
   ],
   "red": {
     "command": "PLAYWRIGHT_JSON_OUTPUT_FILE=.planning/research/.cache/07-21/red.json PLAYWRIGHT_JUNIT_OUTPUT_FILE=.planning/research/.cache/07-21/red-junit.xml npx playwright test tests/pause-menu-pointer-lock.spec.js --workers=1 --reporter=line,json,junit",
@@ -642,11 +655,11 @@
     "followupLineEndings": "yes",
     "selectionBasis": "The owner did not type an option name. The orchestrator stated its recommendation (register-exception-pinned-lf, followup yes); the owner replied \"ok, continue, do the rational thing\"; the orchestrator read that as delegation to its recommendation and told the owner so. Relayed to the executor by the orchestrator."
   },
-  "mainJsSha256After": "51db511fd5249fed908d07ac90929da2e0e2fca11c9014808a332392e88b51f5",
+  "mainJsSha256After": "f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393",
   "mainJsAfter": {
-    "bytes": 25818,
+    "bytes": 26122,
     "carriageReturns": 0,
-    "lineFeeds": 567,
+    "lineFeeds": 571,
     "gitEol": "i/lf w/lf attr/text eol=lf src/main.js",
     "gitAttributes": [
       "src/main.js: text: set",
@@ -656,38 +669,72 @@
   "addedLines": [
     {
       "line": 275,
-      "text": "      // A press on a menu control must reach it, not re-capture the pointer."
+      "text": "      // A press inside the pause box or the online error banner, or on killcam Skip, must"
     },
     {
       "line": 276,
-      "text": "      if (e.target?.closest?.('#pause-menu, #kc-skip')) return;"
+      "text": "      // reach it, not re-capture the pointer. Skip also hides a pause menu left up by Esc,"
+    },
+    {
+      "line": 277,
+      "text": "      // so that none stays over the round result."
+    },
+    {
+      "line": 278,
+      "text": "      const control = e.target?.closest?.('#pause-menu, #mp-error-banner, #kc-skip');"
+    },
+    {
+      "line": 279,
+      "text": "      if (control?.id === 'kc-skip') document.getElementById('pause-menu').style.display = 'none';"
+    },
+    {
+      "line": 280,
+      "text": "      if (control) return;"
     }
   ],
-  "guardLines": 2,
+  "guardLines": 6,
   "mainJsSha256AfterEqualsLfNormalisedCommittedContent": true,
   "byteRelations": {
-    "note": "All values computed from bytes, not from git diff output. \"staged\" is the index blob :src/main.js that the task commit records.",
+    "note": "All values computed from bytes, not from git diff output. \"staged\" is the index blob :src/main.js that the commit of this state records.",
     "preservedFrozenSha256": "c762044675702688313ce81c7812153bdb30bc95951aa1995e69337414a882d3",
-    "preservedCorrectedSha256": "51db511fd5249fed908d07ac90929da2e0e2fca11c9014808a332392e88b51f5",
-    "workingFileSha256": "51db511fd5249fed908d07ac90929da2e0e2fca11c9014808a332392e88b51f5",
-    "stagedBlobSha256": "51db511fd5249fed908d07ac90929da2e0e2fca11c9014808a332392e88b51f5",
+    "preservedCorrectedSha256": "f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393",
+    "workingFileSha256": "f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393",
+    "stagedBlobSha256": "f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393",
     "previousCommittedBlobSha256": "cb7c2f54c37ddda5ced3e39d1f4753f0a9b9d8e509b2f9998b6ffb33816d7dc0",
+    "previousCommittedBlobNote": "src/main.js as committed at e0663dc, before this plan",
+    "supersededCorrectedSha256": "51db511fd5249fed908d07ac90929da2e0e2fca11c9014808a332392e88b51f5",
     "preservedCorrectedEqualsWorkingFile": true,
     "workingFileEqualsStagedBlob": true,
     "frozenWithoutCarriageReturnsEqualsPreviousCommittedBlob": true,
     "correctedHasNoCarriageReturn": true,
-    "correctedBytesMinusFrozenWithoutCarriageReturns": 142,
-    "addedLinesBytesIncludingLineEnds": 142,
-    "frozenPlusGuardLinesEqualsCorrected": true
+    "correctedBytesMinusFrozenWithoutCarriageReturns": 446,
+    "addedLinesBytesIncludingLineEnds": 446,
+    "frozenPlusGuardLinesEqualsCorrected": true,
+    "correctedDiffersFromSupersededOnlyInTheGuardBlock": {
+      "commonPrefixBytes": 13475,
+      "commonSuffixBytes": 12228,
+      "supersededChangedLines": [
+        275,
+        276
+      ],
+      "correctedChangedLines": [
+        275,
+        280
+      ]
+    }
   },
   "sourceChange": {
-    "recordedAt": "2026-10-09T21:27:47.856Z",
+    "recordedAt": "2026-10-09T22:18:22.616Z",
     "file": "src/main.js",
-    "handler": "document.addEventListener('mousedown', ...) (offline branch), lines 271 to 284 of the corrected file",
-    "selector": "#pause-menu, #kc-skip",
-    "expression": "if (e.target?.closest?.('#pause-menu, #kc-skip')) return;",
-    "placement": "Inside the existing `!locked && gameRunning && !isBuyPanelOpen()` branch, before the lock request. That branch already ended in `return`, so the only behaviour removed is the lock request for a press inside the selector.",
-    "idiom": "Same `event.target.closest(...)` shape as the online path in src/network/onlineSession.js. `?.closest?.` is used because tools/art/animation-capture.mjs line 373 dispatches mousedown on `document`, whose target has no `closest`.",
+    "handler": "document.addEventListener('mousedown', ...) (offline branch), lines 271 to 288 of the corrected file",
+    "selector": "#pause-menu, #mp-error-banner, #kc-skip",
+    "statements": [
+      "const control = e.target?.closest?.('#pause-menu, #mp-error-banner, #kc-skip');",
+      "if (control?.id === 'kc-skip') document.getElementById('pause-menu').style.display = 'none';",
+      "if (control) return;"
+    ],
+    "placement": "Inside the existing `!locked && gameRunning && !isBuyPanelOpen()` branch, before the lock request. That branch already ended in `return`, so the behaviour removed is the lock request for a press inside the selector; the behaviour added is that a press on #kc-skip sets #pause-menu to display none.",
+    "idiom": "Same `event.target.closest(...)` shape as the online path in src/network/onlineSession.js. `?.closest?.` is used because tools/art/animation-capture.mjs dispatches mousedown on `document`, whose target has no `closest`; `control` is then undefined and the lock is requested as before.",
     "unchanged": [
       "online early return and requestOnlineAction",
       "tryShoot for a locked left press",
@@ -698,24 +745,29 @@
     "selectorSurfaces": [
       {
         "selector": "#pause-menu",
-        "source": "task 1 surface rows 1 to 4",
         "effect": "A left press anywhere inside the pause box no longer requests the lock: Main Menu reaches its click handler; Resume still captures through its own click handler; the graphics-quality control was already covered by its capture listener.",
-        "behaviourChange": "A press on the empty part of the box (title, hint, padding) used to re-capture the pointer and now does nothing. Not exercised by a test.",
-        "browserEvidence": "green cases 1, 2, 3, 4 and 5"
+        "behaviourChange": "A press on the empty part of the box (title, hint, padding) used to re-capture the pointer and now does nothing. Ruled acceptable by the review; pinned by a case.",
+        "browserEvidence": "cases 1 to 5 and \"pause menu: a press on the empty part of the box does not capture the pointer\""
+      },
+      {
+        "selector": "#mp-error-banner",
+        "addedIn": "the review follow-up (F-01)",
+        "effect": "A left press on the banner or its Retry and Return to menu buttons no longer requests the lock. The banner can be up over a running offline match after a failed join or a disconnect; no offline start clears it.",
+        "behaviourChange": "Before, such a press captured the pointer on mousedown. Under the test adapter the click was still delivered.",
+        "browserEvidence": "the two \"online error banner:\" cases: RED on the first registered state, GREEN on this one",
+        "notMeasured": "Whether a real browser loses the click once the lock is granted. The stale banner itself is left as it is: clearing it needs a change outside src/main.js or a leaveOnline() call in every offline start."
       },
       {
         "selector": "#kc-skip",
-        "source": "task 1 surface row \"#killcam-wrap\", marked \"needs the fix\"",
-        "effect": "A left press on the killcam Skip button while the player is dead and the pointer is unlocked no longer requests the lock; its click handler ends the killcam as before. #killcam-wrap itself takes no pointer events, so only the button is named.",
-        "behaviourChange": "In wave modes a press on Skip no longer leaves a captured pointer on the KILLED IN ACTION screen. In TDM and S&D the result callback released the pointer anyway.",
-        "browserEvidence": "none: source reading only; no test presses #kc-skip",
-        "forReview": "The plan sets the selector to #pause-menu plus the surfaces task 1 marked \"needs the fix\", and task 1 made this row conditional on the task 3 review confirming it."
+        "effect": "A left press on killcam Skip while the pointer is unlocked no longer requests the lock, and it hides #pause-menu. The click handler ends the killcam as before. #killcam-wrap takes no pointer events, so only the button is named.",
+        "behaviourChange": "After a wave death a Skip press no longer leaves a captured pointer on the KILLED IN ACTION screen. With the player alive and the pause menu up (Esc during an end-of-round killcam), the press used to capture the pointer, which hid the menu, and the result callback then released it; now the press hides the menu directly and captures nothing.",
+        "browserEvidence": "the two \"killcam:\" cases; setup shortened from page script, the press itself is a real click"
       }
     ],
     "forReview": [
-      "#kc-skip is in the selector on source reading alone; no browser test presses it.",
-      "The blank area of #pause-menu no longer acts as an unlabelled resume.",
-      "Still open and unchanged by this plan: with the player dead in TDM or S&D a canvas press re-captures the pointer during the respawn wait (surfaceNotes)."
+      "One statement has a side effect beyond not locking: a Skip press sets #pause-menu to display none on mousedown. If the press is abandoned (button released elsewhere), the menu stays hidden while the killcam runs, as it did before this plan when the press captured the pointer.",
+      "The pause menu still stays up over a round result when the killcam ends by the [K] key or by expiry while paused. That cause is in src/modes/snd.js and src/modes/tdm.js, which this plan must not touch; it is older than this plan and unchanged by it.",
+      "Still open and unchanged: with the player dead in TDM or S&D a canvas press re-captures the pointer during the respawn wait, and a canvas press during a wave killcam leaves the pointer captured on the death screen (review F-14)."
     ],
     "gitattributes": {
       "addedPathLines": [
@@ -733,10 +785,15 @@
       "index.html": "1f89a54e697b4f2bf2bf5b47ff15d09782514d327c0caf7f81e39cae430f6e77",
       "style.css": "3cf82a6907773d93b90ec980492ec9f0563cd5a804afb82eb97da4e126fa2332",
       "src/loop.js": "5c28b979a75d5ed843513e774d685ca73586daa3d9cd91a81d7a0bffe7397cbe",
-      "src/input.js": "d279d07eff5d05fd63e8acfee2e37c940d7720958392948c5b74f25b279f5074"
+      "src/input.js": "d279d07eff5d05fd63e8acfee2e37c940d7720958392948c5b74f25b279f5074",
+      "src/modes/snd.js": "1553ceb66b0438655d6d39504a7e3a05ef7b13068fad7664c15b72a707f0dee9",
+      "src/modes/tdm.js": "a9d34d3d57fa650468cfc40d8e0288dba54936143ff91d536c7a4c7718e9cc47",
+      "src/replay/killcam.js": "17a12c1e3ce558e533db9112e5b88ba3caf686b6e97b947b7d4c38295d87b27b",
+      "src/network/onlineSession.js": "968b2814d5878d67521b27941479567b804cba22ea737ed24e0fc3e6d65b8666",
+      "src/network/onlineUi.js": "2df9096e2558a42ef50c7d769f9114e853dcfa9ac22c00988883782e406577b6"
     },
-    "writeMethod": "A node script read the file as a buffer, checked it against the frozen hash, the preserved copy and the committed blob, removed carriage returns, inserted the two lines once at a unique anchor, checked addedLines, and wrote the buffer. No editor tool and no git command wrote the file. restore was not run.",
-    "registryEntryAddedIn": "task 07-21-03"
+    "writeMethod": "A node script read the registered file as a buffer, checked it against the registered hash, the preserved copy and the committed blob, replaced the one two-line guard block with the six-line block at its unique position, checked that no carriage return resulted and that addedLines against the preserved frozen bytes gives exactly the six lines inside the handler, and wrote the buffer. No editor tool and no git command wrote the file. restore was not run.",
+    "supersedes": "reviewFollowUp.superseded.sourceChange"
   },
   "registration": {
     "recordedAt": "2026-10-09T21:31:42.927Z",
@@ -870,7 +927,8 @@
       },
       "reading": "Both checkout forms give src/main.js the registered corrected hash, and all seven reviewed-source-exception controls pass on both. Same host and same git and node versions for both clones; no other operating system was used.",
       "observationForLineEndingFollowUp": "Of the 127 frozen file identities, a fresh core.autocrlf=true clone reproduces 62 and a fresh core.autocrlf=false clone reproduces 38; src/main.js counts as different in both because it now holds the corrected content. No single fresh checkout form reproduces both the 38 committed-bytes identities and the 57 all-CRLF ones, because a CRLF checkout also converts text files whose frozen hash is of LF bytes. This is the standing property of the frozen gate recorded in lineEndingSurvey, measured here on fresh clones; this plan does not repair it."
-    }
+    },
+    "status": "historical: the entry below was registered in f7bc7c4 and is superseded; see reviewFollowUp.registration"
   },
   "reruns": null,
   "reviewFollowUp": {
@@ -1212,6 +1270,425 @@
       "F-02": {
         "waveSkip": "Passes on current source. Fails without #kc-skip in the guard: the pointer stays captured on the death screen.",
         "pausedSkipAtRoundEnd": "Fails on current source: #pause-menu stays visible over #snd-result. Ends clean without #kc-skip in the guard. This is a regression introduced by the registered state and is not left in place."
+      }
+    },
+    "superseded": {
+      "note": "The state registered in f7bc7c4 and reviewed at 14ff711. Replaced in one step after the review; its corrected hash is accepted nowhere now.",
+      "correctedSha256": "51db511fd5249fed908d07ac90929da2e0e2fca11c9014808a332392e88b51f5",
+      "recoverableFrom": {
+        "gitBlob": "5036e916a7f54c961776b5ba7231e42d792c350d",
+        "commits": "6f33df7 to 9dfebbb hold these bytes as src/main.js (the path is pinned to LF, so the blob is the file)",
+        "command": "git cat-file blob 6f33df7:src/main.js",
+        "preservedCopy": "evidence/07-21-frozen-bytes.json as committed in 6f33df7 holds the same bytes under corrected[\"src/main.js\"]"
+      },
+      "mainJsSha256After": "51db511fd5249fed908d07ac90929da2e0e2fca11c9014808a332392e88b51f5",
+      "mainJsAfter": {
+        "bytes": 25818,
+        "carriageReturns": 0,
+        "lineFeeds": 567,
+        "gitEol": "i/lf w/lf attr/text eol=lf src/main.js",
+        "gitAttributes": [
+          "src/main.js: text: set",
+          "src/main.js: eol: lf"
+        ]
+      },
+      "addedLines": [
+        {
+          "line": 275,
+          "text": "      // A press on a menu control must reach it, not re-capture the pointer."
+        },
+        {
+          "line": 276,
+          "text": "      if (e.target?.closest?.('#pause-menu, #kc-skip')) return;"
+        }
+      ],
+      "guardLines": 2,
+      "byteRelations": {
+        "note": "All values computed from bytes, not from git diff output. \"staged\" is the index blob :src/main.js that the task commit records.",
+        "preservedFrozenSha256": "c762044675702688313ce81c7812153bdb30bc95951aa1995e69337414a882d3",
+        "preservedCorrectedSha256": "51db511fd5249fed908d07ac90929da2e0e2fca11c9014808a332392e88b51f5",
+        "workingFileSha256": "51db511fd5249fed908d07ac90929da2e0e2fca11c9014808a332392e88b51f5",
+        "stagedBlobSha256": "51db511fd5249fed908d07ac90929da2e0e2fca11c9014808a332392e88b51f5",
+        "previousCommittedBlobSha256": "cb7c2f54c37ddda5ced3e39d1f4753f0a9b9d8e509b2f9998b6ffb33816d7dc0",
+        "preservedCorrectedEqualsWorkingFile": true,
+        "workingFileEqualsStagedBlob": true,
+        "frozenWithoutCarriageReturnsEqualsPreviousCommittedBlob": true,
+        "correctedHasNoCarriageReturn": true,
+        "correctedBytesMinusFrozenWithoutCarriageReturns": 142,
+        "addedLinesBytesIncludingLineEnds": 142,
+        "frozenPlusGuardLinesEqualsCorrected": true
+      },
+      "sourceChange": {
+        "recordedAt": "2026-10-09T21:27:47.856Z",
+        "file": "src/main.js",
+        "handler": "document.addEventListener('mousedown', ...) (offline branch), lines 271 to 284 of the corrected file",
+        "selector": "#pause-menu, #kc-skip",
+        "expression": "if (e.target?.closest?.('#pause-menu, #kc-skip')) return;",
+        "placement": "Inside the existing `!locked && gameRunning && !isBuyPanelOpen()` branch, before the lock request. That branch already ended in `return`, so the only behaviour removed is the lock request for a press inside the selector.",
+        "idiom": "Same `event.target.closest(...)` shape as the online path in src/network/onlineSession.js. `?.closest?.` is used because tools/art/animation-capture.mjs line 373 dispatches mousedown on `document`, whose target has no `closest`.",
+        "unchanged": [
+          "online early return and requestOnlineAction",
+          "tryShoot for a locked left press",
+          "middle-button tryThrowGrenade",
+          "right-button ADS",
+          "the canvas click handler and the Resume click handler"
+        ],
+        "selectorSurfaces": [
+          {
+            "selector": "#pause-menu",
+            "source": "task 1 surface rows 1 to 4",
+            "effect": "A left press anywhere inside the pause box no longer requests the lock: Main Menu reaches its click handler; Resume still captures through its own click handler; the graphics-quality control was already covered by its capture listener.",
+            "behaviourChange": "A press on the empty part of the box (title, hint, padding) used to re-capture the pointer and now does nothing. Not exercised by a test.",
+            "browserEvidence": "green cases 1, 2, 3, 4 and 5"
+          },
+          {
+            "selector": "#kc-skip",
+            "source": "task 1 surface row \"#killcam-wrap\", marked \"needs the fix\"",
+            "effect": "A left press on the killcam Skip button while the player is dead and the pointer is unlocked no longer requests the lock; its click handler ends the killcam as before. #killcam-wrap itself takes no pointer events, so only the button is named.",
+            "behaviourChange": "In wave modes a press on Skip no longer leaves a captured pointer on the KILLED IN ACTION screen. In TDM and S&D the result callback released the pointer anyway.",
+            "browserEvidence": "none: source reading only; no test presses #kc-skip",
+            "forReview": "The plan sets the selector to #pause-menu plus the surfaces task 1 marked \"needs the fix\", and task 1 made this row conditional on the task 3 review confirming it."
+          }
+        ],
+        "forReview": [
+          "#kc-skip is in the selector on source reading alone; no browser test presses it.",
+          "The blank area of #pause-menu no longer acts as an unlabelled resume.",
+          "Still open and unchanged by this plan: with the player dead in TDM or S&D a canvas press re-captures the pointer during the respawn wait (surfaceNotes)."
+        ],
+        "gitattributes": {
+          "addedPathLines": [
+            "src/main.js text eol=lf"
+          ],
+          "addedCommentLines": [
+            "# Reviewed plan 07-21 correction, registered by exact hash; LF on every checkout."
+          ],
+          "filesWhoseWorkingFormChanged": [
+            "src/main.js"
+          ],
+          "method": "git ls-files --eol for all 477 tracked files before and after; the only differing line is src/main.js (w/mixed, no attribute -> w/lf, text eol=lf)."
+        },
+        "unchangedProtectedFiles": {
+          "index.html": "1f89a54e697b4f2bf2bf5b47ff15d09782514d327c0caf7f81e39cae430f6e77",
+          "style.css": "3cf82a6907773d93b90ec980492ec9f0563cd5a804afb82eb97da4e126fa2332",
+          "src/loop.js": "5c28b979a75d5ed843513e774d685ca73586daa3d9cd91a81d7a0bffe7397cbe",
+          "src/input.js": "d279d07eff5d05fd63e8acfee2e37c940d7720958392948c5b74f25b279f5074"
+        },
+        "writeMethod": "A node script read the file as a buffer, checked it against the frozen hash, the preserved copy and the committed blob, removed carriage returns, inserted the two lines once at a unique anchor, checked addedLines, and wrote the buffer. No editor tool and no git command wrote the file. restore was not run.",
+        "registryEntryAddedIn": "task 07-21-03"
+      },
+      "registryEntry": {
+        "name": "src/main.js",
+        "original": "c762044675702688313ce81c7812153bdb30bc95951aa1995e69337414a882d3",
+        "corrected": "51db511fd5249fed908d07ac90929da2e0e2fca11c9014808a332392e88b51f5",
+        "hashBasis": "pinned-lf",
+        "guardLines": 2,
+        "review": ".planning/phases/07-movement-matched-and-action-safe-animation/07-21-SOURCE-EXCEPTION-REVIEW.md"
+      }
+    },
+    "surfaceCorrections": {
+      "correctedAfterReview": true,
+      "rowsBefore": [
+        {
+          "surface": "#pause-menu",
+          "controls": "the box itself outside its controls (title, hint, padding); #mp-leave-btn is hidden offline (index.html:188, src/main.js:359)",
+          "visibleWhileRunningUnlocked": "yes",
+          "pressReachesDocumentMousedown": "yes",
+          "pressCanRecapturePointer": "yes: a press on the empty part of the box re-captures and hides the menu, which acts as an unlabelled resume",
+          "coverage": "changes with the fix",
+          "coverageReason": "Not a defect today. A guard written as closest('#pause-menu') also stops this press from capturing; Resume and a canvas press still capture.",
+          "coveredByThisPlan": "yes as a side effect of the #pause-menu selector; stated so the owner sees the behaviour change",
+          "basis": "source reading only"
+        },
+        {
+          "surface": "#killcam-wrap",
+          "controls": "#kc-skip ([K] SKIP)",
+          "visibleWhileRunningUnlocked": "yes: src/replay/killcam.js:58-68 shows it; the killcam runs while gameRunning is still true (wave death: src/entities/enemies.js:257 releases the pointer and 266-268 start the killcam before _showWaveOver sets gameRunning false at 259; S&D: src/modes/snd.js:367-369; TDM: src/modes/tdm.js:71-73); the button takes pointer events (style.css:265)",
+          "pressReachesDocumentMousedown": "yes: nothing stops mousedown for it",
+          "pressCanRecapturePointer": "yes when the pointer is unlocked (player dead): src/main.js:274-276. In wave modes _showWaveOver (src/entities/enemies.js:258-264) does not release the pointer, so a granted lock stays on the KILLED IN ACTION screen; the S&D and TDM result callbacks release it (src/modes/snd.js:363, src/modes/tdm.js:54)",
+          "coverage": "needs the fix",
+          "coverageReason": "Same handler, same missing target check. The wrap is not hidden by pointerlockchange, so the click itself is lost only if a real browser redirects mouseup to the lock element; that was not measured. The [K] key (src/replay/killcam.js:66) is unaffected.",
+          "coveredByThisPlan": "only if the owner chooses a register-exception option and the task 3 review confirms this row",
+          "basis": "source reading only; not exercised in a browser in this task"
+        },
+        {
+          "surface": "#mp-match-controls, #mp-error-banner, #mp-leave-btn",
+          "controls": "online match controls",
+          "visibleWhileRunningUnlocked": "online only (hidden attribute offline: index.html:10-25, 188)",
+          "pressReachesDocumentMousedown": "no for the offline branch: the handler returns early when online (src/main.js:272); the online capture handler exempts buttons (src/network/onlineSession.js:134-136)",
+          "pressCanRecapturePointer": "no",
+          "coverage": "online-only",
+          "coverageReason": "The online path already has the exemption this fix would mirror.",
+          "coveredByThisPlan": "no change needed",
+          "basis": "source reading only"
+        }
+      ],
+      "added": [
+        "#mp-error-banner"
+      ],
+      "note": "The banner row was split out of the online-only row. The #kc-skip and empty-box rows now rest on browser cases."
+    },
+    "settled": {
+      "F-01 (W1)": {
+        "measured": "Reachable. On the first registered state both banner cases failed on one observation: the press captured the pointer before the click was delivered. The click was delivered and each handler did its work under the test adapter.",
+        "decision": "Covered: #mp-error-banner added to the guard selector.",
+        "why": "The press captured the pointer by the same handler path as the Main Menu defect, and src/main.js changes in this step anyway (the comment, and F-02), so covering it costs no extra registered state. Leaving a measured lock-on-press on two buttons out of a guard that exists to prevent it would need a recorded open defect instead.",
+        "honestLimit": "The orchestrator's instruction set two outcomes, \"the buttons work\" and \"it reproduces\". The measurement fell between them: the buttons work under the adapter and the capture reproduces. This record treats the capture as the defect. A lost click on these buttons was not shown."
+      },
+      "F-02 (W2)": {
+        "measured": "Wave death then Skip: passes with #kc-skip guarded, and with it served out of the guard the pointer stays captured on the death screen. Paused at a lost TDM match end then Skip, under an adapter with a silent release: failed on the first registered state (#pause-menu visible over #snd-result), and ended clean with #kc-skip served out of the guard.",
+        "decision": "Kept #kc-skip in the selector, and the Skip press now also hides #pause-menu.",
+        "why": "Smallest handling inside src/main.js that leaves no regression: one statement on the path that already handled the press. It does not depend on a lock being granted and released, which is what cleared the menu before this plan. The alternative of guarding Skip only while the player is dead would restore the old behaviour exactly, including the capture on a control press; removing #kc-skip would bring back the captured pointer on the wave death screen.",
+        "notChosen": [
+          "guard #kc-skip only when player.dead",
+          "remove #kc-skip from the selector and record the wave-mode defect as expected-failing"
+        ]
+      },
+      "F-03 (W3)": {
+        "control": "reviewed source exception: the frozen gate accepts the corrected src/main.js and rejects any other",
+        "secondControl": "reviewed source exception: the frozen gate rejects the corrected src/main.js under the original tuple",
+        "where": "tools/art/motion-promotion.test.mjs, in the block that needs no gitignored cache. tools/art/animation-budget-v2.test.mjs and tools/art/animation-budget-v2.mjs are unchanged.",
+        "how": "The real verifyCandidate, the tracked frozen budget file, and a synthetic candidate built as the CR-02 control builds its own. The published motion tuple is read from tracked files.",
+        "originalTuple": "Its three files are no longer in a checkout. They are read from git history by blob id, or from the research cache, and checked against their registered original hashes. With a shallow history and no cache the case is skipped visibly; the first control still runs."
+      },
+      "F-04": "The source comment now names the pause box, the banner and Skip. The empty-box behaviour is pinned by a case. Stating it in the summary is left to the final step.",
+      "F-05": "No change. guardLines is 6 and remains a line-count cross-check; the hash pair pins the content.",
+      "F-06": "hashBasis is asserted as the literal pinned-lf and against the decision record's hash_basis line; the working-file comparison is no longer skippable.",
+      "F-07": "New control: the review record must exist, carry status pass or pass-with-notes with reviewer_model opus and reviewer_effort high, and name the registered corrected hash in full.",
+      "F-08": "Recorded under limitations below; the gate is not changed.",
+      "F-09": "Added: an undefined or null binding throws TypeError.",
+      "F-11": "The task field is corrected. reruns stays null until the final step.",
+      "F-13, F-14, F-15, F-10, F-12": "Not changed in this step."
+    },
+    "limitations": {
+      "gateAcceptsEitherHash": "For plans 07-13 and 07-18: the exception is additive. Under the corrected motion tuple the frozen gate passes with src/main.js at the frozen hash c7620446... or at the registered corrected hash, and refuses every other value. A gate pass therefore does not show that the fix is in the measured build; compare the candidate's src/main.js identity with the registered corrected hash for that. Under the original tuple only the frozen hash passes. A control states this (the last assertion of the first gate-level control).",
+      "reviewOfTheNewHash": "The review record on file reviewed the superseded hash 51db511f.... Until a delta review names the new hash in that record, the control \"the review record is non-blocking and covers the registered hash\" fails by design, and with it npm run test:art.",
+      "freshCloneFailuresElsewhere": "tools/art/animation-budget-v2.test.mjs still fails three cases on a clone without the gitignored cache (review F-13). Not changed here."
+    },
+    "green": {
+      "command": "PLAYWRIGHT_JSON_OUTPUT_FILE=.planning/research/.cache/07-21/seg3-green.json npm run test:e2e -- tests/pause-menu-pointer-lock.spec.js --workers=1 --reporter=line,json",
+      "runs": 1,
+      "startedAt": "2026-10-09T22:12:56Z",
+      "endedAt": "2026-10-09T22:15:18Z",
+      "exitCode": 0,
+      "reportPath": ".planning/research/.cache/07-21/seg3-green.json",
+      "reportSha256": "99daa6fc33b9731ab1597b8753c8cefa0ecda10b4002cdf1e2a5c4a13ef5e5ca",
+      "consoleLogPath": ".planning/research/.cache/07-21/seg3-green-console.log",
+      "consoleLogSha256": "52e8ed0d2047be6ec285cbe84358f5952e4d3ca6f22157e2aee24096aa49108c",
+      "specSha256": "0ba7a2a60758fecb61fd663aa57d3a7ac849d048f3f3d720909421382ff5dac7",
+      "specUnchangedSinceRedRun": true,
+      "mainJsSha256DuringRun": "f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393",
+      "note": "Run on the final bytes of src/main.js before they were committed; the file was not changed afterwards.",
+      "stats": {
+        "startTime": "2026-10-09T22:12:57.263Z",
+        "duration": 141374.97199999998,
+        "expected": 11,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "cases": [
+        {
+          "title": "pause menu: Main Menu press returns to the menu under a synchronous lock grant",
+          "status": "passed",
+          "outcome": "expected",
+          "expectedStatus": "passed",
+          "retries": 0,
+          "durationMs": 8591,
+          "failedAssertions": [],
+          "annotations": []
+        },
+        {
+          "title": "pause menu: a 150 ms Main Menu press returns to the menu under a deferred lock grant",
+          "status": "passed",
+          "outcome": "expected",
+          "expectedStatus": "passed",
+          "retries": 0,
+          "durationMs": 8544,
+          "failedAssertions": [],
+          "annotations": []
+        },
+        {
+          "title": "pause menu: an immediate Main Menu click returns to the menu under a deferred lock grant",
+          "status": "passed",
+          "outcome": "expected",
+          "expectedStatus": "passed",
+          "retries": 0,
+          "durationMs": 9788,
+          "failedAssertions": [],
+          "annotations": []
+        },
+        {
+          "title": "pause menu: the graphics-quality control stays usable while paused",
+          "status": "passed",
+          "outcome": "expected",
+          "expectedStatus": "passed",
+          "retries": 0,
+          "durationMs": 11306,
+          "failedAssertions": [],
+          "annotations": []
+        },
+        {
+          "title": "pause menu: Resume re-captures the pointer",
+          "status": "passed",
+          "outcome": "expected",
+          "expectedStatus": "passed",
+          "retries": 0,
+          "durationMs": 9481,
+          "failedAssertions": [],
+          "annotations": []
+        },
+        {
+          "title": "pause menu: a canvas press re-captures the pointer while unlocked and running",
+          "status": "passed",
+          "outcome": "expected",
+          "expectedStatus": "passed",
+          "retries": 0,
+          "durationMs": 10189,
+          "failedAssertions": [],
+          "annotations": []
+        },
+        {
+          "title": "pause menu: a press on the empty part of the box does not capture the pointer",
+          "status": "passed",
+          "outcome": "expected",
+          "expectedStatus": "passed",
+          "retries": 0,
+          "durationMs": 9445,
+          "failedAssertions": [],
+          "annotations": []
+        },
+        {
+          "title": "online error banner: a Return to menu press over an offline match returns to the menu without capturing the pointer",
+          "status": "passed",
+          "outcome": "expected",
+          "expectedStatus": "passed",
+          "retries": 0,
+          "durationMs": 11348,
+          "failedAssertions": [],
+          "annotations": []
+        },
+        {
+          "title": "online error banner: a Retry press over an offline match starts a fresh join attempt without capturing the pointer first",
+          "status": "passed",
+          "outcome": "expected",
+          "expectedStatus": "passed",
+          "retries": 0,
+          "durationMs": 12673,
+          "failedAssertions": [],
+          "annotations": []
+        },
+        {
+          "title": "killcam: a Skip press after a wave death shows the death screen with the pointer released",
+          "status": "passed",
+          "outcome": "expected",
+          "expectedStatus": "passed",
+          "retries": 0,
+          "durationMs": 14967,
+          "failedAssertions": [],
+          "annotations": []
+        },
+        {
+          "title": "killcam: a Skip press while paused at a lost TDM match end leaves no pause menu over the result",
+          "status": "passed",
+          "outcome": "expected",
+          "expectedStatus": "passed",
+          "retries": 0,
+          "durationMs": 17986,
+          "failedAssertions": [],
+          "annotations": []
+        }
+      ]
+    },
+    "registration": {
+      "registry": "REVIEWED_SOURCE_EXCEPTIONS in tools/art/motion-acceptance.mjs",
+      "entry": {
+        "name": "src/main.js",
+        "original": "c762044675702688313ce81c7812153bdb30bc95951aa1995e69337414a882d3",
+        "corrected": "f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393",
+        "hashBasis": "pinned-lf",
+        "guardLines": 6,
+        "review": ".planning/phases/07-movement-matched-and-action-safe-animation/07-21-SOURCE-EXCEPTION-REVIEW.md"
+      },
+      "pairsRegisteredForSrcMainJs": 1,
+      "supersededCorrectedSha256": "51db511fd5249fed908d07ac90929da2e0e2fca11c9014808a332392e88b51f5",
+      "supersededRejected": "By the rule-level control (as a current and as a reference hash) and by the gate-level control (Protected source changed: src/main.js). The registry test also asserts that the superseded hash does not occur in tools/art/motion-acceptance.mjs.",
+      "controls": [
+        "reviewed source exception: registry holds one exact pair for src/main.js",
+        "reviewed source exception: the review record is non-blocking and covers the registered hash",
+        "reviewed source exception: rule accepts only the exact pair under the corrected binding",
+        "reviewed source exception: no other name gains an exception",
+        "reviewed source exception: registry hashes are the preserved bytes",
+        "reviewed source exception: preserved corrected bytes are the reviewed content",
+        "reviewed source exception: frozen bytes plus the guard lines are the corrected bytes",
+        "reviewed source exception: pinned-lf content is the registered hash on every checkout",
+        "reviewed source exception: the frozen gate accepts the corrected src/main.js and rejects any other",
+        "reviewed source exception: the frozen gate rejects the corrected src/main.js under the original tuple"
+      ],
+      "controlRun": {
+        "command": "node --test tools/art/motion-promotion.test.mjs tools/art/animation-budget-v2.test.mjs tools/art/frozen-bytes.test.mjs",
+        "exitCode": 1,
+        "logPath": ".planning/research/.cache/07-21/seg3-controls.log",
+        "logSha256": "a67fb1884c61658d36c2b8d0745ada0c41aee330ed44e63eb237e490dca4e98b",
+        "tests": 89,
+        "pass": 88,
+        "fail": 1,
+        "skipped": 0,
+        "todo": 0,
+        "failing": [
+          "reviewed source exception: the review record is non-blocking and covers the registered hash"
+        ]
+      },
+      "testArt": {
+        "command": "npm run test:art",
+        "exitCode": 1,
+        "logPath": ".planning/research/.cache/07-21/seg3-test-art.log",
+        "logSha256": "45404428617615894636befba9a067d903a94f37d2294c51944c097ac7ee9eff",
+        "tests": 197,
+        "pass": 196,
+        "fail": 1,
+        "skipped": 0,
+        "todo": 0,
+        "failing": [
+          "reviewed source exception: the review record is non-blocking and covers the registered hash"
+        ]
+      },
+      "expectedFailure": "Exactly one control fails in both runs: \"reviewed source exception: the review record is non-blocking and covers the registered hash\". The record on file names the superseded hash only. It passes once the delta review names f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393 in that record with a non-blocking status. It is a real failure of the run, not a pass.",
+      "preservedBytesVerify": {
+        "command": "node tools/art/frozen-bytes.mjs verify",
+        "verified": 26,
+        "mismatched": 0,
+        "mainJsLine": "verified corrected src/main.js sha256=f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393 bytes=26122 crlf=0 lf=571"
+      },
+      "unchangedFrozenFiles": {
+        "tools/art/animation-budget-v2.mjs": {
+          "workingFileSha256": "65ed6f129f77e4098c32f9b227435a804a483087ee983014199d4834dd09e777",
+          "blobAtPlanStart": "c23e1429b94876a93f13fd66a3c76914c1160ae4",
+          "blobAtHead": "c23e1429b94876a93f13fd66a3c76914c1160ae4",
+          "statusClean": true
+        },
+        "tools/art/animation-budget-v2.test.mjs": {
+          "workingFileSha256": "598d2a01d64fa5869cf903fc8b48eb0a2a1422b5750f51f9b8ae58f84a239768",
+          "blobAtPlanStart": "af8ca8f67b2fea84945be15f26b69bbe1df73e38",
+          "blobAtHead": "af8ca8f67b2fea84945be15f26b69bbe1df73e38",
+          "statusClean": true
+        },
+        ".planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-budget-view-v2.json": {
+          "workingFileSha256": "6f0bf775eda9061b601023d5890a50248668a3bccbec48eeaeb7f84e7a64ba34",
+          "blobAtPlanStart": "e9cdb636942b321743a77281ea8d4b71f8628b6d",
+          "blobAtHead": "e9cdb636942b321743a77281ea8d4b71f8628b6d",
+          "statusClean": true
+        },
+        ".planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-09-view-reference-v2.json": {
+          "workingFileSha256": "6d5fd41136766209445b9694dfb0ffdf269d4a1887cffadba868dcad8a8b6aef",
+          "blobAtPlanStart": "99dad160194ce16f0080542a8299d8ddfe10c6ac",
+          "blobAtHead": "99dad160194ce16f0080542a8299d8ddfe10c6ac",
+          "statusClean": true
+        }
+      },
+      "lintOfSrcMainJs": {
+        "command": "npx eslint src/main.js --max-warnings 0",
+        "exitCode": 0,
+        "note": "One file only. The full lint, typecheck, unit and offline browser reruns belong to the final step; reruns is still null."
       }
     }
   }

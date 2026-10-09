@@ -92,8 +92,8 @@ export const CORRECTION_DEPENDENTS = Object.freeze({ 'src/builders/enemyGLTF.tes
 // evidence/07-21-frozen-bytes.json.
 export const REVIEWED_SOURCE_EXCEPTIONS = Object.freeze({ 'src/main.js': Object.freeze({
   original: 'c762044675702688313ce81c7812153bdb30bc95951aa1995e69337414a882d3',
-  corrected: '51db511fd5249fed908d07ac90929da2e0e2fca11c9014808a332392e88b51f5',
-  hashBasis: 'pinned-lf', guardLines: 2,
+  corrected: 'f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393',
+  hashBasis: 'pinned-lf', guardLines: 6,
   review: '.planning/phases/07-movement-matched-and-action-safe-animation/07-21-SOURCE-EXCEPTION-REVIEW.md' }) });
 export function exactCorrectionException(name, reference, current, binding) {
   if (binding.revision !== '07-CR02-directional-crouch') return false;
