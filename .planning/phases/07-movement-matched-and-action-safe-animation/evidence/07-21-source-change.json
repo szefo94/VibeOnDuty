@@ -931,7 +931,255 @@
     },
     "status": "historical: the entry below was registered in f7bc7c4 and is superseded; see reviewFollowUp.registration"
   },
-  "reruns": null,
+  "reruns": [
+    {
+      "id": "lint",
+      "command": "npm run lint",
+      "exitCode": 0,
+      "counts": {
+        "passed": null,
+        "failed": null,
+        "skipped": null,
+        "flaky": null,
+        "errors": 0,
+        "warnings": 0
+      },
+      "startedAt": "2026-10-09T22:44:31Z",
+      "endedAt": "2026-10-09T22:44:33Z",
+      "durationMs": 1901,
+      "logPath": ".planning/research/.cache/07-21/final-lint.log",
+      "logSha256": "94a1703068e5f56072f7f9628edf50bf3c925a0a1d1c0a489b47ead5e3c741b2",
+      "mainJsSha256AtRun": "f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393",
+      "mainJsIsRegisteredCorrected": true,
+      "headAtRun": "3777191399505a005f8878b6c71c956a7c3a270a",
+      "countsBasis": "ESLint reports no test counts. With --max-warnings 0, exit code 0 means no error and no warning; the log holds 0 problem lines. Lint covers src/, server/ and tests/helpers/ only."
+    },
+    {
+      "id": "typecheck",
+      "command": "npm run typecheck",
+      "exitCode": 0,
+      "counts": {
+        "passed": null,
+        "failed": null,
+        "skipped": null,
+        "flaky": null,
+        "errors": 0
+      },
+      "startedAt": "2026-10-09T22:44:37Z",
+      "endedAt": "2026-10-09T22:44:40Z",
+      "durationMs": 2668,
+      "logPath": ".planning/research/.cache/07-21/final-typecheck.log",
+      "logSha256": "932e001e4db172b5d3937d10e631426464011d1f4791e3b81c0a18d11c835c3a",
+      "mainJsSha256AtRun": "f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393",
+      "mainJsIsRegisteredCorrected": true,
+      "headAtRun": "3777191399505a005f8878b6c71c956a7c3a270a",
+      "countsBasis": "tsc reports no test counts. Exit code 0 means no diagnostic; the log holds 0 problem lines. checkJs is false, so this is weak evidence for a .js change."
+    },
+    {
+      "id": "test-unit",
+      "command": "npm run test:unit",
+      "exitCode": 0,
+      "counts": {
+        "passed": 323,
+        "failed": 0,
+        "skipped": 0,
+        "flaky": 0,
+        "files": 31
+      },
+      "startedAt": "2026-10-09T22:44:44Z",
+      "endedAt": "2026-10-09T22:45:41Z",
+      "durationMs": 56898,
+      "logPath": ".planning/research/.cache/07-21/final-test-unit.log",
+      "logSha256": "2f2974bc5926a8bc4acbfcf1f68c9606d08ca07fa7600392e95fec09a2724075",
+      "mainJsSha256AtRun": "f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393",
+      "mainJsIsRegisteredCorrected": true,
+      "headAtRun": "3777191399505a005f8878b6c71c956a7c3a270a",
+      "countsBasis": "The \"Test Files\" and \"Tests\" lines of the vitest summary in the log. vitest has no retry configured, so flaky is 0 by construction."
+    },
+    {
+      "id": "test-art",
+      "command": "npm run test:art",
+      "exitCode": 0,
+      "counts": {
+        "passed": 197,
+        "failed": 0,
+        "skipped": 0,
+        "flaky": 0,
+        "tests": 197,
+        "cancelled": 0,
+        "todo": 0
+      },
+      "startedAt": "2026-10-09T22:45:49Z",
+      "endedAt": "2026-10-09T22:46:05Z",
+      "durationMs": 15970,
+      "logPath": ".planning/research/.cache/07-21/final-test-art.log",
+      "logSha256": "75ac45189aa36f1d7b55d9bc82be763dbee5525140ca9c38afd9bc90b9963fd3",
+      "mainJsSha256AtRun": "f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393",
+      "mainJsIsRegisteredCorrected": true,
+      "headAtRun": "3777191399505a005f8878b6c71c956a7c3a270a",
+      "countsBasis": "The node:test summary lines in the log. node:test has no retry, so flaky is 0 by construction."
+    },
+    {
+      "id": "e2e",
+      "command": "PLAYWRIGHT_JSON_OUTPUT_FILE=.planning/research/.cache/07-21/final-e2e.json npm run test:e2e -- tests/smoke.spec.js tests/animation-regressions.spec.js tests/character-art.spec.js tests/animation-review.spec.js tests/action-lifecycle.spec.js tests/offline-multiplayer-regressions.spec.js tests/pause-menu-pointer-lock.spec.js --workers=1 --reporter=line,json",
+      "exitCode": 1,
+      "counts": {
+        "passed": 85,
+        "failed": 1,
+        "skipped": 0,
+        "flaky": 0,
+        "tests": 86
+      },
+      "startedAt": "2026-10-09T22:46:49Z",
+      "endedAt": "2026-10-09T23:04:08Z",
+      "durationMs": 1038693,
+      "logPath": ".planning/research/.cache/07-21/final-e2e.log",
+      "logSha256": "73b7ac20b393c36dff30863f0d49b692c55683b6ef514f70d693e8254492387f",
+      "mainJsSha256AtRun": "f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393",
+      "mainJsIsRegisteredCorrected": true,
+      "headAtRun": "3777191399505a005f8878b6c71c956a7c3a270a",
+      "countsBasis": "The stats block of the Playwright JSON report (expected, unexpected, skipped, flaky). No retry is configured, so a case cannot be reported flaky.",
+      "invocations": 1,
+      "workers": 1,
+      "specFiles": 7,
+      "specs": [
+        "tests/smoke.spec.js",
+        "tests/animation-regressions.spec.js",
+        "tests/character-art.spec.js",
+        "tests/animation-review.spec.js",
+        "tests/action-lifecycle.spec.js",
+        "tests/offline-multiplayer-regressions.spec.js",
+        "tests/pause-menu-pointer-lock.spec.js"
+      ],
+      "perFile": {
+        "tests/action-lifecycle.spec.js": {
+          "tests": 22,
+          "passed": 22,
+          "failed": 0,
+          "skipped": 0,
+          "flaky": 0
+        },
+        "tests/animation-regressions.spec.js": {
+          "tests": 6,
+          "passed": 6,
+          "failed": 0,
+          "skipped": 0,
+          "flaky": 0
+        },
+        "tests/animation-review.spec.js": {
+          "tests": 10,
+          "passed": 10,
+          "failed": 0,
+          "skipped": 0,
+          "flaky": 0
+        },
+        "tests/character-art.spec.js": {
+          "tests": 28,
+          "passed": 27,
+          "failed": 1,
+          "skipped": 0,
+          "flaky": 0
+        },
+        "tests/offline-multiplayer-regressions.spec.js": {
+          "tests": 1,
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "flaky": 0
+        },
+        "tests/pause-menu-pointer-lock.spec.js": {
+          "tests": 11,
+          "passed": 11,
+          "failed": 0,
+          "skipped": 0,
+          "flaky": 0
+        },
+        "tests/smoke.spec.js": {
+          "tests": 8,
+          "passed": 8,
+          "failed": 0,
+          "skipped": 0,
+          "flaky": 0
+        }
+      },
+      "reportPath": ".planning/research/.cache/07-21/final-e2e.json",
+      "reportSha256": "5b9e9abd805977514bc7ca9b1eb9328341590b4fda07dac6348e401148753c4d",
+      "reportDurationMs": 1037483,
+      "casesRunMoreThanOnce": 0,
+      "guardSelectorEnv": "unset",
+      "guardVariantMarksInReport": 0,
+      "specSha256": "4ef92d70a04b2ac04d3e0ce9b06d8968a48df875403cad5615789e21b7486177",
+      "notExpected": [
+        {
+          "file": "tests/character-art.spec.js",
+          "line": 953,
+          "title": "art slice: base-prefixed production build resolves the painted assets",
+          "status": "unexpected",
+          "resultStatus": "failed",
+          "durationMs": 15795,
+          "firstErrorLine": "Error: Owned prefix preview did not start"
+        }
+      ],
+      "attempt": 1,
+      "role": "The plan's one sequential Playwright invocation over the seven spec files. It exited 1 and is recorded as it ran."
+    },
+    {
+      "id": "e2e-character-art-rerun",
+      "command": "PLAYWRIGHT_JSON_OUTPUT_FILE=.planning/research/.cache/07-21/final-e2e-character-art-rerun.json npm run test:e2e -- tests/character-art.spec.js --workers=1 --reporter=line,json",
+      "exitCode": 1,
+      "counts": {
+        "passed": 27,
+        "failed": 1,
+        "skipped": 0,
+        "flaky": 0,
+        "tests": 28
+      },
+      "startedAt": "2026-10-09T23:05:27Z",
+      "endedAt": "2026-10-09T23:11:49Z",
+      "durationMs": 381728,
+      "logPath": ".planning/research/.cache/07-21/final-e2e-character-art-rerun.log",
+      "logSha256": "2783544dfc8f7e46598505a428df7efba90a764decb1c1c53808627a2a8c9c9d",
+      "mainJsSha256AtRun": "f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393",
+      "mainJsIsRegisteredCorrected": true,
+      "headAtRun": "3777191399505a005f8878b6c71c956a7c3a270a",
+      "countsBasis": "The stats block of the Playwright JSON report (expected, unexpected, skipped, flaky). No retry is configured, so a case cannot be reported flaky.",
+      "invocations": 1,
+      "workers": 1,
+      "specFiles": 1,
+      "specs": [
+        "tests/character-art.spec.js"
+      ],
+      "perFile": {
+        "tests/character-art.spec.js": {
+          "tests": 28,
+          "passed": 27,
+          "failed": 1,
+          "skipped": 0,
+          "flaky": 0
+        }
+      },
+      "reportPath": ".planning/research/.cache/07-21/final-e2e-character-art-rerun.json",
+      "reportSha256": "6424ab488129d97219e74e0619f272e80a9b8872d7e7a5f9f37e2e0d55314fac",
+      "reportDurationMs": 380520,
+      "casesRunMoreThanOnce": 0,
+      "guardSelectorEnv": "unset",
+      "guardVariantMarksInReport": 0,
+      "specSha256": "4ef92d70a04b2ac04d3e0ce9b06d8968a48df875403cad5615789e21b7486177",
+      "notExpected": [
+        {
+          "file": "tests/character-art.spec.js",
+          "line": 953,
+          "title": "art slice: base-prefixed production build resolves the painted assets",
+          "status": "unexpected",
+          "resultStatus": "failed",
+          "durationMs": 15866,
+          "firstErrorLine": "Error: Owned prefix preview did not start"
+        }
+      ],
+      "attempt": 2,
+      "role": "One repeat of the single spec file that held the failing case, allowed once by the orchestrator for a failure in setup that looked like an infrastructure flake. It failed in the same way. It is a second attempt beside the first, not a replacement for it, and its passes are not added to the first run's."
+    }
+  ],
   "reviewFollowUp": {
     "recordedAt": "2026-10-09T22:05:42.893Z",
     "purpose": "Settles the three warnings (F-01, F-02, F-03) and several notes of the independent review inside this plan, on the orchestrator's instruction. This goes beyond the plan's rule that only a blocker is fixed after review; it is recorded as a deviation.",
@@ -1937,6 +2185,74 @@
       "D-05": "Not fixed. The control \"the frozen gate rejects the corrected src/main.js under the original tuple\" reads three blobs from git history and is skipped, visibly, on a shallow history, which is the default on CI. It is not CI coverage. The rule-level control for the original binding always runs.",
       "D-06": "For plans 07-13 and 07-18. The gate-level control calls verifyCandidate, which under the corrected motion tuple accepts src/main.js at the frozen hash c7620446... or at the registered corrected hash. It does not exercise the command's own check that every reported identity equals the file on disk (tools/art/animation-budget-v2.mjs lines 261 to 262). A pass of the gate, or of that control, does not show that the fix is in the measured build. Plans 07-13 and 07-18 must check that the candidate's src/main.js identity equals the registered corrected hash f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393. See also reviewFollowUp.limitations.gateAcceptsEitherHash.",
       "whyNotFixed": "D-03 and D-04 have their causes in protected files; a change there would need another registered hash and another review. D-05 and D-06 are properties of the frozen gate and of CI checkout depth, outside this plan."
+    },
+    "rerunFailure": {
+      "case": "tests/character-art.spec.js:953 › art slice: base-prefixed production build resolves the painted assets",
+      "attempts": [
+        {
+          "rerun": "e2e",
+          "exitCode": 1,
+          "passed": 85,
+          "failed": 1,
+          "caseDurationMs": 15795,
+          "firstErrorLine": "Error: Owned prefix preview did not start"
+        },
+        {
+          "rerun": "e2e-character-art-rerun",
+          "exitCode": 1,
+          "passed": 27,
+          "failed": 1,
+          "caseDurationMs": 15866,
+          "firstErrorLine": "Error: Owned prefix preview did not start"
+        }
+      ],
+      "whereItStops": "In the case's own setup. The error is thrown by the test's 15000 ms timer at tests/character-art.spec.js line 968, after its `vite build` child had exited 0 and while it waited for its `vite preview` child to report readiness. That is before page.goto at line 976: no page of the game was loaded and no press was made in this case.",
+      "touchesTheChangedHandler": false,
+      "diagnosis": {
+        "how": "No browser. The case's two child commands were repeated by hand from a scratch script, building into a new OS temp directory that was removed afterwards. No project file was written.",
+        "logPath": ".planning/research/.cache/07-21/final-e2e-diagnosis-preview.log",
+        "logSha256": "0a133601af77364d34544b589abf58ecf7ffc72ce86262161cd75347ebaa32d1",
+        "build": "node node_modules/vite/bin/vite.js build --outDir <temp> with PUBLIC_BASE=/art-prefix/: exit 0 in 721 ms. The corrected src/main.js builds.",
+        "preview": "node node_modules/vite/bin/vite.js preview ... --strictPort: first output after about 330 ms, and the server kept running. With the session's environment, and with FORCE_COLOR=1, the line is \"  ➜  <ESC>[1mLocal<ESC>[22m:   http://127.0.0.1:<port>/art-prefix/\": an escape sequence sits between \"Local\" and \":\". With NO_COLOR=1 the line is \"  ➜  Local:   http://127.0.0.1:<port>/art-prefix/\".",
+        "cause": "The preview server did start. The test recognises readiness only by a stdout chunk that contains the plain text \"Local:\" (line 970), and with colour on that text never occurs, so its timer fires. Colour is on here for two reasons read from node_modules: Playwright sets FORCE_COLOR=1 for every worker (playwright/lib/runner/workerHost.js line 46) and the test hands the worker's environment to the server; and the colour rule bundled in Vite 8.0.8 turns colour on under win32 unless NO_COLOR is set or --no-color is passed. The session's shell sets neither NO_COLOR nor FORCE_COLOR."
+      },
+      "comparison": {
+        "stableGates0710": "evidence/07-10-stable-gates.json: in the full offline run of 2026-10-07 this case passed in 9.7 s (offline-full-current.json). That run's two failures were setup timeouts in tests/action-lifecycle.spec.js, and that file passed here, 22 of 22.",
+        "requiredAssertions0711": "evidence/07-11-required-assertions.json covers tests/action-lifecycle.spec.js (22 passed) and one animation-regressions case. It does not include this case.",
+        "inference": "For the 2026-10-07 run to pass on this host, colour must have been off for the server process, for example through NO_COLOR in the invoking shell. That log shows an uncoloured reporter. The earlier environment is not recorded and this was not verified."
+      },
+      "relationToThisPlan": "tests/character-art.spec.js, vite.config.js, package.json and playwright.config.js are unchanged since e0663dc. The case depends on src/main.js only through the build succeeding, which it did. Earlier segments of this plan ran the pause spec alone, so this case had not been run in this plan before.",
+      "classification": "Unrelated to the changed handler. A sensitivity of an existing, unchanged test to colour output in the invoking environment. Not a flake: it failed identically in both attempts and the cause is deterministic in this environment.",
+      "notDone": [
+        "No third attempt was made.",
+        "No run was made with NO_COLOR set.",
+        "The test was not edited.",
+        "The two attempts were not combined into one result."
+      ],
+      "consequence": "The plan's acceptance criterion of one Playwright entry over the seven spec files with exitCode 0 is not met, and its first task 3 verify command exits 1 on this record. The plan is partial. The other 85 cases of the seven-spec run passed, including all 11 of tests/pause-menu-pointer-lock.spec.js and all 22 of tests/action-lifecycle.spec.js.",
+      "forTheOwnerOrOrchestrator": "Two ways to settle it, neither taken here: authorise one repeat of the seven-spec invocation with NO_COLOR=1 in its environment, recorded as a third attempt beside these two; or have the readiness check at tests/character-art.spec.js line 970 made independent of colour in a separate change, which is outside this plan's files."
+    },
+    "rerunConditions": {
+      "recordedAt": "2026-10-09T23:15:29.604Z",
+      "order": [
+        "lint",
+        "typecheck",
+        "test-unit",
+        "test-art",
+        "e2e",
+        "e2e-character-art-rerun"
+      ],
+      "sequential": "Each command was started after the previous one had exited. Nothing else was run beside a browser run, and no project file was written while one ran.",
+      "guardSelector": "PAUSE_SPEC_GUARD_SELECTOR was unset for every command (the runner script unsets it and records that), and the two Playwright reports carry 0 guard-variant marks.",
+      "identity": "src/main.js hashed to f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393 before and after every command.",
+      "runsPerCommand": "One each. The seven-spec invocation ran once; the single spec file with the failing case was then run once more (attempt 2).",
+      "allExitCodesZero": false,
+      "nonZero": [
+        "e2e",
+        "e2e-character-art-rerun"
+      ],
+      "host": "One Windows host, headless Chromium with SwiftShader under pointer-lock adapters. Not a device or frame-rate measurement, and not a real-browser pointer-lock measurement.",
+      "notRun": "npm run build, npm run test:mp, npm run typecheck:mp and the offline specs outside the seven named by the plan were not run in this step."
     }
   }
 }
