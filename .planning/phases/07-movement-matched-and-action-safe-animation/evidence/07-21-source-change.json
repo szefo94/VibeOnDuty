@@ -872,5 +872,347 @@
       "observationForLineEndingFollowUp": "Of the 127 frozen file identities, a fresh core.autocrlf=true clone reproduces 62 and a fresh core.autocrlf=false clone reproduces 38; src/main.js counts as different in both because it now holds the corrected content. No single fresh checkout form reproduces both the 38 committed-bytes identities and the 57 all-CRLF ones, because a CRLF checkout also converts text files whose frozen hash is of LF bytes. This is the standing property of the frozen gate recorded in lineEndingSurvey, measured here on fresh clones; this plan does not repair it."
     }
   },
-  "reruns": null
+  "reruns": null,
+  "reviewFollowUp": {
+    "recordedAt": "2026-10-09T22:05:42.893Z",
+    "purpose": "Settles the three warnings (F-01, F-02, F-03) and several notes of the independent review inside this plan, on the orchestrator's instruction. This goes beyond the plan's rule that only a blocker is fixed after review; it is recorded as a deviation.",
+    "reviewRecord": {
+      "path": ".planning/phases/07-movement-matched-and-action-safe-animation/07-21-SOURCE-EXCEPTION-REVIEW.md",
+      "sha256": "66371523a98b034c873f3f02e00fc8e643b482ca5a71075e077806d510f91703",
+      "status": "pass-with-notes",
+      "committedUnchangedIn": "f0e0b8f"
+    },
+    "measuredSource": {
+      "commit": "f0e0b8f780bae122511fc0e477189ee74fcf4967",
+      "mainJsSha256": "51db511fd5249fed908d07ac90929da2e0e2fca11c9014808a332392e88b51f5",
+      "note": "Every run below was made with src/main.js on disk at the registered corrected hash. No run wrote that file."
+    },
+    "specSha256": "0ba7a2a60758fecb61fd663aa57d3a7ac849d048f3f3d720909421382ff5dac7",
+    "newCases": [
+      "pause menu: a press on the empty part of the box does not capture the pointer",
+      "online error banner: a Return to menu press over an offline match returns to the menu without capturing the pointer",
+      "online error banner: a Retry press over an offline match starts a fresh join attempt without capturing the pointer first",
+      "killcam: a Skip press after a wave death shows the death screen with the pointer released",
+      "killcam: a Skip press while paused at a lost TDM match end leaves no pause menu over the result"
+    ],
+    "method": {
+      "presses": "Every press is a real locator.click(). No element.click() and no dispatchEvent is used for a press.",
+      "pressLog": "A read-only init script records mousedown, mouseup, click (window, capture phase) and pointerlockchange, each with whether document.pointerLockElement was set. \"reached\" means the click was delivered to the pressed control; \"capturedBeforeClick\" means the pointer was captured at some moment from mousedown to that delivery.",
+      "adapters": {
+        "synchronous": "The collector's three overrides, unchanged (cases of the first six, the banner cases, the wave Skip case, the empty-box case).",
+        "synchronousSilentRelease": "Same synchronous grant, but exitPointerLock() fires pointerlockchange only when it ends a lock, as a browser does (the paused Skip case). The collector's adapter fires it on every release and cannot show a state that depends on no event arriving.",
+        "limits": "Both are models. Neither redirects the rest of a press to the lock element the way a real browser does once a lock is granted, so a click on a control that stays visible is always delivered here. A real browser was not used: headless Chromium grants no pointer lock."
+      },
+      "setupShortenedFromPageScript": {
+        "killcam: a Skip press after a wave death shows the death screen with the pointer released": "A live enemy is assigned to player.lastAttacker and the game's own triggerDeath() is called. The death is not played out.",
+        "killcam: a Skip press while paused at a lost TDM match end leaves no pause menu over the result": "A live enemy is assigned to player.lastAttacker and the TDM mode's own tick is called once with 601 seconds, so the match ends on time, lost 0 to 0 with the player alive, and the end-of-match killcam starts.",
+        "note": "In both cases the press on #kc-skip itself is a real click. The banner cases use no page-script setup: the join fails because the owned Vite server has no game server behind it."
+      }
+    },
+    "red": {
+      "command": "PLAYWRIGHT_JSON_OUTPUT_FILE=.planning/research/.cache/07-21/seg3-red.json PLAYWRIGHT_JUNIT_OUTPUT_FILE=.planning/research/.cache/07-21/seg3-red-junit.xml npx playwright test tests/pause-menu-pointer-lock.spec.js --workers=1 --reporter=line,json,junit",
+      "runs": 1,
+      "startedAt": "2026-10-09T21:58:39Z",
+      "endedAt": "2026-10-09T22:01:41Z",
+      "exitCode": 1,
+      "reportPath": ".planning/research/.cache/07-21/seg3-red.json",
+      "reportSha256": "78ce8a0b26136446bf6a66169c46b098bc0b252849220f650e92f5b85aed02b0",
+      "consoleLogPath": ".planning/research/.cache/07-21/seg3-red-console.log",
+      "consoleLogSha256": "c3a191b92dd6a0c6e919ccc55851f33805a9c666bc8a1fd358a3fc30dee9cb26",
+      "junitPath": ".planning/research/.cache/07-21/seg3-red-junit.xml",
+      "junitSha256": "f6af6338c3b503854fd26f18114b8c595fed6d981fb020fcc94e64eb71d108e4",
+      "reportNote": "The report directory is gitignored; the hashes bind this record to the files on the executing host.",
+      "softAssertions": "The new cases use expect.soft for the press observations, so one run reports every failed observation of a case. A case with a single listed assertion passed all its others.",
+      "tddRedEvidence": {
+        "classifier": "gsd-tools check tdd-red-evidence",
+        "records": [
+          {
+            "targetTest": "online error banner: a Return to menu press over an offline match returns to the menu without capturing the pointer",
+            "recordPath": ".planning/research/.cache/07-21/seg3-red-evidence-1.json",
+            "recordSha256": "03a8ad1f5662941e78751fd778b7654f47694fdc0b033599278a11c57e44cc4b",
+            "format": "junit",
+            "verdict": "RED_EVIDENCE_OK",
+            "reason": "target_test_failed",
+            "matchedTest": "pause-menu-pointer-lock.spec.js#online error banner: a Return to menu press over an offline match returns to the menu without capturing the pointer",
+            "expected": "A real press on #mp-error-return-btn, over an offline match with the banner left up by a failed join, is delivered to the button and the pointer is not captured at any moment before that delivery; the menu then returns and the banner hides",
+            "actual": "capturedBeforeClick was true: the press captured the pointer before the click was delivered. The click was delivered and the menu returned."
+          },
+          {
+            "targetTest": "online error banner: a Retry press over an offline match starts a fresh join attempt without capturing the pointer first",
+            "recordPath": ".planning/research/.cache/07-21/seg3-red-evidence-2.json",
+            "recordSha256": "d5d33e8d1fbed9879e2b5dca1b96eee1dea0a55b8ebc585333bb7df56a554371",
+            "format": "junit",
+            "verdict": "RED_EVIDENCE_OK",
+            "reason": "target_test_failed",
+            "matchedTest": "pause-menu-pointer-lock.spec.js#online error banner: a Retry press over an offline match starts a fresh join attempt without capturing the pointer first",
+            "expected": "A real press on #mp-retry-btn in the same state is delivered and the pointer is not captured before that delivery; a second matchmaking request is made, the banner reports the failure and the pointer ends released",
+            "actual": "capturedBeforeClick was true: the press captured the pointer before the click was delivered. The click was delivered and a second join attempt was made."
+          },
+          {
+            "targetTest": "killcam: a Skip press while paused at a lost TDM match end leaves no pause menu over the result",
+            "recordPath": ".planning/research/.cache/07-21/seg3-red-evidence-3.json",
+            "recordSha256": "10c257054582854d46ef9c677f3fbb1ab4c7142f5984f20f8010e518127dd4f2",
+            "format": "junit",
+            "verdict": "RED_EVIDENCE_OK",
+            "reason": "target_test_failed",
+            "matchedTest": "pause-menu-pointer-lock.spec.js#killcam: a Skip press while paused at a lost TDM match end leaves no pause menu over the result",
+            "expected": "After Esc during an end-of-match killcam with the player alive, a real press on #kc-skip shows the result with #pause-menu hidden and the pointer released, under an adapter whose release fires no event when nothing is captured",
+            "actual": "#pause-menu stayed visible over #snd-result for 5000 ms"
+          }
+        ],
+        "semanticAssessment": "Each target ran to the end and failed on one planned assertion only: the two banner cases on \"the pointer was captured before the click was delivered\" (reached, menu return, second join attempt and final state all held), the paused Skip case on \"#pause-menu hidden\" (result shown, title DEFEAT, pointer released and gameRunning false all held). No setup, import or fixture fault; the eight other cases in the same run passed through the same server and helpers."
+      },
+      "stats": {
+        "startTime": "2026-10-09T21:58:40.990Z",
+        "duration": 180768.232,
+        "expected": 8,
+        "skipped": 0,
+        "unexpected": 3,
+        "flaky": 0
+      },
+      "cases": [
+        {
+          "title": "pause menu: Main Menu press returns to the menu under a synchronous lock grant",
+          "status": "passed",
+          "outcome": "expected",
+          "expectedStatus": "passed",
+          "retries": 0,
+          "durationMs": 9062,
+          "failedAssertions": [],
+          "annotations": []
+        },
+        {
+          "title": "pause menu: a 150 ms Main Menu press returns to the menu under a deferred lock grant",
+          "status": "passed",
+          "outcome": "expected",
+          "expectedStatus": "passed",
+          "retries": 0,
+          "durationMs": 8837,
+          "failedAssertions": [],
+          "annotations": []
+        },
+        {
+          "title": "pause menu: an immediate Main Menu click returns to the menu under a deferred lock grant",
+          "status": "passed",
+          "outcome": "expected",
+          "expectedStatus": "passed",
+          "retries": 0,
+          "durationMs": 9058,
+          "failedAssertions": [],
+          "annotations": []
+        },
+        {
+          "title": "pause menu: the graphics-quality control stays usable while paused",
+          "status": "passed",
+          "outcome": "expected",
+          "expectedStatus": "passed",
+          "retries": 0,
+          "durationMs": 10586,
+          "failedAssertions": [],
+          "annotations": []
+        },
+        {
+          "title": "pause menu: Resume re-captures the pointer",
+          "status": "passed",
+          "outcome": "expected",
+          "expectedStatus": "passed",
+          "retries": 0,
+          "durationMs": 10010,
+          "failedAssertions": [],
+          "annotations": []
+        },
+        {
+          "title": "pause menu: a canvas press re-captures the pointer while unlocked and running",
+          "status": "passed",
+          "outcome": "expected",
+          "expectedStatus": "passed",
+          "retries": 0,
+          "durationMs": 9623,
+          "failedAssertions": [],
+          "annotations": []
+        },
+        {
+          "title": "pause menu: a press on the empty part of the box does not capture the pointer",
+          "status": "passed",
+          "outcome": "expected",
+          "expectedStatus": "passed",
+          "retries": 0,
+          "durationMs": 10008,
+          "failedAssertions": [],
+          "annotations": []
+        },
+        {
+          "title": "online error banner: a Return to menu press over an offline match returns to the menu without capturing the pointer",
+          "status": "failed",
+          "outcome": "unexpected",
+          "expectedStatus": "passed",
+          "retries": 0,
+          "durationMs": 11552,
+          "failedAssertions": [
+            "Error: the pointer was captured before the click was delivered | Expected: false | Received: true"
+          ],
+          "annotations": []
+        },
+        {
+          "title": "online error banner: a Retry press over an offline match starts a fresh join attempt without capturing the pointer first",
+          "status": "failed",
+          "outcome": "unexpected",
+          "expectedStatus": "passed",
+          "retries": 0,
+          "durationMs": 12225,
+          "failedAssertions": [
+            "Error: the pointer was captured before the click was delivered | Expected: false | Received: true"
+          ],
+          "annotations": []
+        },
+        {
+          "title": "killcam: a Skip press after a wave death shows the death screen with the pointer released",
+          "status": "passed",
+          "outcome": "expected",
+          "expectedStatus": "passed",
+          "retries": 0,
+          "durationMs": 19100,
+          "failedAssertions": [],
+          "annotations": []
+        },
+        {
+          "title": "killcam: a Skip press while paused at a lost TDM match end leaves no pause menu over the result",
+          "status": "failed",
+          "outcome": "unexpected",
+          "expectedStatus": "passed",
+          "retries": 0,
+          "durationMs": 22686,
+          "failedAssertions": [
+            "Error: the pause menu stayed up over the result | Locator:  locator('#pause-menu') | Expected: hidden | Received: visible"
+          ],
+          "annotations": []
+        }
+      ]
+    },
+    "guardVariantRuns": {
+      "how": "PAUSE_SPEC_GUARD_SELECTOR makes the spec serve the page a copy of src/main.js in which the selector of the one press guard is replaced, through a Playwright route. The file on disk is not written and was still at the registered hash after each run. These runs record what the guard prevents; they are not results for the shipped source.",
+      "withoutSkip": {
+        "command": "PAUSE_SPEC_GUARD_SELECTOR='#pause-menu' PLAYWRIGHT_JSON_OUTPUT_FILE=.planning/research/.cache/07-21/seg3-variant-noskip.json npx playwright test tests/pause-menu-pointer-lock.spec.js --workers=1 --reporter=line,json -g \"killcam: \"",
+        "runs": 1,
+        "startedAt": "2026-10-09T22:02:07Z",
+        "endedAt": "2026-10-09T22:03:09Z",
+        "exitCode": 1,
+        "reportPath": ".planning/research/.cache/07-21/seg3-variant-noskip.json",
+        "reportSha256": "09c1ed392a62dc96ec953a294fc30ce0769204f0abfd916d837066804f90147e",
+        "consoleLogPath": ".planning/research/.cache/07-21/seg3-variant-noskip-console.log",
+        "consoleLogSha256": "004b0fe3c050ccec01c6e5bbc701a3693511c4ba4253781d0df01df08ed2a26b",
+        "servedSelector": "#pause-menu",
+        "equivalentTo": "the registered guard with #kc-skip removed, which for a Skip press is the behaviour before this plan",
+        "stats": {
+          "startTime": "2026-10-09T22:02:09.147Z",
+          "duration": 60039.993,
+          "expected": 0,
+          "skipped": 0,
+          "unexpected": 2,
+          "flaky": 0
+        },
+        "cases": [
+          {
+            "title": "killcam: a Skip press after a wave death shows the death screen with the pointer released",
+            "status": "failed",
+            "outcome": "unexpected",
+            "expectedStatus": "passed",
+            "retries": 0,
+            "durationMs": 13291,
+            "failedAssertions": [
+              "Error: the pointer was captured before the click was delivered | Expected: false | Received: true",
+              "Error: expect(received).toEqual(expected) // deep equality | +   \"pointerLocked\": true,"
+            ],
+            "annotations": [
+              "guard-variant: #pause-menu"
+            ]
+          },
+          {
+            "title": "killcam: a Skip press while paused at a lost TDM match end leaves no pause menu over the result",
+            "status": "failed",
+            "outcome": "unexpected",
+            "expectedStatus": "passed",
+            "retries": 0,
+            "durationMs": 14824,
+            "failedAssertions": [
+              "Error: the pointer was captured before the click was delivered | Expected: false | Received: true"
+            ],
+            "annotations": [
+              "guard-variant: #pause-menu"
+            ]
+          }
+        ]
+      },
+      "withoutGuard": {
+        "command": "PAUSE_SPEC_GUARD_SELECTOR=':not(*)' PLAYWRIGHT_JSON_OUTPUT_FILE=.planning/research/.cache/07-21/seg3-variant-noguard.json npx playwright test tests/pause-menu-pointer-lock.spec.js --workers=1 --reporter=line,json -g \"empty part of the box|Main Menu press returns to the menu under a synchronous\"",
+        "runs": 1,
+        "startedAt": "2026-10-09T22:03:16Z",
+        "endedAt": "2026-10-09T22:04:19Z",
+        "exitCode": 1,
+        "reportPath": ".planning/research/.cache/07-21/seg3-variant-noguard.json",
+        "reportSha256": "3a43bc2e7b7f651311417d0124ef5fa5cea82b51aeec0733568d1f49794f537e",
+        "consoleLogPath": ".planning/research/.cache/07-21/seg3-variant-noguard-console.log",
+        "consoleLogSha256": "7c81d014f597f8de839c67a1e966fcf8d4a12614776e3cd1e959e2cf5b2d5f0c",
+        "servedSelector": ":not(*)",
+        "equivalentTo": "a guard that matches nothing, which is the frozen behaviour of the handler",
+        "stats": {
+          "startTime": "2026-10-09T22:03:18.330Z",
+          "duration": 60945.274,
+          "expected": 0,
+          "skipped": 0,
+          "unexpected": 2,
+          "flaky": 0
+        },
+        "cases": [
+          {
+            "title": "pause menu: Main Menu press returns to the menu under a synchronous lock grant",
+            "status": "failed",
+            "outcome": "unexpected",
+            "expectedStatus": "passed",
+            "retries": 0,
+            "durationMs": 14254,
+            "failedAssertions": [
+              "Error: expect(locator).toBeVisible() failed | Locator:  locator('#overlay') | Expected: visible | Received: hidden"
+            ],
+            "annotations": [
+              "guard-variant: :not(*)"
+            ]
+          },
+          {
+            "title": "pause menu: a press on the empty part of the box does not capture the pointer",
+            "status": "failed",
+            "outcome": "unexpected",
+            "expectedStatus": "passed",
+            "retries": 0,
+            "durationMs": 14749,
+            "failedAssertions": [
+              "Error: expect(locator).toBeVisible() failed | Locator:  locator('#pause-menu') | Expected: visible | Received: hidden"
+            ],
+            "annotations": [
+              "guard-variant: :not(*)"
+            ]
+          }
+        ]
+      },
+      "reading": [
+        "Without the whole guard the first case fails exactly as in the original RED record (#overlay hidden), so the served variant reproduces the frozen behaviour and the mechanism is a valid stand-in for it.",
+        "Without the whole guard a press on the empty part of the pause box hides the menu and captures the pointer. With the registered guard it does neither. This is the behaviour change the review ruled acceptable; it is now pinned by a case.",
+        "Without #kc-skip in the guard, a Skip press after a wave death is delivered, but the pointer is captured on the press and stays captured on the KILLED IN ACTION screen (pointerLocked true at the end). With #kc-skip guarded the same case passes. This is the first browser evidence for that half of the selector.",
+        "Without #kc-skip in the guard, the paused Skip case ends clean (result shown, pause menu hidden, pointer released) and fails only on the press observation: the pointer was captured before the click. So the review's reading is confirmed: before this plan the stale pause menu was cleared by the lock and unlock cycle of the press."
+      ]
+    },
+    "measured": {
+      "F-01": {
+        "reachable": true,
+        "how": "Online TDM pressed with no game server: the banner appears. Offline TDM is then started through its button and the pointer released: the banner is still visible over the running match, with the pause menu.",
+        "onCurrentSource": "A real press on Retry or on Return to menu captures the pointer on mousedown (capturedBeforeClick true). Under this adapter the click is still delivered, because the banner is not hidden by pointerlockchange: Return to menu returned to the menu and hid the banner, Retry made a second matchmaking request and ended with the banner up and the pointer released.",
+        "reading": "The lock-on-press mechanism of the Main Menu defect reproduces on both banner buttons. The lost click does not reproduce under this adapter, and whether a real browser loses it was not measured.",
+        "tableRowWas": "online only"
+      },
+      "F-02": {
+        "waveSkip": "Passes on current source. Fails without #kc-skip in the guard: the pointer stays captured on the death screen.",
+        "pausedSkipAtRoundEnd": "Fails on current source: #pause-menu stays visible over #snd-result. Ends clean without #kc-skip in the guard. This is a regression introduced by the registered state and is not left in place."
+      }
+    }
+  }
 }
