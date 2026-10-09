@@ -70,8 +70,37 @@ async function waitSimulation(page, { what, limitSimSeconds, wallGuardMs, sample
     await new Promise(resolve => setTimeout(resolve, 250));
   }
 }
-// RED stub: replaced by the real rule in the GREEN commit.
-export function diagnoseAcquisition() { return { classification: 'unimplemented' }; }
+// Classifies why an aim-proof wait ended without a proof, from the driver's retained
+// progress samples (it keeps only the last 256). `route` is the driver's absolute
+// waypoint counter (four waypoints per loop, never reset), so the whole-wait distance
+// is read from the last sample and not from a first-to-last difference of the window.
+//   acquired        some sample saw a target or carries an aim proof
+//   driver-stalled  nothing seen and either the final third barely moved while walking
+//                   or a whole route loop (4 waypoints) was walked
+//   still-searching nothing seen, under one loop, and the driver was still moving
+//   undetermined    too few or malformed samples, or not walking and not moving
+export function diagnoseAcquisition(progress) {
+  const samples = Array.isArray(progress) ? progress : [];
+  const result = { classification: 'undetermined', simSpanSeconds: null, wallSpanMs: null, routeCount: null,
+    loopsWalked: null, finalThirdDisplacementM: null, samples: samples.length };
+  const valid = samples.length >= 3 && samples.every(s => s && Array.isArray(s.eye) && s.eye.length >= 3
+    && Number.isFinite(s.eye[0]) && Number.isFinite(s.eye[2]) && Number.isFinite(s.route) && Number.isFinite(s.simSeconds));
+  if (!valid) return result;
+  const first = samples[0], last = samples.at(-1);
+  result.simSpanSeconds = last.simSeconds - first.simSeconds;
+  result.wallSpanMs = Number.isFinite(first.wallMs) && Number.isFinite(last.wallMs) ? last.wallMs - first.wallMs : null;
+  result.routeCount = last.route;
+  result.loopsWalked = last.route / 4;
+  const third = samples.slice(-Math.max(2, Math.floor(samples.length / 3)));
+  result.finalThirdDisplacementM = Math.hypot(third.at(-1).eye[0] - third[0].eye[0], third.at(-1).eye[2] - third[0].eye[2]);
+  if (samples.some(s => s.target?.visible === true || (s.aimProof !== null && s.aimProof !== undefined))) {
+    result.classification = 'acquired'; return result;
+  }
+  const walking = third.every(s => s.input?.walking === true);
+  if (last.route >= 4 || (walking && result.finalThirdDisplacementM < 1)) result.classification = 'driver-stalled';
+  else if (result.finalThirdDisplacementM >= 1) result.classification = 'still-searching';
+  return result;
+}
 export function independentTracerComplete(report) {
   return !!(report.tracer && report.matrix.length === 1 && report.matrix[0].completed
     && report.matrix[0].media?.bytes > 0 && report.offlineMovement.length === 1 && report.offlineMovement[0].complete
