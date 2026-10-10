@@ -1,0 +1,158 @@
+{
+  "schemaVersion": 1,
+  "plan": "07-14",
+  "controls": [
+    {
+      "reference": "aed271f",
+      "referenceFull": "aed271f8e4ce08e70e05b2bd334a367a892071b7",
+      "title": "teams: solo start and smaller-team assignments are visible in both browsers",
+      "passed": true,
+      "exitCode": 0,
+      "firstError": null,
+      "reportPath": ".planning/research/.cache/07-14-mp-ab/runs/control-aed271f8e4ce-1791623526310/report.json",
+      "reportSha256": "add6b388239ca88729954872d058fa68e90d604014bac3f776c305756ba1b430",
+      "durationMs": 21271,
+      "nodeModules": "junction",
+      "recordedAt": "2026-10-10T09:12:27.583Z"
+    }
+  ],
+  "cases": [
+    {
+      "title": "tracer: two browsers join and move",
+      "reference": "aed271f",
+      "referenceFull": "aed271f8e4ce08e70e05b2bd334a367a892071b7",
+      "n": 3,
+      "verdict": "not-reproduced",
+      "note": null,
+      "control": {
+        "passed": true,
+        "referenceFull": "aed271f8e4ce08e70e05b2bd334a367a892071b7"
+      },
+      "sameCaseSource": {
+        "candidate": "5cba0dcd747a5f46393bd1503217120d702acf507db1428ff8b9e8cc1a084915",
+        "reference": "5cba0dcd747a5f46393bd1503217120d702acf507db1428ff8b9e8cc1a084915",
+        "identical": true
+      },
+      "helperSource": {
+        "candidate": "93e5b05129cc3c8850cd2ddac742ab55b456035fd5247bff2ddc83dda256aaf3",
+        "reference": "66a8e71fe2b75666d2352d812db58b24b6477d09ab7bcbe32a4cd6fdbc97c69e"
+      },
+      "nodeModules": "parent-lookup",
+      "host": {
+        "cpuModel": "AMD Ryzen 5 5600 6-Core Processor              ",
+        "logicalCpus": 12,
+        "powerPlan": "Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Zr�wnowa�ony)",
+        "sampledBusyFraction": 0.123,
+        "freeMemMiB": 17183,
+        "at": "2026-10-10T09:12:56.958Z"
+      },
+      "wallMs": 478115,
+      "runs": [
+        {
+          "arm": "reference",
+          "repeat": 1,
+          "order": 1,
+          "exitCode": 0,
+          "timedOut": false,
+          "durationMs": 77020,
+          "passed": true,
+          "passedCount": 1,
+          "failedCount": 0,
+          "specCount": 1,
+          "firstError": null,
+          "reportPath": ".planning/research/.cache/07-14-mp-ab/runs/aed271f8e4ce-1791623576958-reference-1/report.json",
+          "reportSha256": "f88052fa8835f76f5b7d2652a8d4ea55426ca228a2d0e0e246357fb49dac9b14",
+          "specFile": "multiplayer.spec.js",
+          "specLine": 729
+        },
+        {
+          "arm": "candidate",
+          "repeat": 1,
+          "order": 2,
+          "exitCode": 0,
+          "timedOut": false,
+          "durationMs": 78678,
+          "passed": true,
+          "passedCount": 1,
+          "failedCount": 0,
+          "specCount": 1,
+          "firstError": null,
+          "reportPath": ".planning/research/.cache/07-14-mp-ab/runs/aed271f8e4ce-1791623653981-candidate-1/report.json",
+          "reportSha256": "a53d196bbb21de454c9fcb0bd5f0a867a7e731ed8fa2f4b30ed4acd84f241e17",
+          "specFile": "multiplayer.spec.js",
+          "specLine": 882
+        },
+        {
+          "arm": "candidate",
+          "repeat": 2,
+          "order": 1,
+          "exitCode": 0,
+          "timedOut": false,
+          "durationMs": 117223,
+          "passed": true,
+          "passedCount": 1,
+          "failedCount": 0,
+          "specCount": 1,
+          "firstError": null,
+          "reportPath": ".planning/research/.cache/07-14-mp-ab/runs/aed271f8e4ce-1791623732661-candidate-2/report.json",
+          "reportSha256": "c12a0419795efb989c8e3869cbe1afb16dc3ed9dde34a3d689313b543da92397",
+          "specFile": "multiplayer.spec.js",
+          "specLine": 882
+        },
+        {
+          "arm": "reference",
+          "repeat": 2,
+          "order": 2,
+          "exitCode": 0,
+          "timedOut": false,
+          "durationMs": 65654,
+          "passed": true,
+          "passedCount": 1,
+          "failedCount": 0,
+          "specCount": 1,
+          "firstError": null,
+          "reportPath": ".planning/research/.cache/07-14-mp-ab/runs/aed271f8e4ce-1791623849885-reference-2/report.json",
+          "reportSha256": "e328cc52bfc15af968fd2c042e2d485b2011805090474f7176fd4496ce851f61",
+          "specFile": "multiplayer.spec.js",
+          "specLine": 729
+        },
+        {
+          "arm": "reference",
+          "repeat": 3,
+          "order": 1,
+          "exitCode": 0,
+          "timedOut": false,
+          "durationMs": 71460,
+          "passed": true,
+          "passedCount": 1,
+          "failedCount": 0,
+          "specCount": 1,
+          "firstError": null,
+          "reportPath": ".planning/research/.cache/07-14-mp-ab/runs/aed271f8e4ce-1791623915539-reference-3/report.json",
+          "reportSha256": "180f504831d48fb2e1c3334b08dec23022fadb2e0d5a1e2599e398cdaf9651c8",
+          "specFile": "multiplayer.spec.js",
+          "specLine": 729
+        },
+        {
+          "arm": "candidate",
+          "repeat": 3,
+          "order": 2,
+          "exitCode": 0,
+          "timedOut": false,
+          "durationMs": 68069,
+          "passed": true,
+          "passedCount": 1,
+          "failedCount": 0,
+          "specCount": 1,
+          "firstError": null,
+          "reportPath": ".planning/research/.cache/07-14-mp-ab/runs/aed271f8e4ce-1791623987001-candidate-3/report.json",
+          "reportSha256": "a7d1ab7bff67682db2c599f98f383c133740bda5e36412638aca0085dc0c032b",
+          "specFile": "multiplayer.spec.js",
+          "specLine": 882
+        }
+      ],
+      "recordedAt": "2026-10-10T09:20:55.073Z"
+    }
+  ],
+  "superseded": []
+}

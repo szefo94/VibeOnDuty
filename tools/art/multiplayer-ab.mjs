@@ -97,9 +97,9 @@ export function materialize(reference) {
     mkdirSync(dir);
     const tar = path.join(cacheRoot, `${rel}.tar`);
     execFileSync('git', ['archive', '--format=tar', '-o', tar, commit], { cwd: ROOT });
-    const x = spawnSync('tar', ['-xf', tar, '-C', dir]);
+    const x = spawnSync('tar', ['-xf', path.join('..', path.basename(tar))], { cwd: dir });
     rmSync(tar, { force: true });
-    assert.equal(x.status, 0, `tar extraction failed: ${x.stderr}`);
+    if (x.status !== 0) { rmSync(dir, { recursive: true, force: true }); assert.fail(`tar extraction failed: ${x.stderr}`); }
     writeFileSync(marker, commit + '\n');
   }
   // The fixture resolves its build tool through a fixed path under its own root, so a
