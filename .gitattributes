@@ -10,3 +10,14 @@ src/main.js text eol=lf
 .planning/phases/07-movement-matched-and-action-safe-animation/07-09-PAIRED-AMENDMENT-V2-REVIEW.md text eol=lf
 # Paired session registry, hashed as raw bytes (E8); LF on every checkout.
 .planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-paired-session-registry.json text eol=lf
+# Paired session evidence, hashed as raw bytes by the registry's closed events (E8); LF on every checkout.
+.planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-16-paired-smoke.json text eol=lf
+.planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-18-paired-calibration.json text eol=lf
+.planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-18-paired-session-1.json text eol=lf
+.planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-18-paired-session-2.json text eol=lf
+.planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-18-paired-session-3.json text eol=lf
+.planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-18-cost-candidate.json text eol=lf
+.planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-18-timing-result.json text eol=lf
+# Original paired proposal and its review, cited by hash in the V2 frontmatter (V2 review O-1, optional); LF on every checkout.
+.planning/phases/07-movement-matched-and-action-safe-animation/07-09-PAIRED-AMENDMENT.md text eol=lf
+.planning/phases/07-movement-matched-and-action-safe-animation/07-09-PAIRED-AMENDMENT-REVIEW.md text eol=lf
