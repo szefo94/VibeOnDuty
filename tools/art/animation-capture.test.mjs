@@ -259,3 +259,39 @@ test('combat-union and row waits no longer use wall-only waitForFunction', async
   for (const name of ['weaponSegment', 'sharedMovementUnion', 'blockedWalkUnion'])
     assert.doesNotMatch(functionBody(source, name), /waitForFunction/, name + ' has a wall-only game-event wait');
 });
+
+test('combat page journal stores page errors, rejections and error or warning console lines', () => {
+  const j = capture.combatPageJournal();
+  j.onPageError(new Error('boom'));
+  j.onConsole({ type: () => 'error', text: () => 'bad thing' });
+  j.onConsole({ type: () => 'warning', text: () => 'careful' });
+  j.onConsole({ type: () => 'log', text: () => 'ordinary' });
+  j.onConsole({ type: () => 'error', text: () => '[moving-combat] already forwarded' });
+  assert.deepEqual(j.entries.map(e => [e.kind, e.text]),
+    [['pageerror', 'boom'], ['console', 'bad thing'], ['console', 'careful']]);
+  for (const e of j.entries) assert.ok(Number.isFinite(e.wallMs));
+  assert.equal(j.dropped, 0);
+});
+test('combat page journal keeps at most 200 entries and counts the rest as dropped', () => {
+  const j = capture.combatPageJournal();
+  for (let i = 0; i < 250; i++) j.onPageError(new Error('e' + i));
+  assert.equal(j.entries.length, 200);
+  assert.equal(j.dropped, 50);
+  assert.equal(j.entries[0].text, 'e0');
+});
+test('combat page journal stores unhandled rejections that are not Error objects', () => {
+  const j = capture.combatPageJournal();
+  j.onPageError('plain rejection');
+  assert.equal(j.entries[0].kind, 'pageerror');
+  assert.equal(j.entries[0].text, 'plain rejection');
+});
+for (const [name, state] of [
+  ['re-locked', { pointerLocked: true, pauseVisible: false, overlayVisible: false, mode: 'tdm', gameRunning: true }],
+  ['handler-not-run', { pointerLocked: false, pauseVisible: true, overlayVisible: false, mode: 'tdm', gameRunning: true }],
+  ['returned', { pointerLocked: false, pauseVisible: false, overlayVisible: true, mode: null, gameRunning: false }],
+  ['unknown', { pointerLocked: false, pauseVisible: false, overlayVisible: false, mode: 'tdm', gameRunning: false }]])
+  test('menu return diagnostics classifies ' + name, () => {
+    const d = capture.menuReturnDiagnostics(state);
+    assert.equal(d.reason, name);
+    for (const key of Object.keys(state)) assert.equal(d[key], state[key]);
+  });
