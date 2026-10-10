@@ -295,3 +295,74 @@ for (const [name, state] of [
     assert.equal(d.reason, name);
     for (const key of Object.keys(state)) assert.equal(d[key], state[key]);
   });
+// Plan 07-23: early approach stall and approach failure diagnostics.
+const trace = (count, stepKind, step = 0) => Array.from({ length: count }, (_, i) => ({ simSeconds: i * 0.5,
+  x: 36 + step * i, z: 31.93, walking: true, alive: true, approaching: true, stepKind }));
+test('approach stalled: the abort ends the wait at once with the observed simulation seconds and wall milliseconds', async () => {
+  const page = scriptedPage([{ wallMs: 0, simSeconds: 0, met: false }, { wallMs: 4000, simSeconds: 6, met: false, stalled: true }]);
+  await assert.rejects(capture.waitSimulation(page, { what: 'death', limitSimSeconds: 120, wallGuardMs: 0,
+    sample: { argument: null, read: () => null, predicate: s => s.met === true, abort: s => (s.stalled ? 'player held W without moving' : null) } }),
+    error => {
+      assert.match(error.message, /^Approach stalled/);
+      assert.match(error.message, /player held W without moving/);
+      assert.match(error.message, /6\.0 simulation seconds/);
+      assert.match(error.message, /4000 wall ms/);
+      assert.equal(error.wait.simSeconds, 6);
+      return true;
+    });
+});
+test('approach stalled: a null abort reason leaves the wait unchanged and a met condition still wins', async () => {
+  const page = scriptedPage([{ wallMs: 0, simSeconds: 0, met: false }, { wallMs: 900, simSeconds: 2, met: true }]);
+  const result = await capture.waitSimulation(page, { what: 'death', limitSimSeconds: 120, wallGuardMs: 60000,
+    sample: { argument: null, read: () => null, predicate: s => s.met === true, abort: () => null } });
+  assert.equal(result.outcome, 'met');
+});
+test('approach stalled: the natural-death abort fires only for a stalled route step', () => {
+  assert.equal(typeof capture.approachStallReason, 'function');
+  assert.match(capture.approachStallReason(trace(14, 'route', 0.001)), /stalled/);
+  assert.equal(capture.approachStallReason(trace(14, 'route', 0.2)), null);
+  assert.equal(capture.approachStallReason(trace(14, 'fallback', 0)), null);
+  assert.equal(capture.approachStallReason(trace(14, 'unreachable', 0)), null);
+  assert.equal(capture.approachStallReason(trace(14, 'arrived', 0)), null);
+  assert.equal(capture.approachStallReason(trace(4, 'route', 0)), null);
+  assert.equal(capture.approachStallReason([]), null);
+});
+const progressFrom = (count, kind, step = 0) => Array.from({ length: count }, (_, i) => ({ simSeconds: i * 0.5, wallMs: i * 700,
+  eye: [36 + step * i, 1.65, 31.93], dead: false, input: { walking: true }, approaching: true,
+  step: { kind, waypoint: [34, 30], targetCell: [8, 12], pathLength: 6 } }));
+test('approach failure: describes the classification, figures, last step and at most eight hostiles', () => {
+  assert.equal(typeof capture.describeApproachFailure, 'function');
+  const hostiles = Array.from({ length: 12 }, (_, i) => ({ x: i, z: 50, state: 'patrol', distance: 18 + i, visible: false, alive: true }));
+  const failure = capture.describeApproachFailure({ progress: progressFrom(16, 'route', 0), hostiles,
+    wait: { simSeconds: 7.5, wallMs: 5250 } });
+  assert.equal(failure.classification, 'stalled');
+  assert.equal(failure.simSeconds, 7.5);
+  assert.equal(failure.wallMs, 5250);
+  assert.equal(failure.lastStep.kind, 'route');
+  assert.equal(failure.hostiles.length, 8);
+  assert.deepEqual(Object.keys(failure.hostiles[0]).sort(), ['alive', 'distance', 'state', 'visible', 'x', 'z']);
+});
+test('approach failure: moving, missing wait and empty inputs stay well formed', () => {
+  assert.equal(typeof capture.describeApproachFailure, 'function');
+  const moving = capture.describeApproachFailure({ progress: progressFrom(16, 'route', 0.3), hostiles: [], wait: null });
+  assert.equal(moving.classification, 'moving');
+  assert.equal(moving.simSeconds, null);
+  assert.equal(moving.wallMs, null);
+  const empty = capture.describeApproachFailure({ progress: [], hostiles: undefined, wait: undefined });
+  assert.equal(empty.classification, 'undetermined');
+  assert.equal(empty.lastStep, null);
+  assert.deepEqual(empty.hostiles, []);
+});
+test('approach failure: the driver is exported and sends only W and mouse movement while approaching', async () => {
+  assert.equal(typeof capture.installCombatDriver, 'function');
+  const source = (await readFile(new URL('./animation-capture.mjs', import.meta.url), 'utf8')).replace(/\r\n/g, '\n');
+  const start = source.indexOf('export async function installCombatDriver(');
+  assert.ok(start >= 0, 'installCombatDriver must be exported');
+  const body = source.slice(start, source.indexOf('\nasync function earnedCombatUnion', start));
+  assert.match(body, /\/tools\/art\/approach-route\.mjs/);
+  for (const forbidden of [/player\.hp\s*=[^=]/, /player\.energy\s*=[^=]/, /player\.dead\s*=[^=]/,
+    /camera\.position\.(set|copy|x\s*=|y\s*=|z\s*=)/, /\.state\s*=[^=]/, /\.dead\s*=[^=]/, /mixer/i, /\.time\s*=[^=]/])
+    assert.doesNotMatch(body, forbidden);
+  const keys = [...body.matchAll(/code:'(\w+)'/g)].map(m => m[1]);
+  assert.deepEqual([...new Set(keys)], ['KeyW']);
+});
