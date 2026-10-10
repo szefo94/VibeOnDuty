@@ -261,6 +261,8 @@ export async function executeV2(directory) {
     result: value, log: relative(log), logSha256: hash(await fs.readFile(log)),
     passed: result.exitCode === 0 && value?.applicableBudgetPass === true };
 }
+// ---- plan 07-16 task 4, RED: exported with a neutral shape so each control fails on its own assertion ----
+export async function actualV2Outcome() { return {}; }
 const relative = filename => path.relative(ROOT, filename).replaceAll('\\', '/');
 const reloadSeconds = { m4: 1.8, p90: 2, awp: 2.5, pistol: 1.2 };
 
