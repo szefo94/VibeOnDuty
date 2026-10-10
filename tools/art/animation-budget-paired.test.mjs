@@ -2521,3 +2521,99 @@ test('host device: review.mjs refuses before a calibration or qualifying session
   assert.match(run, /\n {10}device, frozenDevices: inputs\.frozenDevices \} : \{\}\) \} \}\);/);
   assert.equal(run.split('pairedHostDevice(').length - 1, 1);
 });
+
+// =============================================================================================
+// Review finding I-05: the session report records the arm difference check
+// =============================================================================================
+// Contract section 2, item 4: any difference between the two arm directories outside the five owner
+// files is refused, and the tool reports the count of differing files, which must be five. The check
+// is made when the arms are materialised and again after the last pair; a smoke report already
+// recorded it, a calibration and a qualifying session report did not.
+
+const OWNERS_VERIFIED = OWNERS.map(name => ({ path: name, blob: paired.PAIRED_CONTRACT.referenceOwners[name].blob,
+  sha256: paired.PAIRED_CONTRACT.referenceOwners[name].sha256 }));
+const differenceOf = kind => (kind === 'calibration'
+  ? { comparedFiles: 139, differingFiles: [], count: 0, identical: true,
+    ownersVerified: ['reference', 'candidate'].flatMap(arm => OWNERS_VERIFIED.map(owner => ({ arm, ...owner }))) }
+  : { ...structuredClone(DIFFERENCE), ownersVerified: structuredClone(OWNERS_VERIFIED) });
+
+test('arm difference: the record holds the expected count, both checks and the verified owners, and says whether the count holds', () => {
+  assert.equal(typeof paired.armDifferenceRecord, 'function');
+  const qualifying = differenceOf('qualifying'), calibration = differenceOf('calibration');
+  assert.deepEqual(paired.armDifferenceRecord('qualifying', qualifying, qualifying), { expectedCount: 5,
+    materialised: { comparedFiles: 139, differingFiles: [...OWNERS].sort(), count: 5, ownersVerified: OWNERS_VERIFIED },
+    afterLastPair: { comparedFiles: 139, differingFiles: [...OWNERS].sort(), count: 5 }, countHolds: true });
+  const record = paired.armDifferenceRecord('calibration', calibration, calibration);
+  assert.deepEqual([record.expectedCount, record.materialised.count, record.afterLastPair.count, record.countHolds, record.materialised.ownersVerified.length],
+    [0, 0, 0, true, 10]);
+  // A second check that did not hold, or was not reached, is recorded as absent, and the count does not hold.
+  for (const afterLastPair of [null, undefined])
+    assert.deepEqual(paired.armDifferenceRecord('qualifying', qualifying, afterLastPair), { expectedCount: 5,
+      materialised: { comparedFiles: 139, differingFiles: [...OWNERS].sort(), count: 5, ownersVerified: OWNERS_VERIFIED }, afterLastPair: null, countHolds: false });
+  // Another count than the kind requires does not hold: four files, six files, five for a calibration, none for a qualifying session.
+  const four = { ...qualifying, differingFiles: qualifying.differingFiles.slice(1), count: 4 };
+  assert.equal(paired.armDifferenceRecord('qualifying', four, four).countHolds, false);
+  assert.equal(paired.armDifferenceRecord('qualifying', qualifying, { ...qualifying, count: 6 }).countHolds, false);
+  assert.equal(paired.armDifferenceRecord('calibration', qualifying, qualifying).countHolds, false);
+  assert.equal(paired.armDifferenceRecord('qualifying', calibration, calibration).countHolds, false);
+  assert.deepEqual(paired.armDifferenceRecord('qualifying', null, null), { expectedCount: 5, materialised: null, afterLastPair: null, countHolds: false });
+  // The record is a copy: later changes to what the capture holds do not reach it.
+  const copied = paired.armDifferenceRecord('qualifying', qualifying, qualifying);
+  qualifying.differingFiles.push('src/main.js'); qualifying.ownersVerified[0].sha256 = HEX('0');
+  assert.deepEqual([copied.materialised.differingFiles.length, copied.afterLastPair.differingFiles.length, copied.materialised.ownersVerified[0].sha256],
+    [5, 5, OWNERS_VERIFIED[0].sha256]);
+});
+
+test('arm difference: the session report of a calibration and of a qualifying session records the count of differing files and the verified owners, inside the bytes hashed into closed', async () => {
+  for (const kind of ['calibration', 'qualifying']) {
+    const rig = runnerRig(kind, { facts: { difference: differenceOf(kind) } });
+    rig.context.difference = differenceOf(kind);
+    const result = await paired.runSession(rig.input());
+    const written = rig.trace.find(entry => entry.type === 'write' && entry.name === RUNNER_PATHS.session);
+    assert.ok(written, kind);
+    const report = JSON.parse(written.text);
+    assert.ok(report.armDifference && typeof report.armDifference === 'object', `the ${kind} session report records the arm difference check`);
+    const expected = paired.armDifferenceRecord(kind, differenceOf(kind), differenceOf(kind));
+    assert.deepEqual(report.armDifference, expected, kind);
+    assert.deepEqual([report.armDifference.expectedCount, report.armDifference.materialised.count, report.armDifference.afterLastPair.count,
+      report.armDifference.countHolds], kind === 'calibration' ? [0, 0, 0, true] : [5, 5, 5, true], kind);
+    assert.deepEqual(report.armDifference.materialised.ownersVerified.map(owner => owner.sha256),
+      (kind === 'calibration' ? [...OWNERS, ...OWNERS] : OWNERS).map(name => paired.PAIRED_CONTRACT.referenceOwners[name].sha256), kind);
+    // It is part of the report whose hash the closed event holds.
+    assert.equal(result.closed.reportHashes.session, sha256(Buffer.from(written.text)), kind);
+    assert.equal(result.closed.outcome, 'passed', kind);
+    // The verify command reports it as recorded and recomputes nothing from it.
+    const files = Object.fromEntries(rig.trace.filter(entry => entry.type === 'write').map(entry => [entry.name, Buffer.from(entry.text)]));
+    const verified = await paired.verifySession({ sessionBytes: files[RUNNER_PATHS.session], registry: rig.registry(),
+      readArm: async (arm, name) => files[name], hashFrameImages: async () => ({ ok: true }), runFrozen: async () => FROZEN_RUN, knownReportHashes: [] });
+    assert.deepEqual(verified.result.armDifference, expected, kind);
+    assert.equal(verified.exitCode, 0, kind);
+  }
+});
+
+test('arm difference: a check after the last pair that did not hold is recorded as absent, and that session is invalid', async () => {
+  const rig = runnerRig('qualifying', { facts: { difference: null, error: 'Arms differ outside the five owner files: src/main.js' } });
+  rig.context.difference = differenceOf('qualifying');
+  const result = await paired.runSession(rig.input());
+  const report = JSON.parse(rig.trace.find(entry => entry.type === 'write' && entry.name === RUNNER_PATHS.session).text);
+  assert.ok(report.armDifference && typeof report.armDifference === 'object', 'the session report records the arm difference check');
+  assert.deepEqual([report.armDifference.materialised.count, report.armDifference.afterLastPair, report.armDifference.countHolds], [5, null, false]);
+  assert.deepEqual([result.closed.valid, result.closed.outcome, report.validity.checks.complete.ok], [false, 'invalid', false]);
+  for (const arm of ['reference', 'candidate'])
+    assert.equal(JSON.parse(rig.trace.find(entry => entry.type === 'write' && entry.name === RUNNER_PATHS[arm]).text).paired.captureError,
+      'Arms differ outside the five owner files: src/main.js', arm);
+  // A smoke report keeps the form it had: the latest check that held, or the one made at materialisation.
+  const smoke = await paired.runSession(runnerRig('smoke', { facts: { difference: null } }).input());
+  assert.deepEqual([smoke.report.armDifference.count, smoke.report.armDifference.onlyOwnersDiffer, smoke.report.structuralFailure], [5, true, false]);
+});
+
+test('arm difference: review.mjs hands the runner the check made at materialisation and, only when it held, the check made after the last pair', async () => {
+  const run = await reviewFunction('runPairedSession');
+  // After the last pair the arms are compared again; the result reaches the runner only from a comparison that did not throw.
+  assert.match(run, /const facts = \{ cleanup: null, pageErrors, error: null, difference: null, /);
+  const again = run.indexOf('facts.difference = { ...paired.compareArms(arms.arms, arms.names, owners, { identical: kind === \'calibration\' }),');
+  assert.ok(again > run.indexOf('if (!interrupted) {') && again < run.indexOf('} catch (error) { facts.error = error?.message ?? String(error); }'));
+  assert.equal(run.split('facts.difference =').length - 1, 1);
+  // The check made at materialisation, with the verified owners, is in the context of every kind.
+  assert.match(run, /context: \{ revision: head\.headCommit, browserVersion, hostBefore, armIdentities: armIdentity, difference: arms\.difference, paths,/);
+});

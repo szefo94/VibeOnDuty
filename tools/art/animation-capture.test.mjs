@@ -1451,6 +1451,9 @@ function toolState(ids = toolIdentities) {
 }
 const registrationOf = (state, kind, nonce) => ({ kind, nonce, commit: 'c'.repeat(40), identity: state.identity, host: { note: 'synthetic' },
   toolHashes: { ...TOOL_HASHES }, samplerIdentity: SAMPLER });
+// The arm difference check as it holds: the five owner files for a qualifying session, no file for a calibration.
+const armDifferenceOf = kind => (kind === 'calibration' ? { comparedFiles: 139, differingFiles: [], count: 0, identical: true }
+  : { comparedFiles: 139, differingFiles: [...OWNER_PATHS].sort(), count: OWNER_PATHS.length, onlyOwnersDiffer: true });
 // One session captured, closed and written by the tool's own runner, with every effect held in memory.
 // `result` is what the capture leads to: equal arms pass, a slower candidate fails, a page error is invalid.
 async function sessionByTheTool(state, kind, result = 'pass') {
@@ -1471,7 +1474,7 @@ async function sessionByTheTool(state, kind, result = 'pass') {
       return captured;
     },
     endCapture: async () => ({ cleanup: { browserClosed: true, serverClosed: true }, hostAfter: { note: 'after' }, diagnostics: null, error: null,
-      pageErrors: { reference: result === 'invalid' ? ['TypeError: synthetic page error'] : [], candidate: [] } }),
+      difference: armDifferenceOf(kind), pageErrors: { reference: result === 'invalid' ? ['TypeError: synthetic page error'] : [], candidate: [] } }),
     hashFrameImages: async () => ({ ok: true }),
     appendEvent: async event => (state.registry = paired.appendEvent(state.registry, event, state.tick)),
     write: async (name, bytes) => { state.files[name] = Buffer.from(bytes); },
@@ -1479,7 +1482,7 @@ async function sessionByTheTool(state, kind, result = 'pass') {
     runFrozen: async name => frozenRunOf(sha(state.files[name]), 3),
     context: { revision: 'c'.repeat(40), browserVersion: REFERENCE.device.browser, hostBefore: { note: 'before' }, armIdentities, paths,
       knownReportHashes: [], device: Object.fromEntries(Object.entries(REFERENCE.device).filter(([key]) => key !== 'rendererClass')),
-      frozenDevices: { [paired.FROZEN_BUDGET_PATH]: V2_BUDGET.device },
+      frozenDevices: { [paired.FROZEN_BUDGET_PATH]: V2_BUDGET.device }, difference: armDifferenceOf(kind),
       runtimeDependencies: { reference: { note: 'synthetic' }, candidate: { note: 'synthetic' } }, baselineSha256: REFERENCE.baselineSha256,
       compare: () => structuredClone(REFERENCE.comparison), v2Budget: V2_BUDGET, v2BudgetBytes: V2_BUDGET_BYTES } });
   assert.equal(run.closed.outcome, { pass: 'passed', fail: 'failed', invalid: 'invalid' }[result], `${kind} ${result}`);
