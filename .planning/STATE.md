@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 07
 current_phase_name: Movement-Matched and Action-Safe Animation
 status: executing
-stopped_at: Completed 07-25-PLAN.md
-last_updated: "2026-10-10T12:56:22.037Z"
+stopped_at: Completed 07-16-PLAN.md
+last_updated: "2026-10-10T18:29:24.990Z"
 last_activity: 2026-10-09
 last_activity_desc: Phase 07 execution started
-state_head: 61f9f69bcade7f1d8c9105d646b51f738aaed782
+state_head: b6615b07dc5bd3fb7cc856771e71d92030fc17d3
 progress:
   total_phases: 12
   completed_phases: 2
   total_plans: 38
-  completed_plans: 34
+  completed_plans: 35
   percent: 17
 ---
 
@@ -28,9 +28,9 @@ See: .planning/PROJECT.md (updated 2026-10-05)
 ## Current Position
 
 Phase: 07 (Movement-Matched and Action-Safe Animation) — EXECUTING
-Plan: 9 of 19
+Plan: 10 of 19
 Status: Ready to execute
-Next action: Plan 07-14 closed: owner route source-fix, host_ready none; time-limit lifecycle regression narrowed to 336099e..b1e2801; gap plan 07-24 to be written before 07-17; 07-17/18/19 need an owner host_ready time. Then parent independent code/security/UI/phase review of07-10 tooling, exact evidence and index. Plan09 fixed-V2 and original throw1ms, full offline/MP failures and natural death/online unions remain open. Independent45 contexts/9 previews/recovery do not bypass those gates. Other jobs must keep running. Phase5 follows accepted Phase7.
+Next action: Plan 07-16 closed (implementation review pass-with-notes at 7c93fb3; no calibration or qualifying session has run). Next: owner decides N-04 (identity width) before the calibration is registered; 07-17, 07-18 and 07-19 need an owner host_ready time. Open: G-01 CI art-test step before any push. Plan09 stays unqualified; ANIM-05 stays open. Phase5 follows accepted Phase7.
 Roadmap review: User revised remaining order to6 → 7 → 5 → 2 → 3 → 4 → 8 → 9 → 10 → 11 → 12; Phase1 remains complete.
 Last activity: 2026-10-09 — Phase 07 execution started
 
@@ -88,6 +88,7 @@ Progress: [██░░░░░░░░] 17%
 | Phase 07 P24 | 40min | 2 tasks | 3 files |
 | Phase 07 P15 | 20min | 2 tasks | 3 files |
 | Phase 07 P25 | record-keeping close (started 2026-10-10T12:09Z) | 2 tasks | 3 files |
+| Phase 07 P16 | 3h 15m | 4 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -151,6 +152,8 @@ Full decisions are recorded in PROJECT.md.
 - [Phase 07]: 07-24: fixed lifecycle race by restructuring test assertion ownership (recorder + score-case tail + new release case), no source change
 - [Phase 07]: 07-15: paired timing amendment approved by owner conditional on R1-R8 (T_aggregate 0.05, T_single 0.25, cap 3); frozen V2 remains only gate until then
 - [Phase 07]: 07-25: paired contract V2 reviewed pass-with-notes (v2_sha256 8f3f6c72); rule 2 aggregates per-cell ratios; frozen exit 0 is recorded and escalated, never a pass; plan 07-16 needs edits P-1..P-5 before dispatch
+- [Phase 07]: 07-16: requirePlan09 frozen route tightened - a frozen-route record needs the frozen evaluation list and the owner's accept-frozen-pass bound to evaluation k of n; paired route (timingGate paired-same-session) accepts only a pass registry verdict under the pinned contract with every counted session re-verified from its reports.
+- [Phase 07]: 07-16: paired implementation review pass-with-notes at 7c93fb3 (after blocker I-01 fixed); the three tool files are hash-pinned and must not change before the calibration; N-04 identity width must be decided by the owner before the calibration is registered.
 
 ### Pending Todos
 
@@ -179,8 +182,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-10-10T12:56:21.895Z
-Stopped at: Completed 07-25-PLAN.md
+Last session: 2026-10-10T18:29:24.820Z
+Stopped at: Completed 07-16-PLAN.md
 Resume file: None
 
 User passed both Phase 6 visual checks with "pass all tests and proceed".
