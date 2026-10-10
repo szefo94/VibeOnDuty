@@ -187,7 +187,8 @@ Plans:
 4. A creator imports or retargets approved reusable motion onto the selected rig, regenerates runtime clips, and reviews the resulting transitions through the Blender-to-game workflow.
 5. Repeated spawn, character replacement, and disposal keep shared templates usable and release instance resources within the measured browser budget.
 
-**Plans:** 24/25 plans executed, 22 tasks across 9 waves; independent plan verification passed on 2026-10-05
+**Plans:** 24/26 plans executed, 22 tasks across 9 waves; independent plan verification passed on 2026-10-05
+- [ ] 07-26-PLAN.md — collector online route robust at capture frame rate; control runs and independent review before the one new strict capture of 07-19
 - [x] 07-25-PLAN.md
 - [x] 07-24-PLAN.md
 - [x] 07-23-PLAN.md
