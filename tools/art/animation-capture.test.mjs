@@ -1933,3 +1933,123 @@ test('default readers: the session verification reader runs the paired tool\'s o
   for (const name of ['../outside.json', path.join(tmpdir(), 'outside.json'), ''])
     assert.throws(() => readers.verifySession(name), /Path escapes owned root/, name);
 });
+
+// ---- review finding I-03: the default readers are the real ones -------------------------------------------
+// "Only files on disk can qualify plan 09" holds in production through the default readers. The controls
+// above pin the file reader, the evidence listing and the verify reader; these pin the other four, each
+// against the repository itself: a canned value in place of any of them makes a control fail.
+const REPO_ROOT = fileURLToPath(new URL('../../', import.meta.url));
+const gitOutput = args => {
+  const run = spawnSync('git', args, { cwd: REPO_ROOT, encoding: 'utf8', maxBuffer: 1 << 28 });
+  assert.equal(run.status, 0, `git ${args.join(' ')}: ${run.stderr}`);
+  return run.stdout;
+};
+
+test('default readers: the frozen reader and the frozen evaluation scan run the unchanged frozen command on the files on disk', () => {
+  const readers = capture.PLAN09_DISK_READERS, smoke = paired.EVIDENCE_DIR + '07-16-paired-smoke.json';
+  const frozenCommand = name => {
+    const run = spawnSync(process.execPath, ['tools/art/animation-budget-v2.mjs', 'verify', '--budget', path.join(REPO_ROOT, paired.FROZEN_BUDGET_PATH),
+      '--candidate', path.join(REPO_ROOT, name)], { cwd: REPO_ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
+    return { exitCode: run.status, stdout: run.stdout, stderr: run.stderr };
+  };
+  // A file that is no candidate report: the real command fails on stderr alone, which a canned numeric result never is.
+  const refused = readers.frozen(smoke);
+  assert.deepEqual(Object.keys(refused).sort(), ['exitCode', 'stderr', 'stdout']);
+  assert.deepEqual([refused.exitCode, refused.stdout, refused.stderr.length > 0], [1, '', true]);
+  assert.deepEqual(refused, frozenCommand(smoke));
+  // The tracked plan 07-13 candidate: whatever the command gives for it on this checkout, the reader gives the same.
+  // Where the command reaches a result line (it needs the frame images of the gitignored cache), that line is of
+  // this file and of no other.
+  const candidateBytes = repoFile(PLAN13_CANDIDATE_PATH), candidate = JSON.parse(candidateBytes.toString('utf8'));
+  const real = frozenCommand(PLAN13_CANDIDATE_PATH);
+  assert.deepEqual(readers.frozen(PLAN13_CANDIDATE_PATH), real);
+  if (real.stdout.trim()) {
+    assert.equal(JSON.parse(real.stdout.trim()).candidateReportSha256, sha(candidateBytes));
+    assert.notDeepEqual(real, refused);
+  }
+  // The scan: every complete report at that source identity under the evidence directory and the capture cache,
+  // once per report hash, each with the result of the frozen command for it, computed here a second time.
+  const identity = paired.identityHash(candidate.identities);
+  const listed = readers.frozenEvaluations(candidate.identities);
+  const reports = paired.scanReports().filter(entry => paired.identityHash(entry.report.identities) === identity);
+  const results = { [sha(candidateBytes)]: real };
+  for (const entry of reports) results[entry.sha256] ??= frozenCommand(entry.path);
+  assert.deepEqual(listed, paired.frozenEvaluationList(reports, identity, results));
+  const own = listed.filter(entry => entry.reportSha256 === sha(candidateBytes));
+  assert.equal(own.length, 1);
+  assert.ok(own[0].paths.includes(PLAN13_CANDIDATE_PATH));
+  assert.deepEqual([own[0].exitCode, own[0].capturedAt], [real.exitCode, candidate.capturedAt]);
+  assert.equal(new Set(listed.map(entry => entry.reportSha256)).size, listed.length);
+  assert.deepEqual(listed.map(entry => [entry.evaluation, entry.of]), listed.map((_entry, index) => [index + 1, listed.length]));
+  // Another source identity has no report on disk, and an identity set with no sampler identity is refused.
+  assert.deepEqual(readers.frozenEvaluations({ ...candidate.identities, 'src/main.js': 'f'.repeat(64) }), []);
+  assert.throws(() => readers.frozenEvaluations({ 'src/main.js': 'f'.repeat(64) }), /Identity set has no sampler identity/);
+});
+
+test('default readers: the committed registry is the registry as git stores it at HEAD', () => {
+  const committed = capture.PLAN09_DISK_READERS.committedRegistry();
+  assert.deepEqual(committed, JSON.parse(gitOutput(['show', 'HEAD:' + paired.REGISTRY_PATH])));
+  assert.deepEqual(committed, paired.committedRegistry());
+  // It holds the recorded smoke session and is a whole chain.
+  assert.ok(committed.events.length >= 3);
+  assert.equal(paired.verifyChain(committed).events, committed.events.length);
+  assert.deepEqual(committed.events.slice(0, 3).map(event => [event.seq, event.type, event.kind]),
+    [[1, 'registered', 'smoke'], [2, 'started', 'smoke'], [3, 'closed', 'smoke']]);
+});
+
+test('default readers: the registry history is every committed version of the registry file, read from git, or the refusal of a history that cannot be read', () => {
+  const readers = capture.PLAN09_DISK_READERS;
+  let expected = null, refusal = null;
+  try { expected = paired.registryHistory(); } catch (error) { refusal = error.message; }
+  if (refusal !== null) {
+    // A shallow checkout: the reader refuses as the tool does, and gives no made-up version.
+    assert.match(refusal, /^Registry history (is shallow|cannot be read)/);
+    assert.throws(() => readers.registryHistory(), error => error.message === refusal);
+    return;
+  }
+  const versions = readers.registryHistory();
+  assert.deepEqual(versions, expected);
+  // The same list from git itself: the commits on HEAD that touch the file, oldest first, and the file at each.
+  const commits = gitOutput(['log', '--full-history', '--reverse', '--format=%H', 'HEAD', '--', paired.REGISTRY_PATH]).split(/\r?\n/).filter(Boolean);
+  assert.ok(commits.length >= 2);
+  const onHead = versions.filter(version => version.onHead);
+  assert.deepEqual(onHead.map(version => version.commit), commits);
+  for (const version of onHead) assert.deepEqual(version.registry, JSON.parse(gitOutput(['show', `${version.commit}:${paired.REGISTRY_PATH}`])), version.commit);
+  // Every one of them is a prefix of the committed registry, and the committed registry is the last of them on HEAD.
+  assert.equal(paired.historyPrefixCheck(readers.committedRegistry(), versions).versions, versions.length);
+  assert.deepEqual(onHead.at(-1).registry, readers.committedRegistry());
+});
+
+test('default readers: each reader is the paired tool\'s own function, named once and given nothing canned', async () => {
+  const source = (await readFile(new URL('./animation-capture.mjs', import.meta.url), 'utf8')).replace(/\r\n/g, '\n');
+  const start = source.indexOf('export const PLAN09_DISK_READERS = Object.freeze({'), end = source.indexOf('\n});\n', start);
+  assert.ok(start > 0 && end > start);
+  // The object, with its comments taken out: seven members and nothing else.
+  const members = source.slice(start, end + 4).split('\n').filter(line => !/^ *\/\//.test(line)).join('\n');
+  assert.equal(members, [
+    'export const PLAN09_DISK_READERS = Object.freeze({',
+    '  file: name => readFileSync(boundedPath(ROOT, name)),',
+    '  evidenceFiles: () => readdirSync(path.join(ROOT, EVIDENCE_DIR), { withFileTypes: true })',
+    '    .filter(entry => entry.isFile() && entry.name.endsWith(\'.json\')).map(entry => EVIDENCE_DIR + entry.name).sort(),',
+    '  committedRegistry: () => committedRegistry(),',
+    '  registryHistory: () => registryHistory(),',
+    '  frozenEvaluations: identities => {',
+    '    const identity = identityHash(identities);',
+    '    const reports = scanReports().filter(entry => identityHash(entry.report.identities) === identity), results = {};',
+    '    for (const entry of reports) results[entry.sha256] ??= runFrozenCommand(entry.path);',
+    '    return frozenEvaluationList(reports, identity, results);',
+    '  },',
+    '  frozen: name => runFrozenCommand(name),',
+    '  verifySession: name => runVerifyCommand(name),',
+    '});'].join('\n'));
+  // The functions they call are the ones imported from the paired tool; the file declares no other of these names.
+  const imported = source.match(/\nimport \{([^}]+)\} from '[^']*animation-budget-paired\.mjs';\n/);
+  assert.ok(imported, 'one import from the paired tool');
+  const names = imported[1].split(',').map(name => name.trim());
+  for (const name of ['committedRegistry', 'registryHistory', 'runFrozenCommand', 'runVerifyCommand', 'scanReports', 'frozenEvaluationList', 'identityHash']) {
+    assert.ok(names.includes(name), name);
+    assert.doesNotMatch(source, new RegExp(`(?:function|const|let|var|class)\\s+${name}\\b`), name);
+    assert.equal(capture[name], undefined, name);
+  }
+  assert.equal(source.match(/ from '[^']*animation-budget-paired\.mjs'/g).length, 1);
+});

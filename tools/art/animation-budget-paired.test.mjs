@@ -2617,3 +2617,36 @@ test('arm difference: review.mjs hands the runner the check made at materialisat
   // The check made at materialisation, with the verified owners, is in the context of every kind.
   assert.match(run, /context: \{ revision: head\.headCommit, browserVersion, hostBefore, armIdentities: armIdentity, difference: arms\.difference, paths,/);
 });
+
+// =============================================================================================
+// Review finding I-04: the verdict reads back the cap of three qualifying sessions
+// =============================================================================================
+
+test('read-back cap: a registry that holds four qualifying sessions for one source identity is refused a verdict', () => {
+  // registerSession refuses a fourth (control "fourth qualifying refused"); a registry written by hand, with a valid
+  // chain, can still hold one. The verdict must not be computed from it, for that identity or for any other.
+  const fourth = (registry, state, now) => {
+    let next = paired.appendEvent(registry, { type: 'registered', ...sessionEntry('qualifying', NONCE(34)), countable: true }, now);
+    if (state === 'registered') return next;
+    next = paired.appendEvent(next, { type: 'started', kind: 'qualifying', nonce: NONCE(34), registrationHash: paired.eventHash(next.events.at(-1)) }, now);
+    return state === 'started' ? next : paired.closeSession(next, NONCE(34), outcomeOf('qualifying', state, NONCE(34)), now);
+  };
+  for (const results of [['fail', 'pass', 'pass'], ['pass', 'fail', 'invalid'], ['registered', 'started', 'invalid']])
+    for (const state of ['registered', 'started', 'pass', 'fail', 'invalid']) {
+      const now = clock(), three = registryOf(results, { now }), label = `${results.join(', ')} then ${state}`;
+      // Three is the cap, and a verdict exists for three.
+      assert.equal(paired.registryVerdict(three, IDENTITY).started, 3, label);
+      const four = fourth(three, state, now), registration = four.events.find(event => event.nonce === NONCE(34) && event.type === 'registered');
+      // Its chain and the order of its sessions are whole: the cap is the one rule it breaks.
+      assert.equal(paired.verifyChain(four).events, four.events.length, label);
+      assert.equal(paired.verifyLifecycle(four).size, 5, label);
+      assert.equal(paired.countableSessions(four, IDENTITY).length, 4, label);
+      const refusal = new RegExp(`^Error: Registry rule broken at sequence ${registration.seq}: more than 3 qualifying sessions for one source identity$`);
+      assert.throws(() => paired.registryVerdict(four, IDENTITY), refusal, label);
+      assert.throws(() => paired.registryVerdict(four, OTHER_IDENTITY), refusal, label);
+    }
+  // Four qualifying sessions over two source identities break nothing: the cap is per identity.
+  const now = clock();
+  const spread = registryOf(['pass'], { identity: OTHER_IDENTITY, base: registryOf(['fail', 'pass', 'pass'], { now }), now, first: 50 });
+  assert.deepEqual([paired.registryVerdict(spread, IDENTITY).started, paired.registryVerdict(spread, OTHER_IDENTITY).started], [3, 1]);
+});
