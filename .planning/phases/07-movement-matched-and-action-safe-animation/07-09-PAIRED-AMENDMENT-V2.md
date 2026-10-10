@@ -60,8 +60,21 @@ Plan 07-16 pins the SHA-256 of this file, of the decision record and of the V2 r
 code and compares them with the files at every run. A changed byte in any of the three makes
 every paired result refuse.
 
-This document was written without running any capture, browser, server or test suite, and it
-changes no code.
+These hashes are of the files' bytes with LF line endings. Before the first registration the
+three records, the registry file and the session evidence files are pinned to LF in the root
+`.gitattributes`, so that no checkout can change their bytes. A registration made before
+those lines are committed is refused.
+
+Revision. The first form of this document (commit `2ea292e`, SHA-256
+`1ae66f8b16f3c4c3d8501b6fd86a5e54b92a6fef9898cab184d4811f793bb47d`) was reviewed with
+`changes-required`: nine required edits, E1 to E9, no owner decision needed, none of the
+approved numbers touched. This text carries those edits; section 11 marks every item they
+changed or added. The earlier verdict does not cover these bytes. The paragraph above on what
+is not owner-approved applies to them unchanged: nothing may rely on this text until the review
+record's `v2_sha256` equals the SHA-256 of this file.
+
+This document was written and revised without running any capture, browser, server or test
+suite, and it changes no code.
 
 ## Terms
 
@@ -145,7 +158,9 @@ How both arms are built, for every session:
    reports the count of differing files; it must be five.
 5. Each arm is served by its own owned strict loopback listener with the same server
    configuration. Whatever the capture does for one arm (browser build, launch flags, context
-   and page lifetime, sampler arguments) it does identically for the other.
+   and page lifetime, sampler arguments) it does identically for the other. The same holds
+   across session kinds: a calibration and a qualifying session use the same context and page
+   lifetime, launch flags and sampler arguments, and every session report records them.
 6. No branch, worktree, checkout or install is used to build an arm.
 
 So both arms carry the candidate's `public/models/enemy.glb`, motion manifest, `src/main.js` and
@@ -234,23 +249,35 @@ The rules use only the 12 measured pairs. `T_single` = 0.25, `T_aggregate` = 0.0
 
 `c <= r * (1 + T_single) + q`
 
-**Rule 2, per group.** For each component and statistic, the ratio of a profile is
-`(c - q) / r`, taken only over profiles with `r` greater than 0. The ratios of a group are
-aggregated with the frozen contract's own median, `sorted[floor(n/2)]`
-(`tools/art/animation-budget-v2.mjs:41`): for an even count that is the upper of the two middle
-values. The aggregate must be at most `1 + T_aggregate`, in each of six groups:
+**Rule 2, per group.** For each component and statistic:
 
-| Group | Profiles | Aggregate is the |
+1. A profile is usable when its `r` is greater than `eps`. The ratio of a usable profile is
+   `(c - q - eps) / r`.
+2. The ratio of a cell is the arithmetic mean of the ratios of its usable profiles: of both
+   runs when both are usable, of the one usable run otherwise. A cell with no usable profile
+   has no ratio.
+3. The aggregate of a group is the frozen contract's own median, `sorted[floor(n/2)]`
+   (`tools/art/animation-budget-v2.mjs:41`), taken over the ratios of the group's cells that
+   have one, `n` being their number.
+4. The aggregate must be at most `1 + T_aggregate`, in each of six groups:
+
+| Group | Cells | Aggregate is the |
 |---|---|---|
-| all profiles | 12 | 7th smallest ratio |
-| one source actor | 6 | 4th smallest |
-| eight source actors | 6 | 4th smallest |
-| Low tier | 4 | 3rd smallest |
-| Medium tier | 4 | 3rd smallest |
-| High tier | 4 | 3rd smallest |
+| all profiles | 6 | 4th smallest cell ratio |
+| one source actor | 3 | 2nd smallest |
+| eight source actors | 3 | 2nd smallest |
+| Low tier | 2 | larger |
+| Medium tier | 2 | larger |
+| High tier | 2 | larger |
 
-(When some profiles of a group have `r` equal to 0, `n` is the number that remain and the same
-formula applies.)
+(With fewer cells having a ratio the same formula applies: of 5 the 3rd smallest, of 4 the
+3rd, of 3 the 2nd, of 2 the larger, of 1 that one.)
+
+Why cells. By section 3 the two runs of a cell have opposite capture order. If the second
+capture of a pair is slower by `d` with no code difference, the two profile ratios of a cell
+are near `1 + d` and `1 / (1 + d)`, and their mean is `1 + d²/(2(1 + d))`: 1.003 at `d` = 8%.
+The same median taken over the 12 profile ratios would sit near `1 + d` and fail every
+session, the calibration included, for an order effect above about 5%.
 
 - A profile with `r` equal to 0 is left out of rule 2 and is covered by rule 1 only.
 - A group with fewer than 3 profiles having `r` greater than 0, for a component and statistic,
@@ -271,8 +298,8 @@ and in section 5 carries the frozen contract's own comparison allowance, `eps` =
 
 - rule 1 is violated when `c > r * (1 + T_single) + q + eps`;
 - `r` counts as 0 when `r <= eps`;
-- rule 2 is violated for a group when, for the profile whose ratio is the group's aggregate,
-  `c > r * (1 + T_aggregate) + q + eps` (ratios that are equal are ordered by capture position);
+- rule 2 is violated for a group when its aggregate, computed as above, is greater than
+  `1 + T_aggregate`; the allowance is already inside every profile ratio;
 - the two checks in section 5 are violated when the larger value exceeds the smaller value times
   `(1 + T_single)` by more than `eps`.
 
@@ -317,7 +344,8 @@ that has no validity block. Nobody reclassifies a session afterwards, in either 
 A session is invalid when any of these holds:
 
 1. **Incomplete.** It does not hold exactly the warm-up pair and the 12 pairs, each profile once
-   per arm; or an arm report is not complete; or the session has no `closed` event.
+   per arm; or an arm report is not complete. (A session that was registered and never closed
+   has no validity block at all; section 8 counts it as invalid at the registry level.)
 2. **Order.** The recorded order of any pair differs from section 3.
 3. **Structure.** An arm fails its structural checks:
    - candidate arm of a qualifying session: the unchanged frozen command
@@ -329,7 +357,10 @@ A session is invalid when any of these holds:
      arm's; every source identity outside the five owner files must equal the other arm's; and
      every listed frame image must hash to its recorded value. (The reference arm cannot pass
      the full frozen candidate check by design: it has the pre-tuning skeleton count and five
-     different identities.)
+     different identities.) Its five owner identities must equal the SHA-256 values pinned in
+     section 2. In a calibration these checks are made on both arms, every identity of the two
+     arms must be equal, and the frozen command is run on neither arm: a calibration has no
+     frozen result and no `structuralV2Pass`.
 4. **Binding.** The binding in section 7 fails.
 5. **Gross instability.** For any cell, the reference arm's frame-interval median in run 1 and
    in run 2 differ by more than `T_single`: the larger exceeds the smaller times
@@ -340,7 +371,10 @@ A session is invalid when any of these holds:
    the reference frame-interval median in run 1, and `k2` the same in run 2. The session is
    invalid when the larger of `k1`, `k2` exceeds the smaller times `(1 + T_single)`. A
    frame-interval median that is not a finite number greater than 0 also makes the session
-   invalid.
+   invalid. The two runs of a cell have opposite capture order, so this check sees the square
+   of a second-capture slowdown: with a slowdown `d` and no code difference the larger of `k1`,
+   `k2` is near `(1 + d)²` times the smaller, and once `(1 + d)²` is above `1 + T_single`
+   (`d` above about 11.8%) every session is invalid, the calibration included.
 
 The proposal's rule 3 ("a session is invalid ... if the reference arm's own run 1 and run 2
 differ by more than `T_single`") survives only as check 5 with its purpose restated; check 6 is
@@ -371,7 +405,14 @@ same order scheme, the same warm-up and the same binding as a qualifying session
   point estimate, from a single event and with a wide interval, is that a session with no code
   difference fails rule 1 about 40% of the time. A failed calibration is therefore a likely
   outcome, not a remote one. If it fails, the harness cannot tell no change from a change at the
-  approved tolerances on this host, and what to do about that is the owner's decision.
+  approved tolerances on this host, and what to do about that is the owner's decision. Rule 2
+  adds its own no-change failures from noise, which the cell ratio of section 4 does not
+  remove (section 11, items 1 and 2); the calibration is the test of that.
+- A calibration applies only to what it ran with. A qualifying session may be registered only
+  when the three tool hashes and the sampler identity equal those in the identity's
+  calibration `registered` event, and its capture is refused when the browser version differs
+  from the one in the calibration's `closed` event. A change to any of them after the
+  calibration ends the paired route for that identity in the same way as a failed calibration.
 - The calibration result changes nothing else. `T_single` stays 0.25 and `T_aggregate` stays
   0.05 whatever it shows. Its measured no-change behaviour is reported (largest rule-1 ratio,
   the group aggregates, the two validity checks' largest values) and is never used to tune.
@@ -383,18 +424,18 @@ A calibration contains no candidate arm. It does not count toward the cap of sec
 - Each session has one nonce. The tool generates it when the session is registered (section 8)
   and records it in the `registered` event.
 - One registration permits one capture invocation. That one invocation captures both arms,
-  writes a started marker (the nonce and the hash of the registration event) before the first
-  capture, and writes the nonce into both arm reports and into the session report. The tool
-  refuses to start a capture for a nonce that already has a started marker or a `closed` event.
-  A capture that started and did not complete is not repeated; the session stays in the registry
-  as it stands.
+  appends a `started` event (the nonce and the hash of the registration event) to the tracked
+  registry file before the first capture, and writes the nonce into both arm reports and into
+  the session report. The tool refuses to start a capture for a nonce that has a `started` or
+  `closed` event in the registry file, in the working tree or as committed. A capture that
+  started and did not complete is not repeated; the session stays in the registry as it stands.
 - Both arm reports carry, for the warm-up and for each of the 12 profiles, the start time and
   end time of that capture, taken by the invoking tool on the host clock. Put in time order, the
   26 captures of a session must not overlap and must follow the scheme of section 3 exactly.
   That is what shows the interleaving.
 - An arm report is rejected, and the session is invalid, when it has no nonce; when its nonce is
   not the session's; when its capture times do not interleave with the other arm's as section 3
-  requires; when any capture time lies before the started marker or after the session's close;
+  requires; when any capture time lies before the `started` event or after the session's close;
   or when its SHA-256 equals that of the frozen reference report, of any existing single-arm V2
   candidate (for example `evidence/07-13-cost-candidate.json`), of an arm report of an earlier
   session, or of the other arm.
@@ -405,16 +446,19 @@ A calibration contains no candidate arm. It does not count toward the cap of sec
 ## 8. Sessions, cap and result (R6)
 
 **Registry.** A tracked registry file records every session before it runs. It is an
-append-only event log. Each event has a type, `registered` or `closed`, and carries a sequence
-number, a timestamp, the session nonce and the SHA-256 of the previous event (a fixed string for
-the first). A removed, reordered or edited event therefore breaks the chain. A `registered`
-event also records the kind, the commit, the source identity and host facts. A `closed` event
-records the mechanical outcome set by the tool (validity, pass or fail), the hashes of the
-reports and, for a qualifying session, the frozen command's exit code and overrun count
-(section 9).
+append-only event log. Each event has a type, `registered`, `started` or `closed`, and carries a
+sequence number, a timestamp, the session nonce and the SHA-256 of the previous event (a fixed
+string for the first). A removed, reordered or edited event therefore breaks the chain. A
+`registered` event also records the kind, the commit, the source identity and host facts, the
+SHA-256 of `tools/art/animation-budget-paired.mjs`, `tools/art/review.mjs` and
+`tools/art/animation-capture.mjs`, and the sampler identity; a `closed` event also records the
+browser version. A `closed` event records the mechanical outcome set by the tool (validity, pass
+or fail), the hashes of the reports and, for a qualifying session, the frozen command's exit
+code and overrun count (section 9).
 
-**Fixed order for every session:** register; commit the registry; capture; close; commit the
-registry and the session evidence.
+**Fixed order for every session:** register; commit the registry; capture, which appends
+`started` before its first capture and `closed` when it completes; commit the registry and the
+session evidence, whether or not the capture completed.
 
 - The tool refuses to start a capture whose `registered` event is not in the committed registry.
 - A capture runs only while the source identity is still the registered one. Between a
@@ -422,11 +466,23 @@ registry and the session evidence.
   committed. A registration whose capture is refused for this reason still counts.
 - The tool refuses to compute a verdict from a registry whose chain is broken, or which holds an
   event that is not present in the committed file.
+- It also refuses when any committed version of the registry file is not a prefix of the
+  current event list. The tool reads every version of the file reachable in git history
+  (`git log` and `git show`, read only) and requires the events of each version to equal,
+  event hash by event hash, the first events of the current list. If that history cannot be
+  read in full (for example in a shallow repository) the verdict is refused.
+- A commit that holds a registration is never amended, squashed or rebased. The tool cannot
+  see rewritten history, so the final record names the commit id of every registration.
 - A session counts from its registration. One that was registered and never closed counts.
-- Each session report carries the hash of its registration event and the started marker.
+- Each session report carries the hash of its registration event and the hash of its `started`
+  event.
 - A session that is not in the registry counts for nothing.
 - No session is stopped or discarded after any timing value has been seen. Reports and hashes
   are kept whatever happens.
+- While a calibration or qualifying session runs, the tool prints, logs and writes no timing
+  value, ratio or rule result. Samples are held in memory; the arm reports and the session
+  report are written once, after the last pair, and the `closed` event is appended before any
+  timing is shown. A session that is interrupted leaves its registry events and no timing.
 - Host facts (power plan, heavy applications running, CPU load) are recorded before and after
   every session (O-4).
 
@@ -516,8 +572,17 @@ command's result is recorded: exit code, overrun count, capture time, host facts
 hash. So a count of frozen evaluations exists whether or not one ever passes. The list also
 holds the plan 07-13 evaluation that failed (exit 1, 40 of 192 over), and says whether that one
 was made at the same source identity. Entries are numbered in time order, so each is "evaluation
-k of n". A calibration session has no candidate arm, so it adds no frozen evaluation. Earlier
-frozen failures on earlier source (among them 135 statistics over on 2026-10-07 and a structural
+k of n".
+
+A frozen evaluation is one captured candidate report on which the frozen command was run;
+running the command again on the same report adds nothing. The list is built by a scan, not
+from memory: every complete candidate report in the phase evidence directory and in the
+capture cache directory whose source identity equals the current one is listed, with the
+frozen command's result for it, whether or not it belongs to a session. A frozen exit 0 on a
+report that the scan does not find is not put forward.
+
+A calibration session has no candidate arm, so it adds no frozen evaluation. Earlier frozen
+failures on earlier source (among them 135 statistics over on 2026-10-07 and a structural
 failure on 2026-10-09) are not in this list because they were made on different source; they
 stay recorded where they are and are named whenever the count is put to the owner.
 
@@ -575,51 +640,79 @@ What a paired pass does not mean:
 
 ## 11. Choices made here
 
-Each item is a point where the review left the form open and this document chose one. None is
-owner-approved. Items 1 to 13 are the forms plan 07-25 specified. Items 14 to 17 were not in
-that plan's list; they were needed to make a rule above exact and are listed for the same
-review.
+Each item is a point where a review left the form open, or asked for a form, and this document
+wrote one down. None is owner-approved: the owner approved the conditions R1 to R8 and the
+numbers stated under "Status, sources and what is approved", and nothing in this section.
+Items 1 to 13 are the forms plan 07-25 specified. Items 14 to 17 were not in that plan's list;
+they were needed to make a rule above exact. Items 1, 2, 3, 5, 6, 9, 13, 16 and 17 were changed,
+and items 18 to 20 added, to apply the required edits E1 to E9 of the V2 review; each says
+which. The forms those edits ask for are the reviewer's, not the owner's, and are listed for
+the repeated review like every other item.
 
-1. **Median.** Choice: the frozen contract's own, `sorted[floor(n/2)]`, the upper middle value
-   for an even count. Alternative: lower middle, or the mean of the two middle values. Can it
-   change what passes: yes. With a 20% increase in 6 of 12 profiles the lower middle gives 1.00
-   (pass), the mean 1.10 (fail), the upper middle 1.20 (fail). The choice is the strictest of the
-   three against a regression. Its cost: if the second capture of a pair is slower by `d` with no
-   code difference, half the ratios of every group sit near `1 + d` and half near `1 / (1 + d)`,
-   and the upper middle is near `1 + d`. An order effect above about 5% therefore fails rule 2
-   in every session, the calibration included. Whether such an effect exists for adjacent
-   captures on this host has not been measured.
-2. **Six groups and the minimum of 3.** Choice: rule 2 on all 12 profiles, each actor count and
-   each tier, none excusing another; a group with fewer than 3 profiles having `r` greater than
-   0 has no aggregate and is `rule-1-only`. Alternative: all 12 only; or a different minimum (1,
-   2 or all 4); or failing a group that has too few. Can it change what passes: yes. More groups
-   can only fail more sessions. The minimum decides whether a tier group with two usable
-   profiles is judged by rule 2 or by rule 1 alone, and rule 1 alone is weaker.
-3. **Order rule.** Choice: run 1 by parity of tier index plus actor index, run 2 the opposite; a
-   recorded order that differs makes the session invalid. Alternative: random order per session;
-   or the cell-level swap without the parity pattern. Can it change what passes: yes. It removes
-   the confound with actor count and with tier. It does not cancel an order effect under the
-   median of item 1; it makes one show up in every group alike. A deviation from the scheme
-   produces an invalid session and not a failed one.
+1. **Aggregate: median over cell ratios (changed, E1).** Choice: the frozen contract's own
+   `sorted[floor(n/2)]`, taken over cell ratios; a cell ratio is the mean of its two
+   opposite-order profile ratios. For an even count `sorted[floor(n/2)]` is the upper middle
+   value. Alternatives: the same median over the 12 profile ratios, which fails on an order
+   effect above about 5%; the mean of the two middle profile ratios, which misses a regression
+   between 5% and 10% confined to one cell. Can it change what passes: yes. When both runs of
+   every cell have the same ratio, the choice gives exactly the result of the same median over
+   the 12 profile ratios (the 7th of 12 is the 4th of 6 cells, the 4th of 6 the 2nd of 3, the
+   3rd of 4 the larger of 2). When the two runs of a cell differ it judges their arithmetic
+   mean, which is never below their geometric mean, so a second-capture slowdown `d` with no
+   code difference leaves `d²/(2(1 + d))` on the strict side, not `d`. The form uses only the
+   design (which runs share a cell) and is fixed before any paired data exists; no order effect
+   is measured and subtracted, and the calibration tunes nothing. What it does not remove:
+   noise that has nothing to do with order. A tier group has two cells, and its aggregate is
+   the larger of the two cell ratios. In the V2 review's simulation of sessions with no code
+   difference and no order effect, a per-capture ratio noise of 2% fails 0.2% of sessions per
+   statistic, and a noise of 4% fails 23.1% (18.4% with the median over profile ratios). Those
+   noise levels are assumptions: the noise of an adjacent pair on this host has never been
+   measured. This is a stated limit of the strict per-tier reading, not a reason to change any
+   number; the calibration is the test of it.
+2. **Six groups and the minimum of 3 (note added, N-1).** Choice: rule 2 on all 12 profiles,
+   each actor count and each tier, none excusing another; a group with fewer than 3 profiles
+   having `r` greater than 0 has no aggregate and is `rule-1-only`. Alternative: all 12 only; or
+   a different minimum (1, 2 or all 4); or failing a group that has too few. Can it change what
+   passes: yes. More groups can only fail more sessions. The minimum decides whether a tier
+   group with two usable profiles is judged by rule 2 or by rule 1 alone, and rule 1 alone is
+   weaker. Note added (N-1): under item 1 a tier group has two cells and its aggregate is the
+   larger of the two cell ratios; what noise alone then does to a session with no code
+   difference is stated in item 1.
+3. **Order rule (changed, E1).** Choice: run 1 by parity of tier index plus actor index, run 2
+   the opposite; a recorded order that differs makes the session invalid. Alternative: random
+   order per session; or the cell-level swap without the parity pattern. Can it change what
+   passes: yes. It removes the confound with actor count and with tier. Together with the cell
+   ratio of item 1 it cancels a second-capture slowdown to first order. A deviation from the
+   scheme produces an invalid session and not a failed one.
 4. **Warm-up discard.** Choice: one warm-up pair (run 1, Low, one actor, reference first),
    declared in advance, recorded, used by nothing. Alternative: no warm-up; or a different
    profile or order. Can it change what passes: yes, indirectly. It removes the session-start
    effect from the first measured pair; it is fixed in advance so that nothing is discarded
    after being seen.
-5. **Validity criteria and their threshold.** Choice: incomplete, order, structure and binding
-   make a session invalid, not failed; plus gross instability of the reference arm and agreement
-   of the candidate-to-reference ratio between runs, both on the frame-interval median, both at
-   `T_single`, both as "larger exceeds smaller times `(1 + T_single)`"; a frame-interval median
-   that is not greater than 0 is also invalid. Alternative: drop the
-   instability check; another threshold; a difference relative to the mean; treating a
-   structural failure as a failed session. Can it change what passes: yes. An invalid session
-   decides nothing but uses one of the three, so a criterion that fires more often on sessions
-   that would have failed than on sessions that would have passed helps a pass.
-6. **Calibration.** Choice: reference against a second copy of the reference; exactly one per
-   identity even after a crash; it gates qualifying sessions and does not count toward the cap.
-   Alternative: allow a repeat after a crash; count it toward the cap; candidate against
-   candidate. Can it change what passes: yes. It can stop an identity before any qualifying
-   session; it cannot make a qualifying session pass.
+5. **Validity criteria and their threshold (changed, E2).** Choice: incomplete, order,
+   structure and binding make a session invalid, not failed; plus gross instability of the
+   reference arm and agreement of the candidate-to-reference ratio between runs, both on the
+   frame-interval median, both at `T_single`, both as "larger exceeds smaller times
+   `(1 + T_single)`"; a frame-interval median that is not greater than 0 is also invalid. Added
+   (E2): the five owner identities of every reference arm, in a calibration and in a qualifying
+   session, must equal the SHA-256 values pinned in section 2; and a calibration runs the frozen
+   command on neither arm and has no frozen result. Alternative: drop the instability check;
+   another threshold; a difference relative to the mean; treating a structural failure as a
+   failed session; no owner-identity check, which would leave nothing in the session record to
+   show that a "reference" report came from the reference tree. Can it change what passes: yes.
+   An invalid session decides nothing but uses one of the three, so a criterion that fires more
+   often on sessions that would have failed than on sessions that would have passed helps a
+   pass. The ratio-agreement check sees the square of a second-capture slowdown (section 5,
+   check 6).
+6. **Calibration (changed, E6).** Choice: reference against a second copy of the reference;
+   exactly one per identity even after a crash; it gates qualifying sessions and does not count
+   toward the cap. Added (E6): a calibration applies only to the bytes of the three tool files,
+   the sampler identity and the browser version it ran with; a change to any of them after the
+   calibration ends the paired route for that identity like a failed calibration. Alternative:
+   allow a repeat after a crash; count it toward the cap; candidate against candidate; a
+   calibration that stays in force when the tooling or the browser changes. Can it change what
+   passes: yes. It can stop an identity before any qualifying session; it cannot make a
+   qualifying session pass.
 7. **Smoke.** Choice: no timing value written, printed or kept; at most one per identity unless
    the previous one failed structurally; refused once a calibration or qualifying event exists;
    never counts. Alternative: unlimited smokes; smokes that report timings. Can it change what
@@ -630,12 +723,20 @@ review.
    serve the candidate from the working tree and only the reference from a copy; or build the
    reference from git objects. Can it change what passes: yes, if the arms differed in anything
    else (path depth, configuration discovery, line endings of 82 files).
-9. **Event-log chain and commit before capture.** Choice: append-only events chained by the hash
-   of the previous event; registration committed before its capture; verdict refused on a broken
-   chain or an uncommitted event. Alternative: a plain list written after the run. Can it change
-   what passes: yes, by preventing a session from being dropped. The chain by itself does not
-   reveal removal of the newest events; the comparison with the committed registry and the
-   file's git history are what cover that.
+9. **Event-log chain, commit before capture, history (changed, E3 and E4).** Choice: append-only
+   events chained by the hash of the previous event; registration committed before its capture;
+   verdict refused on a broken chain or an uncommitted event. Added (E4): the started marker is
+   a `started` event in the tracked registry file, appended before the first capture, and a
+   nonce that has a `started` or `closed` event there, in the working tree or as committed, is
+   refused a second capture. Added (E3): the verdict is also refused when any committed version
+   of the registry file is not a prefix of the current event list, and when that history cannot
+   be read in full (a shallow repository); a commit that holds a registration is never amended,
+   squashed or rebased, and the final record names the commit id of every registration.
+   Alternative: a plain list written after the run; a started marker kept in the session
+   directory under the ignored cache, where deleting the directory removes the only trace; the
+   chain without the history check. Can it change what passes: yes, by preventing a session
+   from being dropped. The chain alone does not reveal removal of the newest events; the prefix
+   check against every committed version covers that, and rewritten history is the residual.
 10. **Counting from registration.** Choice: a session counts once registered; one never closed
     counts and is treated as invalid; one registration permits one capture; a capture refused
     because the source identity changed still counts. Alternative: count from the first capture;
@@ -648,11 +749,13 @@ review.
 12. **Listing sessions of earlier identities.** Choice: every final record lists all qualifying
     sessions in the registry by identity. Alternative: only the current identity's. Can it
     change what passes: no. It changes what is disclosed when a source identity has changed.
-13. **A frozen exit 0.** Choice: recorded with its evaluation count and put to the owner; never
-    a pass by the tooling; never a reason to stop or change paired sessions; only the owner's
-    recorded `accept-frozen-pass` can lead to a frozen-route qualification. Alternative: treat an
-    exit 0 as the frozen gate passing. Can it change what passes: yes. The alternative would let
-    the frozen route pass on a later evaluation of a contract that allowed one.
+13. **A frozen exit 0 (changed, E7).** Choice: recorded with its evaluation count and put to the
+    owner; never a pass by the tooling; never a reason to stop or change paired sessions; only
+    the owner's recorded `accept-frozen-pass` can lead to a frozen-route qualification. Added
+    (E7): the count is the scanned list of item 17, and a frozen exit 0 on a report that scan
+    does not find is not put forward. Alternative: treat an exit 0 as the frozen gate passing.
+    Can it change what passes: yes. The alternative would let the frozen route pass on a later
+    evaluation of a contract that allowed one.
 14. **Comparison allowance (not in the plan's list).** Choice: every comparison carries the
     frozen contract's `eps` of 1e-7 ms, and `r` at or below `eps` is 0. Alternative: compare the
     reported doubles literally. Can it change what passes: yes, in one direction and by at most
@@ -666,15 +769,44 @@ review.
     capture invocation. Alternative: a nonce created by the capture invocation itself. Can it
     change what passes: not by itself; it is what lets the registration be committed before the
     capture and tied to it.
-16. **Source identity (not in the plan's list).** Choice: the hash of the canonical identity set
-    of the candidate tree, the value the stable gates compare; tooling under `tools/art` is not
-    part of it. Alternative: the commit id. Can it change what passes: yes. It decides when a
-    new count of three and a new calibration begin.
-17. **Frozen evaluation list (not in the plan's list).** Choice: the list holds the plan 07-13
-    evaluation and one entry per qualifying session; earlier failures on earlier source are
-    named beside it, not numbered in it. Alternative: number every frozen evaluation ever made.
-    Can it change what passes: no. It changes the n in "evaluation k of n" that the owner is
-    shown.
+16. **Source identity (not in the plan's list; changed, E6).** Choice: the hash of the canonical
+    identity set of the candidate tree, the value the stable gates compare; tooling under
+    `tools/art` is not part of it. Alternative: the commit id. Can it change what passes: yes.
+    It decides when a new count of three and a new calibration begin. Because tooling is outside
+    it, a change to the tooling does not start a new count of three; by item 6 it does end the
+    use of the identity's calibration, and with it the paired route for that identity.
+17. **Frozen evaluation list (not in the plan's list; changed, E7).** Choice: a frozen
+    evaluation is one captured candidate report on which the frozen command was run. The list
+    holds the plan 07-13 evaluation and every complete candidate report at the current source
+    identity that a scan of the phase evidence directory and of the capture cache directory
+    finds, whether or not it belongs to a session; earlier failures on earlier source are named
+    beside it, not numbered in it. Alternative: the plan 07-13 evaluation and one entry per
+    qualifying session only, which a single-arm capture made outside any session would escape;
+    or number every frozen evaluation ever made. Can it change what passes: no paired result.
+    It changes the n in "evaluation k of n" that the owner is shown, and keeps an evaluation
+    made outside a session from being left out of it.
+18. **No timing before close (added, E5).** Choice: while a calibration or qualifying session
+    runs, no timing value, ratio or rule result is printed, logged or written; the reports are
+    written once, after the last pair, and the `closed` event is appended before any timing is
+    shown; an interrupted session leaves its registry events and no timing. Alternative: write
+    or print values as each pair completes and rely on the rule that no session is stopped after
+    a timing value has been seen. Can it change what passes: yes. An invalid session costs less
+    than a failed one under the majority rule, so a session that could be watched and stopped
+    would help a pass; with nothing visible the rule no longer rests on conduct alone.
+19. **Same capture conditions across session kinds (added, E9).** Choice: a calibration and a
+    qualifying session use the same context and page lifetime, launch flags and sampler
+    arguments, and every session report records them. This contract does not say which lifetime
+    that is; the implementation fixes one for all kinds. Alternative: identical between the two
+    arms of one session only. Can it change what passes: yes. A calibration made under other
+    conditions says nothing about the qualifying sessions it gates.
+20. **Line endings of the hash-bound files (added, E8).** Choice: the three records, the
+    registry file and the session evidence files are pinned to LF by exact path in the root
+    `.gitattributes`; a registration made before those lines are committed is refused.
+    Alternative: strip carriage returns in the tool before hashing; or leave the files without
+    an attribute. Can it change what passes: not the outcome of a session that runs. It keeps a
+    checkout from changing the bytes of a hash-bound file, which would make the tool refuse; a
+    registered session whose run is refused still counts, and a calibration that cannot run
+    ends the identity.
 
 ## 12. Not adopted, and available
 
