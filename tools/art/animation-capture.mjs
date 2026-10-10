@@ -143,6 +143,33 @@ export function independentTracerComplete(report) {
     && report.offlineCombat[0].media?.bytes > 0 && report.protectedBytesUnchanged && !report.canceled
     && !report.collectionErrors.length);
 }
+const COMBAT_JOURNAL_LIMIT = 200;
+// Records what a combat page reports about itself: page errors, unhandled rejections
+// and console error or warning lines. Observation only; no acceptance predicate reads it.
+export function combatPageJournal() {
+  const entries = [];
+  const journal = { entries, dropped: 0 };
+  const push = (kind, text) => {
+    if (entries.length >= COMBAT_JOURNAL_LIMIT) { journal.dropped++; return; }
+    entries.push({ kind, text: String(text).slice(0, 1000), wallMs: Date.now() });
+  };
+  journal.onPageError = error => push('pageerror', error?.message ?? error);
+  journal.onConsole = message => {
+    const type = message.type(), text = message.text();
+    if (text.startsWith('[moving-combat]')) return;
+    if (type === 'error' || type === 'warning') push('console', text);
+  };
+  return journal;
+}
+// Classifies the state a page showed after a menu return that did not reach the overlay.
+export function menuReturnDiagnostics(state) {
+  const { pointerLocked, pauseVisible, overlayVisible, mode, gameRunning } = state;
+  let reason = 'unknown';
+  if (pointerLocked === true && overlayVisible === false) reason = 're-locked';
+  else if (pointerLocked === false && pauseVisible === true && gameRunning === true) reason = 'handler-not-run';
+  else if (overlayVisible === true && mode === null) reason = 'returned';
+  return { pointerLocked, pauseVisible, overlayVisible, mode, gameRunning, reason };
+}
 export function requireStableGates(identities, evidence) {
   verifyRuntimeDependencies(identities);
   assert.deepEqual(evidence?.identities, identities, 'Stale or missing stable gate identities');
@@ -764,6 +791,7 @@ async function collectCombat(serverUrl,browser,directory,report) {
     const context=await browser.newContext({viewport:{width:1280,height:960},deviceScaleFactor:1,
       recordVideo:{dir:directory,size:{width:1280,height:960}}});
     let page,video,entry;
+    const journal=combatPageJournal();
     try {
       await context.addInitScript(tier=>{
         localStorage.setItem('vod_graphics_quality_v1',tier);let captured=false;
@@ -773,6 +801,7 @@ async function collectCombat(serverUrl,browser,directory,report) {
       },tier);
       page=await context.newPage();video=page.video();page.setDefaultTimeout(45000);
       page.on('console',message=>{if(message.text().startsWith('[moving-combat]'))console.log(message.text());});
+      page.on('pageerror',journal.onPageError);page.on('console',journal.onConsole);
       await page.goto(serverUrl);
       await page.waitForFunction(()=>!document.getElementById('tdm-startbtn')?.disabled);
       await page.locator('.diff-card[data-diff="recruit"]').click();
@@ -790,7 +819,22 @@ async function collectCombat(serverUrl,browser,directory,report) {
       console.log(`Moving eligible combat ${tier}: qualified earned grenade/damage/death/respawn`);
       await page.evaluate(()=>document.exitPointerLock());
       await page.locator('#pause-mainmenu-btn').click();
-      await page.locator('#overlay').waitFor({state:'visible'});entry.menuReturn=true;
+      // Interface readiness, wall-bounded (45 s page default) on purpose: returnToMainMenu shows the
+      // overlay synchronously inside the click task, so this covers at most the next rendered frames
+      // (250 to 600 ms each under software rendering here, so 45 s is roughly 75 to 180 frames), and no
+      // game event is awaited, so a simulation bound would add nothing.
+      try{await page.locator('#overlay').waitFor({state:'visible'});}
+      catch(waitError){
+        entry.menuReturnDiagnostics=menuReturnDiagnostics(await page.evaluate(async()=>{
+          const shown=id=>{const el=document.getElementById(id);return !!el&&getComputedStyle(el).display!=='none'&&getComputedStyle(el).visibility!=='hidden';};
+          let mode,gameRunning;
+          try{mode=(await import('/src/modes/modeManager.js')).getMode()?.name??null;}catch{mode='unreadable';}
+          try{gameRunning=(await import('/src/input.js')).gameRunning;}catch{gameRunning='unreadable';}
+          return {pointerLocked:!!document.pointerLockElement,pauseVisible:shown('pause-menu'),overlayVisible:shown('overlay'),mode,gameRunning};
+        }).catch(error=>({error:error.message})));
+        throw waitError;
+      }
+      entry.menuReturn=true;
     } catch(error){
       if(entry&&page&&!page.isClosed()){
         entry.lastObservation=await observe(page,'combat-incomplete').catch(()=>null);
@@ -800,6 +844,7 @@ async function collectCombat(serverUrl,browser,directory,report) {
         progress:error.combatProgress??[]});
       console.error(`Moving eligible combat ${tier} retained partial: ${error.message}`);
     } finally {
+      if(entry){entry.pageJournal=journal.entries;entry.pageJournalDropped=journal.dropped;}
       await context.close();if(video){const filename=await video.path(),bytes=await fs.readFile(filename);
         const media={path:relative(filename),sha256:hash(bytes),bytes:bytes.length,format:'WebM',continuousFullPixels:true};
         report.media.push(media);if(entry)entry.media=media;
