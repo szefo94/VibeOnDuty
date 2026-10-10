@@ -592,6 +592,24 @@ export function evaluatePaired(session, contract = PAIRED_CONTRACT) {
   return { rule1: { comparisons, violations }, pairedBudgetPass: violations.length === 0 };
 }
 
+// ---- task 07-16-02, RED: exported with neutral shapes so each control fails on its own assertion ----
+
+/** The warm-up pair and the 12 pairs in capture order, each with the arm that is captured first. */
+export function sessionScheme() {
+  const scheme = [{ warmup: true, run: 1, tier: 'low', actorCount: 1, first: 'reference-first' }];
+  for (const run of [1, 2]) for (const [tierIndex, tier] of TIERS.entries()) for (const [actorIndex, actorCount] of ACTOR_COUNTS.entries())
+    scheme.push({ warmup: false, run, tier, actorCount, first: orderFor(run, tierIndex, actorIndex) });
+  return scheme;
+}
+export function bindingCheck() { return { ok: null, reasons: [] }; }
+export function sessionValidity() {
+  return { valid: null, reasons: [], checks: Object.fromEntries(['complete', 'order', 'structure', 'binding', 'grossInstability',
+    'ratioAgreement', 'settings'].map(name => [name, { ok: null, reasons: [] }])) };
+}
+export function calibrationFor() { return null; }
+export function sessionReport() { return {}; }
+export async function verifySession() { return { result: {}, exitCode: null }; }
+
 // ---- command line -----------------------------------------------------------------------------------
 
 async function cli() {
