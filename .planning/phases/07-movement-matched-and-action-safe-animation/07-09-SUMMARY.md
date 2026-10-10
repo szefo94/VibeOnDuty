@@ -3,7 +3,7 @@ phase: 07-movement-matched-and-action-safe-animation
 plan: "09"
 subsystem: animation
 tags: [resource-ownership, authoritative-generation, first-person, measured-cost, checkpoint]
-status: halted
+status: complete
 requires:
   - phase: 07-08
     provides: Isolated actor/view review and phase-driven handling
@@ -34,25 +34,30 @@ coverage:
     human_judgment: false
   - id: D2
     description: Actual offline action/view/review ownership, exact palettes and owned lookup retirement
-    verification: [{kind: e2e, ref: "45/46 current distinct resource/action/handling cases qualified; legacy1/2 qualified", status: fail}]
+    verification: [{kind: e2e, ref: "evidence/07-10-stable-gates.json (full offline gate, exit 0, 138 passed, on the second of two runs) and evidence/07-09-qualification.json (both required assertions executed and passed in that gate's report)", status: pass}]
     human_judgment: true
-    rationale: Two original checks did not reach assertions in setup; targeted verification remains open, not human-rubber-stampable.
+    rationale: Both required cases executed and passed in the full offline gate of plan 07-17. That gate passed on the second of two full runs (the first run failed one case in setup); the owner weighs that, an agent does not.
   - id: D3
     description: Complete actual candidate passes the frozen numerical envelope
-    verification: [{kind: integration, ref: "evidence/07-09-owner-cache-pilot-result.json#actualV2Cli exit1 Incomplete report", status: fail}]
+    verification: [{kind: integration, ref: "evidence/07-18-timing-result.json#frozenApplicableBudgetPass false (original absolute limits, not met)", status: fail}]
     human_judgment: true
-    rationale: Current source has an incomplete pilot with14 fixed Low/one overruns; no fresh complete candidate or numerical acceptance is qualified.
+    rationale: Two complete current-source candidates failed the unchanged frozen command (plan 07-13, 40 of 192 over; plan 07-18 session 1 candidate arm, 21 of 192 over). No frozen exit 0 was observed. The original absolute limits were not met; the paired gate of row D5 is the applicable timing gate by the owner's decision.
   - id: D4
     description: Human moving contact/anatomy and representative hardware acceptance
     verification: []
     human_judgment: true
     rationale: Agent pixels and SwiftShader measurements establish neither human motion acceptance nor phone/iGPU/Pi/60FPS qualification.
+  - id: D5
+    description: Edits to the five owner files after c973458 added no cost within the owner-approved paired tolerances in the offline Training Range capture; every frozen structural predicate intact
+    requirement: ANIM-05
+    verification: [{kind: integration, ref: "evidence/07-18-timing-result.json (passed, session 1 of 1; 0 valid sessions failed; 0 invalid), evidence/07-paired-session-registry.json, 07-09-PAIRED-AMENDMENT-V2.md", status: pass}]
+    human_judgment: false
 actuals: {tokens: 223269, tasks: 1, commits: 25}
 commits: 25
 plan_head_before: b64b594c5316fba4d3e19d04314618e726d458b1
 plan_head_after: 1dea2c242b8520d20d21fb47f8bfbfc526302c89
 duration: approximately30min owner-cache continuation; prior spans retained in history
-completed: null
+completed: 2026-10-11
 last_verified: 2026-10-07
 ---
 
@@ -218,3 +223,94 @@ Task2, plan09 and dependent plan10 remain open. After justified host readiness o
 ## Self-Check: PASSED — Artifact Integrity Only
 
 Referenced artifacts and commits exist. Current protected source and media identity checks agree with saved evidence. Owned collection and fixture handles are retired. This section verifies artifact integrity only; qualification is governed by the actual gates recorded above.
+
+## Paired Qualification — 2026-10-11 (plan 07-18)
+
+**Result: passed, session 1 of 1; 0 valid sessions failed; 0 invalid.** This is the verdict of the paired same-session gate (`07-09-PAIRED-AMENDMENT-V2.md`, approved by the owner conditional on the review's changes R1 to R8) for source identity `c1b062729e765c0086c4c9c283170cf2da3e65044ff4eeacd66937899cbc2c57`, computed from the tracked registry by the tool. The root status of this summary is `complete` on that verdict and on nothing else. Everything above this section is history and is unchanged; where it says qualification is halted, it describes the state before 2026-10-11.
+
+The original absolute limits of the frozen V2 budget were **not** met. `applicableBudgetPass` is `false` in `evidence/07-09-qualification.json`, exactly as the unchanged frozen command reported it for the recorded candidate. No frozen exit 0 was observed. The original limits would count as met only on the frozen route, which needs the owner's own recorded acceptance of a frozen exit 0 and is then worded "evaluation k of n, on a prepared host"; that route was not taken and no such record exists.
+
+### What this pass means
+
+In the contract's own words (section 10, "in the review's words"): "in one software-rendered session on this host, in the offline Training Range workload, the five owner files as they are now did not cost more than the same five files at the freeze, within 5% typically and 25% in any single profile for the frame interval, and within about one timer tick for the small script components; and every structural check of the frozen gate still passed." The statement is made for the sessions the verdict counts and carries its denominator: passed, session 1 of 1; 0 valid sessions failed; 0 invalid.
+
+### What this pass does not mean (section 10 of the contract, in full)
+
+1. That the original fixed limits were met. The recorded frozen evaluations failed them (plan 07-13: 40 of 192 over), and that stays recorded. A paired pass is never worded as meeting the original absolute limits.
+2. Any frame-rate claim, any representative-device claim, or any human motion or quality acceptance. An agent's review is none of these either.
+3. That Phase 7 as a whole did not add animation cost, or did not make the game slower. Cost that was present at the freeze, including the first-person view from plan 07-07, is in both arms and cancels. The first-person view cost is invisible to the paired predicate, and it is equally invisible to the frozen limits, which were also taken with that view present. Neither gate tells you what the view costs.
+4. Anything about any file outside the five owner files. Their cost is identical in both arms.
+5. Anything about online play, or about any workload other than offline Training Range with 1 and 8 source actors.
+6. That the current owner files are as fast as they have been. They are compared with the pre-tuning owner files, so a later slowdown smaller than the tuning gain passes.
+7. That sub-millisecond components did not regress by less than one timer step plus tolerance.
+8. That zero limits still hold exactly.
+9. Anything about a real GPU or another host. The sessions are software-rendered on one desktop.
+10. That any earlier failed report has become a pass, or that a smoke or a calibration session is a qualification.
+
+### Every qualifying session in the registry, by source identity
+
+- Source identity `c1b062729e765c0086c4c9c283170cf2da3e65044ff4eeacd66937899cbc2c57`: 1 started, 1 valid passed, 0 valid failed, 0 invalid, verdict `pass`.
+  - Session 1, nonce `a16b4bbfea250ea1013d364dc385651a`, registered at commit `d3c1116`: passed (valid true, pass true); frozen command on its candidate arm: exit 1, 21 of 192 over.
+
+Registrations and the commits that hold them (none amended, squashed or rebased): smoke `76123eb3` at `e17f125`, calibration `23e8adde` at `034c1ab`, qualifying `a16b4bbf` at `658c0b0`. The smoke session of plan 07-16 and the calibration never count toward the cap of 3.
+
+### Every frozen evaluation at this source identity
+
+| Evaluation | Captured | Evidence | Report SHA-256 | Exit | Over | What it is | Power plan |
+|---|---|---|---|---|---|---|---|
+| 1 of 2 | 2026-10-10T07:22:59.763Z | `.planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-13-cost-candidate.json` | `5803ffe08e584488268dbd020e59ce19d5f4794d32625e29f0534238ba9894b5` | 1 | 40 of 192 | plan 07-13; same source identity: true | Zrównoważony (Balanced) |
+| 2 of 2 | 2026-10-10T21:43:05.837Z | `.planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-18-cost-candidate.json` | `339857fec29f04ea663f4be420ec11926fd069be392402a3b8bc5ec343819424` | 1 | 21 of 192 | candidate arm of qualifying session 1 (a16b4bbfea250ea1013d364dc385651a) | Balanced |
+
+Built by scan (`animation-budget-paired.mjs frozen-evaluations`: 13 complete reports scanned, 2 at this identity) and numbered as the plan 09 predicate numbers them. Frozen failures on earlier source are not in this list: among them 135 statistics over on 2026-10-07 and a structural failure on 2026-10-09; they stay recorded where they are. A calibration adds no frozen evaluation.
+
+### Calibration (reference arm against a second copy of itself)
+
+One calibration, nonce `23e8adde9e65a967182bada166dcc98f`, registered before it ran, valid, passed rules 1 and 2. It changed no tolerance: `T_single` stays 0.25 and `T_aggregate` 0.05. Its figures are the first measurement of adjacent-pair noise on this host and are reported, never used to tune:
+
+- Rule 1: 192 comparisons, 0 violations. Largest ratio of the second copy to the first: 2.00 (selectionMs median, profile 1/low/1 (run/tier/actors): reference 0.1 ms, other arm 0.2 ms; one timer step of 0.1 ms on a 0.1 ms value). Largest frame-interval ratio: 1.0180 (frameIntervalMs p95, profile 1/low/1 (run/tier/actors): reference 244.7 ms, other arm 249.1 ms). Largest share of its own bound used by any comparison: 0.8889. Comparisons within 10% of their bound: 0. Comparisons with a zero reference value: 18.
+- Rule 2: 86 group aggregates pass, 10 are rule-1-only, 0 violations. Largest aggregate: 1.0145 (tier-low, frameIntervalMs p95) against the limit 1.05.
+- Frame interval, median, the six group aggregates: all 0.9999, actors-1 0.9990, actors-8 0.9999, tier-low 1.0062, tier-medium 0.9999, tier-high 1.0013.
+- Frame interval, p95, the six group aggregates: all 0.9970, actors-1 1.0002, actors-8 0.9950, tier-low 1.0145, tier-medium 1.0002, tier-high 0.9970.
+- Validity checks, largest values against the limit 1.25: gross instability 1.0341, ratio agreement 1.0142.
+
+The two profile ratios of each frame-interval cell (reference-first and candidate-first runs; in a calibration the "candidate" position is the second copy of the reference) and the cell ratio rule 2 uses. `r` and `c` are ms; `rule2` is `(c - q - eps) / r`:
+
+| Cell | Statistic | Run 1 | Run 2 | Cell ratio |
+|---|---|---|---|---|
+| low/1 | median | reference-first r=226.0 c=229.1 c/r=1.0137 rule2=1.0133 | candidate-first r=233.7 c=233.6 c/r=0.9996 rule2=0.9991 | 1.0062 |
+| low/1 | p95 | reference-first r=244.7 c=249.1 c/r=1.0180 rule2=1.0176 | candidate-first r=253.3 c=256.3 c/r=1.0118 rule2=1.0114 | 1.0145 |
+| low/8 | median | candidate-first r=360.1 c=358.4 c/r=0.9953 rule2=0.9950 | reference-first r=360.6 c=361.2 c/r=1.0017 rule2=1.0014 | 0.9982 |
+| low/8 | p95 | candidate-first r=381.4 c=376.9 c/r=0.9882 rule2=0.9879 | reference-first r=378.5 c=380.7 c/r=1.0058 rule2=1.0055 | 0.9967 |
+| medium/1 | median | candidate-first r=246.9 c=246.4 c/r=0.9980 rule2=0.9976 | reference-first r=247.4 c=247.6 c/r=1.0008 rule2=1.0004 | 0.9990 |
+| medium/1 | p95 | candidate-first r=266.6 c=264.4 c/r=0.9917 rule2=0.9914 | reference-first r=264.7 c=267.2 c/r=1.0094 rule2=1.0091 | 1.0002 |
+| medium/8 | median | reference-first r=420.3 c=420.1 c/r=0.9995 rule2=0.9993 | candidate-first r=421.2 c=421.5 c/r=1.0007 rule2=1.0005 | 0.9999 |
+| medium/8 | p95 | reference-first r=446.9 c=436.9 c/r=0.9776 rule2=0.9774 | candidate-first r=442.3 c=438.9 c/r=0.9923 rule2=0.9921 | 0.9847 |
+| high/1 | median | reference-first r=246.8 c=247.2 c/r=1.0016 rule2=1.0012 | candidate-first r=247.0 c=245.6 c/r=0.9943 rule2=0.9939 | 0.9976 |
+| high/1 | p95 | reference-first r=265.7 c=265.1 c/r=0.9977 rule2=0.9974 | candidate-first r=265.8 c=265.0 c/r=0.9970 rule2=0.9966 | 0.9970 |
+| high/8 | median | candidate-first r=420.2 c=420.7 c/r=1.0012 rule2=1.0010 | reference-first r=419.9 c=420.7 c/r=1.0019 rule2=1.0017 | 1.0013 |
+| high/8 | p95 | candidate-first r=440.2 c=438.3 c/r=0.9957 rule2=0.9955 | reference-first r=439.4 c=437.1 c/r=0.9948 rule2=0.9945 | 0.9950 |
+
+### Qualifying session 1 (candidate against reference)
+
+Nonce `a16b4bbfea250ea1013d364dc385651a`, valid, passed. Rule 1: 192 comparisons, 0 violations; largest candidate-to-reference ratio 1.1429 (renderMs median, profile 1/low/1 (run/tier/actors): reference 0.7 ms, other arm 0.8 ms); largest share of a bound used 0.8205; 0 comparisons within 10% of their bound. Rule 2: 86 aggregates pass, 10 rule-1-only, 0 violations; largest aggregate 0.9986 (tier-low, frameIntervalMs p95). Frame interval, median: all 0.9970, actors-1 0.9981, actors-8 0.9863, tier-low 0.9981, tier-medium 0.9970, tier-high 0.9984. Frame interval, p95: all 0.9925, actors-1 0.9971, actors-8 0.9862, tier-low 0.9986, tier-medium 0.9925, tier-high 0.9971. Validity, largest values: gross instability 1.0099, ratio agreement 1.0085. Arm difference as the runner recorded it: 137 files compared, 5 differing (the five owner files), the same after the last pair. Unchanged frozen command on its candidate arm: a result line was printed (every structural predicate held), exit 1, 21 of 192 over.
+
+### Evidence identities (SHA-256)
+
+- `evidence/07-paired-session-registry.json`: `d81f5b13dbc4f89e1008265fbeca81c10e5770a642b5a34f9eb21bb9543be4b6` (9 events, chain valid, every event committed, every committed version a prefix).
+- `evidence/07-18-paired-calibration.json`: `f14eaa343d0dbedbbcd81dce1be263fcfb63acf3de8a616d712813114167edf9`.
+- `evidence/07-18-paired-session-1.json`: `9b5e21205ba917a0b9c40bdea6fbb6b463c0d1bde7ddeab1cadac180b57a4377`.
+- `evidence/07-18-cost-candidate.json` (candidate arm of session 1, the recorded candidate): `339857fec29f04ea663f4be420ec11926fd069be392402a3b8bc5ec343819424`.
+- `evidence/07-18-timing-result.json`: `92cf5e59c805fce5190fa425d8fb9ae72ecdd7ae718695fb84cb287135ff653c`.
+- `evidence/07-09-qualification.json` (current record, built by `node tools/art/stable-gates.mjs plan09`): `13e0e6e5ea168eff7dc13b8b43d4525dcbb302cd3e9875fa950447230fa8244a`.
+- `evidence/07-09-qualification-halted-2026-10-07.json` (the halted record, byte for byte): `564799e5b272755bc1a45d394ef89fca6ba4397410608d2278e7a9c6df32c304`.
+- Both required browser assertions (`throw1ms`, `repeated-removal-keeper`) are read from the full offline gate of plan 07-17: log `.planning/research/.cache/07-17-gates/offline.log`, SHA-256 `a2e9eb31818e300711e56f365480959847110a39b8e9e57b01ccb011303f05a5`, exit 0, on the second of two full runs.
+
+### Limits
+
+- Earlier failed captures remain historical and unchanged. No earlier report became a pass, and the frozen budget, the frozen reference and `tools/art/animation-budget-v2.mjs` are byte-identical.
+- Software rendering on one desktop, offline Training Range, 1 and 8 source actors. Not device or frame-rate certification, and no human motion or aesthetic acceptance (row D4 stays human judgment).
+- The source identity does not cover the two weapon FBX files, the installed packages or the Vite configuration (review note N-04); the owner decided to keep it so.
+- Reports invented from scratch cannot be told from captured ones by any tool; git history and the owner are the evidence that these sessions were captured (review J-01).
+- Checking this qualification needs the session directories under the gitignored `.planning/research/.cache/06-art/animation-paired/` on this machine and an unchanged source identity.
+- An available measurement that was not run: the exact frozen source can be rebuilt byte for byte (contract section 12) and captured on today's host. It would show directly how much of the frozen overruns is the machine. No plan has run it.
+- No requirement is marked complete here; that belongs to phase verification.
