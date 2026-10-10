@@ -1479,6 +1479,7 @@ async function sessionByTheTool(state, kind, result = 'pass') {
     runFrozen: async name => frozenRunOf(sha(state.files[name]), 3),
     context: { revision: 'c'.repeat(40), browserVersion: REFERENCE.device.browser, hostBefore: { note: 'before' }, armIdentities, paths,
       knownReportHashes: [], device: Object.fromEntries(Object.entries(REFERENCE.device).filter(([key]) => key !== 'rendererClass')),
+      frozenDevices: { [paired.FROZEN_BUDGET_PATH]: V2_BUDGET.device },
       runtimeDependencies: { reference: { note: 'synthetic' }, candidate: { note: 'synthetic' } }, baselineSha256: REFERENCE.baselineSha256,
       compare: () => structuredClone(REFERENCE.comparison), v2Budget: V2_BUDGET, v2BudgetBytes: V2_BUDGET_BYTES } });
   assert.equal(run.closed.outcome, { pass: 'passed', fail: 'failed', invalid: 'invalid' }[result], `${kind} ${result}`);

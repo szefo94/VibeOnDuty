@@ -1811,6 +1811,7 @@ function runnerRig(kind, options = {}) {
   const context = { revision: COMMIT, browserVersion: BROWSER, hostBefore: { note: 'before' }, armIdentities: identities, paths: RUNNER_PATHS,
     knownReportHashes: [], difference: structuredClone(DIFFERENCE),
     device: Object.fromEntries(Object.entries(frozenReference.device).filter(([key]) => key !== 'rendererClass')),
+    frozenDevices: { [EVIDENCE + '07-budget-view-v2.json']: structuredClone(v2Budget.device) },
     runtimeDependencies: { reference: { note: 'synthetic' }, candidate: { note: 'synthetic' } },
     baselineSha256: frozenReference.baselineSha256, compare: () => structuredClone(frozenReference.comparison), v2Budget, v2BudgetBytes };
   return { kind, trace, effects, context, registered, pairs, tick, registry: () => registry,
@@ -2415,4 +2416,108 @@ test('the verify command line, run with its output captured, refuses the recorde
   assert.equal(paired.verifyFacts(run, { kind: 'qualifying', nonce: SESSION_NONCE }), null);
   for (const name of ['../outside.json', path.join(tmpdir(), 'outside.json'), ''])
     assert.throws(() => paired.runVerifyCommand(name), /Path escapes owned root/, name);
+});
+
+// =============================================================================================
+// Review finding I-02: a session is not started on a host that is not the frozen device
+// =============================================================================================
+// An arm report carries the host's device block. The comparison stored in the report and the
+// unchanged frozen command both compare that block whole with a frozen one, so on another OS
+// release, Node version, CPU string or browser build every arm fails and the session closes invalid.
+
+const FROZEN_DEVICE = { hostname: 'FROZEN-HOST', os: 'Windows_NT', release: '10.0.19045', arch: 'x64',
+  cpu: 'Synthetic CPU 6-Core Processor              ', node: 'v24.19.0', browser: '147.0.7727.15', rendererClass: 'software' };
+const hostOf = (change = {}) => ({ ...Object.fromEntries(Object.entries(FROZEN_DEVICE).filter(([name]) => name !== 'rendererClass')), ...change });
+const FROZEN_DEVICES = { 'evidence/07-budget.json': FROZEN_DEVICE, 'evidence/07-budget-view-v2.json': structuredClone(FROZEN_DEVICE) };
+
+test('host device: the frozen device passes, and another OS release, Node version, CPU string or browser build is refused, naming the field', () => {
+  assert.equal(typeof paired.assertHostDevice, 'function');
+  assert.equal(paired.assertHostDevice(hostOf(), FROZEN_DEVICES), true);
+  for (const [name, value] of [['release', '10.0.22631'], ['node', 'v24.20.0'], ['cpu', 'Synthetic CPU 6-Core Processor'], ['browser', '148.0.7778.0'],
+    ['hostname', 'OTHER-HOST'], ['os', 'Linux'], ['arch', 'arm64']])
+    assert.throws(() => paired.assertHostDevice(hostOf({ [name]: value }), FROZEN_DEVICES), new RegExp(
+      `^Error: Run refused: this host is not the frozen device its arm reports would be compared with \\(evidence/07-budget\\.json\\): ${name} is `), name);
+  // The CPU string is compared as it is stored, trailing spaces included, as the frozen comparisons do.
+  assert.notEqual(hostOf().cpu, hostOf().cpu.trim());
+  // A field the host lacks, and one the frozen device does not have, are differences too.
+  const { node: _node, ...withoutNode } = hostOf();
+  assert.throws(() => paired.assertHostDevice(withoutNode, FROZEN_DEVICES), /node is undefined here and "v24\.19\.0" there/);
+  assert.throws(() => paired.assertHostDevice(hostOf({ gpuDriver: '1.0' }), FROZEN_DEVICES), /gpuDriver is "1\.0" here and undefined there/);
+  assert.throws(() => paired.assertHostDevice(undefined, FROZEN_DEVICES), /this host is not the frozen device/);
+  // Every frozen source is compared: one that differs is named.
+  assert.throws(() => paired.assertHostDevice(hostOf(), { ...FROZEN_DEVICES, 'evidence/07-budget-view-v2.json': { ...FROZEN_DEVICE, node: 'v22.0.0' } }),
+    /\(evidence\/07-budget-view-v2\.json\): node is "v24\.19\.0" here and "v22\.0\.0" there/);
+  // The renderer class is read from the samples after a capture and is not compared here, on either side.
+  assert.equal(paired.assertHostDevice(hostOf(), { one: { ...FROZEN_DEVICE, rendererClass: 'physical-or-unidentified' } }), true);
+  assert.equal(paired.assertHostDevice(hostOf({ rendererClass: 'software' }), FROZEN_DEVICES), true);
+  // With nothing to compare with, nothing is started.
+  for (const frozen of [undefined, null, {}, [], { one: null }, { one: 'device' }])
+    assert.throws(() => paired.assertHostDevice(hostOf(), frozen), /^Error: Run refused: .*nothing was started or written$/, JSON.stringify(frozen));
+  // The message names no gate state.
+  try { paired.assertHostDevice(hostOf({ node: 'v1' }), FROZEN_DEVICES); assert.fail('not refused'); }
+  catch (error) { assert.doesNotMatch(error.message, /halted|unqualified/); assert.match(error.message, /Nothing was started or written, and the registration stays as it is$/); }
+});
+
+test('host device: the runner refuses a calibration and a qualifying session before the started event, and appends, captures, writes and logs nothing', async () => {
+  for (const kind of ['calibration', 'qualifying']) for (const [name, value] of [['release', '10.0.22631'], ['node', 'v24.20.0'],
+    ['cpu', frozenReference.device.cpu.trim() + '!'], ['browser', '148.0.7778.0']]) {
+    const rig = runnerRig(kind), label = `${kind} ${name}`, before = structuredClone(rig.registry());
+    assert.notEqual(rig.context.device[name], value, label);
+    rig.context.device[name] = value;
+    await assert.rejects(paired.runSession(rig.input()), new RegExp(`^Error: Run refused: this host is not the frozen device .*: ${name} is `), label);
+    assert.deepEqual(rig.trace, [], label);
+    assert.deepEqual(rig.registry(), before, label);
+    assert.equal(rig.registry().events.some(event => event.nonce === SESSION_NONCE && event.type !== 'registered'), false, label);
+  }
+  // The frozen side is every budget the arm reports will be compared with: one of them differing refuses as well.
+  const other = runnerRig('calibration');
+  other.context.frozenDevices['evidence/07-budget.json'] = { ...frozenReference.device, release: '10.0.17763' };
+  await assert.rejects(paired.runSession(other.input()), /\(evidence\/07-budget\.json\): release is /);
+  assert.deepEqual(other.trace, []);
+  // A runner that is given no frozen device starts nothing.
+  const none = runnerRig('qualifying');
+  delete none.context.frozenDevices;
+  await assert.rejects(paired.runSession(none.input()), /^Error: Run refused: no frozen device to compare this host with/);
+  assert.deepEqual(none.trace, []);
+  // On the frozen device both kinds run as before, and a smoke, which builds no arm report, is not compared at all.
+  for (const kind of ['calibration', 'qualifying']) assert.equal((await runner(kind)).closed.outcome, 'passed', kind);
+  const smoke = runnerRig('smoke');
+  smoke.context.device.node = 'v1.0.0';
+  delete smoke.context.frozenDevices;
+  assert.equal((await paired.runSession(smoke.input())).closed.outcome, 'loaded');
+});
+
+// The text of one exported async function of review.mjs, up to the next top-level declaration.
+async function reviewFunction(name) {
+  const source = readFileSync(new URL('./review.mjs', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const start = source.indexOf(`export async function ${name}(`);
+  assert.ok(start > 0, name);
+  const end = source.slice(start + 1).search(/\n(?:export |const |async function |function |if \()/);
+  return source.slice(start, end === -1 ? source.length : start + 1 + end);
+}
+
+test('host device: review.mjs refuses before a calibration or qualifying session is registered, and before a run materialises or starts anything', async () => {
+  // The frozen devices are read from the two budgets an arm report is compared with, by the function that hands them to the comparisons.
+  const { pairedReportInputs } = await import('./review.mjs');
+  const inputs = await pairedReportInputs();
+  assert.deepEqual(inputs.frozenDevices, {
+    [EVIDENCE + '07-budget.json']: JSON.parse(readFileSync(path.join(ROOT, EVIDENCE, '07-budget.json'), 'utf8')).device,
+    [EVIDENCE + '07-budget-view-v2.json']: v2Budget.device });
+  assert.equal(inputs.v2Budget.device, inputs.frozenDevices[EVIDENCE + '07-budget-view-v2.json']);
+  for (const device of Object.values(inputs.frozenDevices))
+    assert.deepEqual(Object.keys(device).sort(), ['arch', 'browser', 'cpu', 'hostname', 'node', 'os', 'release', 'rendererClass']);
+  // Registration: the check precedes the registration and the write of the registry, and a smoke is left out.
+  const register = await reviewFunction('registerPairedSession');
+  const check = register.indexOf('if (kind !== \'smoke\') paired.assertHostDevice(pairedHostDevice(await pairedBrowserVersion()), (await pairedReportInputs()).frozenDevices);');
+  assert.ok(check > 0, 'registration checks the host');
+  assert.ok(check < register.indexOf('paired.registerSession(') && check < register.indexOf('paired.writeRegistry('));
+  // Run: one device block is built, compared, and handed on unchanged; the check precedes the arms, the listeners and the runner.
+  const run = await reviewFunction('runPairedSession');
+  const built = run.indexOf('device = pairedHostDevice(browserVersion);'), compared = run.indexOf('if (full) paired.assertHostDevice(device, inputs.frozenDevices);');
+  assert.ok(built > 0 && compared > built, 'the run checks the host');
+  for (const later of ['paired.materializeArms(', 'await serveArm(', 'paired.runSession(', 'paired.appendEvent(', 'fs.mkdir('])
+    assert.ok(run.indexOf(later) > compared, later);
+  assert.ok(run.indexOf('browserVersion = browser.version();') < built);
+  assert.match(run, /\n {10}device, frozenDevices: inputs\.frozenDevices \} : \{\}\) \} \}\);/);
+  assert.equal(run.split('pairedHostDevice(').length - 1, 1);
 });
