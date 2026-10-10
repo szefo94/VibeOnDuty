@@ -1367,6 +1367,8 @@ export function runFrozenCommand(candidate, budget = FROZEN_BUDGET_PATH) {
 // ---- the session runner (contract sections 3, 7 and 8) -------------------------------------------------------
 
 export const SMOKE_PAIR = Object.freeze({ warmup: false, run: 1, tier: 'low', actorCount: 1, first: orderFor(1, 0, 0) });
+// task 07-16-03, RED: neutral, so the lifetime control fails on its own assertion
+export function pairCapturer() { return { capturePair: async () => ({}), closeAll: async () => {} }; }
 const jsonBytes = value => Buffer.from(JSON.stringify(value, null, 2) + '\n');
 const ARM_LIMITS = 'One arm of a paired same-session capture (paired-same-session-v2): the controlled Training Range workload of the ' +
   'frozen V2 candidate capture, with the archived sampler unchanged, 214 measured frames per profile, software rendering. An arm ' +

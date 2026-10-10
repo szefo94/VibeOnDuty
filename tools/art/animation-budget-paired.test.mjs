@@ -2265,3 +2265,74 @@ test('a calibration materialises two reference copies: no file differs between t
     assert.equal(paired.materializeArms({ ...qualifying.registered, kind: 'qualifying' }, qualifying.options()).difference.count, 5);
   } finally { qualifying.remove(); }
 });
+
+// ---- context and page lifetime ------------------------------------------------------------------------------
+
+// The capture of the pairs with opening, sampling and closing replaced by recorders.
+function capturerRig(pairs, options = {}) {
+  const events = [];
+  let views = 0, time = T0;
+  const capturer = paired.pairCapturer({ pairs,
+    openView: async arm => { const view = { id: ++views, arm, open: true }; events.push(['open', arm, view.id]); return view; },
+    sample: async (view, arm, pair) => {
+      events.push(['sample', arm, view.id, view.open, `${pair.warmup ? 'warm-up' : pair.run}/${pair.tier}/${pair.actorCount}`]);
+      if (options.failAt === events.filter(event => event[0] === 'sample').length) throw Error('the page crashed');
+      return { tier: pair.tier, actorCount: pair.actorCount, raw: true };
+    },
+    finish: async (sample, arm, pair) => ({ ...sample, run: pair.run, arm }),
+    closeView: async view => { view.open = false; events.push(['close', view.arm, view.id]); },
+    now: () => new Date(time += 1000).toISOString() });
+  return { events, capturer, of: type => events.filter(event => event[0] === type) };
+}
+
+test('context and page lifetime: for the warm-up and for each run one fresh view per arm, opened immediately before that arm\'s first capture in it and closed when its last pair is captured', async () => {
+  const pairs = paired.sessionScheme(), rig = capturerRig(pairs), captured = [];
+  for (const [index, pair] of pairs.entries()) captured.push(await rig.capturer.capturePair(pair, index));
+  // Six views: two for the warm-up, two for run 1, two for run 2; the arm that is captured first is opened first.
+  assert.deepEqual(rig.of('open').map(event => event[1]), ['reference', 'candidate', 'reference', 'candidate', 'candidate', 'reference']);
+  // A view is opened immediately before its arm's first capture in the warm-up or run.
+  for (const [index, event] of rig.events.entries()) if (event[0] === 'open')
+    assert.deepEqual(rig.events[index + 1].slice(0, 3), ['sample', event[1], event[2]], `view ${event[2]}`);
+  // The warm-up has its own two views, closed before run 1 begins.
+  assert.deepEqual(rig.events.slice(0, 6).map(event => event.slice(0, 3)), [['open', 'reference', 1], ['sample', 'reference', 1],
+    ['open', 'candidate', 2], ['sample', 'candidate', 2], ['close', 'reference', 1], ['close', 'candidate', 2]]);
+  // Every view is sampled while open, once in the warm-up and six times in a run, and closed once.
+  assert.ok(rig.of('sample').every(event => event[3] === true));
+  assert.deepEqual([1, 2, 3, 4, 5, 6].map(id => rig.of('sample').filter(event => event[2] === id).length), [1, 1, 6, 6, 6, 6]);
+  assert.deepEqual(rig.of('close').map(event => event[2]).sort(), [1, 2, 3, 4, 5, 6]);
+  // A run's views are closed when its last pair is captured, and not before: run 1 ends with High/8.
+  const lastOfRun1 = rig.events.findLastIndex(event => event[0] === 'sample' && event[4] === '1/high/8');
+  assert.deepEqual(rig.events.slice(lastOfRun1 + 1, lastOfRun1 + 4).map(event => event[0]), ['close', 'close', 'open']);
+  assert.deepEqual(rig.events.slice(6, lastOfRun1).filter(event => event[0] === 'close'), []);
+  assert.deepEqual(rig.events.slice(-2).map(event => event[0]), ['close', 'close']);
+  // Never more than one view per arm at a time.
+  const open = new Set();
+  for (const event of rig.events) {
+    if (event[0] === 'open') { assert.equal(open.has(event[1]), false, `two ${event[1]} views at once`); open.add(event[1]); }
+    if (event[0] === 'close') open.delete(event[1]);
+  }
+  assert.equal(open.size, 0);
+  // The arms are captured in the order of the scheme, one capture at a time, and each capture has its start and end time.
+  assert.deepEqual(rig.of('sample').map(event => event[1]), pairs.flatMap(pair => pair.first === 'reference-first'
+    ? ['reference', 'candidate'] : ['candidate', 'reference']));
+  const times = [];
+  for (const [index, pair] of pairs.entries()) {
+    const [first, second] = pair.first === 'reference-first' ? ['reference', 'candidate'] : ['candidate', 'reference'];
+    times.push(captured[index][first].startedAt, captured[index][first].endedAt, captured[index][second].startedAt, captured[index][second].endedAt);
+    assert.deepEqual(captured[index][first].sample, { tier: pair.tier, actorCount: pair.actorCount, raw: true, run: pair.run, arm: first }, `pair ${index}`);
+  }
+  assert.deepEqual(times, [...times].sort());
+  assert.equal(new Set(times).size, 52);
+  // A smoke captures its one pair under the same rule.
+  const smoke = capturerRig([paired.SMOKE_PAIR]);
+  await smoke.capturer.capturePair(paired.SMOKE_PAIR, 0);
+  assert.deepEqual(smoke.events.map(event => event.slice(0, 3)), [['open', 'reference', 1], ['sample', 'reference', 1],
+    ['open', 'candidate', 2], ['sample', 'candidate', 2], ['close', 'reference', 1], ['close', 'candidate', 2]]);
+  // A capture that fails leaves its views to be closed by the caller, which closeAll does.
+  const failed = capturerRig(pairs, { failAt: 4 });
+  await failed.capturer.capturePair(pairs[0], 0);
+  await assert.rejects(failed.capturer.capturePair(pairs[1], 1), /the page crashed/);
+  assert.deepEqual(failed.of('close').map(event => event[2]), [1, 2]);
+  await failed.capturer.closeAll();
+  assert.deepEqual(failed.of('close').map(event => event[2]).sort(), [1, 2, 3, 4]);
+});
