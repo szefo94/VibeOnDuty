@@ -11,6 +11,7 @@
 // limits, a frame rate, a device or a human acceptance.
 //
 //   node tools/art/animation-budget-paired.mjs chain --registry <registry>
+//   node tools/art/animation-budget-paired.mjs verify --budget <frozen V2 budget> --session <session report> --registry <registry>
 //
 // Sessions are registered and run through `node tools/art/review.mjs --animation-paired`.
 import assert from 'node:assert/strict';
@@ -22,7 +23,7 @@ import {
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { COMPONENTS, canonical, sha256 } from './animation-budget-v2.mjs';
+import { COMPONENTS, canonical, qualify, sha256 } from './animation-budget-v2.mjs';
 import { ROOT, boundedPath } from './motion-acceptance.mjs';
 
 const PHASE = '.planning/phases/07-movement-matched-and-action-safe-animation/';
@@ -560,7 +561,195 @@ export function smokeReport({ nonce, identity, commit, registrationEventHash, st
       'calibration, not a qualification and not a pass of any gate.' };
 }
 
-// ---- timing predicate (contract section 4): rule 1 ------------------------------------------------
+// ---- session shape (contract section 3) --------------------------------------------------------------
+
+const ARMS = Object.freeze(['reference', 'candidate']);
+const profileKey = entry => `${entry?.run}/${entry?.tier}/${entry?.actorCount}`;
+
+/** The warm-up pair and the 12 pairs in capture order, each with the arm that is captured first. */
+export function sessionScheme() {
+  const scheme = [{ warmup: true, run: 1, tier: 'low', actorCount: 1, first: 'reference-first' }];
+  for (const run of [1, 2]) for (const [tierIndex, tier] of TIERS.entries()) for (const [actorIndex, actorCount] of ACTOR_COUNTS.entries())
+    scheme.push({ warmup: false, run, tier, actorCount, first: orderFor(run, tierIndex, actorIndex) });
+  return scheme;
+}
+const PROFILE_KEYS = Object.freeze(sessionScheme().slice(1).map(profileKey));
+
+// ---- single-invocation binding (contract section 7) --------------------------------------------------
+
+/** Rejects an arm report that was not made by this session's one capture invocation. The result
+ *  goes into the session record; `sessionValidity` reads it from there. `knownReportHashes` are
+ *  the hashes of reports that exist outside any session (the frozen reference, single-arm
+ *  candidates); arm reports of earlier sessions are read from the registry's closed events. */
+export function bindingCheck(session, knownReportHashes = [], registry = emptyRegistry()) {
+  const reasons = [], known = new Set(knownReportHashes), nonce = session?.nonce, events = registry?.events ?? [];
+  const started = events.find(event => event.nonce === nonce && event.type === 'started');
+  const closed = events.find(event => event.nonce === nonce && event.type === 'closed');
+  if (!started) reasons.push('the registry holds no started event for this session');
+  const earlier = new Set(events.filter(event => event.type === 'closed' && event.nonce !== nonce)
+    .flatMap(event => Object.values(event.reportHashes ?? {})));
+  const captures = [];
+  for (const arm of ARMS) {
+    const entry = session?.arms?.[arm], block = entry?.report?.paired;
+    if (!block?.nonce) reasons.push(`the ${arm} arm report has no nonce`);
+    else if (block.nonce !== nonce) reasons.push(`the ${arm} arm report carries another nonce`);
+    if (!HEX64.test(entry?.sha256 ?? '')) reasons.push(`the ${arm} arm report has no hash`);
+    else {
+      if (known.has(entry.sha256)) reasons.push(`the ${arm} arm report is equal in hash to an existing report`);
+      if (earlier.has(entry.sha256)) reasons.push(`the ${arm} arm report is equal in hash to a report of an earlier session`);
+    }
+    for (const capture of Array.isArray(block?.captures) ? block.captures : [])
+      captures.push({ arm, key: `${arm}:${capture?.warmup === true ? 'warm-up' : 'pair'}:${profileKey(capture)}`,
+        start: Date.parse(capture?.startedAt), end: Date.parse(capture?.endedAt) });
+  }
+  if (HEX64.test(session?.arms?.reference?.sha256 ?? '') && session.arms.reference.sha256 === session.arms.candidate?.sha256)
+    reasons.push('the two arm reports are one report: each is equal in hash to the other arm');
+  const expected = sessionScheme().flatMap(entry => (entry.first === 'reference-first' ? ARMS : [...ARMS].reverse())
+    .map(arm => `${arm}:${entry.warmup ? 'warm-up' : 'pair'}:${profileKey(entry)}`));
+  if (captures.length !== expected.length || !captures.every(capture => Number.isFinite(capture.start) &&
+    Number.isFinite(capture.end) && capture.end > capture.start))
+    reasons.push('capture times do not interleave with the other arm\'s as section 3 requires: a capture or its start and end time is missing');
+  else {
+    const ordered = [...captures].sort((a, b) => a.start - b.start);
+    if (ordered.some((capture, index) => capture.key !== expected[index]))
+      reasons.push('capture times do not interleave with the other arm\'s as section 3 requires');
+    if (ordered.some((capture, index) => index > 0 && capture.start < ordered[index - 1].end)) reasons.push('captures overlap in time');
+    if (started && ordered.some(capture => capture.start < Date.parse(started.at))) reasons.push('a capture time lies before the started event');
+    if (closed && ordered.some(capture => capture.end > Date.parse(closed.at))) reasons.push('a capture time lies after the closed event');
+  }
+  return { ok: reasons.length === 0, reasons };
+}
+
+// ---- validity (contract section 5) ---------------------------------------------------------------------
+
+function completeness(session) {
+  const reasons = [];
+  if (!Array.isArray(session?.order) || session.order.length !== 13 || session.order.filter(entry => entry?.warmup === true).length !== 1)
+    reasons.push('the session does not record exactly the warm-up pair and the 12 pairs');
+  for (const arm of ARMS) {
+    const report = session?.arms?.[arm]?.report;
+    if (report?.complete !== true) reasons.push(`the ${arm} arm report is not complete`);
+    const samples = Array.isArray(report?.samples) ? report.samples.map(profileKey) : [];
+    const captures = Array.isArray(report?.paired?.captures) ? report.paired.captures : [];
+    const measured = captures.filter(capture => capture?.warmup !== true).map(profileKey);
+    const warm = captures.filter(capture => capture?.warmup === true);
+    if (warm.length !== 1 || profileKey(warm[0]) !== '1/low/1' || report?.paired?.warmup?.warmup !== true ||
+      profileKey(report.paired.warmup) !== '1/low/1')
+      reasons.push(`the ${arm} arm does not hold exactly one warm-up pair capture (run 1, Low, one actor)`);
+    for (const [what, keys] of [['sample', samples], ['capture', measured]]) {
+      if (keys.length !== 12) reasons.push(`the ${arm} arm holds ${keys.length} profile ${what}s, not 12`);
+      for (const key of PROFILE_KEYS) {
+        const times = keys.filter(candidate => candidate === key).length;
+        if (times !== 1) reasons.push(`the ${arm} arm holds the ${what} of profile ${key} ${times} times`);
+      }
+    }
+  }
+  return { ok: reasons.length === 0, reasons };
+}
+
+function recordedOrder(session) {
+  const scheme = sessionScheme(), order = session?.order, reasons = [];
+  if (!Array.isArray(order) || order.length !== scheme.length)
+    return { ok: false, reasons: ['the recorded order does not list the warm-up pair and the 12 pairs'] };
+  for (const [index, expected] of scheme.entries()) {
+    const entry = order[index];
+    if (entry?.warmup !== expected.warmup || profileKey(entry) !== profileKey(expected))
+      reasons.push(`pair ${index} is ${profileKey(entry)}, the scheme has ${profileKey(expected)} there`);
+    else if (entry.first !== expected.first)
+      reasons.push(`pair ${index} (${profileKey(entry)}) was captured ${entry.first}, the scheme requires ${expected.first}`);
+  }
+  return { ok: reasons.length === 0, reasons };
+}
+
+// Structural checks of both arms. Reading frame images and running the frozen command are done
+// by the caller, which records their results in `session.structural`; a missing result fails.
+function structure(session, contract) {
+  const reasons = [], owners = Object.keys(contract.referenceOwners), producers = {}, calibration = session?.kind === 'calibration';
+  if (!['calibration', 'qualifying'].includes(session?.kind)) reasons.push('the session kind is not calibration or qualifying');
+  for (const arm of ARMS) {
+    try { producers[arm] = qualify(session?.arms?.[arm]?.report); } catch (error) { reasons.push(`the ${arm} arm fails qualify: ${error.message}`); }
+    const frames = session?.structural?.frameImages?.[arm];
+    if (frames?.ok !== true) reasons.push(`the ${arm} arm frame images do not hash to their recorded values` + (frames?.error ? `: ${frames.error}` : ''));
+  }
+  if (producers.reference && producers.candidate && canonical(producers.reference) !== canonical(producers.candidate))
+    reasons.push('the arms have different producer contracts');
+  const reference = session?.arms?.reference?.report?.identities ?? {}, candidate = session?.arms?.candidate?.report?.identities ?? {};
+  if (!HEX64.test(reference.captureSampler ?? '') || reference.captureSampler !== candidate.captureSampler)
+    reasons.push('the arms have different sampler identities');
+  const unequal = [...new Set([...Object.keys(reference), ...Object.keys(candidate)])].sort()
+    .filter(name => (calibration || !owners.includes(name)) && reference[name] !== candidate[name]);
+  for (const name of unequal.slice(0, 8)) reasons.push(`identity differs between the arms: ${name}`);
+  if (unequal.length > 8) reasons.push(`${unequal.length - 8} more identities differ between the arms`);
+  for (const arm of calibration ? ARMS : ['reference']) for (const name of owners)
+    if (session?.arms?.[arm]?.report?.identities?.[name] !== contract.referenceOwners[name].sha256)
+      reasons.push(`the ${arm} arm owner identity is not the pinned reference owner: ${name}`);
+  if (session?.kind === 'qualifying' && session?.structural?.frozen?.resultPrinted !== true)
+    reasons.push('the frozen command printed no result line for the candidate arm');
+  return { ok: reasons.length === 0, reasons };
+}
+
+// Checks 5 and 6: gross instability of the reference arm and agreement of the candidate-to-reference
+// ratio between the two runs of a cell, both on the frame-interval median, both at tSingle.
+function frameIntervalChecks(session, { tSingle, comparisonEpsilonMs: eps }) {
+  const grossInstability = { ok: true, reasons: [], largest: null }, ratioAgreement = { ok: true, reasons: [], largest: null };
+  const exceeds = (a, b) => Math.max(a, b) - Math.min(a, b) * (1 + tSingle) > eps;
+  for (const tier of TIERS) for (const actorCount of ACTOR_COUNTS) {
+    const median = (arm, run) => (session?.arms?.[arm]?.report?.samples ?? []).find(sample =>
+      sample?.run === run && sample.tier === tier && sample.actorCount === actorCount)?.timings?.frameIntervalMs?.median;
+    const r1 = median('reference', 1), r2 = median('reference', 2), c1 = median('candidate', 1), c2 = median('candidate', 2);
+    if (![r1, r2, c1, c2].every(value => Number.isFinite(value) && value > 0)) {
+      ratioAgreement.ok = false;
+      ratioAgreement.reasons.push(`a frame-interval median is not a finite number greater than 0 in cell ${tier}/${actorCount}`);
+      continue;
+    }
+    const spread = Math.max(r1, r2) / Math.min(r1, r2), k1 = c1 / r1, k2 = c2 / r2, disagreement = Math.max(k1, k2) / Math.min(k1, k2);
+    grossInstability.largest = Math.max(grossInstability.largest ?? 0, spread);
+    ratioAgreement.largest = Math.max(ratioAgreement.largest ?? 0, disagreement);
+    if (exceeds(r1, r2)) {
+      grossInstability.ok = false;
+      grossInstability.reasons.push(`the reference frame-interval median differs between run 1 and run 2 by more than tSingle in cell ${tier}/${actorCount}`);
+    }
+    if (exceeds(k1, k2)) {
+      ratioAgreement.ok = false;
+      ratioAgreement.reasons.push(`the candidate-to-reference frame-interval ratio differs between run 1 and run 2 by more than tSingle in cell ${tier}/${actorCount}`);
+    }
+  }
+  return { grossInstability, ratioAgreement };
+}
+
+// A calibration applies to what it ran with: a qualifying session captured under other settings is
+// not covered by it and is not judged (plan 07-16's reading of section 2 item 5, accepted and
+// binding through the contract review's second pass).
+function sameSettings(session, calibration) {
+  if (session?.kind !== 'qualifying') return { ok: true, reasons: [] };
+  if (!calibration?.settings || !session.settings) return { ok: false, reasons: ['no calibration settings are on record to compare with'] };
+  return canonical(session.settings) === canonical(calibration.settings) ? { ok: true, reasons: [] }
+    : { ok: false, reasons: ['context and page lifetime, launch flags or sampler arguments differ from those the calibration recorded'] };
+}
+
+/** The validity block of a session, from fixed criteria only. It is computed, and written into
+ *  the session record, before any rule is evaluated; nothing here reads a rule result. */
+export function sessionValidity(session, contract = PAIRED_CONTRACT, calibration = null) {
+  const binding = session?.binding && typeof session.binding.ok === 'boolean'
+    ? { ok: session.binding.ok, reasons: [...(session.binding.reasons ?? [])] } : { ok: false, reasons: ['the binding was not checked'] };
+  const checks = { complete: completeness(session), order: recordedOrder(session), structure: structure(session, contract), binding,
+    ...frameIntervalChecks(session, contract), settings: sameSettings(session, calibration) };
+  return { valid: Object.values(checks).every(check => check.ok === true),
+    reasons: Object.entries(checks).flatMap(([name, check]) => check.reasons.map(reason => `${name}: ${reason}`)), checks };
+}
+
+/** The closed calibration of a source identity, with the settings it recorded, or null. */
+export function calibrationFor(registry, identity) {
+  const registered = (registry?.events ?? []).find(event => event.type === 'registered' && event.kind === 'calibration' && event.identity === identity);
+  const closed = registered && registry.events.find(event => event.type === 'closed' && event.nonce === registered.nonce);
+  return closed ? { nonce: registered.nonce, valid: closed.valid ?? null, pass: closed.pass ?? null,
+    settings: closed.settings ?? null, browserVersion: closed.browserVersion ?? null } : null;
+}
+
+// ---- timing predicate (contract section 4) -------------------------------------------------------------
+
+const GROUPS = Object.freeze([['all', () => true], ['actors-1', cell => cell.actorCount === 1], ['actors-8', cell => cell.actorCount === 8],
+  ['tier-low', cell => cell.tier === 'low'], ['tier-medium', cell => cell.tier === 'medium'], ['tier-high', cell => cell.tier === 'high']]);
 
 function pairedProfiles(session) {
   const pairs = [];
@@ -576,49 +765,214 @@ function pairedProfiles(session) {
   return pairs;
 }
 
-/** Rule 1, per value: `c <= r * (1 + tSingle) + q`, with the frozen comparison allowance. */
+// What the two tolerances really allow for one component and statistic (contract section 4, R8):
+// the timer step `q` is added to every bound, so 25% and 5% are effective only for large values.
+function appliedTolerance(references, { tSingle, tAggregate, timerQuantumMs: q, comparisonEpsilonMs: eps }) {
+  const min = Math.min(...references), max = Math.max(...references);
+  const rule = tolerance => ({ allowedAtMinMs: min * (1 + tolerance) + q, allowedAtMaxMs: max * (1 + tolerance) + q,
+    effectiveToleranceAtMin: min > eps ? tolerance + q / min : null, effectiveToleranceAtMax: max > eps ? tolerance + q / max : null });
+  return { referenceMinMs: min, referenceMaxMs: max, rule1: rule(tSingle), rule2: rule(tAggregate) };
+}
+
+/** Rules 1 and 2 over the 12 measured pairs. Refuses a record with no validity block and an
+ *  invalid session: validity is decided first and nobody reclassifies afterwards.
+ *
+ *  Rule 1, per value: `c <= r * (1 + tSingle) + q`.
+ *  Rule 2, per group: a profile is usable when `r > eps`; its ratio is `(c - q - eps) / r`; a cell's
+ *  ratio is the mean of the ratios of its usable profiles; a group's aggregate is the frozen
+ *  contract's own `sorted[floor(n/2)]` over the ratios of its cells that have one, and must be at
+ *  most `1 + tAggregate`. A group with fewer than 3 usable profiles is `rule-1-only`. The form uses
+ *  only the design (which runs share a cell): no order effect is measured or subtracted. */
 export function evaluatePaired(session, contract = PAIRED_CONTRACT) {
-  const { tSingle, timerQuantumMs: q, comparisonEpsilonMs: eps } = contract;
-  const violations = [];
-  let comparisons = 0;
-  for (const { profile, reference, candidate } of pairedProfiles(session))
-    for (const component of COMPONENTS) for (const stat of STATS) {
-      const r = reference.timings?.[component]?.[stat], c = candidate.timings?.[component]?.[stat];
-      assert.ok(count(r) && count(c), `Nonfinite timing: ${profile.run}/${profile.tier}/${profile.actorCount} ${component} ${stat}`);
-      comparisons++;
-      const boundMs = r * (1 + tSingle) + q;
-      if (c > boundMs + eps) violations.push({ ...profile, component, stat, referenceMs: r, candidateMs: c, boundMs });
+  assert.ok(session?.validity && typeof session.validity.valid === 'boolean',
+    'Session record has no validity block: validity is decided before any rule is evaluated');
+  assert.equal(session.validity.valid, true, 'An invalid session is not evaluated');
+  const { tSingle, tAggregate, timerQuantumMs: q, comparisonEpsilonMs: eps } = contract;
+  const pairs = pairedProfiles(session), limit = 1 + tAggregate;
+  const rule1 = { comparisons: 0, violations: [] }, rule2 = { groups: [], violations: [] }, applied = {};
+  for (const component of COMPONENTS) {
+    applied[component] = {};
+    for (const stat of STATS) {
+      const values = pairs.map(({ profile, reference, candidate }) =>
+        ({ ...profile, r: reference.timings?.[component]?.[stat], c: candidate.timings?.[component]?.[stat] }));
+      for (const { run, tier, actorCount, r, c } of values) {
+        assert.ok(count(r) && count(c), `Nonfinite timing: ${run}/${tier}/${actorCount} ${component} ${stat}`);
+        rule1.comparisons++;
+        const boundMs = r * (1 + tSingle) + q;
+        if (c > boundMs + eps) rule1.violations.push({ run, tier, actorCount, component, stat, referenceMs: r, candidateMs: c, boundMs });
+      }
+      const cells = [];
+      for (const tier of TIERS) for (const actorCount of ACTOR_COUNTS) {
+        const ratios = values.filter(value => value.tier === tier && value.actorCount === actorCount && value.r > eps)
+          .map(value => (value.c - q - eps) / value.r);
+        cells.push({ tier, actorCount, usableProfiles: ratios.length,
+          ratio: ratios.length ? ratios.reduce((sum, ratio) => sum + ratio, 0) / ratios.length : null });
+      }
+      for (const [group, belongs] of GROUPS) {
+        const members = cells.filter(belongs), usableProfiles = members.reduce((sum, cell) => sum + cell.usableProfiles, 0);
+        const sorted = members.filter(cell => cell.ratio !== null).map(cell => cell.ratio).sort((a, b) => a - b);
+        const aggregate = usableProfiles >= 3 ? sorted[Math.floor(sorted.length / 2)] : null;
+        const status = aggregate === null ? 'rule-1-only' : aggregate > limit ? 'fail' : 'pass';
+        rule2.groups.push({ group, component, stat, status, aggregate, limit, usableProfiles, cells: members.map(cell => ({ ...cell })) });
+        if (status === 'fail') rule2.violations.push({ group, component, stat, aggregate, limit });
+      }
+      applied[component][stat] = appliedTolerance(values.map(value => value.r), contract);
     }
-  return { rule1: { comparisons, violations }, pairedBudgetPass: violations.length === 0 };
-}
-
-// ---- task 07-16-02, RED: exported with neutral shapes so each control fails on its own assertion ----
-
-/** The warm-up pair and the 12 pairs in capture order, each with the arm that is captured first. */
-export function sessionScheme() {
-  const scheme = [{ warmup: true, run: 1, tier: 'low', actorCount: 1, first: 'reference-first' }];
-  for (const run of [1, 2]) for (const [tierIndex, tier] of TIERS.entries()) for (const [actorIndex, actorCount] of ACTOR_COUNTS.entries())
-    scheme.push({ warmup: false, run, tier, actorCount, first: orderFor(run, tierIndex, actorIndex) });
-  return scheme;
-}
-export function bindingCheck() { return { ok: null, reasons: [] }; }
-export function sessionValidity() {
-  return { valid: null, reasons: [], checks: Object.fromEntries(['complete', 'order', 'structure', 'binding', 'grossInstability',
-    'ratioAgreement', 'settings'].map(name => [name, { ok: null, reasons: [] }])) };
-}
-export function calibrationFor() { return null; }
-export function sessionReport() { return {}; }
-export async function verifySession() { return { result: {}, exitCode: null }; }
-
-// ---- command line -----------------------------------------------------------------------------------
-
-async function cli() {
-  const [operation, ...flags] = process.argv.slice(2), values = {};
-  for (let i = 0; i < flags.length; i += 2) {
-    assert.ok(['--registry'].includes(flags[i]) && flags[i + 1] && !values[flags[i]], 'Invalid arguments');
-    values[flags[i]] = flags[i + 1];
   }
-  assert.equal(operation, 'chain', 'Use chain --registry <registry>');
+  return { rule1, rule2, tolerances: { tSingle, tAggregate, timerQuantumMs: q, comparisonEpsilonMs: eps, applied },
+    pairedBudgetPass: rule1.violations.length === 0 && rule2.violations.length === 0 };
+}
+
+// ---- session report and verify ---------------------------------------------------------------------------
+
+/** The session report, built once from the in-memory session after validity (and, for a valid
+ *  session only, the rules) is known. Its bytes are hashed into the `closed` event. */
+export function sessionReport({ session, evaluation = null, registrationEventHash, startedEventHash, host = null, armPaths },
+  contract = PAIRED_CONTRACT) {
+  assert.ok(session?.validity && typeof session.validity.valid === 'boolean', 'Session record has no validity block');
+  assert.equal(evaluation !== null, session.validity.valid, 'The rules are evaluated for a valid session, and only for one');
+  const frozen = session.structural?.frozen;
+  return { schemaVersion: 1, kind: session.kind, complete: session.validity.checks?.complete?.ok === true,
+    contractVersion: contract.version, nonce: session.nonce, identity: session.identity ?? null,
+    contract: { v2Sha256: contract.v2Sha256, decisionSha256: contract.decisionSha256, v2ReviewSha256: contract.v2ReviewSha256 },
+    registrationEventHash, startedEventHash,
+    arms: Object.fromEntries(ARMS.map(arm => [arm, { path: armPaths[arm], sha256: session.arms[arm].sha256 }])),
+    order: structuredClone(session.order), settings: structuredClone(session.settings), browserVersion: session.browserVersion ?? null, host,
+    // Recorded and marked as warm-up; used by no rule, no validity check and no verdict.
+    warmup: Object.fromEntries(ARMS.map(arm => [arm, session.arms[arm].report?.paired?.warmup?.timings ?? null])),
+    frameImages: session.structural?.frameImages ?? null, binding: session.binding ?? null,
+    validity: structuredClone(session.validity),
+    outcome: !session.validity.valid ? 'invalid' : evaluation.pairedBudgetPass ? 'passed' : 'failed',
+    evaluation,
+    ...(session.kind === 'qualifying' ? { frozen: { resultPrinted: frozen?.resultPrinted === true, exitCode: frozen?.exitCode ?? null,
+      overrunCount: frozen?.overrunCount ?? null, applicableBudgetPass: frozen?.applicableBudgetPass ?? null,
+      exitZeroObserved: frozen?.exitCode === 0 } } : {}),
+    certification: false,
+    meaning: 'One paired session under paired-same-session-v2. A session outcome is not a verdict: the verdict is computed ' +
+      'from the registry over every qualifying session and is always worded with its denominator. A calibration has no ' +
+      'candidate arm and qualifies nothing. No outcome here means the original absolute limits were met, a frame rate, ' +
+      'a device or a human acceptance; see section 10 of the contract.' };
+}
+
+/** The result line of the unchanged frozen command, or null when it printed only an error. */
+function frozenResult(run) {
+  const line = String(run?.stdout ?? '').split(/\r?\n/).filter(text => text.trim()).at(-1);
+  let parsed;
+  try { parsed = JSON.parse(line); } catch { return null; }
+  if (!parsed || typeof parsed.applicableBudgetPass !== 'boolean' || !Array.isArray(parsed.overruns)) return null;
+  // It prints a result at exit 0, and at exit 1 when the only failures are numeric overruns.
+  return (run.exitCode === 0 && parsed.applicableBudgetPass) || (run.exitCode === 1 && !parsed.applicableBudgetPass) ? parsed : null;
+}
+
+/** Verify one closed calibration or qualifying session. A reader: it writes nothing. Every effect
+ *  is injected (`readArm`, `hashFrameImages`, `runFrozen`), so the order and the refusals are
+ *  testable. It refuses unless the given bytes are the bytes the runner hashed into the `closed`
+ *  event, recomputes validity and, for a valid session only, the rules, and refuses when either
+ *  differs from the report. Returns the result line and the exit code. */
+export async function verifySession({ sessionBytes, registry, readArm, hashFrameImages, runFrozen, knownReportHashes = [],
+  readContract, contract = PAIRED_CONTRACT }) {
+  assertContract(readContract, contract);
+  verifyChain(registry);
+  const bytes = Buffer.from(sessionBytes), report = JSON.parse(bytes.toString('utf8'));
+  const events = registry.events.filter(event => event.nonce === report.nonce);
+  const registered = events.find(event => event.type === 'registered'), closed = events.find(event => event.type === 'closed');
+  if (!registered) throw Error('Session is not in the registry');
+  if (registered.kind === 'smoke' || report.kind === 'smoke') throw Error('A smoke is never evaluated');
+  if (!closed) throw Error('Session has no closed event in the registry');
+  assert.equal(report.kind, registered.kind, 'Session report kind differs from its registration');
+  if (sha256(bytes) !== closed.reportHashes?.session) throw Error('Session report differs from the bytes hashed in its closed event');
+  const arms = {};
+  for (const arm of ARMS) {
+    const armBytes = Buffer.from(await readArm(arm, report.arms?.[arm]?.path));
+    if (sha256(armBytes) !== closed.reportHashes?.[arm] || sha256(armBytes) !== report.arms?.[arm]?.sha256)
+      throw Error(`The ${arm} arm report differs from the bytes hashed in its closed event`);
+    arms[arm] = { report: JSON.parse(armBytes.toString('utf8')), sha256: sha256(armBytes) };
+  }
+  if (!report.validity || typeof report.validity.valid !== 'boolean') throw Error('Session report has no validity block');
+  const session = { kind: registered.kind, nonce: report.nonce, identity: registered.identity, order: report.order,
+    settings: report.settings, browserVersion: report.browserVersion, arms, structural: { frameImages: {} } };
+  for (const arm of ARMS) session.structural.frameImages[arm] = await hashFrameImages(arms[arm].report, arm);
+  let frozen = null;
+  if (session.kind === 'qualifying') {
+    // The frozen file, current-source and pixel checks are private to the frozen tool; they are
+    // obtained by running it, unchanged, on the candidate arm. A calibration runs it on neither arm.
+    const run = await runFrozen(report.arms.candidate.path);
+    let parsed = frozenResult(run);
+    if (parsed?.candidateReportSha256 !== undefined && parsed.candidateReportSha256 !== arms.candidate.sha256) parsed = null;
+    frozen = session.structural.frozen = { resultPrinted: parsed !== null, exitCode: run?.exitCode ?? null,
+      overrunCount: parsed ? parsed.overruns.length : null, applicableBudgetPass: parsed ? parsed.applicableBudgetPass : null };
+  }
+  session.binding = bindingCheck(session, knownReportHashes, registry);
+  session.validity = sessionValidity(session, contract, calibrationFor(registry, registered.identity));
+  if (canonical(session.validity) !== canonical(report.validity)) throw Error('Validity block differs from its recomputation');
+  const evaluation = session.validity.valid ? JSON.parse(JSON.stringify(evaluatePaired(session, contract))) : null;
+  if (canonical(evaluation) !== canonical(report.evaluation ?? null)) throw Error('Evaluation differs from its recomputation');
+  const pairedBudgetPass = evaluation ? evaluation.pairedBudgetPass : null;
+  const structuralV2Pass = session.kind === 'calibration' ? null : frozen.resultPrinted;
+  const result = { kind: session.kind, nonce: session.nonce, valid: session.validity.valid, pairedBudgetPass, structuralV2Pass,
+    certification: false, validity: session.validity, rule1: evaluation?.rule1 ?? null, groups: evaluation?.rule2.groups ?? [],
+    rule2Violations: evaluation?.rule2.violations ?? [], tolerances: evaluation?.tolerances ?? null,
+    // The frozen gate's own result is reported as it is, whichever it is. An exit 0 is recorded and
+    // changes nothing else: it is never a pass by this tool and is the owner's to judge.
+    ...(session.kind === 'qualifying' ? { frozenApplicableBudgetPass: frozen.applicableBudgetPass, frozenExitCode: frozen.exitCode,
+      frozenOverrunCount: frozen.overrunCount, frozenExitZeroObserved: frozen.exitCode === 0 } : {}) };
+  const passed = session.validity.valid && pairedBudgetPass === true && (session.kind === 'calibration' || structuralV2Pass === true);
+  return { result, exitCode: passed ? 0 : 1 };
+}
+
+// ---- command line ----------------------------------------------------------------------------------------
+
+// Every listed frame image must hash to its recorded value (contract section 5, criterion 3).
+function frameImages(report) {
+  try {
+    const cache = path.join(ROOT, '.planning/research/.cache');
+    for (const sample of report.samples) for (const frame of sample.sequence) {
+      const file = boundedPath(cache, path.relative(cache, path.resolve(ROOT, frame.image)));
+      assert.equal(sha256(readFileSync(file)), frame.sha256, `Stale frame image hash: ${frame.image}`);
+    }
+    return { ok: true };
+  } catch (error) { return { ok: false, error: error.message }; }
+}
+
+// Reports that exist outside any session: the frozen reference and every complete single-arm
+// report in the phase evidence directory and the candidate capture cache. A report that carries a
+// `paired` block is an arm report and is bound by its nonce and the registry instead.
+function existingReportHashes(budget) {
+  const hashes = [budget.referenceReportSha256];
+  for (const directory of [path.join(ROOT, EVIDENCE_DIR), path.join(ROOT, '.planning/research/.cache/06-art/animation-candidate')]) {
+    if (!existsSync(directory)) continue;
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
+      const bytes = readFileSync(path.join(directory, entry.name));
+      let report;
+      try { report = JSON.parse(bytes.toString('utf8')); } catch { continue; }
+      if (Array.isArray(report?.samples) && report.samples.length === 12 && report.identities && !report.paired) hashes.push(sha256(bytes));
+    }
+  }
+  return hashes;
+}
+
+async function verifyCommand(values) {
+  for (const flag of ['--budget', '--session', '--registry']) assert.ok(values[flag], 'Use verify --budget <frozen V2 budget> --session <session report> --registry <registry>');
+  const budgetFile = path.resolve(values['--budget']);
+  const { result, exitCode } = await verifySession({ sessionBytes: readFileSync(path.resolve(values['--session'])),
+    registry: JSON.parse(readFileSync(path.resolve(values['--registry']), 'utf8')),
+    readArm: async (arm, name) => {
+      assert.ok(typeof name === 'string' && name, `Session report names no ${arm} arm report`);
+      return readFileSync(boundedPath(ROOT, name));
+    },
+    hashFrameImages: async report => frameImages(report),
+    runFrozen: async name => {
+      const run = spawnSync(process.execPath, ['tools/art/animation-budget-v2.mjs', 'verify', '--budget', budgetFile,
+        '--candidate', boundedPath(ROOT, name)], { cwd: ROOT, encoding: 'utf8', windowsHide: true, timeout: 120000, maxBuffer: 1 << 26 });
+      return { exitCode: run.status, stdout: run.stdout ?? '', stderr: run.stderr ?? '' };
+    },
+    knownReportHashes: existingReportHashes(JSON.parse(readFileSync(budgetFile, 'utf8'))) });
+  console.log(JSON.stringify(result));
+  process.exitCode = exitCode;
+}
+
+function chainCommand(values) {
   assert.ok(values['--registry'], 'Use chain --registry <registry>');
   const file = path.resolve(values['--registry']);
   assert.equal(path.relative(ROOT, file).split(path.sep).join('/'), REGISTRY_PATH, 'chain reads the tracked paired session registry');
@@ -629,6 +983,17 @@ async function cli() {
     everyEventCommitted: uncommitted.length === 0 && committedEvents === summary.events };
   console.log(JSON.stringify(result));
   if (!result.everyEventCommitted) process.exitCode = 1;
+}
+
+async function cli() {
+  const [operation, ...flags] = process.argv.slice(2), values = {};
+  for (let i = 0; i < flags.length; i += 2) {
+    assert.ok(['--registry', '--budget', '--session'].includes(flags[i]) && flags[i + 1] && !values[flags[i]], 'Invalid arguments');
+    values[flags[i]] = flags[i + 1];
+  }
+  if (operation === 'chain') chainCommand(values);
+  else if (operation === 'verify') await verifyCommand(values);
+  else throw Error('Use chain --registry <registry>, or verify --budget <frozen V2 budget> --session <session report> --registry <registry>');
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   cli().catch(error => { console.error(error.message); process.exitCode = 1; });
