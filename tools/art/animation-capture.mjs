@@ -9,6 +9,7 @@ import { chromium } from '@playwright/test';
 import { createServer } from 'vite';
 import { ROOT, CACHE, hash, approvedArtMotion, iterationPath } from './pipeline.mjs';
 import { verifyRuntimeDependencies } from './runtime-dependencies.mjs';
+import { classifyStall } from './approach-route.mjs';
 
 const EVIDENCE = path.join(ROOT, '.planning/phases/07-movement-matched-and-action-safe-animation/evidence');
 export const REQUIRED_ASSERTIONS = [
@@ -81,6 +82,13 @@ export async function waitSimulation(page, { what, label, limitSimSeconds, wallG
         + ' (observed ' + result.simSeconds.toFixed(1) + ' simulation seconds, ' + result.wallMs.toFixed(0) + ' wall ms)');
       error.wait = result; throw error;
     }
+    // Optional early end: sample.abort(latest sample) returns a reason string or null.
+    const abortReason = sample.abort?.(samples.at(-1));
+    if (abortReason) {
+      const error = new Error('Approach stalled: ' + abortReason + ' (observed ' + result.simSeconds.toFixed(1)
+        + ' simulation seconds, ' + result.wallMs.toFixed(0) + ' wall ms)');
+      error.wait = result; throw error;
+    }
     if (Date.now() - began >= wallGuardMs) {
       const error = new Error('Wall guard expired before the simulation bound (' + (label ?? what) + '): observed '
         + result.simSeconds.toFixed(1) + ' simulation seconds in ' + (Date.now() - began) + ' wall ms, guard ' + wallGuardMs + ' ms');
@@ -133,6 +141,25 @@ export function diagnoseAcquisition(progress) {
   if (last.route >= 4 || (walking && result.finalThirdDisplacementM < 1)) result.classification = 'driver-stalled';
   else if (result.finalThirdDisplacementM >= 1) result.classification = 'still-searching';
   return result;
+}
+// Natural-death abort: a stalled approach is ended early only when the driver was on a `route` step
+// (the other step kinds resolve by themselves or are left to the simulation bound on purpose).
+export function approachStallReason(trace) {
+  const samples = Array.isArray(trace) ? trace : [];
+  if (classifyStall(samples) !== 'stalled' || samples.at(-1)?.stepKind !== 'route') return null;
+  return 'the player held W on a route step and moved under 0.5 m in 5 simulation seconds';
+}
+// Snapshot for a natural-death or natural-respawn failure: stall classification over the retained
+// driver progress, the wait figures, the last steering step and at most eight hostiles.
+export function describeApproachFailure({ progress, hostiles, wait } = {}) {
+  const samples = Array.isArray(progress) ? progress : [];
+  const last = samples.at(-1);
+  const classification = classifyStall(samples.map(sample => ({ simSeconds: sample.simSeconds, x: sample.eye?.[0], z: sample.eye?.[2],
+    walking: sample.input?.walking === true, alive: sample.dead !== true, approaching: sample.approaching === true })));
+  const lastStep = [...samples].reverse().find(sample => sample.step)?.step ?? null;
+  const source = Array.isArray(hostiles) ? hostiles : (last?.hostiles ?? []);
+  return { classification, simSeconds: wait?.simSeconds ?? null, wallMs: wait?.wallMs ?? null, lastStep,
+    hostiles: source.slice(0, 8).map(h => ({ x: h.x, z: h.z, state: h.state, distance: h.distance, visible: h.visible, alive: h.alive !== false })) };
 }
 export function independentTracerComplete(report) {
   return !!(report.tracer && report.matrix.length === 1 && report.matrix[0].completed
@@ -385,18 +412,25 @@ async function sharedMovementUnion(page, tier) {
     history, eligibleActions:['directional','sprint','crouch','jump','pitch','melee-reload-interruption'],
     deadlineLimits:'Exact equality at reload deadline remains dependent on executed lifecycle assertions, not driver timing'};
 }
-async function earnedCombatUnion(page, tier, recordStep) {
-  await badge(page, `Actual ${tier} TDM · earn grenade energy through enemy damage · normal input/clock`);
-  const start = (await observe(page,'combat-start')).wallMs;
+// Installs the combat driver in the page. Ordinary input only: KeyW keydown and keyup, mouse events on
+// the document and the existing mouse buttons outside the approach. During the approach the driver steers
+// with the pure route of tools/art/approach-route.mjs over the live map, sends only W and mouse movement,
+// never fires and writes no health, energy, pose, position, action, AI state or clock.
+export async function installCombatDriver(page) {
   await page.evaluate(async () => {
       const {enemies} = await import('/src/entities/enemies.js');
       const {player} = await import('/src/entities/player.js');
       const {camera} = await import('/src/scene.js');
-      const {groundElevation} = await import('/src/map.js');
+      const {groundElevation,MAP,HMAP,MAP_W,MAP_H} = await import('/src/map.js');
       const {hasLOS} = await import('/src/utils/los.js');
-      const {BULLET_GRAV,BULLET_SPEED,MOUSE_SENS} = await import('/src/config.js');
-      let route=0,raf,left=false,walking=false,aiming=false,lastJournal=0,approaching=false;
-      const points=[[62,46],[62,22],[34,22],[34,46]], progress=[];
+      const {BULLET_GRAV,BULLET_SPEED,MOUSE_SENS,CELL} = await import('/src/config.js');
+      const {TILE_FLOOR,isCrack,isColumn,isRamp,isSideWall} = await import('/src/tiles.js');
+      const {openGrid,approachStep} = await import('/tools/art/approach-route.mjs');
+      const level=HMAP[Math.floor(camera.position.z/CELL)]?.[Math.floor(camera.position.x/CELL)]??0;
+      const grid=openGrid({tiles:MAP,heightmap:HMAP,width:MAP_W,height:MAP_H},{TILE_FLOOR,isCrack,isColumn,isRamp,isSideWall},level);
+      let route=0,raf,left=false,walking=false,aiming=false,lastJournal=0,approaching=false,lastHostiles=[];
+      const points=[[62,46],[62,22],[34,22],[34,46]], progress=[], trace=[];
+      const round=v=>Math.round(v*100)/100;
       const mouse=(button,down)=>document.dispatchEvent(new MouseEvent(down?'mousedown':'mouseup',{button,bubbles:true}));
       const forward=down=>{if(walking===down)return;walking=down;
         document.dispatchEvent(new KeyboardEvent(down?'keydown':'keyup',{code:'KeyW',bubbles:true}));};
@@ -409,41 +443,69 @@ async function earnedCombatUnion(page, tier, recordStep) {
         document.dispatchEvent(event);
         return {requested,constructorValues,before,after:{yaw:player.yaw,pitch:player.pitch},desired:{yaw,pitch}};};
       const tick=()=>{
-        const target=enemies.filter(e => !e.dead && e.sndTeam !== 'friend').map(e => {
+        const live=enemies.filter(e => !e.dead && e.sndTeam !== 'friend');
+        const mapped=live.map(e => {
         const y=groundElevation(e.x,e.z)+.99;
         const distance=Math.hypot(e.x-camera.position.x,y-camera.position.y,e.z-camera.position.z);
         return {x:e.x,z:e.z,y:y+.5*BULLET_GRAV*(distance/BULLET_SPEED)**2,distance,
           visible:hasLOS(camera.position.x,camera.position.y,camera.position.z,e.x,y,e.z)};
-        }).sort((a,b)=>Number(b.visible)-Number(a.visible)||a.distance-b.distance)[0];
-        let aimProof=null;
+        });
+        const target=[...mapped].sort((a,b)=>Number(b.visible)-Number(a.visible)||a.distance-b.distance)[0];
+        let aimProof=null,step=null;
         if(player.dead||!approaching&&player.energy>=100){fire(false);forward(false);}
+        else if(approaching){
+          // Approach: route over open flat cells; W and mouse movement only, never fire, never ADS.
+          fire(false);const point=points[route%points.length];
+          step=approachStep({grid,cell:CELL,player:{x:camera.position.x,z:camera.position.z},
+            hostiles:live.map(e=>({x:e.x,z:e.z})),fallback:point});
+          if(step.kind==='fallback'&&Math.hypot(point[0]-camera.position.x,point[1]-camera.position.z)<1)route++;
+          look(step.yaw,0);forward(step.kind==='route'||step.kind==='fallback');
+        }
         else if(target?.visible){
-          forward(approaching);if(!approaching&&!aiming){aiming=true;mouse(2,true);}
+          forward(false);if(!aiming){aiming=true;mouse(2,true);}
           aimProof=look(Math.atan2(-(target.x-camera.position.x),-(target.z-camera.position.z)),
             Math.atan2(target.y-camera.position.y,Math.hypot(target.x-camera.position.x,target.z-camera.position.z)));
           const direction=camera.getWorldDirection(new window.__THREE.Vector3());
           const desired=new window.__THREE.Vector3(target.x-camera.position.x,target.y-camera.position.y,target.z-camera.position.z).normalize();
           aimProof.cameraDirection=direction.toArray();aimProof.desiredDirection=desired.toArray();aimProof.dot=direction.dot(desired);
           aimProof.collision={center:[target.x,target.y-.5*BULLET_GRAV*(target.distance/BULLET_SPEED)**2,target.z],radius:.75,distance:target.distance};
-          fire(!approaching);
+          fire(true);
         }else{
           fire(false);const point=points[route%points.length];
           if(Math.hypot(point[0]-camera.position.x,point[1]-camera.position.z)<1)route++;
           look(Math.atan2(-(point[0]-camera.position.x),-(point[1]-camera.position.z)),0);forward(true);
         }
-        progress.push({...window.__movingRead(),target,route,aimProof,input:{left,walking,aiming}});
+        const sample={...window.__movingRead(),target,route,aimProof,input:{left,walking,aiming}};
+        if(approaching){
+          lastHostiles=mapped.map((m,i)=>({x:round(m.x),z:round(m.z),state:live[i].state,distance:round(m.distance),visible:m.visible,alive:true}))
+            .sort((a,b)=>a.distance-b.distance).slice(0,8);
+          sample.approaching=true;
+          sample.step={kind:step?.kind??null,waypoint:step?.waypoint??null,targetCell:step?.targetCell??null,pathLength:step?.pathCells.length??0};
+          sample.hostiles=lastHostiles;
+        }
+        progress.push(sample);
         if(progress.length>256)progress.shift();
+        const now=window.__movingSim();
+        trace.push({simSeconds:now,x:camera.position.x,z:camera.position.z,walking,alive:!player.dead,approaching,stepKind:step?.kind??null});
+        while(trace.length>1&&trace[0].simSeconds<now-8)trace.shift();
         if(performance.now()-lastJournal>5000){lastJournal=performance.now();
           console.info('[moving-combat] '+JSON.stringify({wallMs:lastJournal,mixerTime:window.__movingRead().mixerTime,
             hp:player.hp,energy:player.energy,ammo:player.ammo,dead:player.dead,eye:camera.position.toArray(),
-            visible:target?.visible,route,aimProof,input:{left,walking,aiming}}));}
+            visible:target?.visible,route,aimProof,input:{left,walking,aiming},step:step?.kind??null}));}
         raf=requestAnimationFrame(tick);
       };
       window.__combatDriverProgress=()=>progress;
+      window.__combatDriverTrace=()=>trace;
+      window.__combatDriverHostiles=()=>lastHostiles;
       window.__combatDriverDispose=()=>{cancelAnimationFrame(raf);fire(false);forward(false);mouse(2,false);};
       window.__combatDriverApproach=()=>{approaching=true;raf=requestAnimationFrame(tick);};
       raf=requestAnimationFrame(tick);
   });
+}
+async function earnedCombatUnion(page, tier, recordStep) {
+  await badge(page, `Actual ${tier} TDM · earn grenade energy through enemy damage · normal input/clock`);
+  const start = (await observe(page,'combat-start')).wallMs;
+  await installCombatDriver(page);
   let energyWait;
   const waitFigures=(wait,limit,guard)=>({simSeconds:wait.simSeconds,wallMs:wait.wallMs,limitSimSeconds:limit,wallGuardMs:guard});
   const waitLog=(name,wait,limit,guard)=>console.log('Moving combat '+tier+' '+name+': '+wait.simSeconds.toFixed(1)
@@ -487,8 +549,9 @@ async function earnedCombatUnion(page, tier, recordStep) {
   try {
     const deathWait=await waitSimulation(page,{what:'death',limitSimSeconds:NATURAL_DEATH_SIM_SECONDS,
       wallGuardMs:NATURAL_DEATH_WALL_GUARD_MS,sample:{argument:start,
-        read:since=>({wallMs:performance.now(),simSeconds:window.__movingSim(),dead:window.__movingSince(since).some(s=>s.dead)}),
-        predicate:s=>s.dead}});
+        read:since=>({wallMs:performance.now(),simSeconds:window.__movingSim(),dead:window.__movingSince(since).some(s=>s.dead),
+          trace:window.__combatDriverTrace()}),
+        predicate:s=>s.dead,abort:s=>approachStallReason(s.trace)}});
     console.log(`Moving combat ${tier} natural death: ${deathWait.simSeconds.toFixed(1)} simulation seconds, ${deathWait.wallMs.toFixed(0)} wall ms (guard ${NATURAL_DEATH_WALL_GUARD_MS} ms)`);
     await recordStep('natural-death',{observations:await page.evaluate(time=>window.__movingSince(time),start),
       wait:{simSeconds:deathWait.simSeconds,wallMs:deathWait.wallMs,limitSimSeconds:NATURAL_DEATH_SIM_SECONDS,wallGuardMs:NATURAL_DEATH_WALL_GUARD_MS}});
@@ -499,6 +562,11 @@ async function earnedCombatUnion(page, tier, recordStep) {
     console.log(`Moving combat ${tier} natural respawn: ${respawnWait.simSeconds.toFixed(1)} simulation seconds, ${respawnWait.wallMs.toFixed(0)} wall ms (guard ${NATURAL_RESPAWN_WALL_GUARD_MS} ms)`);
     await recordStep('natural-respawn',{sample:await observe(page,'respawn'),
       wait:{simSeconds:respawnWait.simSeconds,wallMs:respawnWait.wallMs,limitSimSeconds:NATURAL_RESPAWN_SIM_SECONDS,wallGuardMs:NATURAL_RESPAWN_WALL_GUARD_MS}});
+  }catch(error){
+    error.combatProgress=await page.evaluate(()=>window.__combatDriverProgress()).catch(()=>[]);
+    const hostiles=await page.evaluate(()=>window.__combatDriverHostiles()).catch(()=>undefined);
+    error.approachFailure=describeApproachFailure({progress:error.combatProgress,hostiles,wait:error.wait});
+    throw error;
   }finally{await page.evaluate(()=>window.__combatDriverDispose());}
   return {tier,kind:'actual-earned-resource-combat-union',complete:true, earned,teams,
     aimProof:await page.evaluate(()=>window.__combatDriverProgress()),
@@ -841,7 +909,7 @@ async function collectCombat(serverUrl,browser,directory,report) {
         entry.observations=await page.evaluate(()=>window.__movingSince(0)).catch(()=>[]);
       }
       report.collectionErrors.push({stage:'eligible-combat',tier,error:error.message,
-        progress:error.combatProgress??[]});
+        progress:error.combatProgress??[],approachFailure:error.approachFailure??null});
       console.error(`Moving eligible combat ${tier} retained partial: ${error.message}`);
     } finally {
       if(entry){entry.pageJournal=journal.entries;entry.pageJournalDropped=journal.dropped;}

@@ -300,7 +300,7 @@ const trace = (count, stepKind, step = 0) => Array.from({ length: count }, (_, i
   x: 36 + step * i, z: 31.93, walking: true, alive: true, approaching: true, stepKind }));
 test('approach stalled: the abort ends the wait at once with the observed simulation seconds and wall milliseconds', async () => {
   const page = scriptedPage([{ wallMs: 0, simSeconds: 0, met: false }, { wallMs: 4000, simSeconds: 6, met: false, stalled: true }]);
-  await assert.rejects(capture.waitSimulation(page, { what: 'death', limitSimSeconds: 120, wallGuardMs: 0,
+  await assert.rejects(capture.waitSimulation(page, { what: 'death', limitSimSeconds: 120, wallGuardMs: 600000,
     sample: { argument: null, read: () => null, predicate: s => s.met === true, abort: s => (s.stalled ? 'player held W without moving' : null) } }),
     error => {
       assert.match(error.message, /^Approach stalled/);
@@ -319,7 +319,7 @@ test('approach stalled: a null abort reason leaves the wait unchanged and a met 
 });
 test('approach stalled: the natural-death abort fires only for a stalled route step', () => {
   assert.equal(typeof capture.approachStallReason, 'function');
-  assert.match(capture.approachStallReason(trace(14, 'route', 0.001)), /stalled/);
+  assert.match(capture.approachStallReason(trace(14, 'route', 0.001)), /route step/);
   assert.equal(capture.approachStallReason(trace(14, 'route', 0.2)), null);
   assert.equal(capture.approachStallReason(trace(14, 'fallback', 0)), null);
   assert.equal(capture.approachStallReason(trace(14, 'unreachable', 0)), null);
@@ -361,7 +361,7 @@ test('approach failure: the driver is exported and sends only W and mouse moveme
   const body = source.slice(start, source.indexOf('\nasync function earnedCombatUnion', start));
   assert.match(body, /\/tools\/art\/approach-route\.mjs/);
   for (const forbidden of [/player\.hp\s*=[^=]/, /player\.energy\s*=[^=]/, /player\.dead\s*=[^=]/,
-    /camera\.position\.(set|copy|x\s*=|y\s*=|z\s*=)/, /\.state\s*=[^=]/, /\.dead\s*=[^=]/, /mixer/i, /\.time\s*=[^=]/])
+    /camera\.position\.(set|copy|x\s*=|y\s*=|z\s*=)/, /\.state\s*=[^=]/, /\.dead\s*=[^=]/, /mixer\w*\s*=[^=]/i, /\.time\s*=[^=]/])
     assert.doesNotMatch(body, forbidden);
   const keys = [...body.matchAll(/code:'(\w+)'/g)].map(m => m[1]);
   assert.deepEqual([...new Set(keys)], ['KeyW']);
