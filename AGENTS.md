@@ -189,6 +189,21 @@ real-click regression. The tracer collector's combat page now records `pageJourn
 errors, rejections, console error or warning lines, at most 200) and, when the `#overlay`
 wait fails, `menuReturnDiagnostics`; it still returns to the menu with a real click.
 
+Moving collector approach (plan 07-23): the combat approach routes over open flat cells with
+the pure `tools/art/approach-route.mjs`, sends only W key and mouse movement, never fires and
+fails early as `stalled` (alive, approaching on a `route` step, holding W and displaced under
+0.5 m in 5 simulation seconds); natural-death and natural-respawn failures carry
+`combatProgress` and `approachFailure`. `tools/art/approach-fixture-control.mjs` is a labelled
+collector control with directly placed actors, not evidence. Open game defects the debug session
+read from source; the files are frozen-gate identities and this phase does not fix them, so
+they belong to a later movement and collision phase: `astar.js` ignores crack tiles that
+collision blocks; the TDM defender spawn slot `[1,0]` on `bunker` is a crack cell; player
+movement probes only the centre and sideways points and misses a leading corner; the
+friendly-bot shot cooldown counts frames. Also open, not a game defect: 07-13 review finding
+G-01, the CI step running `npm run test:art` cannot pass on a fresh checkout (three controls in
+`tools/art/animation-budget-v2.test.mjs` need the gitignored cache); fix it before any push, no
+plan in this set does.
+
 ## Character animation and weapons
 
 - Current accepted `enemy.glb` contains **107 clip occurrences**: the exact 48 inherited
