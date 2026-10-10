@@ -3,7 +3,7 @@ route: source-fix
 decided: 2026-10-10
 decided_by: owner
 evidence: ".planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-14-mp-ab.json sha256=26dc71019aee287a016cb973f3534a8e4aa82e39b36846c020340364714ce130"
-host_ready: none
+host_ready: 2026-10-10T21:18:47+02:00
 fix_plan: 07-24
 ---
 
