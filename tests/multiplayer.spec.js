@@ -232,7 +232,11 @@ for (const path of ['score', 'time'])
       }
       await a.screenshot({ path: test.info().outputPath(`results-${path}.png`) });
       await b.screenshot({ path: test.info().outputPath(`results-${path}-peer.png`) });
+      let replacement = null;
       if (path === 'time') {
+        // The rematch keeps the 6-second setting, so nothing after it may race generation 2.
+        // Record its facts inside the page before the leave, switch and rejoin block below.
+        for (const page of [a, b]) await installRematchRecorder(page);
         // A valid solo results switch persists, then a fresh connection joins the smaller team.
         await b.locator('#mp-match-leave').click();
         await expect.poll(async () => (await snapshot(a)).players.length).toBe(1);
@@ -242,7 +246,7 @@ for (const path of ['score', 'time'])
         await b.locator('#mp-join-btn').click();
         await expect.poll(async () => (await snapshot(a)).players.length).toBe(2);
         await expect.poll(async () => (await snapshot(b)).sessionId).toBeTruthy();
-        const replacement = (await snapshot(b)).sessionId;
+        replacement = (await snapshot(b)).sessionId;
         await expect
           .poll(async () => {
             const s = await snapshot(b);
@@ -258,6 +262,17 @@ for (const path of ['score', 'time'])
           expect(own(s, first.sessionId).team).toBe('red');
           expect(own(s, replacement).team).toBe('blue');
         }
+        for (const [label, page] of [['a', a], ['b', b]]) {
+          // A leave and rejoin does not navigate; if a page did reload, reinstall at once.
+          if (!(await page.evaluate(() => typeof window.__rematchSeen === 'function'))) {
+            await installRematchRecorder(page);
+            test.info().annotations.push({ type: `recorder-reinstalled:${label}`, description: 'true' });
+          }
+        }
+        test.info().annotations.push({
+          type: 'results-remaining-ms-after-join',
+          description: String(result.resultsEndsAtMs - (await snapshot(a)).nowMs),
+        });
       }
       // Wait using authority milliseconds; never click to begin the rematch.
       await expect
@@ -275,49 +290,124 @@ for (const path of ['score', 'time'])
         expect(nearDeadline.startedAtMs + 1e-7).toBeGreaterThanOrEqual(result.resultsEndsAtMs);
       }
       await expect.poll(async () => (await snapshot(a)).matchGeneration, { timeout: 3000 }).toBe(2);
-      for (const page of [a, b]) {
-        await expect.poll(async () => (await snapshot(page)).phase).toBe('active');
-        const s = await snapshot(page);
-        expect(s.settings).toEqual(first.settings);
-        expect([s.scoreBlue, s.scoreRed, s.winner]).toEqual([0, 0, '']);
-        expect(
-          s.players.every(
-            (p) =>
-              p.alive &&
-              p.health === 100 &&
-              p.ammo === 30 &&
-              p.reserve === 90 &&
-              p.kills === 0 &&
-              p.deaths === 0
-          )
-        ).toBe(true);
-        expect(s.lastConfirmedHit).toBeNull();
-        await expect(page.locator('#kills-num')).toHaveText('0');
-        expect((await snapshot(page)).presentation.kills).toBe(0);
-        if (path === 'score') {
+      if (path === 'score') {
+        const tailStartedMs = Date.now();
+        for (const page of [a, b]) {
+          await expect.poll(async () => (await snapshot(page)).phase).toBe('active');
+          const s = await snapshot(page);
+          expect(s.settings).toEqual(first.settings);
+          expect([s.scoreBlue, s.scoreRed, s.winner]).toEqual([0, 0, '']);
+          expect(
+            s.players.every(
+              (p) =>
+                p.alive &&
+                p.health === 100 &&
+                p.ammo === 30 &&
+                p.reserve === 90 &&
+                p.kills === 0 &&
+                p.deaths === 0
+            )
+          ).toBe(true);
+          expect(s.lastConfirmedHit).toBeNull();
+          await expect(page.locator('#kills-num')).toHaveText('0');
+          expect((await snapshot(page)).presentation.kills).toBe(0);
           expect(s.remoteActors).toHaveLength(1);
           const remote = s.players.find(p => p.sessionId !== s.sessionId);
           expect(s.remoteActors[0]).toMatchObject({ lifeGeneration: remote.lifeGeneration, skinned: true, armed: true });
           expectHumanArt(await humanArtState(page));
+          await expect(page.locator('#mp-results')).toBeHidden();
         }
-        await expect(page.locator('#mp-results')).toBeHidden();
-      }
-      expect((await snapshot(a)).startedAtMs + 1e-7).toBeGreaterThanOrEqual(result.resultsEndsAtMs);
-      await expect(a.locator('#mp-resume')).toBeVisible();
-      await a.locator('#mp-resume').click();
-      await expect.poll(() => a.evaluate(() => !!document.pointerLockElement)).toBe(true);
-      await a.screenshot({path:test.info().outputPath(`rematch-${path}.png`)});
-      for (const page of [a, b]) {
-        await focusControls(page);
-        await page.evaluate(() => document.exitPointerLock());
-        await expect(page.locator('#pause-menu')).toBeVisible();
-        const pause = await page.locator('#pause-menu').boundingBox();
-        const controls = await page.locator('#mp-match-controls').boundingBox();
-        expect(pause.x).toBeGreaterThanOrEqual(controls.x + controls.width + 8);
-        await page.locator('#mp-match-leave').click();
-        await expect(page.locator('#overlay')).toBeVisible();
-        await expect(page.locator('#kills-num')).toHaveText('0');
-        expect((await snapshot(page)).presentation.kills).toBe(0);
+        expect((await snapshot(a)).startedAtMs + 1e-7).toBeGreaterThanOrEqual(
+          result.resultsEndsAtMs
+        );
+        await expect(a.locator('#mp-resume')).toBeVisible();
+        await a.locator('#mp-resume').click();
+        await expect.poll(() => a.evaluate(() => !!document.pointerLockElement)).toBe(true);
+        await a.screenshot({path:test.info().outputPath(`rematch-${path}.png`)});
+        for (const page of [a, b]) {
+          await focusControls(page);
+          await page.evaluate(() => document.exitPointerLock());
+          await expect(page.locator('#pause-menu')).toBeVisible();
+          const pause = await page.locator('#pause-menu').boundingBox();
+          const controls = await page.locator('#mp-match-controls').boundingBox();
+          expect(pause, '#pause-menu has no layout box').not.toBeNull();
+          expect(controls, '#mp-match-controls has no layout box').not.toBeNull();
+          expect(pause.x).toBeGreaterThanOrEqual(controls.x + controls.width + 8);
+          await page.locator('#mp-match-leave').click();
+          await expect(page.locator('#overlay')).toBeVisible();
+          await expect(page.locator('#kills-num')).toHaveText('0');
+          expect((await snapshot(page)).presentation.kills).toBe(0);
+        }
+        test.info().annotations.push({
+          type: 'score-tail-wall-ms',
+          description: String(Date.now() - tailStartedMs),
+        });
+      } else {
+        // Read the in-page record afterwards; nothing here is bounded by the 6-second match.
+        const labelled = [['a', a], ['b', b]];
+        for (const [label, page] of labelled)
+          await expect
+            .poll(async () => !!(await readRematchSeen(page)).firstActive, {
+              timeout: 10000,
+              message: `generation 2 never became active on client ${label}`,
+            })
+            .toBe(true);
+        for (const [label, page] of labelled)
+          await expect
+            .poll(
+              async () => {
+                const r = await readRematchSeen(page);
+                return (!!r.presentationSettled && !!r.resumeVisible) || r.ended;
+              },
+              {
+                timeout: 12000,
+                message: `client ${label} recorder neither settled nor ended generation 2`,
+              }
+            )
+            .toBe(true);
+        for (const [label, page] of labelled) {
+          const r = await readRematchSeen(page);
+          const s = r.firstActive.snapshot;
+          expect([s.matchGeneration, s.phase]).toEqual([2, 'active']);
+          expect(s.settings).toEqual(first.settings);
+          expect([s.scoreBlue, s.scoreRed, s.winner]).toEqual([0, 0, '']);
+          expect(
+            s.players.every(
+              (p) =>
+                p.alive &&
+                p.health === 100 &&
+                p.ammo === 30 &&
+                p.reserve === 90 &&
+                p.kills === 0 &&
+                p.deaths === 0
+            )
+          ).toBe(true);
+          expect(s.lastConfirmedHit).toBeNull();
+          expect(own(s, first.sessionId).team).toBe('red');
+          expect(own(s, replacement).team).toBe('blue');
+          if (label === 'a')
+            expect(s.startedAtMs + 1e-7).toBeGreaterThanOrEqual(result.resultsEndsAtMs);
+          const never = `fact never held during generation 2 (ended=${r.ended}, ticks with results visible=${r.resultsVisibleTicks})`;
+          expect(r.presentationSettled, `presentation: ${never}`).toBeTruthy();
+          expect([r.presentationSettled.snapshot.matchGeneration, r.presentationSettled.snapshot.phase]).toEqual([2, 'active']);
+          expect(r.presentationSettled.killsText).toBe('0');
+          expect(r.presentationSettled.snapshot.presentation.kills).toBe(0);
+          expect(r.presentationSettled.resultsHidden).toBe(true);
+          const presentationLateMs = r.presentationSettled.wallMs - r.firstActive.wallMs;
+          test.info().annotations.push({
+            type: `presentation-lateness-ms:${label}`,
+            description: String(presentationLateMs),
+          });
+          expect(presentationLateMs).toBeLessThanOrEqual(1500);
+          expect(r.resumeVisible, `#mp-resume: ${never}`).toBeTruthy();
+          expect([r.resumeVisible.snapshot.matchGeneration, r.resumeVisible.snapshot.phase]).toEqual([2, 'active']);
+          const resumeLateMs = r.resumeVisible.wallMs - r.firstActive.wallMs;
+          test.info().annotations.push({
+            type: `resume-lateness-ms:${label}`,
+            description: String(resumeLateMs),
+          });
+          expect(resumeLateMs).toBeLessThanOrEqual(1500);
+        }
       }
     } finally {
       try {
@@ -328,9 +418,177 @@ for (const path of ['score', 'time'])
     }
   });
 
+test('lifecycle: a rematched match reaching results again hides resume and pause and releases the pointer', async ({
+  browser,
+}) => {
+  test.setTimeout(240000);
+  const fixture = await startMpFixture({
+    testSettings: { killLimit: 50, matchSeconds: 30, respawnSeconds: 5, friendlyFire: 0.25 },
+  });
+  const contexts = [];
+  try {
+    for (let i = 0; i < 2; i++)
+      contexts.push(
+        await browser.newContext({ viewport: { width: 800, height: 600 }, deviceScaleFactor: 0.25 })
+      );
+    const [a, b] = await Promise.all(contexts.map((c) => c.newPage()));
+    for (const page of [a, b]) {
+      await page.goto(fixture.url);
+      await expect(page.locator('#mp-join-btn')).toBeEnabled({ timeout: 60000 });
+      await page.locator('#mp-join-btn').click();
+      await expect.poll(async () => (await snapshot(page)).sessionId).toBeTruthy();
+    }
+    await expect.poll(async () => (await snapshot(a)).players.length).toBe(2);
+    const first = await snapshot(a),
+      targetId = (await snapshot(b)).sessionId;
+    const own = (s, id) => s.players.find((p) => p.sessionId === id);
+    for (const page of [a, b])
+      await expect
+        .poll(async () => (await snapshot(page)).phase, { timeout: 60000 })
+        .toBe('results');
+    const result = await snapshot(a);
+    expect(result.matchGeneration).toBe(1);
+    // A valid solo results switch persists, then a fresh connection joins the smaller team.
+    await b.locator('#mp-match-leave').click();
+    await expect.poll(async () => (await snapshot(a)).players.length).toBe(1);
+    await expect(a.locator('#mp-switch-team')).toBeEnabled();
+    await a.locator('#mp-switch-team').click();
+    await expect(a.locator('#tdm-label')).toHaveText('ONLINE · RED');
+    await b.locator('#mp-join-btn').click();
+    await expect.poll(async () => (await snapshot(a)).players.length).toBe(2);
+    await expect.poll(async () => (await snapshot(b)).sessionId).toBeTruthy();
+    const replacement = (await snapshot(b)).sessionId;
+    await expect
+      .poll(async () => {
+        const s = await snapshot(b);
+        return (
+          s.players.some((p) => p.sessionId === replacement) &&
+          s.players.some((p) => p.sessionId === first.sessionId)
+        );
+      })
+      .toBe(true);
+    expect(replacement).not.toBe(targetId);
+    for (const page of [a, b]) {
+      const s = await snapshot(page);
+      expect(own(s, first.sessionId).team).toBe('red');
+      expect(own(s, replacement).team).toBe('blue');
+    }
+    test.info().annotations.push({
+      type: 'results-remaining-ms-after-join',
+      description: String(result.resultsEndsAtMs - (await snapshot(a)).nowMs),
+    });
+    // Wait using authority milliseconds; never click to begin the rematch.
+    await expect
+      .poll(async () => (await snapshot(a)).nowMs, { timeout: 16000 })
+      .toBeGreaterThanOrEqual(result.resultsEndsAtMs - 1000);
+    await expect.poll(async () => (await snapshot(a)).matchGeneration, { timeout: 3000 }).toBe(2);
+    for (const page of [a, b])
+      await expect.poll(async () => (await snapshot(page)).phase).toBe('active');
+
+    // Replacement client: capture, release, pause layout, leave.
+    await focusControls(b);
+    await b.evaluate(() => document.exitPointerLock());
+    await expect(b.locator('#pause-menu')).toBeVisible();
+    const pause = await b.locator('#pause-menu').boundingBox();
+    const controls = await b.locator('#mp-match-controls').boundingBox();
+    expect(pause, '#pause-menu has no layout box').not.toBeNull();
+    expect(controls, '#mp-match-controls has no layout box').not.toBeNull();
+    expect(pause.x).toBeGreaterThanOrEqual(controls.x + controls.width + 8);
+    await b.locator('#mp-match-leave').click();
+    await expect(b.locator('#overlay')).toBeVisible();
+    await expect(b.locator('#kills-num')).toHaveText('0');
+    expect((await snapshot(b)).presentation.kills).toBe(0);
+
+    // Switched client: capture the pointer while generation 2 is still running.
+    await expect(a.locator('#mp-resume')).toBeVisible();
+    await focusControls(a);
+    const atLock = await snapshot(a);
+    const remainingMs = atLock.endsAtMs - atLock.nowMs;
+    test.info().annotations.push({
+      type: 'match-remaining-ms-at-lock',
+      description: String(remainingMs),
+    });
+    expect(remainingMs).toBeGreaterThan(5000);
+
+    // Results of the rematched match release the pointer and hide resume and pause.
+    await expect
+      .poll(
+        async () => {
+          const s = await snapshot(a);
+          return [s.phase, s.matchGeneration];
+        },
+        { timeout: 40000 }
+      )
+      .toEqual(['results', 2]);
+    await expect(a.locator('#mp-resume')).toBeHidden();
+    await expect(a.locator('#pause-menu')).toBeHidden();
+    await expect.poll(() => a.evaluate(() => document.pointerLockElement)).toBeNull();
+    await expect(a.locator('#mp-results')).toBeVisible();
+    await a.locator('#mp-match-leave').click();
+    await expect(a.locator('#overlay')).toBeVisible();
+    await expect(a.locator('#kills-num')).toHaveText('0');
+    expect((await snapshot(a)).presentation.kills).toBe(0);
+  } finally {
+    try {
+      await Promise.all(contexts.map((c) => c.close()));
+    } finally {
+      await fixture.stop();
+    }
+  }
+});
+
 /** @param {import('@playwright/test').Page} page */
 async function snapshot(page) {
   return page.evaluate(() => window.__mpDebug());
+}
+
+/** Observation only: records generation-2 facts from each tick's own snapshot and the live DOM.
+ * @param {import('@playwright/test').Page} page
+ */
+async function installRematchRecorder(page) {
+  await page.evaluate(() => {
+    const rec = {
+      firstActive: null,
+      presentationSettled: null,
+      resumeVisible: null,
+      resultsVisibleTicks: 0,
+      ended: false,
+    };
+    window.__rematchSeen = () => structuredClone(rec);
+    const shown = (id) => {
+      const el = document.getElementById(id);
+      if (!el || el.hidden) return false;
+      const style = getComputedStyle(el);
+      return style.display !== 'none' && style.visibility !== 'hidden' && el.getClientRects().length > 0;
+    };
+    setInterval(() => {
+      if (rec.ended) return;
+      const s = window.__mpDebug();
+      const wallMs = performance.now();
+      const live = s.matchGeneration === 2 && s.phase === 'active';
+      if (!live) {
+        if (rec.firstActive) rec.ended = true;
+        return;
+      }
+      if (!rec.firstActive) rec.firstActive = { snapshot: s, wallMs };
+      const resultsShown = shown('mp-results');
+      if (resultsShown) rec.resultsVisibleTicks++;
+      const killsText = document.getElementById('kills-num')?.textContent ?? null;
+      if (
+        !rec.presentationSettled &&
+        killsText === '0' &&
+        s.presentation.kills === 0 &&
+        !resultsShown
+      )
+        rec.presentationSettled = { snapshot: s, wallMs, killsText, resultsHidden: !resultsShown };
+      if (!rec.resumeVisible && shown('mp-resume')) rec.resumeVisible = { snapshot: s, wallMs };
+    }, 10);
+  });
+}
+
+/** @param {import('@playwright/test').Page} page */
+async function readRematchSeen(page) {
+  return page.evaluate(() => window.__rematchSeen());
 }
 
 test('animation retirement: two real M4 clients reload, die and render a fresh life', async ({ browser }) => {
