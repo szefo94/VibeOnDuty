@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 07
 current_phase_name: Movement-Matched and Action-Safe Animation
 status: executing
-stopped_at: Completed 07-24-PLAN.md
-last_updated: "2026-10-10T11:19:05.124Z"
+stopped_at: Completed 07-15-PLAN.md
+last_updated: "2026-10-10T11:44:56.637Z"
 last_activity: 2026-10-09
 last_activity_desc: Phase 07 execution started
-state_head: dae0e930ce1b2ac4e8528514dd863b58b05ac404
+state_head: ffcf466a0b318437dc85875529ffa4d8cdde8ba7
 progress:
   total_phases: 12
   completed_phases: 2
   total_plans: 37
-  completed_plans: 32
+  completed_plans: 33
   percent: 17
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-05)
 ## Current Position
 
 Phase: 07 (Movement-Matched and Action-Safe Animation) — EXECUTING
-Plan: 7 of 19
+Plan: 8 of 19
 Status: Ready to execute
 Next action: Plan 07-14 closed: owner route source-fix, host_ready none; time-limit lifecycle regression narrowed to 336099e..b1e2801; gap plan 07-24 to be written before 07-17; 07-17/18/19 need an owner host_ready time. Then parent independent code/security/UI/phase review of07-10 tooling, exact evidence and index. Plan09 fixed-V2 and original throw1ms, full offline/MP failures and natural death/online unions remain open. Independent45 contexts/9 previews/recovery do not bypass those gates. Other jobs must keep running. Phase5 follows accepted Phase7.
 Roadmap review: User revised remaining order to6 → 7 → 5 → 2 → 3 → 4 → 8 → 9 → 10 → 11 → 12; Phase1 remains complete.
@@ -86,6 +86,7 @@ Progress: [██░░░░░░░░] 17%
 | Phase 07 P23 | 135 min | 4 tasks | 12 files |
 | Phase 07 P14 | multi-session | 3 tasks | 4 files |
 | Phase 07 P24 | 40min | 2 tasks | 3 files |
+| Phase 07 P15 | 20min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -147,6 +148,7 @@ Full decisions are recorded in PROJECT.md.
 - [Phase 07]: 07-23: approach steering is a 4-neighbour BFS over plain-floor cells; early stall abort applies only on route steps
 - [Phase 07]: 07-14: owner route source-fix (selected via recommendation); host_ready none; gap plan 07-24 to be created; time-limit lifecycle regression narrowed to 336099e..b1e2801
 - [Phase 07]: 07-24: fixed lifecycle race by restructuring test assertion ownership (recorder + score-case tail + new release case), no source change
+- [Phase 07]: 07-15: paired timing amendment approved by owner conditional on R1-R8 (T_aggregate 0.05, T_single 0.25, cap 3); frozen V2 remains only gate until then
 
 ### Pending Todos
 
@@ -175,8 +177,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-10-10T11:19:04.961Z
-Stopped at: Completed 07-24-PLAN.md
+Last session: 2026-10-10T11:44:56.475Z
+Stopped at: Completed 07-15-PLAN.md
 Resume file: None
 
 User passed both Phase 6 visual checks with "pass all tests and proceed".
