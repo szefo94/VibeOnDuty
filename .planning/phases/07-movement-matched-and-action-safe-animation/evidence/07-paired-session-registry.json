@@ -210,6 +210,62 @@
       "seq": 4,
       "at": "2026-10-10T20:34:11.716Z",
       "prevHash": "551336e9be8b58e77ca78034cb9e1a606950a6685f635a477d90fbc0c4be7a01"
+    },
+    {
+      "type": "started",
+      "kind": "calibration",
+      "nonce": "23e8adde9e65a967182bada166dcc98f",
+      "registrationHash": "1d87e13ecd21874ef3e82b86a558ae10b221677e67a0cdfa781ba73572322edf",
+      "seq": 5,
+      "at": "2026-10-10T20:34:39.611Z",
+      "prevHash": "1d87e13ecd21874ef3e82b86a558ae10b221677e67a0cdfa781ba73572322edf"
+    },
+    {
+      "type": "closed",
+      "kind": "calibration",
+      "nonce": "23e8adde9e65a967182bada166dcc98f",
+      "outcome": "passed",
+      "valid": true,
+      "pass": true,
+      "settings": {
+        "contextAndPageLifetime": "One browser process per session. For each run, one fresh browser context and one page per arm, opened immediately before that arm's first capture of the run and kept until the last pair of the run is captured, then closed. The warm-up pair has its own fresh context and page per arm, closed before run 1 begins. A smoke captures one pair under the same rule.",
+        "launch": {
+          "headless": true,
+          "args": [
+            "--use-gl=swiftshader"
+          ]
+        },
+        "context": {
+          "viewport": {
+            "width": 1280,
+            "height": 960
+          },
+          "deviceScaleFactor": 1
+        },
+        "samplerArguments": {
+          "candidate": true,
+          "renderedView": true,
+          "captureFrames": false,
+          "failAt": null
+        },
+        "server": {
+          "host": "127.0.0.1",
+          "strictPort": true,
+          "base": "/",
+          "configFile": false,
+          "hmr": false,
+          "viteCache": "one per arm, outside the served directory"
+        }
+      },
+      "browserVersion": "147.0.7727.15",
+      "reportHashes": {
+        "session": "f14eaa343d0dbedbbcd81dce1be263fcfb63acf3de8a616d712813114167edf9",
+        "reference": "b84256e6b438838cb0ebeb6cab6e353520cfcf09309fdd89ee468363e5aaddf5",
+        "candidate": "237c645078227b58eb3af04e233ff4cae51059db3dfa344046c63259041bd4db"
+      },
+      "seq": 6,
+      "at": "2026-10-10T21:07:41.742Z",
+      "prevHash": "e12775fc42a072e43e778ae348532bf0608d134dec737f13511d8280f3658589"
     }
   ]
 }
