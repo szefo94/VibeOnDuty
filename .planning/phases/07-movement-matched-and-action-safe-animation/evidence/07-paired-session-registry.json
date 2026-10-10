@@ -93,6 +93,31 @@
       "seq": 1,
       "at": "2026-10-10T13:28:10.198Z",
       "prevHash": "paired-same-session-v2:first-event"
+    },
+    {
+      "type": "started",
+      "kind": "smoke",
+      "nonce": "76123eb3c88d18d41c1535b427c59fe7",
+      "registrationHash": "cb8fe17cdc3dc2e7b1fcbd0e01eb4516c608150a15321293388d8bd97a0d4b60",
+      "seq": 2,
+      "at": "2026-10-10T13:28:27.697Z",
+      "prevHash": "cb8fe17cdc3dc2e7b1fcbd0e01eb4516c608150a15321293388d8bd97a0d4b60"
+    },
+    {
+      "type": "closed",
+      "kind": "smoke",
+      "nonce": "76123eb3c88d18d41c1535b427c59fe7",
+      "outcome": "loaded",
+      "structuralFailure": false,
+      "valid": null,
+      "pass": null,
+      "reportHashes": {
+        "session": "d56539ab8b12d42e6ae6ffd95268dc4f7c84f9124593ef7ec8624cafa70bbc7f"
+      },
+      "browserVersion": "147.0.7727.15",
+      "seq": 3,
+      "at": "2026-10-10T13:30:25.251Z",
+      "prevHash": "38e11ab8d9258bdd9e6ec84ae236571691eeae847f50ad16741971992c50dd88"
     }
   ]
 }
