@@ -34,7 +34,7 @@ key-decisions:
 requirements-completed: []
 duration: 40min
 completed: 2026-10-10
-status: partial
+status: complete
 ---
 
 # Phase 07 Plan 22: Branch `register-exception`; the single fresh tracer did NOT pass (partial, gap open)
@@ -102,3 +102,9 @@ None. The journal holds console and error text of a local offline page (T-07-22-
 - Files exist: `07-motion-review-tracer-fifth.json`, `07-motion-review-tracer.json`, `animation-capture.mjs`, `animation-capture.test.mjs`, `AGENTS.md` (checked).
 - Commits `df7c45c`, `ae230a6`, `606550e`, `3f49ffe` are ancestors of HEAD; `git ls-files --eol` shows `i/crlf w/crlf` for both tool files; `node tools/art/frozen-bytes.mjs verify`: 26 verified, 0 mismatched; `src/main.js` still `f768954f...bc393`.
 - Gap status: OPEN. `07-12-SUMMARY.md` and `07-20-SUMMARY.md` untouched and still `status: partial`; ROADMAP and STATE progress not advanced.
+
+## Tracer acceptance met by plan 07-23 (2026-10-10)
+
+Plan 07-23 spent its single fresh tracer capture (`node tools/art/review.mjs --animation-capture --tracer`). The report `evidence/07-motion-review-tracer.json` (capturedAt `2026-10-10T09:01:35.566Z`, SHA-256 `55c4e4e23ccf4c30f4c7a637d3711e78a0e93c45d1290494551802c99d865202`) has `independentTracerComplete: true`, the five combat stages `accepted-aim`, `earned-resource`, `throw-canceled-reload`, `natural-death`, `natural-respawn` in order, `menuReturn: true`, `protectedBytesUnchanged: true` and empty `collectionErrors`. The driver change that made the approach reach a natural death is commit `5b067f5` (route steer, early stall failure, approach diagnostics).
+
+07-22 its own part was the page journal and the menu-return diagnostics. The tracer exercised the Low tier once; Medium and High are first run by plan 07-19. The runs of 2026-10-09T19:29:06.828Z, 2026-10-09T19:54:33.020Z and 2026-10-10T05:20:38.924Z remain failed runs, archived as `evidence/07-motion-review-tracer-fourth.json`, `-fifth.json` and `-sixth.json`. `complete`, `matrixComplete` and `plan09Qualified` stay false in the fresh report. No requirement is marked complete by this change. All earlier sections, including each "Tracer result" section, are kept above unchanged as history.

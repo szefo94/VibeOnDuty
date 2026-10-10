@@ -3,7 +3,7 @@ phase: 07-movement-matched-and-action-safe-animation
 plan: "20"
 subsystem: art-capture-tooling
 tags: [animation-capture, simulation-time, tracer, tdd, gap-closure]
-status: partial
+status: complete
 requirements: [ANIM-02]
 requirements-completed: []
 commits: 8
@@ -180,3 +180,9 @@ None.
 ---
 *Phase: 07-movement-matched-and-action-safe-animation*
 *Completed: 2026-10-09 (status: partial)*
+
+## Tracer acceptance met by plan 07-23 (2026-10-10)
+
+Plan 07-23 spent its single fresh tracer capture (`node tools/art/review.mjs --animation-capture --tracer`). The report `evidence/07-motion-review-tracer.json` (capturedAt `2026-10-10T09:01:35.566Z`, SHA-256 `55c4e4e23ccf4c30f4c7a637d3711e78a0e93c45d1290494551802c99d865202`) has `independentTracerComplete: true`, the five combat stages `accepted-aim`, `earned-resource`, `throw-canceled-reload`, `natural-death`, `natural-respawn` in order, `menuReturn: true`, `protectedBytesUnchanged: true` and empty `collectionErrors`. The driver change that made the approach reach a natural death is commit `5b067f5` (route steer, early stall failure, approach diagnostics).
+
+07-20 its own part was the other simulation bounds and the five-stage observation of the tracer. The tracer exercised the Low tier once; Medium and High are first run by plan 07-19. The runs of 2026-10-09T19:29:06.828Z, 2026-10-09T19:54:33.020Z and 2026-10-10T05:20:38.924Z remain failed runs, archived as `evidence/07-motion-review-tracer-fourth.json`, `-fifth.json` and `-sixth.json`. `complete`, `matrixComplete` and `plan09Qualified` stay false in the fresh report. No requirement is marked complete by this change. All earlier sections, including each "Tracer result" section, are kept above unchanged as history.

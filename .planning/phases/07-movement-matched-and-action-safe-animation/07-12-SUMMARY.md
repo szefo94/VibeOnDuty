@@ -3,7 +3,7 @@ phase: 07-movement-matched-and-action-safe-animation
 plan: "12"
 subsystem: art-capture-tooling
 tags: [animation-capture, simulation-time, tracer, tdd]
-status: partial
+status: complete
 requirements: [ANIM-02]
 commits: 3
 plan_head_before: 951506c9496905b70d7aa24ca6b5233a8c7aa252
@@ -65,3 +65,9 @@ None.
 ## For post-execution review
 
 Collector waits were changed after `07-10-CONTINUATION.md` recorded that no further blind combat tuning was authorized. The change is evidence-based, not gameplay tuning: the recorded 158-second movie showed about 15 game seconds elapsed, and this run again showed the game advancing a small fraction of wall time (observer 1.8 simulation seconds at 21 wall seconds). A 60 wall-second death wait therefore bounds wall time, not the game events it is meant to observe. The change measures the game's own capped frame intervals (read only), adds no input, damage, difficulty change or state write, leaves the aim-proof, energy and throw waits and every acceptance predicate unchanged, and adds distinct non-passing outcomes for simulation expiry and wall-guard expiry. Recommended follow-up (new gap, not done here): the 30000 ms wall `accepted-aim` gate and the 120000 ms wall energy wait are subject to the same slowdown and need the same simulation-time treatment before a tracer can reach the natural death wait.
+
+## Tracer acceptance met by plan 07-23 (2026-10-10)
+
+Plan 07-23 spent its single fresh tracer capture (`node tools/art/review.mjs --animation-capture --tracer`). The report `evidence/07-motion-review-tracer.json` (capturedAt `2026-10-10T09:01:35.566Z`, SHA-256 `55c4e4e23ccf4c30f4c7a637d3711e78a0e93c45d1290494551802c99d865202`) has `independentTracerComplete: true`, the five combat stages `accepted-aim`, `earned-resource`, `throw-canceled-reload`, `natural-death`, `natural-respawn` in order, `menuReturn: true`, `protectedBytesUnchanged: true` and empty `collectionErrors`. The driver change that made the approach reach a natural death is commit `5b067f5` (route steer, early stall failure, approach diagnostics).
+
+07-12 its own part was the simulation-bounded natural death and respawn waits with their wall guards. The tracer exercised the Low tier once; Medium and High are first run by plan 07-19. The runs of 2026-10-09T19:29:06.828Z, 2026-10-09T19:54:33.020Z and 2026-10-10T05:20:38.924Z remain failed runs, archived as `evidence/07-motion-review-tracer-fourth.json`, `-fifth.json` and `-sixth.json`. `complete`, `matrixComplete` and `plan09Qualified` stay false in the fresh report. No requirement is marked complete by this change. All earlier sections, including each "Tracer result" section, are kept above unchanged as history.

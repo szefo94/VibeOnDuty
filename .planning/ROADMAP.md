@@ -188,11 +188,11 @@ Plans:
 5. Repeated spawn, character replacement, and disposal keep shared templates usable and release instance resources within the measured browser budget.
 
 **Plans:** 13/22 plans executed, 22 tasks across 9 waves; independent plan verification passed on 2026-10-05
-- [ ] 07-20-PLAN.md
+- [x] 07-20-PLAN.md
 - [x] 07-21-PLAN.md
-- [ ] 07-22-PLAN.md
+- [x] 07-22-PLAN.md
 - [x] 07-11-PLAN.md
-- [ ] 07-12-PLAN.md
+- [x] 07-12-PLAN.md
 - [x] 07-13-PLAN.md
 - [ ] 07-14-PLAN.md
 - [ ] 07-15-PLAN.md
