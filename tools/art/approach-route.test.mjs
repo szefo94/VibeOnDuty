@@ -128,8 +128,9 @@ test('tie order: the lowest row, then the lowest column, wins among equally near
   const hostile = { x: 1.5 * CELL, z: 1.5 * CELL };
   const result = syntheticStep(rows, { x: 0.5 * CELL, z: 0.5 * CELL }, [hostile]);
   assert.deepEqual(result.targetCell, [1, 0], 'north neighbour: lowest row');
-  const west = syntheticStep([[1, 1, 1], [0, 1, 0], [1, 1, 1]], { x: 0.5 * CELL, z: 1.5 * CELL }, [hostile]);
-  assert.deepEqual(west.targetCell, [0, 1], 'same row: the lowest column');
+  const sameRow = syntheticStep([[0, 1, 0], [0, 0, 0]], { x: 1.5 * CELL, z: 1.5 * CELL },
+    [{ x: 1.5 * CELL, z: 0.5 * CELL }]);
+  assert.deepEqual(sameRow.targetCell, [0, 0], 'same row: the lowest column beats the later cells');
 });
 
 test('determinism: the same input returns the same path and neighbours expand north, east, south, west', () => {
