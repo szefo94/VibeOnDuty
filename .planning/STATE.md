@@ -3,11 +3,11 @@ gsd_state_version: "1.0"
 current_phase: 07
 current_phase_name: Movement-Matched and Action-Safe Animation
 status: executing
-stopped_at: Completed 07-16-PLAN.md
-last_updated: "2026-10-10T18:29:24.990Z"
+stopped_at: "Halted 07-17: offline stable gate exit 1 (137/138); multiplayer 18/18"
+last_updated: "2026-10-10T20:02:44.768Z"
 last_activity: 2026-10-09
 last_activity_desc: Phase 07 execution started
-state_head: b6615b07dc5bd3fb7cc856771e71d92030fc17d3
+state_head: 464d035b579a58027eb37df4b1f557a0dfcec0f9
 progress:
   total_phases: 12
   completed_phases: 2
@@ -169,6 +169,7 @@ None yet.
 - Plan07-09 budget_contract checkpoint: qualified retirement and12 actual view profiles committed; legacy budget unmet/noncomparable, world51-equal-skeleton sharing requires root review. No09completion or golden-envelope change.
 - Plan07-09 exact two owner caches are qualified at f89d820. Actual unchanged-producer current smoke fails14 fixed Low/one statistics; named V2 CLI exits1 Incomplete report. Earlier complete135-flag failure is preserved separately. No current full candidate/plan/requirement advance; unrelated browser jobs remain running.
 - Plan07-09 qualifies45/46 distinct current resource/action/handling cases and1/2 legacy keepers. Original throw1ms and repeated-removal checks stopped in setup before assertions (WINDOWS42/43); targeted qualification remains open without changed tests/timeouts.
+- 07-17 stable gates incomplete: offline gate failed 1 of 138 (action-lifecycle throw 1ms, first-test beforeEach timeout, #range-startbtn LOADING). Owner decision needed on rerun.
 
 ### Roadmap Evolution
 
@@ -182,9 +183,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-10-10T18:29:24.820Z
-Stopped at: Completed 07-16-PLAN.md
-Resume file: None
+Last session: 2026-10-10T20:02:43.957Z
+Stopped at: Halted 07-17: offline stable gate exit 1 (137/138); multiplayer 18/18
+Resume file: .planning/phases/07-movement-matched-and-action-safe-animation/07-17-SUMMARY.md
 
 User passed both Phase 6 visual checks with "pass all tests and proceed".
 Canonical 06-VERIFICATION.md is passed; ART-01 through ART-04 are complete.
