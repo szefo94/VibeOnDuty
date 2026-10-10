@@ -7,6 +7,8 @@ import { requirePlan09, REQUIRED_ASSERTIONS, requireStableGates, REQUIRED_STABLE
   NATURAL_DEATH_WALL_GUARD_MS, NATURAL_RESPAWN_WALL_GUARD_MS, COLLECTION_LIFETIME_MS,
   COLLECTION_LIFETIME_PROJECTION, NATURAL_DEATH_SIM_SECONDS, NATURAL_RESPAWN_SIM_SECONDS,
   independentTracerComplete, diagnoseAcquisition } from './animation-capture.mjs';
+import { MANIFEST_PATH, PROVENANCE_PATH } from './runtime-dependencies.mjs';
+import { ACCEPTANCE_PATH } from './motion-acceptance.mjs';
 const identities = { 'src/main.js': 'a'.repeat(64),
   ...runtimeDependencyIdentities() };
 const completeSummary = '---\nstatus: complete\n---\n';
@@ -366,3 +368,35 @@ test('approach failure: the driver is exported and sends only W and mouse moveme
   const keys = [...body.matchAll(/code:'(\w+)'/g)].map(m => m[1]);
   assert.deepEqual([...new Set(keys)], ['KeyW']);
 });
+
+// ---- Plan 07-16 task 4: the plan 09 predicate ---------------------------------------------------
+// Re-review note N-01: the runtime dependency binding (CR-03) inside the two predicates. Both sides
+// of each comparison carry the same identities, so only verifyRuntimeDependencies can reject, and
+// each case asserts that check's own message.
+// A rejection by one named check: an AssertionError whose first line is exactly that check's message
+// (node appends the compared values on later lines).
+const rejectedWith = message => error => {
+  assert.ok(error instanceof assert.AssertionError, 'not an assertion rejection: ' + error);
+  assert.equal(error.message.split('\n')[0], message);
+  return true;
+};
+const stableEvidence = ids => ({ identities: ids, checks: REQUIRED_STABLE_GATES.map(id => ({ id,
+  executed: true, exitCode: 0, scope: 'full', logSha256: 'c'.repeat(64) })) });
+const DEPENDENCY_CASES = {
+  'manifest identity absent': [ids => { delete ids[MANIFEST_PATH]; }, 'Missing/stale runtime manifest identity'],
+  'manifest identity stale': [ids => { ids[MANIFEST_PATH] = 'f'.repeat(64); }, 'Missing/stale runtime manifest identity'],
+  'provenance identity changed': [ids => { ids[PROVENANCE_PATH] = 'f'.repeat(64); }, 'Missing/changed protected provenance identity'],
+  'acceptance registry identity absent': [ids => { delete ids[ACCEPTANCE_PATH]; }, 'Missing/stale acceptance registry identity'],
+};
+for (const [name, [mutate, message]] of Object.entries(DEPENDENCY_CASES)) {
+  test('runtime dependency binding in the stable gate predicate: ' + name, () => {
+    assert.ok(ACCEPTANCE_PATH in identities && MANIFEST_PATH in identities && PROVENANCE_PATH in identities);
+    assert.equal(requireStableGates(identities, stableEvidence(identities)), true);
+    const ids = structuredClone(identities); mutate(ids);
+    assert.throws(() => requireStableGates(ids, stableEvidence(ids)), rejectedWith(message));
+  });
+  test('runtime dependency binding in the plan 09 predicate, frozen route: ' + name, () => {
+    const ids = structuredClone(identities); mutate(ids);
+    assert.throws(() => requirePlan09(ids, completeSummary, { ...good(), identities: ids }), rejectedWith(message));
+  });
+}
