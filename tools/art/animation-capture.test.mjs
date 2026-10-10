@@ -669,7 +669,12 @@ for (const [name, bytes, message] of [
   ['the scalar has an indented child', rawDecision('decision: accept-frozen-pass\n  child: information-only\n' + REST), 'Owner decision is not accept-frozen-pass'],
   ['a lone carriage return hides a second key', rawDecision('decision: accept-frozen-pass\nnote: x\rdecision: information-only\n' + REST), 'Owner decision is not accept-frozen-pass'],
   ['the key is a continuation line of a quoted scalar', rawDecision('note: "a\ndecision: accept-frozen-pass\nb"\n' + REST), 'Owner decision is not accept-frozen-pass'],
-  ['the mapping is indented', rawDecision(' decision: neither\nnote: "a\ndecision: accept-frozen-pass\n' + REST + '\nb"'), 'Owner decision is not accept-frozen-pass'],
+  // The form of re-review row C5: the real mapping is indented by one space and says neither; the answer and one
+  // more key are unindented continuation lines of a quoted scalar inside it.
+  ['the real mapping is indented and the answer is a continuation line of its quoted scalar', rawDecision(' decision: neither\n note: "x\ndecision: accept-frozen-pass\n' + REST + '\nkey: y"'), 'Owner decision is not accept-frozen-pass'],
+  ['a next-line character hides a second key', rawDecision('decision: accept-frozen-pass\nnote: x\u0085decision: information-only\n' + REST), 'Owner decision is not accept-frozen-pass'],
+  ['a line separator hides a second key', rawDecision('decision: accept-frozen-pass\nnote: x\u2028decision: information-only\n' + REST), 'Owner decision is not accept-frozen-pass'],
+  ['a paragraph separator hides a second key', rawDecision('decision: accept-frozen-pass\nnote: x\u2029decision: information-only\n' + REST), 'Owner decision is not accept-frozen-pass'],
   ['a line is indented with a tab', rawDecision('decision: accept-frozen-pass\n\tnote: x\n' + REST), 'Owner decision is not accept-frozen-pass'],
   ['decided_by is quoted, so the record is not in the plain form at all', rawDecision('decision: accept-frozen-pass\ndecided_by: "owner"\nevaluation: 2\nevaluations: 2'), 'Owner decision is not accept-frozen-pass'],
   ['decided_by carries a comment', rawDecision('decision: accept-frozen-pass\ndecided_by: owner # by proxy\nevaluation: 2\nevaluations: 2'), 'Decision record is not decided by the owner'],
@@ -1341,4 +1346,47 @@ test('production call site: captureAnimationReview calls the plan 09 predicate w
   assert.equal(capture.executeV2.length, 1);
   assert.deepEqual(executed.map(entry => [entry.declared, entry.args]), [[true, ['directory']], [false, ['directory']]]);
   assert.ok(executed[1].index > review);
+});
+
+// ---- what stands behind the defaults ---------------------------------------------------------------------
+test('paired route rejects when the file present under a session report hash is not the report of that session', () => {
+  const message = /^The session report found is not the report of its registry session: 0{31}2$/;
+  for (const content of [{ schemaVersion: 1, kind: 'qualifying', nonce: 'f'.repeat(32), outcome: 'passed' },
+    { schemaVersion: 1, kind: 'calibration', nonce: '0'.repeat(31) + '2', outcome: 'passed' },
+    { schemaVersion: 1, kind: 'qualifying', nonce: '0'.repeat(31) + '2', outcome: 'failed' }, 'not a session report']) {
+    // The registry's closed event is written for these bytes, and the record is rebuilt from that registry,
+    // so the hash matches and only the content is wrong.
+    const world = pairedWorld(), name = sessionReports(world)[0];
+    world.files[name] = typeof content === 'string' ? Buffer.from(content) : jsonBytes(content);
+    delete world.record;
+    handEdited(world, event => event.type === 'closed' && event.kind === 'qualifying',
+      event => { event.reportHashes = { ...event.reportHashes, session: sha(world.files[name]) }; });
+    assert.equal(world.record.paired.verdict, 'pass');
+    assert.throws(() => requirePlan09(world.ids, completeSummary, world.record, readersOf(world)), rejectedLike(message), JSON.stringify(content));
+  }
+});
+test('default readers: the predicate defaults to the files on disk, read inside the repository only', async () => {
+  const readers = capture.PLAN09_DISK_READERS;
+  assert.ok(readers && Object.isFrozen(readers));
+  assert.deepEqual(Object.keys(readers).sort(), ['committedRegistry', 'evidenceFiles', 'file', 'frozen', 'frozenEvaluations', 'registryHistory']);
+  for (const reader of Object.values(readers)) assert.equal(typeof reader, 'function');
+  // The file reader returns the bytes of a tracked file and refuses a path that leaves the repository.
+  assert.deepEqual(readers.file(paired.PAIRED_CONTRACT.decisionPath), repoFile(paired.PAIRED_CONTRACT.decisionPath));
+  for (const name of ['../outside.json', paired.EVIDENCE_DIR + '../../../../../outside.json', path.join(tmpdir(), 'outside.json'), ''])
+    assert.throws(() => readers.file(name), /Path escapes owned root/, name);
+  // The evidence listing holds the JSON files directly inside the evidence directory, the registry among them.
+  const listed = readers.evidenceFiles();
+  assert.ok(listed.includes(paired.REGISTRY_PATH));
+  assert.ok(listed.includes(PLAN13_CANDIDATE_PATH) && listed.includes(PLAN13_RESULT_PATH));
+  for (const name of listed) {
+    assert.ok(name.startsWith(paired.EVIDENCE_DIR) && name.endsWith('.json') && !name.slice(paired.EVIDENCE_DIR.length).includes('/'), name);
+    assert.ok(readers.file(name).length > 0, name);
+  }
+  assert.deepEqual(listed, [...listed].sort());
+  // That object, and no other, is the default of the fourth parameter, and it is never reassigned.
+  const source = (await readFile(new URL('./animation-capture.mjs', import.meta.url), 'utf8')).replace(/\r\n/g, '\n');
+  assert.equal(occurrencesOf(source, 'requirePlan09')[0].args[3], 'readers = PLAN09_DISK_READERS');
+  const named = occurrencesOf(source, 'PLAN09_DISK_READERS');
+  assert.equal(named.length, 2);
+  assert.match(source.slice(named[0].index - 13, named[0].index + 40), /^export const PLAN09_DISK_READERS = Object\.freeze\(\{/);
 });
