@@ -174,10 +174,20 @@ Important dependencies and lifecycle constraints:
   `mapDefFromB64()` used by `main.js` for `?map=` currently accepts v2 only.
 
 Observed code paths to recheck when relevant (not browser-reproduced bug reports):
-`returnToMainMenu()` does not reset the active mode; pointer unlock displays the pause
+`returnToMainMenu()` calls `setMode(null)`; pointer unlock displays the pause
 overlay without clearing `gameRunning`; `WALKABLE_CELLS` and the player's visited grid
 are initialized against the initial map. Exercise mode switching and differently sized
 maps when changing lifecycle/spawning/radar behavior.
+
+Pause-menu press (plans 07-21, 07-22): the offline document `mousedown` handler in
+`src/main.js` requests no pointer lock for a press inside `#pause-menu`, `#mp-error-banner`
+or on `#kc-skip` (selector `'#pause-menu, #mp-error-banner, #kc-skip'`); Resume re-captures
+through its own click handler. `src/main.js` is accepted by the frozen V2 gate only as the
+one reviewed exact-hash exception (LF, pinned in `.gitattributes`). Existing tests stub
+`requestPointerLock` without capturing; `tests/pause-menu-pointer-lock.spec.js` is the
+real-click regression. The tracer collector's combat page now records `pageJournal` (page
+errors, rejections, console error or warning lines, at most 200) and, when the `#overlay`
+wait fails, `menuReturnDiagnostics`; it still returns to the menu with a real click.
 
 ## Character animation and weapons
 
