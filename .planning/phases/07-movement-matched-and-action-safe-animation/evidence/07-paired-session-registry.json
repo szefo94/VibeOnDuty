@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "contractVersion": "paired-same-session-v2",
+  "events": [
+    {
+      "type": "registered",
+      "kind": "smoke",
+      "countable": false,
+      "nonce": "76123eb3c88d18d41c1535b427c59fe7",
+      "commit": "4c544c87bd21225b887b7e9d65845f0859083d78",
+      "identity": "c1b062729e765c0086c4c9c283170cf2da3e65044ff4eeacd66937899cbc2c57",
+      "host": {
+        "at": "2026-10-10T13:28:10.194Z",
+        "hostname": "DESKTOP-NUH2KOI",
+        "platform": "win32",
+        "release": "10.0.19045",
+        "cpuModel": "AMD Ryzen 5 5600 6-Core Processor",
+        "logicalCpus": 12,
+        "powerPlan": "Balanced",
+        "powerPlanGuid": "381b4222-f694-41f0-9685-ff5bb260df2e",
+        "sampledBusyFraction": 0.117,
+        "freeMemMiB": 17004,
+        "totalMemMiB": 32672,
+        "heaviestProcesses": [
+          {
+            "name": "brave.exe",
+            "processes": 36,
+            "workingSetMiB": 3852
+          },
+          {
+            "name": "claude.exe",
+            "processes": 17,
+            "workingSetMiB": 2296
+          },
+          {
+            "name": "Memory Compression",
+            "processes": 1,
+            "workingSetMiB": 1868
+          },
+          {
+            "name": "Code.exe",
+            "processes": 15,
+            "workingSetMiB": 1403
+          },
+          {
+            "name": "svchost.exe",
+            "processes": 91,
+            "workingSetMiB": 723
+          },
+          {
+            "name": "Discord.exe",
+            "processes": 6,
+            "workingSetMiB": 473
+          },
+          {
+            "name": "MsMpEng.exe",
+            "processes": 1,
+            "workingSetMiB": 402
+          },
+          {
+            "name": "SearchApp.exe",
+            "processes": 2,
+            "workingSetMiB": 228
+          },
+          {
+            "name": "Dell.TechHub.Instrumentation.SubAgent.exe",
+            "processes": 1,
+            "workingSetMiB": 189
+          },
+          {
+            "name": "node.exe",
+            "processes": 1,
+            "workingSetMiB": 180
+          },
+          {
+            "name": "Unity Hub.exe",
+            "processes": 7,
+            "workingSetMiB": 168
+          },
+          {
+            "name": "NVDisplay.Container.exe",
+            "processes": 2,
+            "workingSetMiB": 165
+          }
+        ]
+      },
+      "toolHashes": {
+        "tools/art/animation-budget-paired.mjs": "60d4686b0121e3b4be64ca3131967296bb599d88fb94bd94dab0f8bc77ca1039",
+        "tools/art/review.mjs": "ea9b4492791494291189cb1afb7f9a219e91018c0f545f3174041c30a26efa3e",
+        "tools/art/animation-capture.mjs": "9df05ccfca0cdee5e48357c4aecbd67627ee4bbc19ba63dafcefe58310ba2ac0"
+      },
+      "samplerIdentity": "2720e51eed272c40fe9e12ff561e4d63072f9b7548b5c270a71ec0ae527ab83f",
+      "seq": 1,
+      "at": "2026-10-10T13:28:10.198Z",
+      "prevHash": "paired-same-session-v2:first-event"
+    }
+  ]
+}
