@@ -332,6 +332,32 @@ build, **273 unit tests in 25 files**, **45 offline browser tests** and **14 pro
 multiplayer tests**. `06-06-SUMMARY.md` and `06-VALIDATION.md` record current source,
 export, capture and recovery identities. Human aesthetic acceptance remains pending.
 
+Multiplayer lifecycle test ownership (plan 07-24, 2026-10-10; test-only, no `src/` or `server/` change):
+
+- The time-limit case (6-second match, rematch keeps it) owns the draw, results duration,
+  solo switch and replacement join, and reads generation-2 facts from the in-page
+  `window.__rematchSeen` recorder; presentation and `#mp-resume` must be seen within 1500 ms
+  of the first generation-2 tick (observed 0 ms on both clients in 9 runs). It never clicks
+  Resume, opens the pause menu or leaves. The score-limit case (180 s) owns Resume capture,
+  the pause-menu layout check and Leave on two ordinary clients. A third case
+  (`lifecycle: a rematched match reaching results again hides resume and pause and releases the pointer`,
+  30 s) runs the same checks on the replacement client and captures the pointer on the
+  switched client. The switched client does not repeat the pause-layout check and leaves
+  from the results screen. Results of any match, rematched ones included, release the
+  pointer and hide `#pause-menu` and `#mp-resume` by design.
+- Finding: first-person view meshes are drawn whenever the local player is online and alive,
+  including on the results screen. Under software rendering one debug session measured about
+  25 to 30 percent of the frame rate (13.0 fps on current source against 14.6 to 14.8 before
+  plan 07-07). Not measured on a real GPU; which part of the drawing dominates was not split.
+- UNVERIFIED hypothesis: this cost contributes to the plan 07-13 frozen V2 numeric failure and
+  to other tight-window multiplayer cases. A reduction confined to the five mutable builders
+  is conceivable (skip the body view or its shadow when unseen, hide views while the pointer
+  is released or on results, no ink hull on view meshes) but changes frozen-budget view
+  evidence and needs its own plan and review.
+- The three `animation authority` multiplayer cases have no reference arm and were not measured.
+- A control that a rematch preserves `matchSeconds` belongs in `src/shared/tdmRules.test.js`,
+  a frozen identity, so it is deferred and not written.
+
 After animation fixes: lint, typecheck, build, **86 unit tests in 10 files**, and **17
 Playwright tests in 3 files** passed. Build reports a JS chunk above 500 kB. Headless
 browser runs log pointer-lock `WrongDocumentError`; existing tests account for pointer
