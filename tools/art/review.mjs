@@ -1037,6 +1037,9 @@ export async function registerPairedSession(kind) {
   const identities = await animationIdentities();
   assert.equal(identities.captureSampler, paired.FROZEN_SAMPLER, 'Sampler is not the frozen capture sampler');
   paired.assertServedTreeClean(identities);
+  // Review finding I-02: a calibration or qualifying session is not registered on a host that is not the
+  // frozen device, where its one capture could only close invalid. Nothing is appended when this refuses.
+  if (kind !== 'smoke') paired.assertHostDevice(pairedHostDevice(await pairedBrowserVersion()), (await pairedReportInputs()).frozenDevices);
   const commit = (await promisify(execFile)('git', ['rev-parse', 'HEAD'], { cwd: ROOT, windowsHide: true })).stdout.trim();
   const next = paired.registerSession(working, { kind, nonce: paired.newNonce(), commit,
     identity: paired.identityHash(identities), host: await paired.hostFacts(), toolHashes: paired.toolHashes(),
@@ -1048,13 +1051,25 @@ export async function registerPairedSession(kind) {
   return event;
 }
 
-// What an arm report needs besides its samples: the frozen files a candidate report cites.
+// What an arm report needs besides its samples: the frozen files a candidate report cites. `frozenDevices`
+// are the device blocks an arm report is compared with, each read from the object that compares it: `budget`
+// by `compare` below, `v2Budget` by the unchanged frozen command.
 export async function pairedReportInputs() {
   const baselineBytes = await fs.readFile(path.join(ANIMATION_EVIDENCE, '07-baseline.json'));
   const budget = JSON.parse(await fs.readFile(path.join(ANIMATION_EVIDENCE, '07-budget.json'), 'utf8'));
   const v2BudgetBytes = await fs.readFile(path.join(ROOT, paired.FROZEN_BUDGET_PATH)), v2Budget = JSON.parse(v2BudgetBytes);
   return { baselineSha256: hash(baselineBytes), compare: report => compareAnimationCandidate(report, budget), v2Budget, v2BudgetBytes,
-    knownReportHashes: paired.existingReportHashes(v2Budget) };
+    knownReportHashes: paired.existingReportHashes(v2Budget),
+    frozenDevices: { [paired.EVIDENCE_DIR + '07-budget.json']: budget.device, [paired.FROZEN_BUDGET_PATH]: v2Budget.device } };
+}
+
+// The device block every arm report of a session carries; `rendererClass` is added from the samples.
+const pairedHostDevice = browserVersion => ({ hostname: os.hostname(), os: os.type(), release: os.release(), arch: process.arch,
+  cpu: os.cpus()[0]?.model, node: process.version, browser: browserVersion });
+// The version of the browser build a session would launch: one short launch with the session's own launch settings.
+async function pairedBrowserVersion() {
+  const browser = await chromium.launch({ headless: paired.SESSION_SETTINGS.launch.headless, args: [...paired.SESSION_SETTINGS.launch.args] });
+  try { return browser.version(); } finally { await browser.close(); }
 }
 
 // Step two: one capture for one committed registration. A smoke captures one profile pair
@@ -1076,7 +1091,7 @@ export async function runPairedSession(kind, nonce) {
   const full = kind !== 'smoke', inputs = full ? await pairedReportInputs() : null;
   const hostBefore = await paired.hostFacts(), owners = Object.keys(paired.PAIRED_CONTRACT.referenceOwners);
   const servers = {}, opened = new Set(), pageErrors = { reference: [], candidate: [] }, failedResponses = { reference: [], candidate: [] };
-  let browser, browserVersion, arms, armIdentity, runtimeDependencies = null, released = false;
+  let browser, browserVersion, device, arms, armIdentity, runtimeDependencies = null, released = false;
   const release = async () => {
     released = true;
     for (const context of opened) await context.close().catch(() => {});
@@ -1090,6 +1105,10 @@ export async function runPairedSession(kind, nonce) {
   try {
     browser = await chromium.launch({ headless: paired.SESSION_SETTINGS.launch.headless, args: [...paired.SESSION_SETTINGS.launch.args] });
     browserVersion = browser.version();
+    // Review finding I-02: a calibration or qualifying session is not started on a host that is not the frozen
+    // device. This is the device block its arm reports will carry; nothing is materialised or appended yet.
+    device = pairedHostDevice(browserVersion);
+    if (full) paired.assertHostDevice(device, inputs.frozenDevices);
     paired.assertRunScope({ registry, registered, toolHashes: paired.toolHashes(), samplerIdentity: identities.captureSampler, browserVersion });
     // Both arms exist, and differ in exactly the five owner files (in none, for a calibration), before the session starts.
     arms = paired.materializeArms(registered, { files: paired.armFiles(identities) });
@@ -1173,8 +1192,7 @@ export async function runPairedSession(kind, nonce) {
       context: { revision: head.headCommit, browserVersion, hostBefore, armIdentities: armIdentity, difference: arms.difference, paths,
         ...(full ? { knownReportHashes: inputs.knownReportHashes, runtimeDependencies, baselineSha256: inputs.baselineSha256,
           compare: inputs.compare, v2Budget: inputs.v2Budget, v2BudgetBytes: inputs.v2BudgetBytes,
-          device: { hostname: os.hostname(), os: os.type(), release: os.release(), arch: process.arch, cpu: os.cpus()[0]?.model,
-            node: process.version, browser: browserVersion } } : {}) } });
+          device, frozenDevices: inputs.frozenDevices } : {}) } });
   } finally { if (!released) await release(); }
   if (kind === 'smoke') {
     if (result.report.error) console.error(result.report.error);

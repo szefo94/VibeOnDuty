@@ -635,6 +635,31 @@ export const SESSION_SETTINGS = Object.freeze({
     viteCache: 'one per arm, outside the served directory' }),
 });
 
+// ---- host device (review finding I-02) ---------------------------------------------------------------
+
+/** Refuses a host that is not the frozen device. Every arm report carries the host's device block,
+ *  and both things an arm is qualified against compare that block whole: the comparison stored in
+ *  the arm report (`compareAnimationCandidate`, against the device of 07-budget.json) and the
+ *  unchanged frozen command (against the device of the frozen V2 budget). On another OS release,
+ *  Node version, CPU string or browser build every arm would fail them and the session would close
+ *  invalid. `frozen` maps the name of each of those sources to its device block. `rendererClass` is
+ *  read from the samples and exists only after a capture, so it is the one field left out.
+ *  A refusal comes before the `started` event: nothing is appended or written, and the registration
+ *  can still be run once the host is the frozen device again. */
+export function assertHostDevice(device, frozen) {
+  const sources = Object.entries(frozen && typeof frozen === 'object' ? frozen : {});
+  if (!sources.length) throw Error('Run refused: no frozen device to compare this host with; nothing was started or written');
+  for (const [source, expected] of sources) {
+    if (!expected || typeof expected !== 'object') throw Error(`Run refused: ${source} holds no frozen device; nothing was started or written`);
+    const names = [...new Set([...Object.keys(expected), ...Object.keys(device ?? {})])].filter(name => name !== 'rendererClass').sort();
+    const differing = names.filter(name => device?.[name] !== expected[name]);
+    if (differing.length) throw Error(`Run refused: this host is not the frozen device its arm reports would be compared with (${source}): ` +
+      differing.map(name => `${name} is ${JSON.stringify(device?.[name])} here and ${JSON.stringify(expected[name])} there`).join('; ') +
+      '. Nothing was started or written, and the registration stays as it is');
+  }
+  return true;
+}
+
 // ---- smoke: load and structure facts only (contract section 8) ----------------------------------
 
 const count = value => Number.isFinite(value) && value >= 0;
@@ -1484,6 +1509,8 @@ export function buildArmReport({ arm, kind, nonce, identities, samples, captures
  *      report; only then show anything that carries timing, the frozen output included.
  *
  *  A calibration skips step 3. A smoke uses steps 1, 6 and 7 with a report that holds no timing.
+ *  Before step 1 a calibration or qualifying session is refused on a host that is not the frozen
+ *  device (`assertHostDevice`): nothing is appended, and the registration can be run later.
  *  A calibration or qualifying capture that does not complete is not closed: the session stays
  *  in the registry as it stands, counts, and cannot be run again. */
 export async function runSession({ kind, registered, pairs, capturePair, endCapture, hashFrameImages, appendEvent: append, write, log,
@@ -1497,6 +1524,9 @@ export async function runSession({ kind, registered, pairs, capturePair, endCapt
     assert.equal(typeof effect, 'function', `runSession needs the injected ${name}`);
   for (const name of ['session', ...(kind === 'smoke' ? [] : ARMS)])
     assert.ok(typeof context.paths?.[name] === 'string' && context.paths[name], `runSession needs the ${name} report path`);
+  // Review finding I-02: a calibration or qualifying session is not started on a host whose arm reports
+  // the frozen comparisons would refuse. A smoke builds no arm report and is not compared with a device.
+  if (kind !== 'smoke') assertHostDevice(context.device, context.frozenDevices);
   const nonce = registered.nonce, registrationEventHash = eventHash(registered);
 
   // 1. Started, then the captures, held in memory.
