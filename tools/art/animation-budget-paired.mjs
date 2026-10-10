@@ -1103,6 +1103,33 @@ export async function verifySession({ sessionBytes, registry, readArm, hashFrame
   return { result, exitCode: passed ? 0 : 1 };
 }
 
+/** What the `verify` command prints and exits with for one session: the result line on stdout with
+ *  the exit code `verifySession` gives, or the refusal on stderr with exit 1. Every effect stays
+ *  injected. The command line and whatever stands in for it share this one function. */
+export async function verifyOutput(input) {
+  try {
+    const { result, exitCode } = await verifySession(input);
+    return { exitCode, stdout: JSON.stringify(result) + '\n', stderr: '' };
+  } catch (error) { return { exitCode: 1, stdout: '', stderr: `${error?.message ?? error}\n` }; }
+}
+
+/** What a captured run of the `verify` command says of one session, or null when it gives no usable
+ *  result: only a refusal, a line of another session or kind, or a line and an exit code that do
+ *  not agree. The command exits 0 only for a valid session that passes rules 1 and 2 and, when it
+ *  has a candidate arm, the frozen tool's structural checks; it exits 1 for every other result. */
+export function verifyFacts(run, { kind, nonce }) {
+  const line = String(run?.stdout ?? '').split(/\r?\n/).filter(text => text.trim()).at(-1);
+  let parsed;
+  try { parsed = JSON.parse(line); } catch { return null; }
+  if (!parsed || typeof parsed !== 'object' || !['calibration', 'qualifying'].includes(kind) || parsed.kind !== kind ||
+    parsed.nonce !== nonce || typeof parsed.valid !== 'boolean') return null;
+  const pass = parsed.pairedBudgetPass ?? null, structuralV2Pass = parsed.structuralV2Pass ?? null;
+  if (parsed.valid ? typeof pass !== 'boolean' : pass !== null) return null;
+  if (kind === 'calibration' ? structuralV2Pass !== null : typeof structuralV2Pass !== 'boolean') return null;
+  const passed = parsed.valid && pass === true && (kind === 'calibration' || structuralV2Pass === true);
+  return run.exitCode === (passed ? 0 : 1) ? { valid: parsed.valid, pass, structuralV2Pass, passed, exitCode: run.exitCode } : null;
+}
+
 // ---- registry history (contract section 8) ---------------------------------------------------------------
 
 /** Passes only when the events of every committed version of the registry equal, event hash by
@@ -1364,6 +1391,17 @@ export function runFrozenCommand(candidate, budget = FROZEN_BUDGET_PATH) {
   return { exitCode: run.status, stdout: run.stdout ?? '', stderr: run.stderr ?? '' };
 }
 
+/** The `verify` command of this tool on one session report, with its output captured, never
+ *  inherited: the whole session verification from the files on disk (the session report, both arm
+ *  reports it names, their frame images and, for a qualifying session, the unchanged frozen command
+ *  on the candidate arm). It needs the session directory in the gitignored cache as the runner left it. */
+export function runVerifyCommand(session, { budget = FROZEN_BUDGET_PATH, registry = REGISTRY_PATH } = {}) {
+  const run = spawnSync(process.execPath, ['tools/art/animation-budget-paired.mjs', 'verify', '--budget', path.resolve(ROOT, budget),
+    '--session', boundedPath(ROOT, session), '--registry', path.resolve(ROOT, registry)],
+    { cwd: ROOT, encoding: 'utf8', windowsHide: true, timeout: 600000, maxBuffer: 1 << 26, stdio: ['ignore', 'pipe', 'pipe'] });
+  return { exitCode: run.status, stdout: run.stdout ?? '', stderr: run.stderr ?? '' };
+}
+
 // ---- the session runner (contract sections 3, 7 and 8) -------------------------------------------------------
 
 export const SMOKE_PAIR = Object.freeze({ warmup: false, run: 1, tier: 'low', actorCount: 1, first: orderFor(1, 0, 0) });
@@ -1601,7 +1639,7 @@ export function existingReportHashes(budget) {
 async function verifyCommand(values) {
   for (const flag of ['--budget', '--session', '--registry']) assert.ok(values[flag], 'Use verify --budget <frozen V2 budget> --session <session report> --registry <registry>');
   const budgetFile = path.resolve(values['--budget']);
-  const { result, exitCode } = await verifySession({ sessionBytes: readFileSync(path.resolve(values['--session'])),
+  const run = await verifyOutput({ sessionBytes: readFileSync(path.resolve(values['--session'])),
     registry: JSON.parse(readFileSync(path.resolve(values['--registry']), 'utf8')),
     readArm: async (arm, name) => {
       assert.ok(typeof name === 'string' && name, `Session report names no ${arm} arm report`);
@@ -1610,8 +1648,10 @@ async function verifyCommand(values) {
     hashFrameImages: async report => frameImageCheck(report),
     runFrozen: async name => runFrozenCommand(name, budgetFile),
     knownReportHashes: existingReportHashes(JSON.parse(readFileSync(budgetFile, 'utf8'))) });
-  console.log(JSON.stringify(result));
-  process.exitCode = exitCode;
+  // The result line, or the refusal: the same two streams and exit code that `runVerifyCommand` captures.
+  if (run.stdout) process.stdout.write(run.stdout);
+  if (run.stderr) process.stderr.write(run.stderr);
+  process.exitCode = run.exitCode;
 }
 
 const trackedRegistry = (values, use) => {

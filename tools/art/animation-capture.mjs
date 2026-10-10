@@ -14,8 +14,8 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { canonical } from './animation-budget-v2.mjs';
 import { boundedPath } from './motion-acceptance.mjs';
 import { EVIDENCE_DIR, REGISTRY_PATH, assertContract, assertRegistryIntegrity, committedRegistry, frozenEvaluationList,
-  identityHash, registrationCommitsOf, registryHistory, registryVerdict, runFrozenCommand,
-  scanReports } from './animation-budget-paired.mjs';
+  identityHash, registrationCommitsOf, registryHistory, registryVerdict, runFrozenCommand, runVerifyCommand,
+  scanReports, verifyFacts } from './animation-budget-paired.mjs';
 
 const EVIDENCE = path.join(ROOT, '.planning/phases/07-movement-matched-and-action-safe-animation/evidence');
 export const REQUIRED_ASSERTIONS = [
@@ -233,6 +233,11 @@ export function requireStableGates(identities, evidence) {
 //     paired             { v2Sha256, decisionSha256, v2ReviewSha256, registry: { path, sha256 }, identity,
 //                          verdict, passed, failed, invalid, started, allQualifying, registrationCommits,
 //                          structuralV2Pass }, equal to what the registry verdict gives for this identity
+//   A `closed` event of the registry is a claim until its session is verified from its reports. For this
+//   source identity the session report of the calibration and of every closed qualifying session must be
+//   in the evidence directory under the hash its `closed` event holds, both arm reports it names must be
+//   on disk with the hashes of that event, and the `verify` command of the paired tool must give for it
+//   the validity and the result the event records (binding, validity and both rules, recomputed).
 //
 // What a paired qualification means is stated in section 10 of 07-09-PAIRED-AMENDMENT-V2.md and nowhere
 // wider: it is never the original absolute limits, a frame rate, a device or a human acceptance.
@@ -248,9 +253,9 @@ const PLAN_0713_RESULT = EVIDENCE_DIR + '07-13-v2-requalification.json';
 const PLAN_0713_CANDIDATE = EVIDENCE_DIR + '07-13-cost-candidate.json';
 
 // What the predicate reads beyond its three arguments: files of the repository, the registry's git
-// history and the unchanged frozen command. Production callers pass no readers, so only these can
-// qualify plan 09; controls inject synthetic ones. No reader can supply the summary, the identities
-// or the qualification record. Exported so that the defaults themselves can be exercised.
+// history, the unchanged frozen command and the paired tool's `verify` command. Production callers pass
+// no readers, so only these can qualify plan 09; controls inject synthetic ones. No reader can supply the
+// summary, the identities or the qualification record. Exported so that the defaults themselves can be exercised.
 export const PLAN09_DISK_READERS = Object.freeze({
   file: name => readFileSync(boundedPath(ROOT, name)),
   evidenceFiles: () => readdirSync(path.join(ROOT, EVIDENCE_DIR), { withFileTypes: true })
@@ -266,6 +271,11 @@ export const PLAN09_DISK_READERS = Object.freeze({
     return frozenEvaluationList(reports, identity, results);
   },
   frozen: name => runFrozenCommand(name),
+  // The paired tool's own `verify` command on one session report of the evidence directory, with its
+  // output captured: it re-reads both arm reports the report names and their frame images from the
+  // session directory in the gitignored cache, runs the unchanged frozen command on a candidate arm,
+  // and recomputes binding, validity and the rules.
+  verifySession: name => runVerifyCommand(name),
 });
 function readOrReject(readers, name, what) {
   try { return Buffer.from(readers.file(name)); } catch { return assert.fail(what + ' is missing or cannot be read'); }
@@ -378,9 +388,72 @@ function requireFrozenRoute(identities, qualification, readers) {
   assert.equal(strictRootScalar(text, 'evaluation'), String(chosen.evaluation), 'Owner decision is for another evaluation');
   assert.equal(strictRootScalar(text, 'evaluations'), String(chosen.of), 'Owner decision was made on another count of evaluations');
 }
+// The JSON files of the evidence directory by the hash of their bytes, read once, when first needed.
+function evidenceByHash(readers) {
+  let found = null;
+  return () => found ??= new Map(readers.evidenceFiles().map(name => {
+    const bytes = readOrReject(readers, name, 'An evidence file');
+    return [hash(bytes), { name, bytes }];
+  }));
+}
+// The session report of one closed session: present in the evidence directory with the hash its `closed`
+// event holds, and the report of that session.
+function sessionReportOf(evidence, kind, session) {
+  const found = evidence().get(session.reportHashes?.session);
+  assert.ok(found, `The session report of ${kind === 'calibration' ? 'the calibration' : 'a qualifying session'} is not present with the hash in its closed event: `
+    + session.nonce);
+  let report;
+  try { report = JSON.parse(found.bytes.toString('utf8')); } catch { report = null; }
+  assert.ok(report?.kind === kind && report.nonce === session.nonce && report.outcome === session.outcome,
+    'The session report found is not the report of its registry session: ' + session.nonce);
+  return { name: found.name, report };
+}
+// Review finding I-01 (07-16-PAIRED-IMPLEMENTATION-REVIEW.md). The registry verdict counts what the `closed`
+// events say, and a `closed` event is a claim until its session is verified from its reports: a registry
+// written by hand, with a valid chain, could otherwise name any report as an arm. So for this source identity
+// the calibration and every closed qualifying session, whatever its outcome, must have
+//   its session report in the evidence directory under the hash of its `closed` event,
+//   both arm reports that report names on disk, with the hashes of that event, and
+//   a result of the paired tool's own `verify` command (binding, validity and both rules recomputed from
+//   those files, and for a candidate arm the unchanged frozen command) that states the validity and the
+//   result the event records; a session counted as passed must verify as passed, which is exit 0.
+// Sessions of earlier source identities are listed and never counted; they are not verified here, and the
+// frozen command could not be run again on their source. Returns the number of sessions verified.
+function requireVerifiedSessions(readers, registry, verdict, evidence = evidenceByHash(readers)) {
+  const counted = [];
+  if (verdict.calibration?.closed === true) {
+    const closed = registry.events.find(event => event.type === 'closed' && event.nonce === verdict.calibration.nonce);
+    counted.push(['calibration', { nonce: closed.nonce, valid: closed.valid ?? null, pass: closed.pass ?? null,
+      outcome: closed.valid === true && closed.pass === true ? 'passed' : closed.valid === true && closed.pass === false ? 'failed' : 'invalid',
+      reportHashes: closed.reportHashes ?? null }]);
+  }
+  for (const session of verdict.sessions) if (session.closed) counted.push(['qualifying', session]);
+  for (const [kind, session] of counted) {
+    const { name, report } = sessionReportOf(evidence, kind, session);
+    for (const arm of ['reference', 'candidate']) {
+      const bytes = readOrReject(readers, report.arms?.[arm]?.path, `The ${arm} arm report of the paired session ${session.nonce}`);
+      assert.equal(hash(bytes), session.reportHashes?.[arm],
+        `The ${arm} arm report of a paired session differs from the hash in its closed event: ${session.nonce}`);
+    }
+    const facts = verifyFacts(readers.verifySession(name), { kind, nonce: session.nonce });
+    assert.ok(facts, 'A paired session is not verified from its reports: ' + session.nonce);
+    assert.ok(facts.valid === session.valid && facts.pass === (session.pass ?? null),
+      'The closed event of a paired session differs from what its verification computes: ' + session.nonce);
+    assert.equal(facts.passed, session.outcome === 'passed', 'A paired session counted as passed does not verify as passed: ' + session.nonce);
+  }
+  return counted.length;
+}
+// The same check for a caller that holds only the source identity: the whole registry, its verdict, and
+// every session that verdict counts verified from its reports.
+function verifiedPairedSessions(identity, readers) {
+  const { registry, versions } = wholeRegistry(readers);
+  return requireVerifiedSessions(readers, registry,
+    registryVerdict(registry, identity, { registrationCommits: registrationCommitsOf(registry, versions) }));
+}
 // A pass comes from the registry verdict under the pinned contract, never from one report: the record
-// must equal what the whole registry gives for the current source identity, and the unchanged frozen
-// command must again print a result line for the recorded candidate.
+// must equal what the whole registry gives for the current source identity, every session that verdict
+// counts must be verified from its reports, and the unchanged frozen command must again print a result
+// line for the recorded candidate.
 function requirePairedRoute(identities, qualification, readers) {
   const record = qualification.paired;
   assert.ok(record && typeof record === 'object', 'Paired plan09 qualification has no paired block');
@@ -393,6 +466,10 @@ function requirePairedRoute(identities, qualification, readers) {
   const { registry, versions } = wholeRegistry(readers, record.registry ?? null);
   const registrationCommits = registrationCommitsOf(registry, versions);
   const verdict = registryVerdict(registry, identity, { registrationCommits });
+  // Review finding I-01. Here, after the registry is known to be whole and before anything below reads
+  // the verdict: every session the verdict counts for this identity is verified from its reports.
+  const evidence = evidenceByHash(readers);
+  requireVerifiedSessions(readers, registry, verdict, evidence);
   assert.equal(verdict.verdict, 'pass', 'Paired registry verdict is not pass: ' + verdict.wording);
   assert.equal(record.verdict, 'pass', 'Paired plan09 qualification does not record the verdict as pass');
   for (const name of ['passed', 'failed', 'invalid', 'started'])
@@ -415,20 +492,8 @@ function requirePairedRoute(identities, qualification, readers) {
   }
   // The report of every closed qualifying session in the registry, of every source identity, is present
   // in the evidence directory with the hash its closed event holds.
-  let evidence = null;
-  for (const group of verdict.allQualifying) for (const session of group.sessions) {
-    if (!session.closed) continue;
-    evidence ??= new Map(readers.evidenceFiles().map(name => {
-      const bytes = readOrReject(readers, name, 'An evidence file');
-      return [hash(bytes), bytes];
-    }));
-    const bytes = evidence.get(session.reportHashes?.session);
-    assert.ok(bytes, 'The session report of a qualifying session is not present with the hash in its closed event: ' + session.nonce);
-    let report;
-    try { report = JSON.parse(bytes.toString('utf8')); } catch { report = null; }
-    assert.ok(report?.kind === 'qualifying' && report.nonce === session.nonce && report.outcome === session.outcome,
-      'The session report found is not the report of its registry session: ' + session.nonce);
-  }
+  for (const group of verdict.allQualifying) for (const session of group.sessions)
+    if (session.closed) sessionReportOf(evidence, 'qualifying', session);
   assert.equal(record.structuralV2Pass, true, 'Paired plan09 qualification has no structural V2 pass');
   assert.ok(typeof qualification.candidate === 'string' && EVIDENCE_REPORT.test(qualification.candidate),
     'Paired plan09 qualification names no candidate in the evidence directory');
@@ -480,7 +545,8 @@ export function requirePlan09(identities, summary, qualification, readers = PLAN
   return true;
 }
 
-const PAIRED_MEANING = 'On the paired route, passed is the registry verdict of the paired same-session gate together with a printed '
+const PAIRED_MEANING = 'On the paired route, passed is the registry verdict of the paired same-session gate, with every session it '
+  + 'counts verified from its reports, together with a printed '
   + 'result line of the unchanged frozen command for the recorded candidate. It covers what section 10 of 07-09-PAIRED-AMENDMENT-V2.md '
   + 'states and nothing wider: it never means the original absolute limits were met (the frozen result is '
   + 'frozenApplicableBudgetPass, as reported), a frame rate, a device or a human acceptance.';
@@ -488,9 +554,10 @@ const PAIRED_MEANING = 'On the paired route, passed is the registry verdict of t
 // command. Frozen route: exit 0 with every limit met, as before. Paired route: the frozen command must
 // first have printed a result line for that candidate (exit 0, or exit 1 with numeric overruns only; a
 // failure on stderr alone is structural and nothing then passes), and only then is the paired verdict
-// asked, for the candidate's own source identity; `passed` needs both. The frozen result is recorded as
-// reported and is never rewritten.
-export async function actualV2Outcome({ qualification, frozenRun, readCandidate, runVerdict }) {
+// asked, for the candidate's own source identity. A `pass` verdict is relied on only when every session
+// it counts is verified from its reports (review finding I-01), which `verifySessions` does or throws;
+// `passed` needs all three. The frozen result is recorded as reported and is never rewritten.
+export async function actualV2Outcome({ qualification, frozenRun, readCandidate, runVerdict, verifySessions }) {
   let value;
   try { value = JSON.parse(frozenRun.stdout.trim()); } catch { value = null; }
   const timingGate = qualification && Object.hasOwn(qualification, 'timingGate') ? qualification.timingGate : 'frozen-v2';
@@ -498,8 +565,8 @@ export async function actualV2Outcome({ qualification, frozenRun, readCandidate,
   if (timingGate !== 'paired-same-session')
     return { result: value, passed: false, timingGate: timingGate ?? null, blocker: 'Unknown plan09 timing gate' };
   const outcome = { result: value, passed: false, timingGate, structuralV2Pass: false, frozenApplicableBudgetPass: null,
-    frozenOverrunCount: null, pairedVerdict: null, pairedWording: null, pairedVerdictExitCode: null, certification: false,
-    meaning: PAIRED_MEANING };
+    frozenOverrunCount: null, pairedVerdict: null, pairedWording: null, pairedVerdictExitCode: null, pairedSessionsVerified: null,
+    certification: false, meaning: PAIRED_MEANING };
   let candidate;
   try { candidate = Buffer.from(await readCandidate()); } catch { candidate = null; }
   const frozen = candidate && frozenFactsOf(candidate, frozenRun);
@@ -513,8 +580,16 @@ export async function actualV2Outcome({ qualification, frozenRun, readCandidate,
   try { verdict = JSON.parse(String(run?.stdout ?? '').trim()); } catch { verdict = null; }
   Object.assign(outcome, { pairedVerdict: verdict?.verdict ?? null, pairedWording: verdict?.wording ?? null,
     pairedVerdictExitCode: Number.isInteger(run?.exitCode) ? run.exitCode : null });
-  outcome.passed = run?.exitCode === 0 && verdict?.verdict === 'pass' && verdict.identity === identity;
-  return outcome.passed ? outcome : { ...outcome, blocker: 'The paired registry verdict is not pass' };
+  if (!(run?.exitCode === 0 && verdict?.verdict === 'pass' && verdict.identity === identity))
+    return { ...outcome, blocker: 'The paired registry verdict is not pass' };
+  // The verdict counts what the registry's `closed` events say. It is relied on only when every session it
+  // counts for this identity is verified from its reports; an effect that is absent or throws verifies nothing.
+  let unverified = null;
+  try { await verifySessions(identity); } catch (error) { unverified = String(error?.message ?? error).split('\n')[0]; }
+  outcome.pairedSessionsVerified = unverified === null;
+  if (unverified !== null) return { ...outcome, blocker: 'A session the paired verdict counts is not verified from its reports: ' + unverified };
+  outcome.passed = true;
+  return outcome;
 }
 export async function executeV2(directory) {
   const qualification = await fs.readFile(path.join(EVIDENCE, '07-09-qualification.json'), 'utf8')
@@ -531,12 +606,14 @@ export async function executeV2(directory) {
     e => ({ exitCode: Number.isInteger(e.code) ? e.code : null, stdout: e.stdout || '',
       stderr: e.stderr || String(e), timedOut: !!e.killed }));
   const result = await execute(args);
-  // For a paired qualification: the unchanged frozen command above first, then the paired verdict command.
+  // For a paired qualification: the unchanged frozen command above first, then the paired verdict command,
+  // then, for a pass verdict, the verification of every session that verdict counts, from the files on disk.
   let verdictRun = null;
   const { result: value, passed, ...pairedFacts } = await actualV2Outcome({ qualification, frozenRun: result,
     readCandidate: () => fs.readFile(candidatePath),
     runVerdict: async identity => (verdictRun = await execute(['tools/art/animation-budget-paired.mjs', 'verdict',
-      '--registry', path.join(ROOT, REGISTRY_PATH), '--identity', identity])) });
+      '--registry', path.join(ROOT, REGISTRY_PATH), '--identity', identity])),
+    verifySessions: async identity => verifiedPairedSessions(identity, PLAN09_DISK_READERS) });
   const log = path.join(directory, 'v2-current-source.log');
   await fs.writeFile(log, result.stdout + '\n' + result.stderr
     + (verdictRun ? '\n' + verdictRun.stdout + '\n' + verdictRun.stderr : ''));
