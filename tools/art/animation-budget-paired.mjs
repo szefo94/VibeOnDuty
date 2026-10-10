@@ -12,8 +12,12 @@
 //
 //   node tools/art/animation-budget-paired.mjs chain --registry <registry>
 //   node tools/art/animation-budget-paired.mjs verify --budget <frozen V2 budget> --session <session report> --registry <registry>
+//   node tools/art/animation-budget-paired.mjs verdict --registry <registry> --identity <source identity hash>
+//   node tools/art/animation-budget-paired.mjs frozen-evaluations --identity <source identity hash>
 //
 // Sessions are registered and run through `node tools/art/review.mjs --animation-paired`.
+// A pass comes from the registry verdict, never from one report. Nothing here merges sessions
+// or selects profiles across sessions.
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
@@ -23,7 +27,7 @@ import {
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { COMPONENTS, canonical, qualify, sha256 } from './animation-budget-v2.mjs';
+import { COMPONENTS, candidateLineage, canonical, producerContract, qualify, sha256 } from './animation-budget-v2.mjs';
 import { ROOT, boundedPath } from './motion-acceptance.mjs';
 
 const PHASE = '.planning/phases/07-movement-matched-and-action-safe-animation/';
@@ -198,8 +202,9 @@ function listFiles(directory, prefix = '') {
   return names;
 }
 
-/** Re-hash both arms. Exactly the owner files may differ, and all of them must. */
-export function compareArms(arms, names, owners) {
+/** Re-hash both arms. Exactly the owner files may differ, and all of them must. In a calibration
+ *  (`identical`) the second directory is a second copy of the reference arm: no file may differ. */
+export function compareArms(arms, names, owners, { identical = false } = {}) {
   const expected = [...names].sort();
   for (const arm of ['reference', 'candidate']) {
     const present = listFiles(arms[arm]).sort();
@@ -208,6 +213,11 @@ export function compareArms(arms, names, owners) {
   }
   const differing = expected.filter(name => sha256(readFileSync(path.join(arms.reference, name))) !==
     sha256(readFileSync(path.join(arms.candidate, name))));
+  if (identical) {
+    if (differing.length) throw Error('The two arms of a calibration must be identical copies of the reference arm; ' +
+      `${differing.length} files differ, the first is ${differing[0]}`);
+    return { comparedFiles: expected.length, differingFiles: [], count: 0, identical: true };
+  }
   const outside = differing.filter(name => !owners.includes(name));
   if (outside.length) throw Error(`Arms differ outside the five owner files: ${outside[0]}`);
   if (differing.length !== owners.length) throw Error('Arms must differ in exactly the five owner files; ' +
@@ -218,7 +228,8 @@ export function compareArms(arms, names, owners) {
 /** Copy the served and hashed working-tree files byte for byte into two owned directories
  *  below the cache, then replace exactly the five owner files of the reference directory with
  *  their pinned blobs. No archive, branch, worktree, checkout or install. Any other difference
- *  between the two directories is refused, naming the path. */
+ *  between the two directories is refused, naming the path. For a calibration the second
+ *  directory is built by the same steps as the reference arm, and no file may differ. */
 export function materializeArms(registered, { root = ROOT, cacheRoot = path.join(ROOT, PAIRED_CACHE), files,
   contract = PAIRED_CONTRACT, readOwnerBlob = name => referenceOwnerBlob(name, contract), copy = copyFileSync } = {}) {
   assert.ok(registered?.type === 'registered' && NONCE.test(registered.nonce ?? ''), 'materializeArms needs a registration event');
@@ -242,16 +253,19 @@ export function materializeArms(registered, { root = ROOT, cacheRoot = path.join
         copy(source, target);
       }
     }
-    const ownersVerified = [];
-    for (const name of owners) {
+    const ownersVerified = [], calibration = registered.kind === 'calibration';
+    for (const arm of calibration ? ['reference', 'candidate'] : ['reference']) for (const name of owners) {
       const bytes = readOwnerBlob(name), pinned = contract.referenceOwners[name];
       assert.ok(Buffer.isBuffer(bytes), `No reference owner bytes: ${name}`);
       assert.equal(gitBlobId(bytes), pinned.blob, `Reference owner bytes are not the pinned blob: ${name}`);
       assert.equal(sha256(bytes), pinned.sha256, `Reference owner bytes differ from the pinned SHA-256: ${name}`);
-      writeFileSync(boundedPath(arms.reference, name), bytes);
-      ownersVerified.push({ path: name, blob: pinned.blob, sha256: pinned.sha256 });
+      writeFileSync(boundedPath(arms[arm], name), bytes);
+      // Read back from the arm: what is served is what was pinned.
+      assert.equal(sha256(readFileSync(path.join(arms[arm], name))), pinned.sha256, `Arm ${arm} does not hold the pinned owner: ${name}`);
+      ownersVerified.push({ ...(calibration ? { arm } : {}), path: name, blob: pinned.blob, sha256: pinned.sha256 });
     }
-    return { sessionDirectory, arms, names, difference: { ...compareArms(arms, names, owners), ownersVerified } };
+    return { sessionDirectory, arms, names,
+      difference: { ...compareArms(arms, names, owners, { identical: calibration }), ownersVerified } };
   } catch (error) {
     rmSync(sessionDirectory, { recursive: true, force: true });
     throw error;
@@ -330,11 +344,38 @@ export function countableSessions(registry, identity) {
   return registry.events.filter(event => event.type === 'registered' && event.kind === 'qualifying' && event.identity === identity);
 }
 
-/** Appends a `registered` event or throws. Smoke only for now; the other kinds follow. */
-export function registerSession(registry, entry, now) {
+const eventOf = (registry, nonce, type) => registry.events.find(event => event.nonce === nonce && event.type === type) ?? null;
+
+// The one calibration of a source identity and where it stands. Qualifying sessions are gated by
+// it: none until it is closed, valid and passed (contract section 6).
+function calibrationState(registry, identity) {
+  const registered = registry.events.find(event => event.type === 'registered' && event.kind === 'calibration' &&
+    event.identity === identity) ?? null;
+  const closed = registered && eventOf(registry, registered.nonce, 'closed');
+  const state = !registered ? 'no calibration is registered' : !closed ? 'the calibration was registered and never closed'
+    : closed.valid !== true ? 'the calibration is invalid' : closed.pass !== true ? 'the calibration failed' : 'passed';
+  return { registered, closed, state };
+}
+
+// A calibration applies only to what it ran with: the bytes of the three tool files and the
+// sampler identity in its `registered` event (contract section 6; the browser version is checked
+// when the capture starts). A difference ends the paired route for the identity.
+function calibrationCovers(calibration, toolHashes, samplerIdentity) {
+  for (const name of TOOL_PATHS) if (!HEX64.test(toolHashes?.[name] ?? '') || toolHashes[name] !== calibration.registered.toolHashes?.[name])
+    return `${name} differs from the bytes the calibration ran with`;
+  if (!HEX64.test(samplerIdentity ?? '') || samplerIdentity !== calibration.registered.samplerIdentity)
+    return 'the sampler identity differs from the calibration\'s';
+  return null;
+}
+const ROUTE_ENDED = '; a calibration applies only to what it ran with, and the paired route for this source identity has ended';
+
+/** Appends a `registered` event or throws. A smoke never counts and is refused once a calibration
+ *  or qualifying event exists for the identity; there is exactly one calibration per identity,
+ *  whatever ends it; a qualifying session needs that calibration closed, valid and passed, the
+ *  same tool bytes and sampler, and is refused as the fourth for its identity. */
+export function registerSession(registry, entry, now, contract = PAIRED_CONTRACT) {
   verifyChain(registry);
   assert.ok(SESSION_KINDS.includes(entry?.kind), 'Unknown session kind');
-  if (entry.kind !== 'smoke') return registry; // task 07-16-03, RED: neutral, nothing is registered
   assert.ok(NONCE.test(entry.nonce ?? ''), 'Registration needs a session nonce');
   assert.ok(!registry.events.some(event => event.nonce === entry.nonce), 'Session nonce is already in the registry');
   assert.ok(HEX64.test(entry.identity ?? ''), 'Registration needs the source identity hash');
@@ -346,15 +387,154 @@ export function registerSession(registry, entry, now) {
   const nonces = new Set(registry.events.filter(event => event.type === 'registered' && event.identity === entry.identity)
     .map(event => event.nonce));
   const ofIdentity = registry.events.filter(event => nonces.has(event.nonce));
-  if (ofIdentity.some(event => event.kind !== 'smoke'))
-    throw Error('Smoke refused: a calibration or qualifying event exists for this source identity');
-  for (const nonce of nonces) {
-    const closed = ofIdentity.find(event => event.nonce === nonce && event.type === 'closed');
-    if (closed?.structuralFailure !== true)
-      throw Error('Smoke refused: a smoke already exists for this source identity and did not fail structurally');
+  if (entry.kind === 'smoke') {
+    if (ofIdentity.some(event => event.kind !== 'smoke'))
+      throw Error('Smoke refused: a calibration or qualifying event exists for this source identity');
+    for (const nonce of nonces) {
+      const closed = ofIdentity.find(event => event.nonce === nonce && event.type === 'closed');
+      if (closed?.structuralFailure !== true)
+        throw Error('Smoke refused: a smoke already exists for this source identity and did not fail structurally');
+    }
+  } else if (entry.kind === 'calibration') {
+    if (ofIdentity.some(event => event.type === 'registered' && event.kind === 'calibration'))
+      throw Error('Calibration refused: there is exactly one calibration per source identity, whatever ended it; ' +
+        'recovery needs an owner decision and a tooling change in a new plan');
+  } else {
+    const calibration = calibrationState(registry, entry.identity);
+    if (calibration.state !== 'passed') throw Error(`Qualifying session refused: ${calibration.state} for this source identity; ` +
+      'a qualifying session needs that identity\'s calibration closed, valid and passed');
+    const uncovered = calibrationCovers(calibration, entry.toolHashes, entry.samplerIdentity);
+    if (uncovered) throw Error(`Qualifying session refused: ${uncovered}${ROUTE_ENDED}`);
+    if (countableSessions(registry, entry.identity).length >= contract.sessionCap)
+      throw Error(`Qualifying session refused: ${contract.sessionCap} qualifying sessions are registered for this source identity ` +
+        'and a fourth is refused');
   }
-  return appendEvent(registry, { type: 'registered', kind: 'smoke', countable: false, nonce: entry.nonce, commit: entry.commit,
-    identity: entry.identity, host: entry.host, toolHashes: entry.toolHashes, samplerIdentity: entry.samplerIdentity }, now);
+  // Only a qualifying session counts toward the cap; every registered one does, whatever follows.
+  return appendEvent(registry, { type: 'registered', kind: entry.kind, countable: entry.kind === 'qualifying', nonce: entry.nonce,
+    commit: entry.commit, identity: entry.identity, host: entry.host, toolHashes: entry.toolHashes,
+    samplerIdentity: entry.samplerIdentity }, now);
+}
+
+/** A capture starts only with what its registration, and for a qualifying session its calibration,
+ *  recorded: the three tool hashes and the sampler identity, and for a qualifying session the
+ *  browser version in the calibration's `closed` event. A difference refuses the capture. */
+export function assertRunScope({ registry, registered, toolHashes, samplerIdentity, browserVersion }) {
+  assert.equal(registered?.type, 'registered', 'assertRunScope needs the registration event');
+  if (registered.kind === 'smoke') return true;
+  for (const name of TOOL_PATHS) if (!HEX64.test(toolHashes?.[name] ?? '') || toolHashes[name] !== registered.toolHashes?.[name])
+    throw Error(`Run refused: ${name} changed since the session was registered`);
+  if (!HEX64.test(samplerIdentity ?? '') || samplerIdentity !== registered.samplerIdentity)
+    throw Error('Run refused: the sampler identity changed since the session was registered');
+  if (registered.kind === 'qualifying') {
+    const calibration = calibrationState(registry, registered.identity);
+    if (calibration.state !== 'passed') throw Error(`Run refused: ${calibration.state} for this source identity`);
+    const uncovered = calibrationCovers(calibration, toolHashes, samplerIdentity);
+    if (uncovered) throw Error(`Run refused: ${uncovered}${ROUTE_ENDED}`);
+    if (typeof browserVersion !== 'string' || !browserVersion || browserVersion !== calibration.closed.browserVersion)
+      throw Error(`Run refused: the browser version (${browserVersion ?? 'unknown'}) differs from the one the calibration ran with ` +
+        `(${calibration.closed.browserVersion ?? 'unknown'})${ROUTE_ENDED}`);
+  }
+  return true;
+}
+
+/** The `closed` event of a session, from the mechanical outcome the tool set. A qualifying close
+ *  records the frozen command's exit code and overrun count; a calibration's and a smoke's record
+ *  neither. `pass` follows from validity: a boolean for a valid session, null for an invalid one. */
+export function closedEvent(kind, nonce, outcome) {
+  assert.ok(SESSION_KINDS.includes(kind), 'Unknown session kind');
+  assert.ok(NONCE.test(nonce ?? ''), 'Close needs a session nonce');
+  assert.ok(outcome && typeof outcome === 'object', 'Close needs the session outcome');
+  const hasFrozen = 'frozenExitCode' in outcome || 'frozenOverrunCount' in outcome;
+  const hash = name => { assert.ok(HEX64.test(outcome.reportHashes?.[name] ?? ''), `Close needs the ${name} report hash`); return outcome.reportHashes[name]; };
+  assert.ok(typeof outcome.browserVersion === 'string' || outcome.browserVersion === null, 'Close needs the browser version');
+  if (kind === 'smoke') {
+    if (hasFrozen) throw Error('A smoke has no frozen result: its closed event records no frozen field');
+    assert.equal(typeof outcome.structuralFailure, 'boolean', 'A smoke close records whether it failed structurally');
+    return { type: 'closed', kind, nonce, outcome: outcome.structuralFailure ? 'structural-failure' : 'loaded',
+      structuralFailure: outcome.structuralFailure, valid: null, pass: null, reportHashes: { session: hash('session') },
+      browserVersion: outcome.browserVersion };
+  }
+  assert.equal(typeof outcome.valid, 'boolean', 'Close needs the validity the tool computed');
+  if (outcome.valid ? typeof outcome.pass !== 'boolean' : outcome.pass !== null)
+    throw Error('Close refused: pass is true or false for a valid session and null for an invalid one');
+  assert.ok(outcome.settings && typeof outcome.settings === 'object', 'Close needs the session settings');
+  const event = { type: 'closed', kind, nonce, outcome: !outcome.valid ? 'invalid' : outcome.pass ? 'passed' : 'failed',
+    valid: outcome.valid, pass: outcome.pass, settings: outcome.settings, browserVersion: outcome.browserVersion,
+    reportHashes: { session: hash('session'), reference: hash('reference'), candidate: hash('candidate') } };
+  if (kind === 'calibration') {
+    if (hasFrozen) throw Error('A calibration has no frozen result: its closed event records no frozen field');
+    return event;
+  }
+  for (const name of ['frozenExitCode', 'frozenOverrunCount']) {
+    if (!(name in outcome)) throw Error(`A qualifying close records the frozen command's result: ${name} is missing`);
+    assert.ok(outcome[name] === null || Number.isInteger(outcome[name]), `${name} is an integer, or null when the frozen command gave none`);
+  }
+  return { ...event, frozenExitCode: outcome.frozenExitCode, frozenOverrunCount: outcome.frozenOverrunCount };
+}
+
+/** Appends the `closed` event of a session that is registered, started and not yet closed. */
+export function closeSession(registry, nonce, outcome, now) {
+  verifyChain(registry);
+  const registered = eventOf(registry, nonce, 'registered');
+  if (!registered) throw Error('Close refused: the session is not in the registry');
+  if (!eventOf(registry, nonce, 'started')) throw Error('Close refused: no started event precedes the close for this nonce');
+  if (eventOf(registry, nonce, 'closed')) throw Error('Close refused: the session is already closed');
+  return appendEvent(registry, closedEvent(registered.kind, nonce, outcome), now);
+}
+
+/** The order of every session's events: one registration, then at most one `started` event that
+ *  carries the hash of that registration, then at most one `closed` event. Throws naming the
+ *  sequence number. With a nonce, only that session is read. */
+export function verifyLifecycle(registry, nonce = null) {
+  assert.ok(registry && Array.isArray(registry.events), 'Registry has no event list');
+  const sessions = new Map();
+  for (const event of registry.events) {
+    if (nonce !== null && event?.nonce !== nonce) continue;
+    const broken = reason => Error(`Registry session order broken at sequence ${event?.seq}: ${reason}`);
+    const session = sessions.get(event.nonce);
+    if (event.type === 'registered') {
+      if (session) throw broken('a second registration of one nonce');
+      if (!SESSION_KINDS.includes(event.kind)) throw broken('a registration of an unknown session kind');
+      sessions.set(event.nonce, { registered: event, started: null, closed: null });
+    } else if (!session) throw broken(`a ${event.type} event for a nonce that has no registration`);
+    else if (event.kind !== session.registered.kind) throw broken('an event whose kind differs from its registration');
+    else if (event.type === 'started') {
+      if (session.started) throw broken('a second started event for one nonce');
+      if (event.registrationHash !== eventHash(session.registered))
+        throw broken('a started event that does not carry the hash of its registration event');
+      session.started = event;
+    } else {
+      if (!session.started) throw broken('a closed event without a preceding started event for the nonce');
+      if (session.closed) throw broken('a second closed event for one nonce');
+      session.closed = event;
+    }
+  }
+  return sessions;
+}
+
+// What `registerSession` and the capture refuse, read back from a registry: a registry that holds
+// it was not written by this tool, and no verdict is computed from it.
+function verifyRegistryRules(registry, sessions, contract) {
+  const perIdentity = new Map();
+  for (const { registered, closed } of sessions.values()) {
+    if (registered.kind === 'smoke') continue;
+    const broken = reason => Error(`Registry rule broken at sequence ${registered.seq}: ${reason}`);
+    const seen = perIdentity.get(registered.identity) ?? { calibration: null, qualifying: 0 };
+    perIdentity.set(registered.identity, seen);
+    if (registered.kind === 'calibration') {
+      if (seen.calibration) throw broken('a second calibration for one source identity');
+      seen.calibration = sessions.get(registered.nonce);
+      continue;
+    }
+    const calibration = seen.calibration;
+    if (!calibration?.closed || calibration.closed.seq > registered.seq || calibration.closed.valid !== true || calibration.closed.pass !== true)
+      throw broken('a qualifying session without a closed, valid and passed calibration for its source identity before it');
+    const uncovered = calibrationCovers(calibration, registered.toolHashes, registered.samplerIdentity);
+    if (uncovered) throw broken(`a qualifying session not covered by its calibration: ${uncovered}`);
+    if (closed && closed.browserVersion !== calibration.closed.browserVersion)
+      throw broken('a qualifying session closed with another browser version than its calibration');
+    if (++seen.qualifying > contract.sessionCap) throw broken(`more than ${contract.sessionCap} qualifying sessions for one source identity`);
+  }
 }
 
 /** Sequence numbers of working events that the committed registry does not hold. */
@@ -854,21 +1034,13 @@ export function sessionReport({ session, evaluation = null, registrationEventHas
       'a device or a human acceptance; see section 10 of the contract.' };
 }
 
-/** The result line of the unchanged frozen command, or null when it printed only an error. */
-function frozenResult(run) {
-  const line = String(run?.stdout ?? '').split(/\r?\n/).filter(text => text.trim()).at(-1);
-  let parsed;
-  try { parsed = JSON.parse(line); } catch { return null; }
-  if (!parsed || typeof parsed.applicableBudgetPass !== 'boolean' || !Array.isArray(parsed.overruns)) return null;
-  // It prints a result at exit 0, and at exit 1 when the only failures are numeric overruns.
-  return (run.exitCode === 0 && parsed.applicableBudgetPass) || (run.exitCode === 1 && !parsed.applicableBudgetPass) ? parsed : null;
-}
-
 /** Verify one closed calibration or qualifying session. A reader: it writes nothing. Every effect
  *  is injected (`readArm`, `hashFrameImages`, `runFrozen`), so the order and the refusals are
  *  testable. It refuses unless the given bytes are the bytes the runner hashed into the `closed`
- *  event, recomputes validity and, for a valid session only, the rules, and refuses when either
- *  differs from the report. Returns the result line and the exit code. */
+ *  event and the report carries the hashes of its own registration and `started` events,
+ *  recomputes validity and, for a valid session only, the rules, and refuses when either differs
+ *  from the report or from the outcome in the `closed` event. Returns the result line and the
+ *  exit code. */
 export async function verifySession({ sessionBytes, registry, readArm, hashFrameImages, runFrozen, knownReportHashes = [],
   readContract, contract = PAIRED_CONTRACT }) {
   assertContract(readContract, contract);
@@ -880,7 +1052,13 @@ export async function verifySession({ sessionBytes, registry, readArm, hashFrame
   if (registered.kind === 'smoke' || report.kind === 'smoke') throw Error('A smoke is never evaluated');
   if (!closed) throw Error('Session has no closed event in the registry');
   assert.equal(report.kind, registered.kind, 'Session report kind differs from its registration');
+  // The order of this session's own events: registered, started with the registration's hash, closed.
+  const started = verifyLifecycle(registry, report.nonce).get(report.nonce)?.started ?? null;
   if (sha256(bytes) !== closed.reportHashes?.session) throw Error('Session report differs from the bytes hashed in its closed event');
+  if (report.registrationEventHash !== eventHash(registered))
+    throw Error('Session report registration event hash does not match its registry event');
+  if (!started || report.startedEventHash !== eventHash(started))
+    throw Error('Session report started event hash does not match its registry event');
   const arms = {};
   for (const arm of ARMS) {
     const armBytes = Buffer.from(await readArm(arm, report.arms?.[arm]?.path));
@@ -896,11 +1074,7 @@ export async function verifySession({ sessionBytes, registry, readArm, hashFrame
   if (session.kind === 'qualifying') {
     // The frozen file, current-source and pixel checks are private to the frozen tool; they are
     // obtained by running it, unchanged, on the candidate arm. A calibration runs it on neither arm.
-    const run = await runFrozen(report.arms.candidate.path);
-    let parsed = frozenResult(run);
-    if (parsed?.candidateReportSha256 !== undefined && parsed.candidateReportSha256 !== arms.candidate.sha256) parsed = null;
-    frozen = session.structural.frozen = { resultPrinted: parsed !== null, exitCode: run?.exitCode ?? null,
-      overrunCount: parsed ? parsed.overruns.length : null, applicableBudgetPass: parsed ? parsed.applicableBudgetPass : null };
+    frozen = session.structural.frozen = frozenFacts(await runFrozen(report.arms.candidate.path), arms.candidate.sha256);
   }
   session.binding = bindingCheck(session, knownReportHashes, registry);
   session.validity = sessionValidity(session, contract, calibrationFor(registry, registered.identity));
@@ -908,6 +1082,13 @@ export async function verifySession({ sessionBytes, registry, readArm, hashFrame
   const evaluation = session.validity.valid ? JSON.parse(JSON.stringify(evaluatePaired(session, contract))) : null;
   if (canonical(evaluation) !== canonical(report.evaluation ?? null)) throw Error('Evaluation differs from its recomputation');
   const pairedBudgetPass = evaluation ? evaluation.pairedBudgetPass : null;
+  // The outcome was set once, by the runner, with these same two functions. A report or a
+  // `closed` event that says otherwise is not verified.
+  const outcome = !session.validity.valid ? 'invalid' : pairedBudgetPass ? 'passed' : 'failed';
+  if (report.outcome !== outcome) throw Error(`Outcome in the session report (${report.outcome}) differs from its recomputation (${outcome})`);
+  const differs = [closed.valid !== session.validity.valid && 'valid', (closed.pass ?? null) !== pairedBudgetPass && 'pass',
+    closed.outcome !== undefined && closed.outcome !== outcome && 'outcome'].filter(Boolean);
+  if (differs.length) throw Error(`Recomputed outcome (${outcome}) differs from the closed event of the session: ${differs.join(', ')}`);
   const structuralV2Pass = session.kind === 'calibration' ? null : frozen.resultPrinted;
   const result = { kind: session.kind, nonce: session.nonce, valid: session.validity.valid, pairedBudgetPass, structuralV2Pass,
     certification: false, validity: session.validity, rule1: evaluation?.rule1 ?? null, groups: evaluation?.rule2.groups ?? [],
@@ -915,37 +1096,447 @@ export async function verifySession({ sessionBytes, registry, readArm, hashFrame
     // The frozen gate's own result is reported as it is, whichever it is. An exit 0 is recorded and
     // changes nothing else: it is never a pass by this tool and is the owner's to judge.
     ...(session.kind === 'qualifying' ? { frozenApplicableBudgetPass: frozen.applicableBudgetPass, frozenExitCode: frozen.exitCode,
-      frozenOverrunCount: frozen.overrunCount, frozenExitZeroObserved: frozen.exitCode === 0 } : {}) };
+      frozenOverrunCount: frozen.overrunCount, frozenExitZeroObserved: frozen.exitCode === 0,
+      // Reported, and changes nothing: whether this run of the frozen command gave what the runner recorded.
+      frozenFieldsMatchClosed: closed.frozenExitCode === frozen.exitCode && closed.frozenOverrunCount === frozen.overrunCount } : {}) };
   const passed = session.validity.valid && pairedBudgetPass === true && (session.kind === 'calibration' || structuralV2Pass === true);
   return { result, exitCode: passed ? 0 : 1 };
 }
 
-// ---- task 07-16-03, RED: exported with neutral shapes so each control fails on its own assertion ----
+// ---- registry history (contract section 8) ---------------------------------------------------------------
+
+/** Passes only when the events of every committed version of the registry equal, event hash by
+ *  event hash, the first events of the current list. A version that holds more events than the
+ *  current list, or one that differs anywhere, is refused, naming its commit. */
+export function historyPrefixCheck(current, committedVersions) {
+  assert.ok(current && Array.isArray(current.events), 'Registry has no event list');
+  if (!Array.isArray(committedVersions)) throw Error('Registry history cannot be read: no list of committed versions');
+  const hashes = current.events.map(eventHash);
+  for (const version of committedVersions) {
+    const events = version?.registry?.events, commit = version?.commit ?? 'an unknown commit';
+    if (!Array.isArray(events) || events.some(event => !event || typeof event !== 'object'))
+      throw Error(`Registry history cannot be read: the version committed at ${commit} holds no event list`);
+    if (events.length > hashes.length) throw Error(`Registry history check failed: the version committed at ${commit} holds ` +
+      `${events.length} events and the current list ${hashes.length}; events were dropped`);
+    const differs = events.findIndex((event, index) => eventHash(event) !== hashes[index]);
+    if (differs !== -1) throw Error(`Registry history check failed: the version committed at ${commit} is not a prefix of the ` +
+      `current event list; it differs at sequence ${differs + 1}`);
+  }
+  return { versions: committedVersions.length, everyVersionIsPrefix: true };
+}
+
+// Read-only git, with its error output captured. `head` is the history of HEAD, oldest first; `all`
+// adds every version any other ref holds, so a session run on a side branch cannot go unseen.
+const gitText = args => execFileSync('git', args, { cwd: ROOT, windowsHide: true, maxBuffer: 1 << 28,
+  stdio: ['ignore', 'pipe', 'pipe'] }).toString('utf8');
+const gitLines = args => gitText(args).split(/\r?\n/).filter(Boolean);
+const gitHistoryReader = () => ({
+  isShallow: () => gitText(['rev-parse', '--is-shallow-repository']).trim(),
+  listCommits: name => ({ head: gitLines(['log', '--full-history', '--reverse', '--format=%H', 'HEAD', '--', name]),
+    all: gitLines(['log', '--all', '--full-history', '--format=%H', '--', name]) }),
+  showVersion: (commit, name) => gitText(['show', `${commit}:${name}`]),
+});
+
+/** Every committed version of the registry file, the history of HEAD first and oldest first.
+ *  Refuses a shallow repository and any version that cannot be read in full. */
+export function registryHistory(reader = gitHistoryReader(), name = REGISTRY_PATH) {
+  const unreadable = (what, error) => Error(`Registry history cannot be read: ${what}${error ? ` (${String(error.message).trim()})` : ''}`);
+  let shallow, commits;
+  try { shallow = reader.isShallow(); } catch (error) { throw unreadable('whether the repository is shallow', error); }
+  if (shallow !== 'false') throw Error('Registry history is shallow: every committed version of the registry must be readable, ' +
+    'and a shallow repository does not hold them');
+  try { commits = reader.listCommits(name); } catch (error) { throw unreadable('the commits that touch the registry', error); }
+  if (!Array.isArray(commits?.head) || !Array.isArray(commits.all)) throw unreadable('the commits that touch the registry');
+  const ordered = [...commits.head, ...commits.all.filter(commit => !commits.head.includes(commit))];
+  return [...new Set(ordered)].map(commit => {
+    if (!HEX40.test(commit ?? '')) throw unreadable(`a commit id (${commit})`);
+    let registry;
+    try { registry = JSON.parse(reader.showVersion(commit, name)); } catch (error) { throw unreadable(`the version committed at ${commit}`, error); }
+    if (!registry || !Array.isArray(registry.events)) throw unreadable(`the version committed at ${commit} holds no event list`);
+    return { commit, onHead: commits.head.includes(commit), registry };
+  });
+}
+
+/** What a verdict needs of the registry file: a valid chain, the order of every session, every
+ *  event present in the committed registry, and every committed version a prefix of the current
+ *  list. Throws on the first that does not hold. */
+export function assertRegistryIntegrity({ working, committed, versions }) {
+  const chain = verifyChain(working);
+  verifyLifecycle(working);
+  const uncommitted = uncommittedEvents(working, committed), committedEvents = committed?.events?.length ?? 0;
+  if (uncommitted.length) throw Error(`Registry holds an event that is not in the committed registry: sequence ${uncommitted.join(', ')}`);
+  if (committedEvents !== working.events.length) throw Error('The committed registry holds more events than the registry in the working tree');
+  const history = historyPrefixCheck(working, versions);
+  if (working.events.length && !history.versions) throw Error('Registry history cannot be read: no committed version of the registry was found');
+  return { chain: 'valid', events: chain.events, head: chain.head, committedEvents, uncommittedSequences: [], everyEventCommitted: true,
+    committedVersions: history.versions, everyCommittedVersionIsPrefix: true };
+}
+
+/** The commit that first contains each `registered` event, from the history of HEAD. A commit
+ *  that holds a registration is never amended, squashed or rebased; the tool cannot see rewritten
+ *  history, so every final record names these. */
+export function registrationCommitsOf(registry, versions) {
+  assert.ok(Array.isArray(versions), 'registrationCommitsOf needs the committed versions');
+  const onHead = versions.filter(version => version.onHead === true);
+  return registry.events.map((event, index) => ({ event, index })).filter(({ event }) => event.type === 'registered').map(({ event, index }) => {
+    const hash = eventHash(event);
+    const first = onHead.find(version => version.registry.events[index] && eventHash(version.registry.events[index]) === hash);
+    if (!first) throw Error(`Registry holds a registration that no commit on HEAD holds: sequence ${event.seq}`);
+    return { nonce: event.nonce, kind: event.kind, seq: event.seq, commit: first.commit };
+  });
+}
+
+/** The registry in the working tree, checked against the committed file and its whole history
+ *  (read-only git). Used by the `verdict` command and by whatever relies on a paired verdict. */
+export function checkedRegistry(file = path.join(ROOT, REGISTRY_PATH)) {
+  assert.equal(path.relative(ROOT, path.resolve(file)).split(path.sep).join('/'), REGISTRY_PATH, 'Only the tracked paired session registry is read');
+  assert.ok(existsSync(file), 'No paired session registry');
+  const registry = readRegistry(file), versions = registryHistory();
+  const summary = assertRegistryIntegrity({ working: registry, committed: committedRegistry(), versions });
+  return { registry, summary, registrationCommits: registrationCommitsOf(registry, versions) };
+}
+
+// ---- verdict (contract section 8) ---------------------------------------------------------------------------
+
+const tally = sessions => ({ started: sessions.length, passed: sessions.filter(session => session.outcome === 'passed').length,
+  failed: sessions.filter(session => session.outcome === 'failed').length,
+  invalid: sessions.filter(session => session.outcome === 'invalid').length });
+// `pass` when valid passes exceed valid fails; `failed` when a pass has become arithmetically
+// impossible within the cap; `undecided` otherwise.
+const verdictFor = ({ started, passed, failed }, cap) => passed > failed ? 'pass' : passed + (cap - started) <= failed ? 'failed' : 'undecided';
+// Only a closed event with `valid` true and a boolean `pass` is a valid session; every other
+// qualifying session, closed or not, is invalid: it decides nothing and still uses one of the three.
+const outcomeOfSession = closed => closed?.valid === true && closed.pass === true ? 'passed'
+  : closed?.valid === true && closed.pass === false ? 'failed' : 'invalid';
+
+// The position of the session whose close made the verdict `pass` and kept it so to the end.
+function decidingSession(registry, identity, sessions) {
+  const order = [], outcomes = new Map();
+  let deciding = null;
+  for (const event of registry.events) {
+    const session = sessions.get(event.nonce);
+    if (session?.registered.kind !== 'qualifying' || session.registered.identity !== identity) continue;
+    if (event.type === 'registered') order.push(event.nonce);
+    if (event.type === 'closed') outcomes.set(event.nonce, outcomeOfSession(event));
+    const values = [...outcomes.values()];
+    const passing = values.filter(value => value === 'passed').length > values.filter(value => value === 'failed').length;
+    if (!passing) deciding = null;
+    else if (deciding === null) deciding = event.nonce;
+  }
+  return deciding === null ? null : order.indexOf(deciding) + 1;
+}
+
+/** The result for a source identity over every qualifying session registered for it, always
+ *  computed from the whole registry and always worded with its denominator. Refuses a broken
+ *  chain, a broken session order and a registry that holds what registration refuses. The
+ *  returned object lists the qualifying sessions of every identity in the registry. */
+export function registryVerdict(registry, identity, { registrationCommits, contract = PAIRED_CONTRACT } = {}) {
+  verifyChain(registry);
+  const sessions = verifyLifecycle(registry);
+  verifyRegistryRules(registry, sessions, contract);
+  assert.ok(HEX64.test(identity ?? ''), 'registryVerdict needs the source identity hash');
+  const cap = contract.sessionCap, groups = new Map();
+  for (const { registered, started, closed } of sessions.values()) {
+    if (registered.kind !== 'qualifying') continue;
+    const group = groups.get(registered.identity) ?? [];
+    groups.set(registered.identity, group);
+    group.push({ position: group.length + 1, nonce: registered.nonce, commit: registered.commit, registeredSeq: registered.seq,
+      registeredAt: registered.at, started: started !== null, closed: closed !== null, closedSeq: closed?.seq ?? null,
+      closedAt: closed?.at ?? null, outcome: outcomeOfSession(closed), valid: closed?.valid ?? null, pass: closed?.pass ?? null,
+      reportHashes: closed?.reportHashes ?? null, browserVersion: closed?.browserVersion ?? null,
+      frozenExitCode: closed?.frozenExitCode ?? null, frozenOverrunCount: closed?.frozenOverrunCount ?? null });
+  }
+  const allQualifying = [...groups].map(([groupIdentity, list]) => ({ identity: groupIdentity, ...tally(list),
+    verdict: verdictFor(tally(list), cap), sessions: list }));
+  const own = groups.get(identity) ?? [], numbers = tally(own), verdict = verdictFor(numbers, cap);
+  const deciding = verdict === 'pass' ? decidingSession(registry, identity, sessions) : null;
+  const calibration = calibrationState(registry, identity);
+  const wording = verdict === 'pass'
+    ? `passed, session ${deciding} of ${numbers.started}; ${numbers.failed} valid sessions failed; ${numbers.invalid} invalid`
+    : `${verdict}, ${numbers.started} of at most ${cap} sessions started; ${numbers.passed} valid sessions passed; ` +
+      `${numbers.failed} valid sessions failed; ${numbers.invalid} invalid`;
+  if (registrationCommits !== undefined) {
+    const registrations = registry.events.filter(event => event.type === 'registered');
+    const named = Array.isArray(registrationCommits) && registrationCommits.length === registrations.length &&
+      registrations.every((event, index) => registrationCommits[index]?.nonce === event.nonce && registrationCommits[index].seq === event.seq &&
+        HEX40.test(registrationCommits[index].commit ?? ''));
+    if (!named) throw Error('registryVerdict needs the commit of every registration in the registry, in order');
+  }
+  return { contractVersion: contract.version, identity, verdict, passed: numbers.passed, failed: numbers.failed, invalid: numbers.invalid,
+    started: numbers.started, cap, decidingSession: deciding, wording, sessions: own,
+    calibration: calibration.registered ? { nonce: calibration.registered.nonce, closed: calibration.closed !== null,
+      valid: calibration.closed?.valid ?? null, pass: calibration.closed?.pass ?? null, toolHashes: calibration.registered.toolHashes ?? null,
+      samplerIdentity: calibration.registered.samplerIdentity ?? null, browserVersion: calibration.closed?.browserVersion ?? null } : null,
+    identitiesTried: allQualifying.length, allQualifying,
+    ...(registrationCommits !== undefined ? { registrationCommits } : {}),
+    certification: false,
+    meaning: 'A verdict of the paired same-session gate for one source identity, over every qualifying session registered for it. ' +
+      'It is not the frozen gate\'s result and never means the original absolute limits were met, a frame rate, a device or a ' +
+      'human acceptance; see section 10 of the contract.' };
+}
+
+// ---- frozen evaluations (contract section 9) -----------------------------------------------------------------
+
+export const FROZEN_BUDGET_PATH = EVIDENCE_DIR + '07-budget-view-v2.json';
+// Where a complete candidate report can lie: the phase evidence directory and the capture cache,
+// which holds `animation-candidate/` (single-arm captures) and `animation-paired/` (arm reports).
+export const FROZEN_EVALUATION_ROOTS = Object.freeze([EVIDENCE_DIR.slice(0, -1), '.planning/research/.cache/06-art']);
+
+const diskLister = directory => {
+  const absolute = path.join(ROOT, directory);
+  return !existsSync(absolute) ? [] : readdirSync(absolute, { withFileTypes: true })
+    .map(entry => ({ name: entry.name, directory: entry.isDirectory(), file: entry.isFile() }));
+};
+const isCompleteReport = report => !!report && typeof report === 'object' && report.complete === true && Array.isArray(report.samples) &&
+  report.samples.length === 12 && !!report.identities && typeof report.identities === 'object' && HEX64.test(report.identities.captureSampler ?? '');
+
+/** Every complete 12-profile report below the roots, recursively, with the hash of its bytes.
+ *  The directory lister and the reader are injectable. A reader of existing files: it captures nothing. */
+export function scanReports({ roots = FROZEN_EVALUATION_ROOTS, list = diskLister, read = name => readFileSync(path.join(ROOT, name)) } = {}) {
+  const found = [];
+  const walk = directory => {
+    for (const entry of [...list(directory)].sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))) {
+      const name = `${directory}/${entry.name}`;
+      if (entry.directory) walk(name);
+      else if (entry.file && entry.name.endsWith('.json')) {
+        const bytes = Buffer.from(read(name));
+        let report;
+        try { report = JSON.parse(bytes.toString('utf8')); } catch { continue; }
+        if (isCompleteReport(report)) found.push({ path: name, sha256: sha256(bytes), report });
+      }
+    }
+  };
+  for (const root of roots) walk(root);
+  return found;
+}
+
+/** The result line of the unchanged frozen command, or null when it printed only an error. */
+function frozenResult(run, reportSha256) {
+  const line = String(run?.stdout ?? '').split(/\r?\n/).filter(text => text.trim()).at(-1);
+  let parsed;
+  try { parsed = JSON.parse(line); } catch { return null; }
+  if (!parsed || typeof parsed.applicableBudgetPass !== 'boolean' || !Array.isArray(parsed.overruns)) return null;
+  // The result is of the report that was named, when the tool says which it read.
+  if (reportSha256 !== undefined && parsed.candidateReportSha256 !== undefined && parsed.candidateReportSha256 !== reportSha256) return null;
+  // It prints a result at exit 0, and at exit 1 when the only failures are numeric overruns.
+  return (run.exitCode === 0 && parsed.applicableBudgetPass) || (run.exitCode === 1 && !parsed.applicableBudgetPass) ? parsed : null;
+}
+const frozenFacts = (run, reportSha256) => {
+  const parsed = frozenResult(run, reportSha256);
+  return { resultPrinted: parsed !== null, exitCode: Number.isInteger(run?.exitCode) ? run.exitCode : null,
+    overrunCount: parsed ? parsed.overruns.length : null, applicableBudgetPass: parsed ? parsed.applicableBudgetPass : null };
+};
+
+/** Every complete candidate report whose source identity equals the given one, once per report
+ *  hash, in time order, each with the frozen command's result for it, whether or not it belongs
+ *  to a session. `results` maps a report hash to the captured run of the unchanged frozen command.
+ *  An exit 0 here is never a pass by this tool: it is recorded with its count and is the owner's
+ *  to judge. */
+export function frozenEvaluationList(reports, identity, results) {
+  assert.ok(Array.isArray(reports), 'frozenEvaluationList needs the scanned reports');
+  assert.ok(HEX64.test(identity ?? ''), 'frozenEvaluationList needs the source identity hash');
+  const byHash = new Map();
+  for (const entry of reports) {
+    if (!isCompleteReport(entry?.report) || identityHash(entry.report.identities) !== identity) continue;
+    assert.ok(HEX64.test(entry.sha256 ?? '') && typeof entry.path === 'string', 'A scanned report needs its path and hash');
+    const known = byHash.get(entry.sha256) ?? { report: entry.report, paths: [] };
+    known.paths.push(entry.path);
+    byHash.set(entry.sha256, known);
+  }
+  const time = report => Date.parse(report.capturedAt) || 0;
+  const ordered = [...byHash].sort(([hashA, a], [hashB, b]) => time(a.report) - time(b.report) || (hashA < hashB ? -1 : 1));
+  return ordered.map(([hash, { report, paths }], index) => {
+    const run = results?.[hash];
+    if (!run) throw Error(`No frozen command result for the listed report ${hash}`);
+    const facts = frozenFacts(run, hash);
+    return { evaluation: index + 1, of: ordered.length, reportSha256: hash, paths: [...new Set(paths)].sort(),
+      capturedAt: report.capturedAt ?? null, revision: report.revision ?? null,
+      session: report.paired ? { nonce: report.paired.nonce ?? null, kind: report.paired.kind ?? null, arm: report.paired.arm ?? null } : null,
+      device: report.device ?? null, ...facts, exitZeroObserved: facts.resultPrinted && facts.exitCode === 0 };
+  });
+}
+
+/** The unchanged frozen command on one candidate report, with its output captured, never inherited. */
+export function runFrozenCommand(candidate, budget = FROZEN_BUDGET_PATH) {
+  const run = spawnSync(process.execPath, ['tools/art/animation-budget-v2.mjs', 'verify', '--budget', path.resolve(ROOT, budget),
+    '--candidate', boundedPath(ROOT, candidate)], { cwd: ROOT, encoding: 'utf8', windowsHide: true, timeout: 120000, maxBuffer: 1 << 26,
+    stdio: ['ignore', 'pipe', 'pipe'] });
+  return { exitCode: run.status, stdout: run.stdout ?? '', stderr: run.stderr ?? '' };
+}
+
+// ---- the session runner (contract sections 3, 7 and 8) -------------------------------------------------------
 
 export const SMOKE_PAIR = Object.freeze({ warmup: false, run: 1, tier: 'low', actorCount: 1, first: orderFor(1, 0, 0) });
-export const FROZEN_BUDGET_PATH = EVIDENCE_DIR + '07-budget-view-v2.json';
-export const FROZEN_EVALUATION_ROOTS = Object.freeze([]);
-export function closedEvent() { return null; }
-export function closeSession(registry) { return registry; }
-export function verifyLifecycle() { return new Map(); }
-export function assertRunScope() { return null; }
-export function historyPrefixCheck() { return { versions: null, everyVersionIsPrefix: null }; }
-export function registryHistory() { return []; }
-export function assertRegistryIntegrity() { return {}; }
-export function registrationCommitsOf() { return []; }
-export function registryVerdict() {
-  return { verdict: null, passed: null, failed: null, invalid: null, started: null, wording: '', sessions: [], allQualifying: [],
-    identitiesTried: null };
+const jsonBytes = value => Buffer.from(JSON.stringify(value, null, 2) + '\n');
+const ARM_LIMITS = 'One arm of a paired same-session capture (paired-same-session-v2): the controlled Training Range workload of the ' +
+  'frozen V2 candidate capture, with the archived sampler unchanged, 214 measured frames per profile, software rendering. An arm ' +
+  'report alone decides nothing: the session report holds validity and the rules, and the registry verdict holds the result. No ' +
+  'input, network or whole-game frame rate, no device certification and no human motion acceptance.';
+
+/** One arm's report: the standard candidate-format report the frozen tool's `qualify` reads, plus
+ *  the `paired` block that binds it to its session (nonce, arm, the start and end time of each of
+ *  its 13 captures, and the warm-up values, which are recorded and used by nothing). */
+export function buildArmReport({ arm, kind, nonce, identities, samples, captures, warmup, pageErrors = [], captureError = null, capturedAt,
+  revision, device, cleanup, runtimeDependencies = null, baselineSha256, compare, v2Budget, v2BudgetBytes, contract = PAIRED_CONTRACT }) {
+  const times = captures.flatMap(capture => [Date.parse(capture.startedAt), Date.parse(capture.endedAt)]).filter(Number.isFinite);
+  // Complete only when the capture finished cleanly: 12 profiles, no page error, browser and listeners closed.
+  const complete = samples.length === 12 && pageErrors.length === 0 && captureError === null &&
+    cleanup?.browserClosed === true && cleanup?.serverClosed === true;
+  const report = { schemaVersion: 1, complete, capturedAt, revision, identities, runtimeDependencies, samples, cleanup,
+    durationMs: times.length ? Math.max(...times) - Math.min(...times) : null,
+    device: { ...device, rendererClass: samples.length > 0 && samples.every(sample => /swiftshader|software/i.test(sample?.gpu ?? ''))
+      ? 'software' : 'physical-or-unidentified' },
+    certification: false, humanMotionAcceptance: 'pending', limits: ARM_LIMITS, baselineSha256 };
+  // The outer fields of a candidate report. A report they cannot be built for does not satisfy
+  // `qualify`, and its session is then invalid; nothing is thrown away.
+  try { report.comparison = compare(report); } catch (error) { report.comparison = { error: error.message }; }
+  try {
+    report.producerContract = producerContract(report);
+    report.v2Lineage = candidateLineage(v2Budget, v2BudgetBytes, report);
+  } catch (error) { report.producerError = error.message; }
+  report.paired = { contractVersion: contract.version, nonce, arm, kind, captures, warmup, pageErrors: [...pageErrors], captureError };
+  return report;
 }
-export function scanReports() { return []; }
-export function frozenEvaluationList() { return []; }
-export function buildArmReport() { return {}; }
-export async function runSession() { return { registry: null, closed: null, report: null, sessionBytes: null, reportHashes: null }; }
 
-// ---- command line ----------------------------------------------------------------------------------------
+/** The one runner every session kind shares. Every effect is an injected function, so the order
+ *  below is the order that happens:
+ *
+ *   1. append `started`; capture the pairs with every sample held in memory; print, log and
+ *      write nothing that carries timing;
+ *   2. build both arm reports as bytes in memory and hash them;
+ *   3. qualifying only: write the candidate arm report, the one file the frozen command must
+ *      read, and run the unchanged frozen command on it through `runFrozen`, output captured;
+ *   4. compute validity and put the validity block into the session record;
+ *   5. only for a valid session, evaluate the rules;
+ *   6. build the session report bytes, hash them, and append `closed` with the outcome;
+ *   7. write the reference arm report (for a calibration both arm reports) and the session
+ *      report; only then show anything that carries timing, the frozen output included.
+ *
+ *  A calibration skips step 3. A smoke uses steps 1, 6 and 7 with a report that holds no timing.
+ *  A calibration or qualifying capture that does not complete is not closed: the session stays
+ *  in the registry as it stands, counts, and cannot be run again. */
+export async function runSession({ kind, registered, pairs, capturePair, endCapture, hashFrameImages, appendEvent: append, write, log,
+  runFrozen, context = {}, now = () => new Date().toISOString(), contract = PAIRED_CONTRACT }) {
+  assert.ok(SESSION_KINDS.includes(kind), 'Unknown session kind');
+  assert.equal(registered?.type, 'registered', 'runSession needs the registration event');
+  assert.equal(registered.kind, kind, `The nonce is registered as a ${registered.kind} session`);
+  assert.ok(Array.isArray(pairs) && pairs.length > 0, 'runSession needs the pairs to capture');
+  for (const [name, effect] of Object.entries({ capturePair, endCapture, appendEvent: append, write, log,
+    ...(kind === 'smoke' ? {} : { hashFrameImages }), ...(kind === 'qualifying' ? { runFrozen } : {}) }))
+    assert.equal(typeof effect, 'function', `runSession needs the injected ${name}`);
+  for (const name of ['session', ...(kind === 'smoke' ? [] : ARMS)])
+    assert.ok(typeof context.paths?.[name] === 'string' && context.paths[name], `runSession needs the ${name} report path`);
+  const nonce = registered.nonce, registrationEventHash = eventHash(registered);
 
-// Every listed frame image must hash to its recorded value (contract section 5, criterion 3).
-function frameImages(report) {
+  // 1. Started, then the captures, held in memory.
+  let registry = await append({ type: 'started', kind, nonce, registrationHash: registrationEventHash });
+  const started = registry?.events?.at(-1);
+  assert.ok(started?.type === 'started' && started.nonce === nonce, 'The started event was not appended');
+  const startedEventHash = eventHash(started), held = [];
+  let captureError = null, facts;
+  try {
+    for (const [index, pair] of pairs.entries()) {
+      held.push({ pair, captured: await capturePair(pair, index) });
+      log(`Paired ${kind} session ${nonce}: pair ${index + 1} of ${pairs.length} captured`);
+    }
+  } catch (error) { captureError = error; }
+  try { facts = await endCapture({ interrupted: captureError !== null }) ?? {}; }
+  catch (error) { captureError ??= error; facts = {}; }
+
+  if (kind === 'smoke') {
+    // A capture that failed is a structural failure of the smoke, and the smoke is still closed.
+    const arms = Object.fromEntries(ARMS.map(arm => [arm, { identities: context.armIdentities?.[arm],
+      pageErrors: facts.pageErrors?.[arm] ?? [], sample: held[0]?.captured?.[arm]?.sample }]));
+    const report = smokeReport({ nonce, identity: registered.identity, commit: context.revision, registrationEventHash, startedEventHash,
+      arms, difference: facts.difference ?? context.difference ?? null, browserVersion: context.browserVersion ?? null,
+      host: { before: context.hostBefore ?? null, after: facts.hostAfter ?? null },
+      error: captureError ? captureError.message ?? String(captureError) : facts.error ?? null,
+      diagnostics: facts.diagnostics ?? null, armDataKept: facts.armDataKept === true }, contract);
+    const bytes = jsonBytes(report), reportHashes = { session: sha256(bytes) };
+    registry = await append(closedEvent('smoke', nonce, { structuralFailure: report.structuralFailure, reportHashes,
+      browserVersion: context.browserVersion ?? null }));
+    const closed = registry.events.at(-1);
+    await write(context.paths.session, bytes);
+    log(JSON.stringify({ kind, nonce, closedSeq: closed.seq, structuralFailure: report.structuralFailure,
+      referencePageErrors: report.referencePageErrors, armDataKept: report.armDataKept, report: context.paths.session, sha256: reportHashes.session }));
+    return { registry, closed, report, sessionBytes: bytes, reportHashes, outcome: closed.outcome };
+  }
+
+  if (captureError) {
+    log(`Paired ${kind} session ${nonce}: the capture did not complete. The session stays in the registry as it stands, ` +
+      'counts, and is not run again; nothing was written.');
+    throw new Error(`Paired ${kind} session ${nonce} was interrupted before its last pair: ${captureError.message ?? captureError}`,
+      { cause: captureError });
+  }
+
+  // 2. Both arm reports, as bytes in memory. The order recorded is the one the captures show.
+  const order = held.map(({ pair, captured }) => ({ warmup: pair.warmup === true, run: pair.run, tier: pair.tier, actorCount: pair.actorCount,
+    first: Date.parse(captured?.reference?.startedAt) <= Date.parse(captured?.candidate?.startedAt) ? 'reference-first' : 'candidate-first' }));
+  const capturedAt = now(), bytes = {}, hashes = {};
+  for (const arm of ARMS) {
+    const warm = held.find(({ pair }) => pair.warmup === true);
+    bytes[arm] = jsonBytes(buildArmReport({ arm, kind, nonce, identities: context.armIdentities?.[arm],
+      samples: held.filter(({ pair }) => pair.warmup !== true).map(({ captured }) => captured?.[arm]?.sample).filter(Boolean),
+      captures: held.map(({ pair, captured }) => ({ warmup: pair.warmup === true, run: pair.run, tier: pair.tier, actorCount: pair.actorCount,
+        startedAt: captured?.[arm]?.startedAt ?? null, endedAt: captured?.[arm]?.endedAt ?? null })),
+      warmup: warm ? { warmup: true, run: warm.pair.run, tier: warm.pair.tier, actorCount: warm.pair.actorCount,
+        frameCount: warm.captured?.[arm]?.sample?.frameCount ?? null, timings: warm.captured?.[arm]?.sample?.timings ?? null } : null,
+      pageErrors: facts.pageErrors?.[arm] ?? [], captureError: facts.error ?? null, capturedAt, revision: context.revision,
+      device: context.device, cleanup: facts.cleanup ?? null, runtimeDependencies: context.runtimeDependencies?.[arm] ?? null,
+      baselineSha256: context.baselineSha256, compare: context.compare, v2Budget: context.v2Budget, v2BudgetBytes: context.v2BudgetBytes,
+      contract }));
+    hashes[arm] = sha256(bytes[arm]);
+  }
+
+  // 3. Qualifying only: the candidate arm report is the one file written before `closed`, once.
+  let frozenRun = null;
+  if (kind === 'qualifying') {
+    await write(context.paths.candidate, bytes.candidate);
+    frozenRun = await runFrozen(context.paths.candidate);
+  }
+
+  // 4. Validity, from the bytes that were hashed: what `verify` will read back.
+  const session = { kind, nonce, identity: registered.identity, order, settings: structuredClone(SESSION_SETTINGS),
+    browserVersion: context.browserVersion ?? null,
+    arms: Object.fromEntries(ARMS.map(arm => [arm, { report: JSON.parse(bytes[arm].toString('utf8')), sha256: hashes[arm] }])),
+    structural: { frameImages: {} } };
+  for (const arm of ARMS) session.structural.frameImages[arm] = await hashFrameImages(session.arms[arm].report, arm);
+  const frozen = kind === 'qualifying' ? session.structural.frozen = frozenFacts(frozenRun, hashes.candidate) : null;
+  session.binding = bindingCheck(session, context.knownReportHashes ?? [], registry);
+  session.validity = sessionValidity(session, contract, calibrationFor(registry, registered.identity));
+
+  // 5. The rules, only for a valid session.
+  const evaluation = session.validity.valid ? JSON.parse(JSON.stringify(evaluatePaired(session, contract))) : null;
+
+  // 6. The session report bytes, with validity and outcome inside, then `closed`.
+  const report = sessionReport({ session, evaluation, registrationEventHash, startedEventHash,
+    host: { before: context.hostBefore ?? null, after: facts.hostAfter ?? null },
+    armPaths: { reference: context.paths.reference, candidate: context.paths.candidate } }, contract);
+  const sessionBytes = jsonBytes(report), reportHashes = { session: sha256(sessionBytes), reference: hashes.reference, candidate: hashes.candidate };
+  registry = await append(closedEvent(kind, nonce, { valid: session.validity.valid, pass: evaluation ? evaluation.pairedBudgetPass : null,
+    settings: session.settings, browserVersion: session.browserVersion, reportHashes,
+    ...(frozen ? { frozenExitCode: frozen.exitCode, frozenOverrunCount: frozen.overrunCount } : {}) }));
+  const closed = registry.events.at(-1);
+
+  // 7. The remaining reports, and only then anything that carries timing.
+  if (kind === 'calibration') await write(context.paths.candidate, bytes.candidate);
+  await write(context.paths.reference, bytes.reference);
+  await write(context.paths.session, sessionBytes);
+  log(JSON.stringify({ kind, nonce, closedSeq: closed.seq, valid: closed.valid, outcome: closed.outcome,
+    pairedBudgetPass: evaluation ? evaluation.pairedBudgetPass : null, invalidReasons: session.validity.valid ? [] : session.validity.reasons,
+    ...(frozen ? { frozenExitCode: frozen.exitCode, frozenOverrunCount: frozen.overrunCount, frozenExitZeroObserved: frozen.exitCode === 0 } : {}),
+    reports: { session: context.paths.session, ...Object.fromEntries(ARMS.map(arm => [arm, context.paths[arm]])) }, reportHashes,
+    certification: false }));
+  if (frozenRun) log(`Captured output of the unchanged frozen command on the candidate arm (exit ${frozenRun.exitCode}):\n` +
+    `${frozenRun.stdout ?? ''}${frozenRun.stderr ?? ''}`);
+  return { registry, closed, report, sessionBytes, reportHashes, outcome: closed.outcome };
+}
+
+/// ---- command line ----------------------------------------------------------------------------------------
+
+/** Every listed frame image must hash to its recorded value (contract section 5, criterion 3).
+ *  Reads the image files; the result goes into the session record as `structural.frameImages`. */
+export function frameImageCheck(report) {
   try {
     const cache = path.join(ROOT, '.planning/research/.cache');
     for (const sample of report.samples) for (const frame of sample.sequence) {
@@ -956,10 +1547,10 @@ function frameImages(report) {
   } catch (error) { return { ok: false, error: error.message }; }
 }
 
-// Reports that exist outside any session: the frozen reference and every complete single-arm
-// report in the phase evidence directory and the candidate capture cache. A report that carries a
-// `paired` block is an arm report and is bound by its nonce and the registry instead.
-function existingReportHashes(budget) {
+/** Reports that exist outside any session: the frozen reference and every complete single-arm
+ *  report in the phase evidence directory and the candidate capture cache. A report that carries a
+ *  `paired` block is an arm report and is bound by its nonce and the registry instead. */
+export function existingReportHashes(budget) {
   const hashes = [budget.referenceReportSha256];
   for (const directory of [path.join(ROOT, EVIDENCE_DIR), path.join(ROOT, '.planning/research/.cache/06-art/animation-candidate')]) {
     if (!existsSync(directory)) continue;
@@ -983,39 +1574,91 @@ async function verifyCommand(values) {
       assert.ok(typeof name === 'string' && name, `Session report names no ${arm} arm report`);
       return readFileSync(boundedPath(ROOT, name));
     },
-    hashFrameImages: async report => frameImages(report),
-    runFrozen: async name => {
-      const run = spawnSync(process.execPath, ['tools/art/animation-budget-v2.mjs', 'verify', '--budget', budgetFile,
-        '--candidate', boundedPath(ROOT, name)], { cwd: ROOT, encoding: 'utf8', windowsHide: true, timeout: 120000, maxBuffer: 1 << 26 });
-      return { exitCode: run.status, stdout: run.stdout ?? '', stderr: run.stderr ?? '' };
-    },
+    hashFrameImages: async report => frameImageCheck(report),
+    runFrozen: async name => runFrozenCommand(name, budgetFile),
     knownReportHashes: existingReportHashes(JSON.parse(readFileSync(budgetFile, 'utf8'))) });
   console.log(JSON.stringify(result));
   process.exitCode = exitCode;
 }
 
-function chainCommand(values) {
-  assert.ok(values['--registry'], 'Use chain --registry <registry>');
+const trackedRegistry = (values, use) => {
+  assert.ok(values['--registry'], use);
   const file = path.resolve(values['--registry']);
-  assert.equal(path.relative(ROOT, file).split(path.sep).join('/'), REGISTRY_PATH, 'chain reads the tracked paired session registry');
+  assert.equal(path.relative(ROOT, file).split(path.sep).join('/'), REGISTRY_PATH, 'Only the tracked paired session registry is read');
   assert.ok(existsSync(file), 'No paired session registry');
-  const working = readRegistry(file), summary = verifyChain(working), committed = committedRegistry();
-  const uncommitted = uncommittedEvents(working, committed), committedEvents = committed?.events?.length ?? 0;
+  return file;
+};
+
+// Exit 0 only when the chain is valid, every event is in the committed registry and every
+// committed version of the file is a prefix of the current event list.
+function chainCommand(values) {
+  const file = trackedRegistry(values, 'Use chain --registry <registry>');
+  const working = readRegistry(file), summary = verifyChain(working);
+  verifyLifecycle(working);
+  const committed = committedRegistry(), uncommitted = uncommittedEvents(working, committed), committedEvents = committed?.events?.length ?? 0;
+  const history = { versions: null, ok: false, error: null };
+  try {
+    history.versions = historyPrefixCheck(working, registryHistory()).versions;
+    if (working.events.length && !history.versions) throw Error('Registry history cannot be read: no committed version of the registry was found');
+    history.ok = true;
+  } catch (error) { history.error = error.message; }
   const result = { chain: 'valid', events: summary.events, head: summary.head, committedEvents, uncommittedSequences: uncommitted,
-    everyEventCommitted: uncommitted.length === 0 && committedEvents === summary.events };
+    everyEventCommitted: uncommitted.length === 0 && committedEvents === summary.events,
+    committedVersions: history.versions, everyCommittedVersionIsPrefix: history.ok, ...(history.error ? { historyError: history.error } : {}) };
   console.log(JSON.stringify(result));
-  if (!result.everyEventCommitted) process.exitCode = 1;
+  if (!result.everyEventCommitted || !result.everyCommittedVersionIsPrefix) process.exitCode = 1;
+}
+
+// Exit 0 only for `pass`; 1 for `undecided` or `failed`, with the result printed; 2 when the
+// verdict is refused (changed contract, broken chain or order, an uncommitted event, a committed
+// version that is not a prefix, a history that cannot be read in full).
+function verdictCommand(values) {
+  const use = 'Use verdict --registry <registry> --identity <source identity hash>';
+  assert.ok(HEX64.test(values['--identity'] ?? ''), use);
+  let result;
+  try {
+    assertContract();
+    const checked = checkedRegistry(trackedRegistry(values, use));
+    result = { ...registryVerdict(checked.registry, values['--identity'], { registrationCommits: checked.registrationCommits }),
+      registry: { path: REGISTRY_PATH, sha256: sha256(readFileSync(path.join(ROOT, REGISTRY_PATH))), ...checked.summary } };
+  } catch (error) {
+    console.error('Verdict refused: ' + error.message);
+    process.exitCode = 2;
+    return;
+  }
+  console.log(JSON.stringify(result));
+  process.exitCode = result.verdict === 'pass' ? 0 : 1;
+}
+
+// A reader of existing reports: it captures nothing and writes nothing. The unchanged frozen
+// command is run once per distinct report hash. An exit 0 in this list is not a pass by any tool.
+function frozenEvaluationsCommand(values) {
+  assert.ok(HEX64.test(values['--identity'] ?? ''), 'Use frozen-evaluations --identity <source identity hash>');
+  assertContract();
+  const identity = values['--identity'], scanned = scanReports();
+  const atIdentity = scanned.filter(entry => identityHash(entry.report.identities) === identity), results = {};
+  for (const entry of atIdentity) results[entry.sha256] ??= runFrozenCommand(entry.path);
+  const evaluations = frozenEvaluationList(atIdentity, identity, results);
+  console.log(JSON.stringify({ contractVersion: PAIRED_CONTRACT.version, identity, budget: FROZEN_BUDGET_PATH,
+    roots: [...FROZEN_EVALUATION_ROOTS], completeReportsScanned: scanned.length, count: evaluations.length, evaluations,
+    frozenExitZeroObserved: evaluations.some(entry => entry.exitZeroObserved), certification: false,
+    meaning: 'Every complete candidate report at this source identity that the scan finds, with the result of the unchanged frozen ' +
+      'command for it. A frozen exit 0 on a later evaluation is recorded with its count and is for the owner to judge; it is never ' +
+      'a pass by this tool. Evaluations made on other source are not in this list.' }));
 }
 
 async function cli() {
   const [operation, ...flags] = process.argv.slice(2), values = {};
   for (let i = 0; i < flags.length; i += 2) {
-    assert.ok(['--registry', '--budget', '--session'].includes(flags[i]) && flags[i + 1] && !values[flags[i]], 'Invalid arguments');
+    assert.ok(['--registry', '--budget', '--session', '--identity'].includes(flags[i]) && flags[i + 1] && !values[flags[i]], 'Invalid arguments');
     values[flags[i]] = flags[i + 1];
   }
   if (operation === 'chain') chainCommand(values);
   else if (operation === 'verify') await verifyCommand(values);
-  else throw Error('Use chain --registry <registry>, or verify --budget <frozen V2 budget> --session <session report> --registry <registry>');
+  else if (operation === 'verdict') verdictCommand(values);
+  else if (operation === 'frozen-evaluations') frozenEvaluationsCommand(values);
+  else throw Error('Use chain --registry <registry>, verify --budget <frozen V2 budget> --session <session report> --registry <registry>, ' +
+    'verdict --registry <registry> --identity <hash>, or frozen-evaluations --identity <hash>');
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   cli().catch(error => { console.error(error.message); process.exitCode = 1; });

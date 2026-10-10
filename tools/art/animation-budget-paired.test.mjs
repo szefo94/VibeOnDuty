@@ -1739,7 +1739,8 @@ const STAMP = '7373', marked = value => Number(`${Math.floor(value)}.${STAMP}`);
 const markedTimings = () => Object.fromEntries(COMPONENTS.map(name =>
   [name, { median: marked(BASE[name][0]), p95: marked(BASE[name][1]), min: marked(0), max: marked(BASE[name][1] * 2) }]));
 // What may not be printed or logged before a session is closed: a timing value, a ratio, a rule result, frozen output.
-const TIMING_WORDS = /7373|ratio|aggregate|median|p95|rule ?[12]|overrun|budget|valid|pass|fail|outcome|FROZEN/i;
+// `ratio` is matched as a word: the session kind "calibration" contains those letters and is in every progress line.
+const TIMING_WORDS = /7373|\bratios?\b|aggregate|median|p95|rule ?[12]|overrun|budget|valid|pass|fail|outcome|FROZEN/i;
 const FROZEN_RUN = { exitCode: 1, stderr: 'FROZEN-STDERR-MARKER\n', stdout: JSON.stringify({ applicableBudgetPass: false,
   overruns: Array.from({ length: 40 }, () => ({ actualMs: marked(251), upperMs: 250 })), certification: false }) + '\n' };
 const SESSION_DIRECTORY = `.planning/research/.cache/06-art/animation-paired/session-${SESSION_NONCE}`;
