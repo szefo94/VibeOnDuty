@@ -79,6 +79,7 @@ function readersOf(world) {
     registryHistory: () => seen('registryHistory', typeof world.versions === 'function' ? world.versions() : world.versions),
     frozenEvaluations: () => seen('frozenEvaluations', structuredClone(world.scanned)),
     frozen: name => seen('frozen:' + name, world.frozen(name)),
+    verifySession: name => seen('verifySession:' + name, world.verify(name)),
   };
 }
 const frozenReaders = edit => readersOf(frozenWorld(edit));
@@ -491,6 +492,15 @@ const frozenRunOf = (reportSha256, overruns, exitCode = overruns === 0 ? 0 : 1) 
   stdout: JSON.stringify({ candidateReportSha256: reportSha256, applicableBudgetPass: overruns === 0,
     overruns: Array.from({ length: overruns }, () => ({})), certification: false }) + '\n' });
 const STDERR_ONLY = { exitCode: 1, stdout: '', stderr: 'Missing/stale runtime manifest identity\n' };
+// What the paired tool's verify command prints for a session report: one result line, with exit 0 only for
+// a valid session that passes the rules and, when it has a candidate arm, the frozen structural checks.
+const verifyRunOf = (report, change = {}) => {
+  const line = { kind: report.kind, nonce: report.nonce, valid: report.outcome !== 'invalid',
+    pairedBudgetPass: report.outcome === 'invalid' ? null : report.outcome === 'passed',
+    structuralV2Pass: report.kind === 'calibration' ? null : report.outcome !== 'invalid', certification: false, ...change };
+  const passed = line.valid === true && line.pairedBudgetPass === true && (line.kind === 'calibration' || line.structuralV2Pass === true);
+  return { exitCode: passed ? 0 : 1, stderr: '', stdout: JSON.stringify(line) + '\n' };
+};
 
 // Sessions driven through a registry with the tool's own pure functions. Each group is one source
 // identity: a passed calibration, then one qualifying session per listed result ('pass', 'fail',
@@ -507,14 +517,22 @@ function sessionsOf(groups) {
     registry = paired.appendEvent(registry, { type: 'started', kind, nonce, registrationHash: paired.eventHash(registry.events.at(-1)) }, now);
     if (result === 'started') return;
     const valid = result !== 'invalid', outcome = !valid ? 'invalid' : result === 'pass' ? 'passed' : 'failed';
-    const report = jsonBytes({ schemaVersion: 1, kind, nonce, outcome, certification: false });
     const candidate = jsonBytes({ schemaVersion: 1, complete: true, capturedAt: now(), identities: group.candidateIds ?? group.ids,
       samples: Array.from({ length: 12 }, () => ({})), paired: { nonce, kind, arm: 'candidate' } });
+    // Both arm reports lie where the runner leaves them, in the session directory of the cache, and the
+    // session report names them with their hashes; the session report is copied to the evidence directory.
+    const reference = jsonBytes({ schemaVersion: 1, complete: true, identities: group.ids,
+      samples: Array.from({ length: 12 }, () => ({})), paired: { nonce, kind, arm: 'reference' } });
+    const arms = { reference: `${paired.PAIRED_CACHE}/session-${nonce}/arm-reference.json`, candidate: `${paired.PAIRED_CACHE}/session-${nonce}/arm-candidate.json` };
+    const report = jsonBytes({ schemaVersion: 1, kind, nonce, outcome, certification: false,
+      arms: { reference: { path: arms.reference, sha256: sha(reference) }, candidate: { path: arms.candidate, sha256: sha(candidate) } } });
     registry = paired.closeSession(registry, nonce, { valid, pass: valid ? outcome === 'passed' : null,
       settings: structuredClone(paired.SESSION_SETTINGS), browserVersion: BROWSER,
-      reportHashes: { session: sha(report), reference: sha('reference arm of ' + nonce), candidate: sha(candidate) },
+      reportHashes: { session: sha(report), reference: sha(reference), candidate: sha(candidate) },
       ...(kind === 'qualifying' ? { frozenExitCode: group.frozenOverruns === 0 ? 0 : 1, frozenOverrunCount: group.frozenOverruns ?? 3 } : {}) }, now);
+    Object.assign(files, { [arms.reference]: reference, [arms.candidate]: candidate });
     if (kind === 'qualifying') { files[`${paired.EVIDENCE_DIR}07-18-paired-session-${count}.json`] = report; candidates[nonce] = candidate; }
+    else files[`${paired.EVIDENCE_DIR}07-18-paired-calibration-${count}.json`] = report;
   };
   for (const group of groups) {
     drive('calibration', 'pass', group);
@@ -536,6 +554,8 @@ function publish(world, registry) {
   const passed = verdict.sessions.filter(session => session.outcome === 'passed').at(-1);
   if (passed) world.files[RECORDED_CANDIDATE_PATH] = world.candidates[passed.nonce];
   world.frozen = name => frozenRunOf(sha(world.files[name]), world.frozenOverruns);
+  // The verify command, answered for a session whose reports are whole: the outcome its session report holds.
+  world.verify = name => verifyRunOf(JSON.parse(world.files[name].toString('utf8')));
   world.record = { complete: true, identities: world.ids, applicableBudgetPass: world.frozenOverruns === 0,
     timingGate: 'paired-same-session', candidate: RECORDED_CANDIDATE_PATH, assertions: passingAssertions(),
     paired: { v2Sha256: paired.PAIRED_CONTRACT.v2Sha256, decisionSha256: paired.PAIRED_CONTRACT.decisionSha256,
@@ -1122,8 +1142,10 @@ test('injected readers: only the named readers are consulted, and never for the 
   const expected = {
     frozen: [['committedRegistry', 'file', 'frozenEvaluations', 'registryHistory'],
       [DECISION_PATH, paired.REGISTRY_PATH, PLAN13_RESULT_PATH, PLAN13_CANDIDATE_PATH].sort()],
-    paired: [['committedRegistry', 'evidenceFiles', 'file', 'frozen', 'registryHistory'],
-      [...CONTRACT_FILES, paired.REGISTRY_PATH, RECORDED_CANDIDATE_PATH, paired.EVIDENCE_DIR + '07-18-paired-session-2.json'].sort()],
+    paired: [['committedRegistry', 'evidenceFiles', 'file', 'frozen', 'registryHistory', 'verifySession'],
+      [...CONTRACT_FILES, paired.REGISTRY_PATH, RECORDED_CANDIDATE_PATH, paired.EVIDENCE_DIR + '07-18-paired-calibration-1.json',
+        paired.EVIDENCE_DIR + '07-18-paired-session-2.json', ...['0'.repeat(31) + '1', '0'.repeat(31) + '2'].flatMap(nonce =>
+          ['reference', 'candidate'].map(arm => `${paired.PAIRED_CACHE}/session-${nonce}/arm-${arm}.json`))].sort()],
   };
   for (const route of ROUTES) {
     const input = routeOf(route), asked = new Set();
@@ -1145,7 +1167,8 @@ const verdictRunOf = (verdict, identity, exitCode = verdict === 'pass' ? 0 : 1) 
 async function pairedOutcome(change = {}) {
   const world = pairedWorld(), candidate = world.files[RECORDED_CANDIDATE_PATH], asked = [];
   const input = { qualification: world.record, frozenRun: frozenRunOf(sha(candidate), 3), readCandidate: async () => candidate,
-    runVerdict: async identity => { asked.push(identity); return verdictRunOf('pass', identity); } };
+    runVerdict: async identity => { asked.push(identity); return verdictRunOf('pass', identity); },
+    verifySessions: async () => 2 };
   Object.assign(input, typeof change === 'function' ? change(world, input) : change);
   assert.equal(typeof capture.actualV2Outcome, 'function');
   return { outcome: await capture.actualV2Outcome(input), asked, world };
@@ -1368,7 +1391,7 @@ test('paired route rejects when the file present under a session report hash is 
 test('default readers: the predicate defaults to the files on disk, read inside the repository only', async () => {
   const readers = capture.PLAN09_DISK_READERS;
   assert.ok(readers && Object.isFrozen(readers));
-  assert.deepEqual(Object.keys(readers).sort(), ['committedRegistry', 'evidenceFiles', 'file', 'frozen', 'frozenEvaluations', 'registryHistory']);
+  assert.deepEqual(Object.keys(readers).sort(), ['committedRegistry', 'evidenceFiles', 'file', 'frozen', 'frozenEvaluations', 'registryHistory', 'verifySession']);
   for (const reader of Object.values(readers)) assert.equal(typeof reader, 'function');
   // The file reader returns the bytes of a tracked file and refuses a path that leaves the repository.
   assert.deepEqual(readers.file(paired.PAIRED_CONTRACT.decisionPath), repoFile(paired.PAIRED_CONTRACT.decisionPath));
@@ -1387,6 +1410,522 @@ test('default readers: the predicate defaults to the files on disk, read inside 
   const source = (await readFile(new URL('./animation-capture.mjs', import.meta.url), 'utf8')).replace(/\r\n/g, '\n');
   assert.equal(occurrencesOf(source, 'requirePlan09')[0].args[3], 'readers = PLAN09_DISK_READERS');
   const named = occurrencesOf(source, 'PLAN09_DISK_READERS');
-  assert.equal(named.length, 2);
+  assert.equal(named.length, 3);
   assert.match(source.slice(named[0].index - 13, named[0].index + 40), /^export const PLAN09_DISK_READERS = Object\.freeze\(\{/);
+  // Its one other use hands the same readers to the session verification that executeV2 asks for.
+  assert.ok(named[2].index > source.indexOf('export async function executeV2('));
+  assert.match(source.slice(named[2].index - 80, named[2].index + 20), /\n {4}verifySessions: async identity => verifiedPairedSessions\(identity, PLAN09_DISK_READERS\)$/);
+});
+
+// ---- review finding I-01: a session the verdict counts is verified from its reports ----------------------
+// The registry verdict counts what `closed` events say. A registry written by hand, with a valid chain, can
+// say anything, so the predicate puts the calibration and every closed qualifying session of the current
+// source identity to the paired tool's `verify` command and compares its result with the `closed` event.
+//
+// The controls above answer that command with a canned line (`world.verify`), as they answer the frozen
+// command with one. The worlds below are made and judged by the tool itself: `paired.runSession` writes the
+// arm reports and the session report of every session into the world's files, and the verify reader answers
+// with what `paired.verifyOutput`, the function behind the `verify` command, gives for those files and that
+// registry. Synthetic inputs only: the samples are those of the tracked frozen reference report.
+import { qualify } from './animation-budget-v2.mjs';
+const REFERENCE = JSON.parse(repoFile(paired.EVIDENCE_DIR + '07-09-view-reference-v2.json').toString('utf8'));
+const V2_BUDGET_BYTES = repoFile(paired.FROZEN_BUDGET_PATH), V2_BUDGET = JSON.parse(V2_BUDGET_BYTES.toString('utf8'));
+const OWNER_PATHS = Object.keys(paired.PAIRED_CONTRACT.referenceOwners);
+const nonceOf = count => String(count).padStart(32, '0');
+// The candidate tree: the paired identities and the five owner files as they are now. The reference tree
+// holds the five pinned owner files instead.
+const toolIdentities = { ...pairedIdentities, ...Object.fromEntries(OWNER_PATHS.map((name, index) => [name, String(index + 1).repeat(64)])) };
+const referenceTree = ids => ({ ...ids, ...Object.fromEntries(OWNER_PATHS.map(name => [name, paired.PAIRED_CONTRACT.referenceOwners[name].sha256])) });
+const TIMING = { frameIntervalMs: [250, 262], mixerMs: [0.1, 0.1], inertiaMs: [0, 0], correctionMs: [1.6, 2], renderMs: [1.8, 2.6],
+  selectionMs: [0.2, 0.3], coreCorrectionMs: [1, 1.3], viewMs: [0.4, 0.5] };
+// A candidate arm 50% slower on the frame interval fails rule 1; equal arms pass both rules.
+const timingsOf = factor => Object.fromEntries(Object.entries(TIMING).map(([name, [median, p95]]) =>
+  [name, name === 'frameIntervalMs' ? { median: median * factor, p95: p95 * factor } : { median, p95 }]));
+const sessionPaths = nonce => Object.fromEntries(['reference', 'candidate', 'session'].map(name =>
+  [name, `${paired.PAIRED_CACHE}/session-${nonce}/${name === 'session' ? 'session' : 'arm-' + name}.json`]));
+const evidenceName = (kind, count) => `${paired.EVIDENCE_DIR}07-18-paired-${kind === 'calibration' ? 'calibration' : 'session'}-${count}.json`;
+function toolState(ids = toolIdentities) {
+  let time = Date.parse('2026-10-12T10:00:00.000Z');
+  return { ids, identity: paired.identityHash(ids), registry: paired.emptyRegistry(), files: {}, candidates: {}, count: 0,
+    tick: (step = 1000) => new Date(time += step).toISOString() };
+}
+const registrationOf = (state, kind, nonce) => ({ kind, nonce, commit: 'c'.repeat(40), identity: state.identity, host: { note: 'synthetic' },
+  toolHashes: { ...TOOL_HASHES }, samplerIdentity: SAMPLER });
+// One session captured, closed and written by the tool's own runner, with every effect held in memory.
+// `result` is what the capture leads to: equal arms pass, a slower candidate fails, a page error is invalid.
+async function sessionByTheTool(state, kind, result = 'pass') {
+  const nonce = nonceOf(++state.count), paths = sessionPaths(nonce);
+  state.registry = paired.registerSession(state.registry, registrationOf(state, kind, nonce), state.tick);
+  const armIdentities = { reference: referenceTree(state.ids), candidate: kind === 'calibration' ? referenceTree(state.ids) : state.ids };
+  const run = await paired.runSession({ kind, registered: state.registry.events.at(-1), pairs: paired.sessionScheme(), now: state.tick,
+    capturePair: async pair => {
+      const captured = {};
+      for (const arm of pair.first === 'reference-first' ? ['reference', 'candidate'] : ['candidate', 'reference']) {
+        const sample = structuredClone(REFERENCE.samples.find(found =>
+          found.run === pair.run && found.tier === pair.tier && found.actorCount === pair.actorCount));
+        Object.assign(sample, { sourceIdentitySha256: sha(JSON.stringify(armIdentities[arm])),
+          timings: timingsOf(arm === 'candidate' && result === 'fail' ? 1.5 : 1) });
+        const startedAt = state.tick();
+        captured[arm] = { startedAt, endedAt: state.tick(9000), sample };
+      }
+      return captured;
+    },
+    endCapture: async () => ({ cleanup: { browserClosed: true, serverClosed: true }, hostAfter: { note: 'after' }, diagnostics: null, error: null,
+      pageErrors: { reference: result === 'invalid' ? ['TypeError: synthetic page error'] : [], candidate: [] } }),
+    hashFrameImages: async () => ({ ok: true }),
+    appendEvent: async event => (state.registry = paired.appendEvent(state.registry, event, state.tick)),
+    write: async (name, bytes) => { state.files[name] = Buffer.from(bytes); },
+    log: () => {},
+    runFrozen: async name => frozenRunOf(sha(state.files[name]), 3),
+    context: { revision: 'c'.repeat(40), browserVersion: REFERENCE.device.browser, hostBefore: { note: 'before' }, armIdentities, paths,
+      knownReportHashes: [], device: Object.fromEntries(Object.entries(REFERENCE.device).filter(([key]) => key !== 'rendererClass')),
+      runtimeDependencies: { reference: { note: 'synthetic' }, candidate: { note: 'synthetic' } }, baselineSha256: REFERENCE.baselineSha256,
+      compare: () => structuredClone(REFERENCE.comparison), v2Budget: V2_BUDGET, v2BudgetBytes: V2_BUDGET_BYTES } });
+  assert.equal(run.closed.outcome, { pass: 'passed', fail: 'failed', invalid: 'invalid' }[result], `${kind} ${result}`);
+  state.files[evidenceName(kind, state.count)] = state.files[paths.session];
+  if (kind === 'qualifying') state.candidates[nonce] = state.files[paths.candidate];
+  return nonce;
+}
+// One session written into the registry by hand, through the tool's own pure functions: a registration, a
+// `started` event and a `closed` event that claims valid and passed. Nothing was captured. `make` returns
+// whatever the writer puts on disk: a session report and two arm reports, any of them or none.
+function sessionByHand(state, kind, make) {
+  const nonce = nonceOf(++state.count), paths = sessionPaths(nonce);
+  state.registry = paired.registerSession(state.registry, registrationOf(state, kind, nonce), state.tick);
+  const registrationEventHash = paired.eventHash(state.registry.events.at(-1));
+  state.registry = paired.appendEvent(state.registry, { type: 'started', kind, nonce, registrationHash: registrationEventHash }, state.tick);
+  const made = make({ nonce, paths, registrationEventHash, startedEventHash: paired.eventHash(state.registry.events.at(-1)) });
+  const hashOf = (bytes, digit) => (bytes ? sha(bytes) : digit.repeat(64));
+  state.registry = paired.closeSession(state.registry, nonce, { valid: true, pass: true, settings: structuredClone(paired.SESSION_SETTINGS),
+    browserVersion: REFERENCE.device.browser,
+    reportHashes: { session: hashOf(made.report, '1'), reference: hashOf(made.reference, '2'), candidate: hashOf(made.candidate, '3') },
+    ...(kind === 'qualifying' ? { frozenExitCode: 1, frozenOverrunCount: 3 } : {}) }, state.tick);
+  if (made.report) state.files[evidenceName(kind, state.count)] = made.report;
+  for (const arm of ['reference', 'candidate']) if (made[arm]) state.files[paths[arm]] = made[arm];
+  if (kind === 'qualifying' && made.candidate) state.candidates[nonce] = made.candidate;
+  return nonce;
+}
+// A complete single-arm candidate report as an earlier capture leaves one, like evidence/07-13-cost-candidate.json:
+// it satisfies the frozen tool's `qualify` and carries no paired block, no nonce and no interleaved capture times.
+function singleArmReport(ids) {
+  const report = structuredClone(REFERENCE);
+  Object.assign(report, { identities: ids, capturedAt: '2026-10-10T07:22:59.763Z' });
+  for (const sample of report.samples) sample.sourceIdentitySha256 = sha(JSON.stringify(ids));
+  return jsonBytes(report);
+}
+// An arm report the runner really captured, relabelled by hand for another session: other bytes, so another hash.
+const relabelled = (bytes, nonce, kind) => {
+  const report = JSON.parse(bytes.toString('utf8'));
+  Object.assign(report.paired, { nonce, kind });
+  return jsonBytes(report);
+};
+// The four-field file the review's probe put under a session report hash, naming its arm reports.
+const stubReport = (kind, { nonce, paths }, arms) => jsonBytes({ schemaVersion: 1, kind, nonce, outcome: 'passed',
+  arms: Object.fromEntries(['reference', 'candidate'].map(arm => [arm, { path: paths[arm], sha256: sha(arms[arm]) }])) });
+// The best a writer by hand can do without a capture: the tool's own report shape, the hashes of the session's
+// real registry events, the arm reports it names, a validity block that says valid and an evaluation that says passed.
+function shapedReport(state, kind, { nonce, paths, registrationEventHash, startedEventHash }, arms) {
+  const ok = { ok: true, reasons: [] };
+  const session = { kind, nonce, identity: state.identity, order: paired.sessionScheme(), settings: structuredClone(paired.SESSION_SETTINGS),
+    browserVersion: REFERENCE.device.browser, binding: ok,
+    arms: { reference: { sha256: sha(arms.reference) }, candidate: { sha256: sha(arms.candidate) } },
+    structural: { frameImages: { reference: { ok: true }, candidate: { ok: true } },
+      frozen: { resultPrinted: true, exitCode: 1, overrunCount: 3, applicableBudgetPass: false } },
+    validity: { valid: true, reasons: [], checks: { complete: ok, order: ok, structure: ok, binding: ok,
+      grossInstability: { ...ok, largest: 1 }, ratioAgreement: { ...ok, largest: 1 }, settings: ok } } };
+  return jsonBytes(paired.sessionReport({ session, registrationEventHash, startedEventHash, host: null,
+    evaluation: { pairedBudgetPass: true, rule1: { comparisons: 192, violations: [] }, rule2: { groups: [], violations: [] }, tolerances: null },
+    armPaths: { reference: paths.reference, candidate: paths.candidate } }));
+}
+// The world of a state: its registry committed, and the record a builder would write from that registry.
+const toolWorld = state => publish({ ids: state.ids, identity: state.identity, files: { ...state.files }, candidates: state.candidates,
+  disk: [...CONTRACT_FILES], scanned: [], frozenOverruns: 3, frozen: null, calls: [] }, state.registry);
+// Answers the verify reader of a world with the tool's own verification of the world's files. `known` stands
+// for the reports that lie outside any session (the frozen reference and single-arm candidates).
+async function verifiedByTheTool(world, known = []) {
+  assert.equal(typeof paired.verifyOutput, 'function');
+  world.verified = {};
+  for (const name of Object.keys(world.files).filter(file => file.startsWith(paired.EVIDENCE_DIR)).sort()) {
+    let report;
+    try { report = JSON.parse(world.files[name].toString('utf8')); } catch { continue; }
+    if (!['calibration', 'qualifying'].includes(report?.kind)) continue;
+    world.verified[name] = await paired.verifyOutput({ sessionBytes: world.files[name], registry: world.registry,
+      readArm: async (arm, file) => {
+        if (!Object.hasOwn(world.files, file)) throw Error(`ENOENT: no such file or directory, open '${file}'`);
+        return world.files[file];
+      },
+      hashFrameImages: async () => ({ ok: true }), runFrozen: async file => world.frozen(file), knownReportHashes: known });
+  }
+  world.verify = name => world.verified[name] ?? { exitCode: 1, stdout: '', stderr: 'No such session report\n' };
+  return world;
+}
+const plan09 = world => requirePlan09(world.ids, completeSummary, world.record, readersOf(world));
+const verifyCalls = world => world.calls.filter(call => call.startsWith('verifySession:')).map(call => call.slice('verifySession:'.length));
+const NOT_VERIFIED = 'A paired session is not verified from its reports: ';
+
+test('session verification, the reviewed case: hand-written closed events that name an existing single-arm report as the candidate arm do not qualify', () => {
+  // 07-16-PAIRED-IMPLEMENTATION-REVIEW.md, finding I-01: a calibration and a qualifying session written by hand
+  // with a valid chain, a four-field file under the session report hash, and the hash of an existing
+  // single-arm report as the candidate arm. No capture is needed for any of it.
+  const state = toolState(), single = singleArmReport(state.ids);
+  assert.equal(JSON.parse(single.toString('utf8')).paired, undefined);
+  assert.equal(typeof qualify(JSON.parse(single.toString('utf8'))), 'object');
+  const calibration = sessionByHand(state, 'calibration', () => ({}));
+  const session = sessionByHand(state, 'qualifying', ({ nonce }) => ({ candidate: single,
+    report: jsonBytes({ schemaVersion: 1, kind: 'qualifying', nonce, outcome: 'passed' }) }));
+  delete state.files[sessionPaths(session).candidate];
+  const world = toolWorld(state);
+  // The registry is whole and its verdict is a pass; the record is what a builder would write from it.
+  assert.deepEqual([world.record.paired.verdict, world.record.paired.passed, world.record.paired.started], ['pass', 1, 1]);
+  assert.equal(sha(world.files[RECORDED_CANDIDATE_PATH]), sha(single));
+  assert.throws(() => plan09(world), rejectedWith('The session report of the calibration is not present with the hash in its closed event: ' + calibration));
+});
+
+test('session verification by the tool: sessions the runner captured and closed are verified and qualify, and the verify reader is asked for the calibration and every closed qualifying session of the identity, in registry order', async () => {
+  for (const [results, numbers, exits] of [[['pass'], ['pass', 1, 0, 0, 1], [0, 0]], [['fail', 'pass', 'pass'], ['pass', 2, 1, 0, 3], [0, 1, 0, 0]],
+    [['invalid', 'pass'], ['pass', 1, 0, 1, 2], [0, 1, 0]]]) {
+    const state = toolState(), label = results.join(', ');
+    await sessionByTheTool(state, 'calibration');
+    for (const result of results) await sessionByTheTool(state, 'qualifying', result);
+    const world = await verifiedByTheTool(toolWorld(state));
+    assert.deepEqual([world.record.paired.verdict, world.record.paired.passed, world.record.paired.failed, world.record.paired.invalid,
+      world.record.paired.started], numbers, label);
+    assert.equal(plan09(world), true, label);
+    const names = [evidenceName('calibration', 1), ...results.map((_result, index) => evidenceName('qualifying', index + 2))];
+    assert.deepEqual(verifyCalls(world), names, label);
+    // What the tool's verification printed for each: a result line for a failed and for an invalid session too,
+    // with exit 0 only for a valid session that passed.
+    assert.deepEqual(names.map(name => world.verified[name].exitCode), exits, label);
+    for (const name of names) assert.deepEqual([world.verified[name].stderr, world.verified[name].stdout.trim().startsWith('{')], ['', true], name);
+  }
+});
+
+test('session verification by the tool: a calibration written by hand is refused, with a qualifying session the runner captured beside it', async () => {
+  const state = toolState();
+  const calibration = sessionByHand(state, 'calibration', made => {
+    const arms = { reference: singleArmReport(referenceTree(state.ids)), candidate: jsonBytes({ note: 'second copy of the reference arm, written by hand' }) };
+    return { ...arms, report: shapedReport(state, 'calibration', made, arms) };
+  });
+  await sessionByTheTool(state, 'qualifying');
+  const world = await verifiedByTheTool(toolWorld(state));
+  assert.equal(world.record.paired.verdict, 'pass');
+  // The qualifying session is whole and verifies; only the calibration is a claim nothing stands behind.
+  assert.equal(world.verified[evidenceName('qualifying', 2)].exitCode, 0);
+  assert.deepEqual([world.verified[evidenceName('calibration', 1)].exitCode, world.verified[evidenceName('calibration', 1)].stdout], [1, '']);
+  assert.match(world.verified[evidenceName('calibration', 1)].stderr, /^Validity block differs from its recomputation\n$/);
+  assert.throws(() => plan09(world), rejectedWith(NOT_VERIFIED + calibration));
+  assert.deepEqual(verifyCalls(world), [evidenceName('calibration', 1)]);
+});
+
+test('session verification by the tool: a qualifying session written by hand is refused, with a calibration the runner captured before it', async () => {
+  for (const [label, report, refusal] of [
+    ['a four-field file under the session report hash', (state, made, arms) => stubReport('qualifying', made, arms),
+      /^Session report registration event hash does not match its registry event\n$/],
+    ['the tool\'s own report shape with the real event hashes', (state, made, arms) => shapedReport(state, 'qualifying', made, arms),
+      /^Validity block differs from its recomputation\n$/]]) {
+    const state = toolState();
+    await sessionByTheTool(state, 'calibration');
+    // Its arms: the reference arm the calibration really captured, relabelled, and a candidate arm written by hand
+    // with the right nonce, the current identities and twelve samples that hold nothing.
+    const session = sessionByHand(state, 'qualifying', made => {
+      const arms = { reference: relabelled(state.files[sessionPaths(nonceOf(1)).reference], made.nonce, 'qualifying'),
+        candidate: jsonBytes({ schemaVersion: 1, complete: true, capturedAt: state.tick(), identities: state.ids,
+          samples: Array.from({ length: 12 }, () => ({})), paired: { nonce: made.nonce, kind: 'qualifying', arm: 'candidate' } }) };
+      return { ...arms, report: report(state, made, arms) };
+    });
+    const world = await verifiedByTheTool(toolWorld(state));
+    assert.equal(world.record.paired.verdict, 'pass', label);
+    assert.equal(world.verified[evidenceName('calibration', 1)].exitCode, 0, label);
+    assert.deepEqual([world.verified[evidenceName('qualifying', 2)].exitCode, world.verified[evidenceName('qualifying', 2)].stdout], [1, ''], label);
+    assert.match(world.verified[evidenceName('qualifying', 2)].stderr, refusal, label);
+    assert.throws(() => plan09(world), rejectedWith(NOT_VERIFIED + session), label);
+  }
+});
+
+test('session verification by the tool: the hash of an existing single-arm report as the candidate arm is refused, whatever the session report says', async () => {
+  const state = toolState(), single = singleArmReport(state.ids);
+  await sessionByTheTool(state, 'calibration');
+  // A reference arm the runner really captured, relabelled for this session, and the single-arm report named as the candidate arm.
+  const session = sessionByHand(state, 'qualifying', made => {
+    const arms = { reference: relabelled(state.files[sessionPaths(nonceOf(1)).reference], made.nonce, 'qualifying'), candidate: single };
+    return { ...arms, report: shapedReport(state, 'qualifying', made, arms) };
+  });
+  const world = await verifiedByTheTool(toolWorld(state), [sha(single)]);
+  // Everything the registry and the record can say is in order: a pass verdict, the candidate recorded, a frozen result line for it.
+  assert.deepEqual([world.record.paired.verdict, sha(world.files[RECORDED_CANDIDATE_PATH])], ['pass', sha(single)]);
+  assert.equal(world.frozen(RECORDED_CANDIDATE_PATH).exitCode, 1);
+  const run = world.verified[evidenceName('qualifying', 2)];
+  assert.deepEqual([run.exitCode, run.stdout], [1, '']);
+  assert.match(run.stderr, /^Validity block differs from its recomputation\n$/);
+  assert.throws(() => plan09(world), rejectedWith(NOT_VERIFIED + session));
+  // What the recomputation found: the binding of section 7 of the contract.
+  const armOf = name => ({ sha256: sha(world.files[sessionPaths(session)[name]]), report: JSON.parse(world.files[sessionPaths(session)[name]].toString('utf8')) });
+  const binding = paired.bindingCheck({ nonce: session, arms: { reference: armOf('reference'), candidate: armOf('candidate') } }, [sha(single)], world.registry);
+  assert.equal(binding.ok, false);
+  for (const reason of ['the candidate arm report has no nonce', 'the candidate arm report is equal in hash to an existing report'])
+    assert.ok(binding.reasons.includes(reason), reason);
+  assert.ok(!binding.reasons.some(reason => reason.startsWith('the reference arm report')), binding.reasons.join(' | '));
+});
+
+test('session verification by the tool: an arm report of the calibration reused unchanged by a later hand-written session leaves neither session verified', async () => {
+  const state = toolState();
+  await sessionByTheTool(state, 'calibration');
+  sessionByHand(state, 'qualifying', made => {
+    const arms = { reference: state.files[sessionPaths(nonceOf(1)).reference], candidate: singleArmReport(state.ids) };
+    return { ...arms, report: shapedReport(state, 'qualifying', made, arms) };
+  });
+  const world = await verifiedByTheTool(toolWorld(state));
+  assert.equal(world.record.paired.verdict, 'pass');
+  // One report hash in two closed events: the binding of each session sees the other, and the calibration no longer verifies.
+  for (const name of [evidenceName('calibration', 1), evidenceName('qualifying', 2)])
+    assert.deepEqual([world.verified[name].exitCode, world.verified[name].stdout, world.verified[name].stderr],
+      [1, '', 'Validity block differs from its recomputation\n'], name);
+  assert.throws(() => plan09(world), rejectedWith(NOT_VERIFIED + nonceOf(1)));
+});
+
+test('session verification by the tool: a closed event and a session report rewritten by hand to say passed are refused, because the outcome differs from its recomputation', async () => {
+  const state = toolState();
+  await sessionByTheTool(state, 'calibration');
+  const session = await sessionByTheTool(state, 'qualifying', 'fail'), name = evidenceName('qualifying', 2);
+  // The runner closed it as valid and failed. By hand: the report's outcome, then the closed event's flags and report hash.
+  const report = JSON.parse(state.files[name].toString('utf8'));
+  assert.equal(report.outcome, 'failed');
+  state.files[name] = jsonBytes({ ...report, outcome: 'passed' });
+  const events = structuredClone(state.registry.events), closed = events.find(event => event.type === 'closed' && event.nonce === session);
+  assert.deepEqual([closed.valid, closed.pass, closed.outcome], [true, false, 'failed']);
+  Object.assign(closed, { pass: true, outcome: 'passed', reportHashes: { ...closed.reportHashes, session: sha(state.files[name]) } });
+  state.registry = rechained(events);
+  const world = await verifiedByTheTool(toolWorld(state));
+  assert.deepEqual([world.record.paired.verdict, world.record.paired.passed, world.record.paired.failed], ['pass', 1, 0]);
+  assert.deepEqual([world.verified[name].exitCode, world.verified[name].stdout], [1, '']);
+  assert.match(world.verified[name].stderr, /^Outcome in the session report \(passed\) differs from its recomputation \(failed\)\n$/);
+  assert.throws(() => plan09(world), rejectedWith(NOT_VERIFIED + session));
+  // With only the closed event rewritten, the report itself already says otherwise.
+  const plain = toolState();
+  await sessionByTheTool(plain, 'calibration');
+  const other = await sessionByTheTool(plain, 'qualifying', 'fail');
+  const rewritten = structuredClone(plain.registry.events);
+  Object.assign(rewritten.find(event => event.type === 'closed' && event.nonce === other), { pass: true, outcome: 'passed' });
+  plain.registry = rechained(rewritten);
+  const flagged = await verifiedByTheTool(toolWorld(plain));
+  assert.match(flagged.verified[name].stderr, /^Recomputed outcome \(failed\) differs from the closed event of the session: pass, outcome\n$/);
+  assert.throws(() => plan09(flagged), rejectedWith('The session report found is not the report of its registry session: ' + other));
+});
+
+test('session verification by the tool: a missing or changed arm report is rejected, for a qualifying session and for the calibration', async () => {
+  const build = async () => {
+    const state = toolState();
+    await sessionByTheTool(state, 'calibration');
+    await sessionByTheTool(state, 'qualifying');
+    return toolWorld(state);
+  };
+  assert.equal(plan09(await verifiedByTheTool(await build())), true);
+  for (const [count, arm] of [[2, 'reference'], [2, 'candidate'], [1, 'reference'], [1, 'candidate']]) {
+    const nonce = nonceOf(count), file = sessionPaths(nonce)[arm], label = `${arm} arm of session ${count}`;
+    const report = evidenceName(count === 1 ? 'calibration' : 'qualifying', count);
+    // Missing: the session directory in the cache was not kept. The tool's verification cannot read it either.
+    const missing = await build();
+    delete missing.files[file];
+    await verifiedByTheTool(missing);
+    assert.match(missing.verified[report].stderr, /^ENOENT: /, label);
+    assert.throws(() => plan09(missing), rejectedWith(`The ${arm} arm report of the paired session ${nonce} is missing or cannot be read`), label);
+    assert.ok(!verifyCalls(missing).includes(report), label);
+    // Changed: other bytes lie where the session report names the arm.
+    const changed = await build();
+    changed.files[file] = Buffer.concat([changed.files[file], Buffer.from('\n')]);
+    await verifiedByTheTool(changed);
+    assert.match(changed.verified[report].stderr, new RegExp(`^The ${arm} arm report differs from the bytes hashed in its closed event\\n$`), label);
+    assert.throws(() => plan09(changed), rejectedWith(`The ${arm} arm report of a paired session differs from the hash in its closed event: ${nonce}`), label);
+  }
+  // A session report that names no arm report has none to read.
+  const unnamed = pairedWorld(), name = sessionReports(unnamed)[0];
+  const { arms, ...withoutArms } = JSON.parse(unnamed.files[name].toString('utf8'));
+  assert.equal(typeof arms.reference.path, 'string');
+  unnamed.files[name] = jsonBytes(withoutArms);
+  delete unnamed.record;
+  handEdited(unnamed, event => event.type === 'closed' && event.kind === 'qualifying',
+    event => { event.reportHashes = { ...event.reportHashes, session: sha(unnamed.files[name]) }; });
+  assert.throws(() => plan09(unnamed), rejectedWith(`The reference arm report of the paired session ${nonceOf(2)} is missing or cannot be read`));
+});
+
+test('session verification: the calibration of the identity must have its session report in the evidence directory under the hash of its closed event', () => {
+  const calibration = evidenceName('calibration', 1);
+  const missing = pairedWorld();
+  assert.ok(Object.hasOwn(missing.files, calibration));
+  delete missing.files[calibration];
+  assert.throws(() => plan09(missing), rejectedWith('The session report of the calibration is not present with the hash in its closed event: ' + nonceOf(1)));
+  const changed = pairedWorld();
+  changed.files[calibration] = Buffer.concat([changed.files[calibration], Buffer.from(' ')]);
+  assert.throws(() => plan09(changed), rejectedWith('The session report of the calibration is not present with the hash in its closed event: ' + nonceOf(1)));
+  // A file with the right hash that is not that calibration's report: another kind, another nonce, another outcome.
+  for (const content of [{ kind: 'qualifying', nonce: nonceOf(1), outcome: 'passed' }, { kind: 'calibration', nonce: nonceOf(9), outcome: 'passed' },
+    { kind: 'calibration', nonce: nonceOf(1), outcome: 'failed' }]) {
+    const world = pairedWorld();
+    world.files[calibration] = jsonBytes({ schemaVersion: 1, ...content });
+    delete world.record;
+    handEdited(world, event => event.type === 'closed' && event.kind === 'calibration',
+      event => { event.reportHashes = { ...event.reportHashes, session: sha(world.files[calibration]) }; });
+    assert.throws(() => plan09(world), rejectedWith('The session report found is not the report of its registry session: ' + nonceOf(1)), JSON.stringify(content));
+  }
+  // The calibration of an earlier source identity is not asked for: its sessions are listed and count for nothing.
+  const earlier = pairedWorld({ earlier: [['fail', 'fail']] });
+  delete earlier.files[calibration];
+  assert.equal(plan09(earlier), true);
+});
+
+test('session verification: a run of the verify command that gives no usable result for a session verifies nothing', () => {
+  const line = (world, name, change) => verifyRunOf(JSON.parse(world.files[name].toString('utf8')), change);
+  const UNUSABLE = {
+    'a refusal on stderr only': () => STDERR_ONLY,
+    'nothing at all with exit 0': () => ({ exitCode: 0, stdout: '', stderr: '' }),
+    'a timeout': () => ({ exitCode: null, stdout: '', stderr: 'timeout' }),
+    'text that is no result line': () => ({ exitCode: 0, stdout: 'verified\n', stderr: '' }),
+    'a line of another session': (world, name) => line(world, name, { nonce: nonceOf(9) }),
+    'a line of another kind': (world, name) => line(world, name, { kind: name.includes('calibration') ? 'qualifying' : 'calibration' }),
+    'a line with no validity': (world, name) => line(world, name, { valid: undefined }),
+    'a valid line with no result': (world, name) => line(world, name, { pairedBudgetPass: null }),
+    'a passing line with exit 1': (world, name) => ({ ...line(world, name), exitCode: 1 }),
+    'a failing line with exit 0': (world, name) => ({ ...line(world, name, { pairedBudgetPass: false }), exitCode: 0 }),
+    'a passing line with exit 2': (world, name) => ({ ...line(world, name), exitCode: 2 }),
+  };
+  for (const [label, answer] of Object.entries(UNUSABLE)) for (const [count, kind] of [[1, 'calibration'], [2, 'qualifying']]) {
+    const world = pairedWorld(), target = evidenceName(kind, count), whole = world.verify;
+    assert.equal(plan09(world), true, label);
+    world.verify = name => (name === target ? answer(world, name) : whole(name));
+    assert.throws(() => plan09(world), rejectedWith(NOT_VERIFIED + nonceOf(count)), `${label}, ${kind}`);
+  }
+  // A reader that throws rejects with what it threw.
+  const thrown = pairedWorld();
+  thrown.verify = () => { throw Error('spawn failed'); };
+  assert.throws(() => plan09(thrown), rejectedLike(/^spawn failed$/));
+});
+
+test('session verification: a closed event whose validity or result differs from what the verification computes is rejected', () => {
+  const differs = 'The closed event of a paired session differs from what its verification computes: ';
+  const answered = (results, target, change) => {
+    const world = pairedWorld({ results }), whole = world.verify;
+    world.verify = name => (name === target ? verifyRunOf(JSON.parse(world.files[name].toString('utf8')), change) : whole(name));
+    return world;
+  };
+  // The registry says valid and passed; the verification says valid and failed, or invalid.
+  assert.throws(() => plan09(answered(['pass'], evidenceName('qualifying', 2), { pairedBudgetPass: false })), rejectedWith(differs + nonceOf(2)));
+  assert.throws(() => plan09(answered(['pass'], evidenceName('qualifying', 2), { valid: false, pairedBudgetPass: null, structuralV2Pass: false })),
+    rejectedWith(differs + nonceOf(2)));
+  assert.throws(() => plan09(answered(['pass'], evidenceName('calibration', 1), { pairedBudgetPass: false })), rejectedWith(differs + nonceOf(1)));
+  // A session that does not decide the verdict is held to the same: a failed one that verifies as passed, an invalid one that verifies as valid.
+  assert.throws(() => plan09(answered(['fail', 'pass', 'pass'], evidenceName('qualifying', 2), { pairedBudgetPass: true })), rejectedWith(differs + nonceOf(2)));
+  assert.throws(() => plan09(answered(['invalid', 'pass'], evidenceName('qualifying', 2), { valid: true, pairedBudgetPass: false, structuralV2Pass: true })),
+    rejectedWith(differs + nonceOf(2)));
+  // The same sessions with the results their closed events record are accepted.
+  for (const results of [['pass'], ['fail', 'pass', 'pass'], ['invalid', 'pass']]) assert.equal(plan09(pairedWorld({ results })), true);
+});
+
+test('session verification: a session counted as passed must verify as passed, which is exit 0 of the verify command', () => {
+  // Valid, both rules passed, and the frozen tool's structural checks failed for the candidate arm: exit 1.
+  assert.equal(typeof paired.verifyFacts, 'function');
+  const world = pairedWorld(), target = evidenceName('qualifying', 2), whole = world.verify;
+  world.verify = name => (name === target ? verifyRunOf(JSON.parse(world.files[name].toString('utf8')), { structuralV2Pass: false }) : whole(name));
+  assert.equal(world.verify(target).exitCode, 1);
+  assert.deepEqual(paired.verifyFacts(world.verify(target), { kind: 'qualifying', nonce: nonceOf(2) }),
+    { valid: true, pass: true, structuralV2Pass: false, passed: false, exitCode: 1 });
+  assert.throws(() => plan09(world), rejectedWith('A paired session counted as passed does not verify as passed: ' + nonceOf(2)));
+});
+
+test('session verification: only the calibration and the closed qualifying sessions of the current identity are verified, each once', () => {
+  // An earlier identity with its own calibration and sessions; for the current one a session that never closed, then a pass.
+  const world = pairedWorld({ results: ['started', 'pass'], earlier: [['fail', 'pass']] });
+  assert.deepEqual([world.record.paired.verdict, world.record.paired.invalid, world.record.paired.started], ['pass', 1, 2]);
+  assert.equal(plan09(world), true);
+  assert.deepEqual(verifyCalls(world), [evidenceName('calibration', 4), evidenceName('qualifying', 6)]);
+  // The reports of the earlier identity must still be present, as before, and are read; they are not verified.
+  const files = new Set(world.calls.filter(call => call.startsWith('file:')).map(call => call.slice(5)));
+  assert.ok(files.has(evidenceName('qualifying', 2)) && files.has(evidenceName('qualifying', 3)));
+  assert.ok(!files.has(sessionPaths(nonceOf(2)).reference) && files.has(sessionPaths(nonceOf(6)).reference));
+  // No reader is asked to verify anything on the frozen route.
+  const frozen = frozenInput();
+  assert.equal(judged(frozen), true);
+  assert.deepEqual(verifyCalls(frozen.world), []);
+});
+
+test('session verification, order: it follows the checks of the registry itself and precedes every check that reads the verdict', () => {
+  const unverifiable = world => { world.verify = () => STDERR_ONLY; return world; };
+  // Before it: the identity, the registry hash, every event committed, the registration rules. None of them asks the verify reader.
+  for (const [edit, expected] of [
+    [world => { world.record.paired.identity = 'f'.repeat(64); }, 'Paired plan09 qualification is for another source identity'],
+    [world => { world.record.paired.registry.sha256 = 'f'.repeat(64); }, 'Paired plan09 qualification registry hash differs from the registry file'],
+    [world => { world.committed = { ...world.committed, events: world.committed.events.slice(0, -1) }; },
+      /^Registry holds an event that is not in the committed registry: sequence 6$/],
+    [world => handEdited(world, event => event.type === 'closed' && event.kind === 'qualifying', event => { event.browserVersion = 'another browser 2.0'; }),
+      /^Registry rule broken at sequence 4: a qualifying session closed with another browser version than its calibration$/],
+  ]) {
+    const world = unverifiable(pairedWorld());
+    edit(world);
+    assert.throws(() => plan09(world), typeof expected === 'string' ? rejectedWith(expected) : rejectedLike(expected));
+    assert.deepEqual(verifyCalls(world), []);
+  }
+  // After it: the verdict and everything that reads it. With all of that wrong at once, the verification rejects first.
+  const world = unverifiable(pairedWorld({ results: ['pass', 'fail'] }));
+  Object.assign(world.record.paired, { verdict: 'undecided', passed: 9, allQualifying: [], registrationCommits: [], structuralV2Pass: false });
+  delete world.files[RECORDED_CANDIDATE_PATH];
+  assert.throws(() => plan09(world), rejectedWith(NOT_VERIFIED + nonceOf(1)));
+  // Once the sessions verify, the next rejection is the verdict's own.
+  world.verify = name => verifyRunOf(JSON.parse(world.files[name].toString('utf8')));
+  assert.throws(() => plan09(world), rejectedLike(/^Paired registry verdict is not pass: undecided, 2 of at most 3 /));
+  assert.deepEqual(verifyCalls(world).slice(-3), [evidenceName('calibration', 1), evidenceName('qualifying', 2), evidenceName('qualifying', 3)]);
+});
+
+test('paired actual V2: a pass verdict whose sessions are not verified from their reports does not pass', async () => {
+  const asked = [], refusal = NOT_VERIFIED + nonceOf(2);
+  const { outcome, world } = await pairedOutcome({ verifySessions: async identity => { asked.push(identity); throw Error(refusal + '\n\ntrue !== false\n'); } });
+  assert.equal(outcome.passed, false);
+  assert.deepEqual([outcome.structuralV2Pass, outcome.pairedVerdict, outcome.pairedSessionsVerified], [true, 'pass', false]);
+  assert.equal(outcome.blocker, 'A session the paired verdict counts is not verified from its reports: ' + refusal);
+  assert.deepEqual(asked, [world.identity]);
+  // An effect that is absent, or is no function, verifies nothing.
+  for (const verifySessions of [undefined, null, true]) {
+    const absent = await pairedOutcome({ verifySessions });
+    assert.deepEqual([absent.outcome.passed, absent.outcome.pairedSessionsVerified, absent.outcome.pairedVerdict], [false, false, 'pass']);
+    assert.match(absent.outcome.blocker, /^A session the paired verdict counts is not verified from its reports: /);
+  }
+  // With every counted session verified it passes, and says so.
+  const verified = await pairedOutcome();
+  assert.deepEqual([verified.outcome.passed, verified.outcome.pairedSessionsVerified, verified.outcome.blocker], [true, true, undefined]);
+  assert.match(verified.outcome.meaning, /with every session it counts verified from its reports/);
+});
+
+test('paired actual V2: the sessions are verified only for a pass verdict, after the frozen result line and the verdict', async () => {
+  const sequence = () => {
+    const order = [];
+    return { order, effects: { runVerdict: async identity => { order.push('verdict'); return verdictRunOf('pass', identity); },
+      verifySessions: async () => { order.push('verify'); return 2; } } };
+  };
+  const passing = sequence();
+  assert.equal((await pairedOutcome(passing.effects)).outcome.passed, true);
+  assert.deepEqual(passing.order, ['verdict', 'verify']);
+  // A verdict that is not a pass is not relied on, so nothing is verified for it.
+  for (const verdict of ['undecided', 'failed']) {
+    const other = sequence();
+    const { outcome } = await pairedOutcome({ ...other.effects, runVerdict: async identity => { other.order.push('verdict'); return verdictRunOf(verdict, identity); } });
+    assert.deepEqual([outcome.passed, outcome.blocker, outcome.pairedSessionsVerified], [false, 'The paired registry verdict is not pass', null]);
+    assert.deepEqual(other.order, ['verdict']);
+  }
+  // No frozen result line: neither the verdict nor the verification is asked.
+  const structural = sequence();
+  const { outcome } = await pairedOutcome({ ...structural.effects, frozenRun: STDERR_ONLY });
+  assert.deepEqual([outcome.passed, outcome.pairedSessionsVerified], [false, null]);
+  assert.deepEqual(structural.order, []);
+});
+
+test('default readers: the session verification reader runs the paired tool\'s own verify command on the files on disk', () => {
+  const readers = capture.PLAN09_DISK_READERS, smoke = paired.EVIDENCE_DIR + '07-16-paired-smoke.json';
+  assert.equal(typeof readers.verifySession, 'function');
+  // The one session report on disk is the recorded smoke, which the real command refuses on stderr alone.
+  const run = readers.verifySession(smoke);
+  assert.deepEqual([run.exitCode, run.stdout], [1, '']);
+  assert.match(run.stderr, /^A smoke is never evaluated\r?\n$/);
+  assert.deepEqual(run, paired.runVerifyCommand(smoke));
+  assert.equal(paired.verifyFacts(run, { kind: 'qualifying', nonce: JSON.parse(repoFile(smoke).toString('utf8')).nonce }), null);
+  // It reads inside the repository only, as the file reader does.
+  for (const name of ['../outside.json', path.join(tmpdir(), 'outside.json'), ''])
+    assert.throws(() => readers.verifySession(name), /Path escapes owned root/, name);
 });

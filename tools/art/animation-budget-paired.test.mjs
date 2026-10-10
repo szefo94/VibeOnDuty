@@ -2336,3 +2336,83 @@ test('context and page lifetime: for the warm-up and for each run one fresh view
   await failed.capturer.closeAll();
   assert.deepEqual(failed.of('close').map(event => event[2]).sort(), [1, 2, 3, 4]);
 });
+
+// =============================================================================================
+// Review finding I-01 (07-16-PAIRED-IMPLEMENTATION-REVIEW.md): the verify command as a captured run
+// =============================================================================================
+// Plan 09 qualification puts every session a verdict counts to the `verify` command and reads its
+// captured output. These controls fix what that output is and how it is read.
+
+const verifyInput = (built, overrides = {}) => ({ sessionBytes: built.sessionBytes, registry: built.registry,
+  readArm: async arm => bytesOf(built.session.arms[arm].report), hashFrameImages: async () => ({ ok: true }),
+  runFrozen: async () => frozenOutput(1, 40), knownReportHashes: [], ...overrides });
+
+test('verify output: the result line with the exit code of the verification, or the refusal on stderr with exit 1', async () => {
+  assert.equal(typeof paired.verifyOutput, 'function');
+  for (const [label, built, exitCode] of [['a passed qualifying session', close(fixture('qualifying')), 0],
+    ['a passed calibration', close(fixture('calibration')), 0],
+    ['a failed calibration', close(fixture('calibration', made => scale(made.session, 'candidate', () => true, 1.5, ['frameIntervalMs']))), 1],
+    ['an invalid calibration', close(fixture('calibration', made => { made.session.order[2].first = 'reference-first'; })), 1]]) {
+    const direct = await paired.verifySession(verifyInput(built)), run = await paired.verifyOutput(verifyInput(built));
+    assert.deepEqual(run, { exitCode: direct.exitCode, stdout: JSON.stringify(direct.result) + '\n', stderr: '' }, label);
+    assert.equal(run.exitCode, exitCode, label);
+  }
+  // A refusal prints nothing on stdout: the reason goes to stderr and the exit code is 1.
+  const built = close(fixture('qualifying'));
+  assert.deepEqual(await paired.verifyOutput(verifyInput(built, { sessionBytes: Buffer.concat([built.sessionBytes, Buffer.from(' ')]) })),
+    { exitCode: 1, stdout: '', stderr: 'Session report differs from the bytes hashed in its closed event\n' });
+  assert.deepEqual(await paired.verifyOutput(verifyInput(built, { readArm: async () => { throw Error('ENOENT: no such file or directory'); } })),
+    { exitCode: 1, stdout: '', stderr: 'ENOENT: no such file or directory\n' });
+});
+
+test('verify facts: a captured run is a result only when its line is of that session and agrees with its exit code', async () => {
+  assert.equal(typeof paired.verifyFacts, 'function');
+  const of = (kind, line, exitCode) => paired.verifyFacts({ exitCode, stdout: JSON.stringify(line) + '\n', stderr: '' }, { kind, nonce: SESSION_NONCE });
+  const qualifying = { kind: 'qualifying', nonce: SESSION_NONCE, valid: true, pairedBudgetPass: true, structuralV2Pass: true };
+  const calibration = { kind: 'calibration', nonce: SESSION_NONCE, valid: true, pairedBudgetPass: true, structuralV2Pass: null };
+  assert.deepEqual(of('qualifying', qualifying, 0), { valid: true, pass: true, structuralV2Pass: true, passed: true, exitCode: 0 });
+  assert.deepEqual(of('calibration', calibration, 0), { valid: true, pass: true, structuralV2Pass: null, passed: true, exitCode: 0 });
+  assert.deepEqual(of('qualifying', { ...qualifying, pairedBudgetPass: false }, 1), { valid: true, pass: false, structuralV2Pass: true, passed: false, exitCode: 1 });
+  assert.deepEqual(of('qualifying', { ...qualifying, structuralV2Pass: false }, 1), { valid: true, pass: true, structuralV2Pass: false, passed: false, exitCode: 1 });
+  assert.deepEqual(of('qualifying', { ...qualifying, valid: false, pairedBudgetPass: null, structuralV2Pass: false }, 1),
+    { valid: false, pass: null, structuralV2Pass: false, passed: false, exitCode: 1 });
+  assert.deepEqual(of('calibration', { ...calibration, valid: false, pairedBudgetPass: null }, 1),
+    { valid: false, pass: null, structuralV2Pass: null, passed: false, exitCode: 1 });
+  // What the real verification prints is read the same way, for a pass, a fail and an invalid session.
+  for (const [built, expected] of [[close(fixture('qualifying')), [true, true, true, 0]],
+    [close(fixture('calibration', made => scale(made.session, 'candidate', () => true, 1.5, ['frameIntervalMs']))), [true, false, false, 1]],
+    [close(fixture('calibration', made => { made.session.order[2].first = 'reference-first'; })), [false, null, false, 1]]]) {
+    const facts = paired.verifyFacts(await paired.verifyOutput(verifyInput(built)), { kind: built.kind, nonce: SESSION_NONCE });
+    assert.deepEqual([facts.valid, facts.pass, facts.passed, facts.exitCode], expected, built.kind);
+  }
+  // No result: a line and an exit code that do not agree, in either direction, and an exit code the command never gives.
+  for (const [kind, line, exitCode] of [['qualifying', qualifying, 1], ['calibration', calibration, 1], ['qualifying', qualifying, 2],
+    ['qualifying', qualifying, null], ['qualifying', { ...qualifying, pairedBudgetPass: false }, 0],
+    ['qualifying', { ...qualifying, structuralV2Pass: false }, 0], ['qualifying', { ...qualifying, valid: false, pairedBudgetPass: null }, 0]])
+    assert.equal(of(kind, line, exitCode), null, JSON.stringify([kind, line, exitCode]));
+  // No result: a line of another session or of another kind, a kind that is never verified, and a malformed line.
+  for (const [kind, line, exitCode] of [['qualifying', { ...qualifying, nonce: NONCE(22) }, 0], ['calibration', qualifying, 0],
+    ['qualifying', calibration, 0], ['smoke', { ...qualifying, kind: 'smoke' }, 0], ['qualifying', { ...qualifying, valid: 'true' }, 0],
+    ['qualifying', { ...qualifying, valid: undefined }, 1], ['qualifying', { ...qualifying, pairedBudgetPass: null }, 1],
+    ['qualifying', { ...qualifying, valid: false, pairedBudgetPass: false }, 1], ['qualifying', { ...qualifying, structuralV2Pass: null }, 1],
+    ['calibration', { ...calibration, structuralV2Pass: true }, 0], ['qualifying', null, 0], ['qualifying', [qualifying], 0]])
+    assert.equal(of(kind, line, exitCode), null, JSON.stringify([kind, line, exitCode]));
+  // No result: a refusal, which prints nothing on stdout, and text that is not a result line.
+  for (const run of [{ exitCode: 1, stdout: '', stderr: 'Validity block differs from its recomputation\n' }, { exitCode: 0, stdout: '', stderr: '' },
+    { exitCode: 0, stdout: 'verified\n', stderr: '' }, null, undefined, {}])
+    assert.equal(paired.verifyFacts(run, { kind: 'qualifying', nonce: SESSION_NONCE }), null, JSON.stringify(run));
+  // The last line of stdout is the one read.
+  assert.equal(paired.verifyFacts({ exitCode: 0, stdout: JSON.stringify(qualifying) + '\n' + JSON.stringify({ ...qualifying, nonce: NONCE(22) }) + '\n' },
+    { kind: 'qualifying', nonce: SESSION_NONCE }), null);
+});
+
+test('the verify command line, run with its output captured, refuses the recorded smoke session and reads inside the repository only', () => {
+  assert.equal(typeof paired.runVerifyCommand, 'function');
+  const run = paired.runVerifyCommand(EVIDENCE + '07-16-paired-smoke.json');
+  assert.deepEqual(Object.keys(run).sort(), ['exitCode', 'stderr', 'stdout']);
+  assert.deepEqual([run.exitCode, run.stdout], [1, '']);
+  assert.match(run.stderr, /^A smoke is never evaluated\r?\n$/);
+  assert.equal(paired.verifyFacts(run, { kind: 'qualifying', nonce: SESSION_NONCE }), null);
+  for (const name of ['../outside.json', path.join(tmpdir(), 'outside.json'), ''])
+    assert.throws(() => paired.runVerifyCommand(name), /Path escapes owned root/, name);
+});
