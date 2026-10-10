@@ -961,13 +961,17 @@ export async function recordAnimationBudget() {
   return decision;
 }
 
-// ---- Paired same-session capture (plan 07-16; contract 07-09-PAIRED-AMENDMENT-V2.md) ----
+/// ---- Paired same-session capture (plan 07-16; contract 07-09-PAIRED-AMENDMENT-V2.md) ----
 // Both arms are byte copies of the served tree in the owned cache, each on its own strict
 // loopback listener with the same configuration. sampleAnimationPage above is reused
-// unedited: its text is the captureSampler identity both arms report. Rules, registry and
-// report shapes live in animation-budget-paired.mjs. A smoke keeps no timing value.
+// unedited: its text is the captureSampler identity both arms report. Rules, registry,
+// report shapes and the order of a session live in animation-budget-paired.mjs (runSession);
+// this file supplies only the effects: browser, listeners and files. A smoke keeps no timing
+// value. A calibration or qualifying session prints, logs and writes no timing value before
+// it is closed, except that a qualifying session writes its candidate arm report, after the
+// last pair, for the unchanged frozen command to read.
 const PAIRED_KINDS = { '--smoke': 'smoke', '--calibration': 'calibration' };
-const PAIRED_NOT_YET = kind => Error(`Paired ${kind} sessions are added by plan 07-16 task 3; only --smoke is available`);
+const PAIRED_ARMS = ['reference', 'candidate'];
 
 async function serveArm(directory, cacheDir) {
   const port = await reviewPort();
@@ -979,8 +983,9 @@ async function serveArm(directory, cacheDir) {
   return { server, url: `http://127.0.0.1:${server.httpServer.address().port}/` };
 }
 
-// The context, init script and page defaults of captureAnimationBaseline, for one arm.
-async function openArmPage(browser) {
+// The context, init script and page defaults of captureAnimationBaseline, for one arm. Page
+// errors and failed responses are collected into the arm's own lists across its pages.
+async function openArmPage(browser, errors = [], failedResponses = []) {
   const context = await browser.newContext({ viewport: { ...paired.SESSION_SETTINGS.context.viewport },
     deviceScaleFactor: paired.SESSION_SETTINGS.context.deviceScaleFactor });
   await context.addInitScript(() => {
@@ -990,7 +995,7 @@ async function openArmPage(browser) {
     let seed = 67245;
     Math.random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
   });
-  const page = await context.newPage(), errors = [], failedResponses = [];
+  const page = await context.newPage();
   page.setDefaultTimeout(45000);
   page.on('pageerror', error => errors.push(error.message));
   page.on('response', response => {
@@ -1018,12 +1023,13 @@ async function sampleArm(page, tier, actorCount) {
   } finally { clearTimeout(timeout); }
 }
 
-// Step one: append the registration to the tracked registry and stop. The registry file is
-// then committed alone, before `--run`.
+// Step one, for every kind: append the registration to the tracked registry and stop. The
+// registry file is then committed alone, before `--run`. The registry rules (one calibration
+// per source identity, a passed calibration before any qualifying session, the same tool bytes
+// and sampler, at most three qualifying sessions) are refused by registerSession.
 export async function registerPairedSession(kind) {
   paired.assertContract();
   paired.assertPins();
-  if (kind !== 'smoke') throw PAIRED_NOT_YET(kind);
   const working = paired.readRegistry(), committed = paired.committedRegistry();
   paired.verifyChain(working);
   assert.deepEqual(paired.uncommittedEvents(working, committed), [], 'Registration refused: the registry holds uncommitted events');
@@ -1038,15 +1044,26 @@ export async function registerPairedSession(kind) {
   paired.writeRegistry(next);
   const event = next.events.at(-1);
   console.log(JSON.stringify({ registered: true, kind, nonce: event.nonce, seq: event.seq, registry: paired.REGISTRY_PATH,
-    next: `Commit the registry file alone, then run --animation-paired --${kind} --run ${event.nonce}` }));
+    next: `Commit the registry file alone, then run --animation-paired ${kind === 'qualifying' ? '' : `--${kind} `}--run ${event.nonce}` }));
   return event;
 }
 
+// What an arm report needs besides its samples: the frozen files a candidate report cites.
+export async function pairedReportInputs() {
+  const baselineBytes = await fs.readFile(path.join(ANIMATION_EVIDENCE, '07-baseline.json'));
+  const budget = JSON.parse(await fs.readFile(path.join(ANIMATION_EVIDENCE, '07-budget.json'), 'utf8'));
+  const v2BudgetBytes = await fs.readFile(path.join(ROOT, paired.FROZEN_BUDGET_PATH)), v2Budget = JSON.parse(v2BudgetBytes);
+  return { baselineSha256: hash(baselineBytes), compare: report => compareAnimationCandidate(report, budget), v2Budget, v2BudgetBytes,
+    knownReportHashes: paired.existingReportHashes(v2Budget) };
+}
+
 // Step two: one capture for one committed registration. A smoke captures one profile pair
-// (run 1, Low, one actor) and writes load and structure facts only.
+// (run 1, Low, one actor) and writes load and structure facts only. A calibration captures the
+// reference arm against a second copy of it, a qualifying session the candidate against the
+// reference: one warm-up pair, then the 12 profiles in the contract's order, with the context
+// and page lifetime, launch flags and sampler arguments of SESSION_SETTINGS in every kind.
 export async function runPairedSession(kind, nonce) {
   paired.assertContract();
-  if (kind !== 'smoke') throw PAIRED_NOT_YET(kind);
   let registry = paired.readRegistry();
   paired.verifyChain(registry);
   const registered = paired.assertRunnable({ nonce, working: registry, committed: paired.committedRegistry() });
@@ -1056,62 +1073,114 @@ export async function runPairedSession(kind, nonce) {
   const head = paired.headState(registered.commit);
   paired.runGuard({ registered, ...head, identityNow: paired.identityHash(identities) });
   paired.assertServedTreeClean(identities);
-  const hostBefore = await paired.hostFacts();
-  // Both arms exist, and differ in exactly the five owner files, before the session starts.
-  const arms = paired.materializeArms(registered, { files: paired.armFiles(identities) });
-  registry = paired.appendEvent(registry, { type: 'started', kind, nonce, registrationHash: paired.eventHash(registered) });
-  paired.writeRegistry(registry);
-  const startedEventHash = paired.eventHash(registry.events.at(-1));
-  const order = paired.orderFor(1, 0, 0) === 'reference-first' ? ['reference', 'candidate'] : ['candidate', 'reference'];
-  const captured = {}, diagnostics = {}, opened = [], servers = [];
-  let browser, browserVersion = null, error = null, difference = arms.difference;
+  const full = kind !== 'smoke', inputs = full ? await pairedReportInputs() : null;
+  const hostBefore = await paired.hostFacts(), owners = Object.keys(paired.PAIRED_CONTRACT.referenceOwners);
+  const servers = {}, opened = new Set(), pageErrors = { reference: [], candidate: [] }, failedResponses = { reference: [], candidate: [] };
+  let browser, browserVersion, arms, armIdentity, runtimeDependencies = null, released = false;
+  const release = async () => {
+    released = true;
+    for (const context of opened) await context.close().catch(() => {});
+    const browserClosed = browser ? await browser.close().then(() => true, () => false) : false;
+    let closedServers = 0;
+    for (const served of Object.values(servers)) closedServers += await served.server.close().then(() => 1, () => 0);
+    return { browserClosed, serverClosed: closedServers === PAIRED_ARMS.length };
+  };
+  // Whatever refuses does so here, before the `started` event: such a refusal captures nothing
+  // and leaves the registration as it is.
   try {
     browser = await chromium.launch({ headless: paired.SESSION_SETTINGS.launch.headless, args: [...paired.SESSION_SETTINGS.launch.args] });
     browserVersion = browser.version();
-    for (const arm of order) {
-      const armIdentity = paired.armIdentities(arms.arms[arm], identities);
-      const served = await serveArm(arms.arms[arm], path.join(arms.sessionDirectory, 'vite-cache-' + arm));
-      servers.push(served.server);
-      const view = await openArmPage(browser);
-      opened.push(view.context);
-      captured[arm] = { identities: armIdentity, pageErrors: view.errors };
-      diagnostics[arm] = { failedResponses: view.failedResponses };
-      await enterRange(view.page, served.url);
-      const sample = await sampleArm(view.page, 'low', 1);
-      for (const frame of sample.sequence ?? []) frame.sha256 = hash(Buffer.from(frame.image.split(',')[1], 'base64'));
-      captured[arm].sample = { run: 1, browser: browserVersion, sourceIdentitySha256: hash(JSON.stringify(armIdentity)), ...sample };
+    paired.assertRunScope({ registry, registered, toolHashes: paired.toolHashes(), samplerIdentity: identities.captureSampler, browserVersion });
+    // Both arms exist, and differ in exactly the five owner files (in none, for a calibration), before the session starts.
+    arms = paired.materializeArms(registered, { files: paired.armFiles(identities) });
+    armIdentity = Object.fromEntries(PAIRED_ARMS.map(arm => [arm, paired.armIdentities(arms.arms[arm], identities)]));
+    if (full) {
+      runtimeDependencies = Object.fromEntries(PAIRED_ARMS.map(arm => [arm, verifyRuntimeDependencies(armIdentity[arm])]));
+      for (const arm of PAIRED_ARMS) await fs.mkdir(path.join(arms.sessionDirectory, 'frames', arm), { recursive: true });
     }
-    difference = { ...paired.compareArms(arms.arms, arms.names, Object.keys(paired.PAIRED_CONTRACT.referenceOwners)),
-      ownersVerified: arms.difference.ownersVerified };
-    assert.deepEqual(await animationIdentities(), identities, 'Source changed during capture');
-  } catch (caught) { error = caught?.message ?? String(caught); }
-  finally {
-    for (const context of opened) await context.close().catch(() => {});
-    if (browser) await browser.close().catch(() => {});
-    for (const server of servers) await server.close().catch(() => {});
+    for (const arm of PAIRED_ARMS) servers[arm] = await serveArm(arms.arms[arm], path.join(arms.sessionDirectory, 'vite-cache-' + arm));
+  } catch (error) {
+    await release();
+    if (arms) {
+      await iterationPath([path.join(ROOT, paired.PAIRED_CACHE)], arms.sessionDirectory);
+      await fs.rm(arms.sessionDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }).catch(() => {});
+    }
+    throw error;
   }
-  // The arm data of a smoke is not kept: both trees and both server caches go before the report is written.
-  const armData = [arms.arms.reference, arms.arms.candidate, ...order.map(arm => path.join(arms.sessionDirectory, 'vite-cache-' + arm))];
-  for (const directory of armData) {
-    await iterationPath([arms.sessionDirectory], directory);
-    await fs.rm(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }).catch(() => {});
+  const sessionRelative = path.relative(ROOT, arms.sessionDirectory).replaceAll('\\', '/');
+  const paths = { reference: `${sessionRelative}/arm-reference.json`, candidate: `${sessionRelative}/arm-candidate.json`,
+    session: `${sessionRelative}/${full ? 'session' : 'smoke-session'}.json` };
+  const pairs = full ? paired.sessionScheme() : [paired.SMOKE_PAIR];
+  // pairCapturer holds the context and page lifetime and the capture order; here are its effects.
+  const { capturePair } = paired.pairCapturer({ pairs,
+    openView: async arm => {
+      const view = await openArmPage(browser, pageErrors[arm], failedResponses[arm]);
+      opened.add(view.context);
+      await enterRange(view.page, servers[arm].url);
+      return view;
+    },
+    sample: (view, _arm, pair) => sampleArm(view.page, pair.tier, pair.actorCount),
+    finish: async (sample, arm, pair) => {
+      for (const frame of sample.sequence ?? []) {
+        const bytes = Buffer.from(frame.image.split(',')[1], 'base64');
+        frame.sha256 = hash(bytes);
+        // Frame images of the 12 measured profiles are written as they are captured, as `qualify`
+        // needs them; they carry no timing. A smoke and the warm-up pair keep none.
+        if (full && !pair.warmup) {
+          const file = path.join(arms.sessionDirectory, 'frames', arm,
+            `run-${pair.run}-${pair.tier}-${pair.actorCount}-${String(frame.frame).padStart(4, '0')}.png`);
+          await fs.writeFile(file, bytes);
+          frame.image = path.relative(ROOT, file).replaceAll('\\', '/');
+        }
+      }
+      return { run: pair.run, browser: browserVersion, sourceIdentitySha256: hash(JSON.stringify(armIdentity[arm])), ...sample };
+    },
+    closeView: async view => { await view.context.close().catch(() => {}); opened.delete(view.context); } });
+  const endCapture = async ({ interrupted }) => {
+    const facts = { cleanup: null, pageErrors, error: null, difference: arms.difference, armDataKept: null, hostAfter: null,
+      diagnostics: Object.fromEntries(PAIRED_ARMS.map(arm => [arm, { failedResponses: failedResponses[arm] }])) };
+    if (!interrupted) {
+      try {
+        facts.difference = { ...paired.compareArms(arms.arms, arms.names, owners, { identical: kind === 'calibration' }),
+          ownersVerified: arms.difference.ownersVerified };
+        assert.deepEqual(await animationIdentities(), identities, 'Source changed during capture');
+      } catch (error) { facts.error = error?.message ?? String(error); }
+    }
+    facts.cleanup = await release();
+    if (!full) {
+      // The arm data of a smoke is not kept: both trees and both server caches go before the report is written.
+      const armData = [arms.arms.reference, arms.arms.candidate, ...PAIRED_ARMS.map(arm => path.join(arms.sessionDirectory, 'vite-cache-' + arm))];
+      for (const directory of armData) {
+        await iterationPath([arms.sessionDirectory], directory);
+        await fs.rm(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }).catch(() => {});
+      }
+      facts.armDataKept = (await Promise.all(armData.map(directory => fs.access(directory).then(() => true, () => false)))).some(Boolean);
+    }
+    facts.hostAfter = await paired.hostFacts();
+    return facts;
+  };
+  let result;
+  try {
+    result = await paired.runSession({ kind, registered, pairs, capturePair, endCapture,
+      hashFrameImages: async report => paired.frameImageCheck(report),
+      // The tracked registry is the only tracked file a session writes.
+      appendEvent: async event => { registry = paired.appendEvent(registry, event); paired.writeRegistry(registry); return registry; },
+      // Reports go below the gitignored session directory, each written once and never rewritten.
+      write: async (name, bytes) => fs.writeFile(await iterationPath([arms.sessionDirectory], path.join(ROOT, name)), bytes, { flag: 'wx' }),
+      log: message => console.log(message),
+      // The unchanged frozen command, reached only here, with its output captured.
+      runFrozen: async name => paired.runFrozenCommand(name),
+      context: { revision: head.headCommit, browserVersion, hostBefore, armIdentities: armIdentity, difference: arms.difference, paths,
+        ...(full ? { knownReportHashes: inputs.knownReportHashes, runtimeDependencies, baselineSha256: inputs.baselineSha256,
+          compare: inputs.compare, v2Budget: inputs.v2Budget, v2BudgetBytes: inputs.v2BudgetBytes,
+          device: { hostname: os.hostname(), os: os.type(), release: os.release(), arch: process.arch, cpu: os.cpus()[0]?.model,
+            node: process.version, browser: browserVersion } } : {}) } });
+  } finally { if (!released) await release(); }
+  if (kind === 'smoke') {
+    if (result.report.error) console.error(result.report.error);
+    if (result.report.structuralFailure) process.exitCode = 1;
   }
-  const armDataKept = (await Promise.all(armData.map(directory => fs.access(directory).then(() => true, () => false)))).some(Boolean);
-  const report = paired.smokeReport({ nonce, identity: registered.identity, commit: head.headCommit,
-    registrationEventHash: paired.eventHash(registered), startedEventHash, arms: captured, difference, browserVersion,
-    host: { before: hostBefore, after: await paired.hostFacts() }, error, diagnostics, armDataKept });
-  const bytes = Buffer.from(JSON.stringify(report, null, 2) + '\n');
-  registry = paired.appendEvent(registry, { type: 'closed', kind, nonce, outcome: report.structuralFailure ? 'structural-failure' : 'loaded',
-    structuralFailure: report.structuralFailure, valid: null, pass: null, reportHashes: { session: hash(bytes) }, browserVersion });
-  paired.writeRegistry(registry);
-  const reportPath = path.join(arms.sessionDirectory, 'smoke-session.json');
-  await fs.writeFile(reportPath, bytes);
-  if (error) console.error(error);
-  console.log(JSON.stringify({ kind, nonce, closedSeq: registry.events.at(-1).seq, structuralFailure: report.structuralFailure,
-    referencePageErrors: report.referencePageErrors, armDataKept,
-    report: path.relative(ROOT, reportPath).replaceAll('\\', '/'), sha256: hash(bytes) }));
-  if (report.structuralFailure) process.exitCode = 1;
-  return report;
+  return result.report;
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

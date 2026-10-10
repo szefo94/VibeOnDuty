@@ -1367,8 +1367,39 @@ export function runFrozenCommand(candidate, budget = FROZEN_BUDGET_PATH) {
 // ---- the session runner (contract sections 3, 7 and 8) -------------------------------------------------------
 
 export const SMOKE_PAIR = Object.freeze({ warmup: false, run: 1, tier: 'low', actorCount: 1, first: orderFor(1, 0, 0) });
-// task 07-16-03, RED: neutral, so the lifetime control fails on its own assertion
-export function pairCapturer() { return { capturePair: async () => ({}), closeAll: async () => {} }; }
+
+/** The `capturePair` of a session under the context and page lifetime SESSION_SETTINGS records:
+ *  for the warm-up and for each run, one fresh view (a context and its page) per arm, opened
+ *  immediately before that arm's first capture in it and closed when its last pair is captured.
+ *  The arm that `pair.first` names is captured first, one capture at a time. Opening, sampling
+ *  and closing are injected; the start and end time of each capture are taken here on the host
+ *  clock, around the sample alone. `finish` completes a sample after its end time is taken. */
+export function pairCapturer({ pairs, openView, sample, finish = async taken => taken, closeView, now = () => new Date().toISOString() }) {
+  assert.ok(Array.isArray(pairs) && pairs.length > 0, 'pairCapturer needs the pairs to capture');
+  for (const [name, effect] of Object.entries({ openView, sample, finish, closeView }))
+    assert.equal(typeof effect, 'function', `pairCapturer needs the injected ${name}`);
+  const segmentOf = pair => (pair.warmup === true ? 'warm-up' : `run-${pair.run}`);
+  let open = null;
+  const closeAll = async () => {
+    const views = Object.values(open?.views ?? {});
+    open = null;
+    for (const view of views) await closeView(view);
+  };
+  const capturePair = async (pair, index) => {
+    const segment = segmentOf(pair);
+    if (open && open.segment !== segment) await closeAll();
+    open ??= { segment, views: {} };
+    const views = open.views, captured = {};
+    for (const arm of pair.first === 'reference-first' ? ARMS : [...ARMS].reverse()) {
+      views[arm] ??= await openView(arm, pair);
+      const startedAt = now(), taken = await sample(views[arm], arm, pair), endedAt = now();
+      captured[arm] = { startedAt, endedAt, sample: await finish(taken, arm, pair) };
+    }
+    if (!pairs[index + 1] || segmentOf(pairs[index + 1]) !== segment) await closeAll();
+    return captured;
+  };
+  return { capturePair, closeAll };
+}
 const jsonBytes = value => Buffer.from(JSON.stringify(value, null, 2) + '\n');
 const ARM_LIMITS = 'One arm of a paired same-session capture (paired-same-session-v2): the controlled Training Range workload of the ' +
   'frozen V2 candidate capture, with the archived sampler unchanged, 214 measured frames per profile, software rendering. An arm ' +
