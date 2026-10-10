@@ -1,5 +1,5 @@
 {
-  "complete": false,
+  "complete": true,
   "identities": {
     "index.html": "1f89a54e697b4f2bf2bf5b47ff15d09782514d327c0caf7f81e39cae430f6e77",
     "public/models/enemy.glb": "2a6bbab2034b01b1722f35e8afbdac2948978226d780fd43eb9d6df117196e4e",
@@ -218,12 +218,12 @@
       "id": "offline",
       "command": "node node_modules/@playwright/test/cli.js test --config tools/art/offline-qualified.config.mjs",
       "log": ".planning/research/.cache/07-17-gates/offline.log",
-      "logSha256": "5df16d9d69f4db08a804618798f27f56b0b4755978ec258b8748c3c4332f7509",
+      "logSha256": "a2e9eb31818e300711e56f365480959847110a39b8e9e57b01ccb011303f05a5",
       "executed": true,
       "scope": "full",
-      "exitCode": 1,
-      "startedAt": "2026-10-10T19:20:34.919Z",
-      "durationMs": 1460566,
+      "exitCode": 0,
+      "startedAt": "2026-10-10T20:04:45.962Z",
+      "durationMs": 1450358,
       "environment": {
         "CI": null,
         "node": "v24.19.0",
@@ -255,13 +255,13 @@
     "durationSeconds": 130.71
   },
   "offline": {
-    "passed": 137,
-    "failed": 1,
+    "passed": 138,
+    "failed": 0,
     "skipped": 0,
     "flaky": 0,
-    "durationMs": 1458097.031,
+    "durationMs": 1449647.023,
     "report": ".planning/research/.cache/07-17-gates/offline-report.json",
-    "reportSha256": "ae58fc6e10161702a61041f69f0e920d0a84e6180f66e9c9756fb3eab1c8cb01"
+    "reportSha256": "fb3ee22da0f2b55311509470af00317b2eed4115c2325c00982a105415ff520a"
   },
   "multiplayer": {
     "passed": 18,
