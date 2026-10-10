@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 07
 current_phase_name: Movement-Matched and Action-Safe Animation
 status: executing
-stopped_at: "Halted 07-17: offline stable gate exit 1 (137/138); multiplayer 18/18"
-last_updated: "2026-10-10T20:02:44.768Z"
+stopped_at: Completed 07-17-PLAN.md (offline gate second run passed)
+last_updated: "2026-10-10T20:30:36.413Z"
 last_activity: 2026-10-09
 last_activity_desc: Phase 07 execution started
-state_head: 464d035b579a58027eb37df4b1f557a0dfcec0f9
+state_head: 8931baadc05f2fed69d2d35ee62c5673741ec680
 progress:
   total_phases: 12
   completed_phases: 2
   total_plans: 38
-  completed_plans: 35
+  completed_plans: 36
   percent: 17
 ---
 
@@ -154,6 +154,7 @@ Full decisions are recorded in PROJECT.md.
 - [Phase 07]: 07-25: paired contract V2 reviewed pass-with-notes (v2_sha256 8f3f6c72); rule 2 aggregates per-cell ratios; frozen exit 0 is recorded and escalated, never a pass; plan 07-16 needs edits P-1..P-5 before dispatch
 - [Phase 07]: 07-16: requirePlan09 frozen route tightened - a frozen-route record needs the frozen evaluation list and the owner's accept-frozen-pass bound to evaluation k of n; paired route (timingGate paired-same-session) accepts only a pass registry verdict under the pinned contract with every counted session re-verified from its reports.
 - [Phase 07]: 07-16: paired implementation review pass-with-notes at 7c93fb3 (after blocker I-01 fixed); the three tool files are hash-pinned and must not change before the calibration; N-04 identity width must be decided by the owner before the calibration is registered.
+- [Phase 07]: 07-17: stable gates complete at identity c1b06272; offline gate failed once (137/138, first-test cold-start timeout) then passed 138/138 on one orchestrator-decided rerun (owner did not separately approve); both runs on record, hypothesis unproven; plan09 still unqualified
 
 ### Pending Todos
 
@@ -169,7 +170,6 @@ None yet.
 - Plan07-09 budget_contract checkpoint: qualified retirement and12 actual view profiles committed; legacy budget unmet/noncomparable, world51-equal-skeleton sharing requires root review. No09completion or golden-envelope change.
 - Plan07-09 exact two owner caches are qualified at f89d820. Actual unchanged-producer current smoke fails14 fixed Low/one statistics; named V2 CLI exits1 Incomplete report. Earlier complete135-flag failure is preserved separately. No current full candidate/plan/requirement advance; unrelated browser jobs remain running.
 - Plan07-09 qualifies45/46 distinct current resource/action/handling cases and1/2 legacy keepers. Original throw1ms and repeated-removal checks stopped in setup before assertions (WINDOWS42/43); targeted qualification remains open without changed tests/timeouts.
-- 07-17 stable gates incomplete: offline gate failed 1 of 138 (action-lifecycle throw 1ms, first-test beforeEach timeout, #range-startbtn LOADING). Owner decision needed on rerun.
 
 ### Roadmap Evolution
 
@@ -183,9 +183,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-10-10T20:02:43.957Z
-Stopped at: Halted 07-17: offline stable gate exit 1 (137/138); multiplayer 18/18
-Resume file: .planning/phases/07-movement-matched-and-action-safe-animation/07-17-SUMMARY.md
+Last session: 2026-10-10T20:30:30.903Z
+Stopped at: Completed 07-17-PLAN.md (offline gate second run passed)
+Resume file: None
 
 User passed both Phase 6 visual checks with "pass all tests and proceed".
 Canonical 06-VERIFICATION.md is passed; ART-01 through ART-04 are complete.
