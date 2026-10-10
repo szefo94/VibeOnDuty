@@ -3,16 +3,16 @@ phase: 07-movement-matched-and-action-safe-animation
 plan: "21"
 subsystem: input-and-frozen-gate-registry
 tags: [pointer-lock, pause-menu, frozen-gate, exact-hash-exception, line-endings, playwright, tdd, gap-closure]
-status: partial
+status: complete
 requirements: [ANIM-02]
 requirements-completed: []
-commits: 15
+commits: 18
 plan_head_before: e0663dc6f3dca20904b7509f04c4fc20465ec3d3
-plan_head_after: 0f9cf5065806e694b17d4cd5aa742d4d01ce2e9b
+plan_head_after: 4d726a9be06d7e117677d4e0f9fe87110f8eab6d
 actuals:
   tokens: 182558   # chars/4 over the realized diff e0663dc..0f9cf50 (730234 chars); 116151 of them are the base64 store, 66407 without it
   tasks: 3
-  commits: 15
+  commits: 18   # measured: git rev-list --count e0663dc..4d726a9 (includes the record commits 9b80789 and 0f9cf50, then 358ddee and 4d726a9)
 requires:
   - phase: 07-movement-matched-and-action-safe-animation
     provides: "plan 07-20's tracer failure on the post-union menu return and the frozen V2 gate's protected identity set"
@@ -95,8 +95,8 @@ coverage:
         ref: "npm run test:art (197 passed)"
         status: pass
       - kind: e2e
-        ref: "seven offline specs, --workers=1: exit 1, 85 passed, 1 failed (tests/character-art.spec.js:953, setup)"
-        status: fail
+        ref: "seven offline specs, --workers=1, attempt 3 (after 358ddee): exit 0, 86 passed, 0 failed, 0 skipped, 0 flaky; attempts 1 and 2 failed on tests/character-art.spec.js:953 (setup) and stay recorded as failed"
+        status: pass
     human_judgment: false
 duration: approximately 43min for the final segment; approximately 2h 11m wall span from the first plan commit, including the owner checkpoint and two reviews
 completed: 2026-10-09
@@ -104,13 +104,13 @@ completed: 2026-10-09
 
 # Phase 7 Plan 21: Pause-menu pointer-lock fix under a reviewed exact-hash exception Summary
 
-**Decision: `register-exception` on the `pinned-lf` basis. `src/main.js` CHANGED (six added lines in the offline `mousedown` handler) and is registered by one exact pair of hashes. The plan is `partial`: the one seven-spec browser rerun on the final identity exited 1 (85 passed, 1 failed) on a setup case that never loads the game, and one allowed repeat of that spec file failed the same way.**
+**Decision: `register-exception` on the `pinned-lf` basis. `src/main.js` CHANGED (six added lines in the offline `mousedown` handler) and is registered by one exact pair of hashes. The first two seven-spec browser attempts failed on a colour-sensitive readiness check in `tests/character-art.spec.js` (test infrastructure, not the source change); after that check was fixed (`358ddee`) a third attempt passed 86 of 86, exit 0. Attempts 1 and 2 stay recorded as failed.**
 
 ## Performance
 
 - **Duration:** final segment approximately 43 min (2026-10-09T22:35:55Z to 23:18:23Z). Whole plan approximately 2 h 11 min of wall time from its first commit (21:07:08Z), including the owner checkpoint and two independent reviews. Wall span, not effort.
-- **Tasks:** 3 executed (07-21-01, the owner checkpoint, 07-21-02, 07-21-03). Task 07-21-03's rerun acceptance is not met.
-- **Commits:** 15, measured with `git rev-list --count e0663dc..0f9cf50`.
+- **Tasks:** 3 executed (07-21-01, the owner checkpoint, 07-21-02, 07-21-03). Task 07-21-03's rerun acceptance is met by attempt 3 (see the discrepancy under "Result").
+- **Commits:** 18, measured with `git rev-list --count e0663dc..4d726a9`.
 - **Files changed:** 11 (7 created, 4 modified).
 
 ## Result
@@ -121,14 +121,16 @@ completed: 2026-10-09
 | `npm run typecheck` | 0 | no diagnostic | 2.7 s |
 | `npm run test:unit` | 0 | 323 passed, 0 failed, 0 skipped (31 files) | 56.9 s |
 | `npm run test:art` | 0 | 197 passed, 0 failed, 0 skipped | 16.0 s |
-| Seven offline specs, one Playwright invocation, `--workers=1` | **1** | **85 passed, 1 failed**, 0 skipped, 0 flaky (86 cases) | 17 min 19 s |
+| Seven offline specs, one Playwright invocation, `--workers=1` (attempt 1) | **1** | **85 passed, 1 failed**, 0 skipped, 0 flaky (86 cases) | 17 min 19 s |
 | `tests/character-art.spec.js` alone, one repeat (attempt 2) | **1** | **27 passed, 1 failed**, 0 skipped, 0 flaky | 6 min 22 s |
+| Narrow: the base-prefixed production build case alone, after the fix (confirmation, attempt 3) | 0 | 1 passed | 9.9 s |
+| **Seven offline specs, one Playwright invocation, `--workers=1`, no colour override (attempt 3)** | **0** | **86 passed, 0 failed**, 0 skipped, 0 flaky | 16.8 min (reporter) |
 
-All six ran one at a time with `PAUSE_SPEC_GUARD_SELECTOR` unset; `src/main.js` hashed to the registered value before and after each. Logs and their SHA-256 are under `reruns` in `evidence/07-21-source-change.json`.
+Attempt 3 and the narrow run were made at HEAD `358ddee` (the fix committed) with `src/main.js` `f768954f…bc393` hashed before and after, unchanged. Per file in attempt 3: action-lifecycle 22 of 22, animation-regressions 6 of 6, animation-review 10 of 10, character-art 28 of 28, offline-multiplayer-regressions 1 of 1, pause-menu-pointer-lock 11 of 11, smoke 8 of 8; counts come from the list reporter of the log (no JSON reporter on this attempt). Attempts 1 and 2 ran on `3777191`. All runs were made one at a time with `PAUSE_SPEC_GUARD_SELECTOR` unset; `src/main.js` hashed to the registered value before and after each. Logs and their SHA-256 are under `reruns` in `evidence/07-21-source-change.json`.
 
 Per file in the seven-spec run: action-lifecycle 22 of 22, animation-regressions 6 of 6, animation-review 10 of 10, character-art 27 of 28, offline-multiplayer-regressions 1 of 1, pause-menu-pointer-lock 11 of 11, smoke 8 of 8.
 
-### The failing case
+### Attempts 1 and 2: the failing case
 
 `tests/character-art.spec.js:953 › art slice: base-prefixed production build resolves the painted assets`, both times with `Error: Owned prefix preview did not start` after 15.8 s.
 
@@ -137,9 +139,15 @@ Per file in the seven-spec run: action-lifecycle 22 of 22, animation-regressions
 - Why colour is on, read from `node_modules`: Playwright sets `FORCE_COLOR=1` for every worker and the test passes the worker's environment to the server; Vite 8.0.8's bundled colour rule also turns colour on under win32 unless `NO_COLOR` or `--no-color` is given. This session's shell sets neither.
 - Comparison: in the full offline run recorded in `evidence/07-10-stable-gates.json` this case passed (9.7 s); that run's two failures were setup timeouts in `action-lifecycle.spec.js`, which passed here. `evidence/07-11-required-assertions.json` does not include this case. That the earlier run had colour off for the server is an inference from its uncoloured log; the earlier environment is not recorded and was not verified.
 - `tests/character-art.spec.js`, `vite.config.js`, `package.json` and `playwright.config.js` are unchanged since `e0663dc`.
-- Not a flake: it failed identically twice. No third attempt was made, no run was made with `NO_COLOR` set, the test was not edited, and the two attempts are not combined.
+- Not a flake: it failed identically twice, and the two attempts were not combined.
 
-Two ways to settle it, neither taken: one authorised repeat of the seven-spec invocation with `NO_COLOR=1`, recorded as a third attempt; or a separate change that makes the readiness check at line 970 independent of colour (outside this plan's files).
+### Settling it: the readiness-check fix and attempt 3
+
+On the orchestrator's instruction the readiness check was made independent of colour (`358ddee`, `tests/character-art.spec.js` only, outside the plan's `files_modified`): the test accumulates the preview child's stdout and strips ANSI colour sequences before testing `banner.includes('Local:')`. Nothing else in the file changed. The narrow run of that case passed (1 of 1, 9.9 s), and attempt 3 (seven specs, `--workers=1`, `PAUSE_SPEC_GUARD_SELECTOR` unset, no colour override) exited 0 with 86 of 86 passed. `tests/character-art.spec.js` therefore changed between attempt 2 and attempt 3; no other file did. The two failed attempts are kept in `reruns` as failed and were not relabelled. No other plain `Local:` readiness check exists under `tests/` or `tools/art/`.
+
+### Task 3 verify commands versus the acceptance criterion
+
+The criterion reads "`reruns` holds lint, typecheck, unit and one Playwright entry covering seven spec files, all with `exitCode: 0`, no skipped and no flaky." Met: lint, typecheck, unit and the attempt-3 seven-spec entry each have `exitCode: 0`, no skipped, no flaky. The first task-3 verify command is stricter: it requires EVERY entry in `reruns` to have exit code 0, so it still exits 1 because attempts 1 and 2 are recorded as the failures they were (`e2e` and `e2e-character-art-rerun`). Its review-record half is true (`pass-with-notes`, `opus`, `high`). The failed entries were not removed or edited to satisfy the command; the criterion governs. The other three verify commands exit 0 (three-file `node --test`, 89 passed with ten named "reviewed source exception"; registry equals working file; `npm run test:art`).
 
 ## What was done
 
@@ -272,9 +280,9 @@ The plan's checkpoint asked the owner to choose among four options, and its must
 | Owner shown what the frozen hash covers and the 82 of 127 dependence | as relayed by the orchestrator; not verifiable from the repository |
 | Gate accepts only the exact pair; frozen files identical; non-blocking review | met |
 | Surfaces listed with coverage | met (16 rows) |
-| Prohibition: no failed result turned into a pass | kept: the failed rerun is recorded as failed and the plan is partial |
+| Prohibition: no failed result turned into a pass | kept: the two failed attempts are recorded as failed; the plan is complete only on attempt 3 after the cause was fixed |
 
-Task 3 verify commands on the final state: the first exits **1** (a recorded rerun has a non-zero exit code; its review-record half alone is true for status, model and effort); the three-file `node --test` exits 0 (89 passed, ten named "reviewed source exception"); the registry-equals-working-file check exits 0; `npm run test:art` exits 0 (197 passed). Task 1 and task 2 verify commands that need no browser exit 0. Task 2's browser verify was not run alone again; the same spec passed 11 of 11 inside the seven-spec run.
+Task 3 verify commands on the final state: the first exits **1** only because the two honest failed attempts stay recorded (see "Task 3 verify commands versus the acceptance criterion"); the three-file `node --test` exits 0 (89 passed, ten named "reviewed source exception"); the registry-equals-working-file check exits 0; `npm run test:art` exits 0 (197 passed). Task 1 and task 2 verify commands that need no browser exit 0. Task 2's browser verify was not run alone again; the same spec passed 11 of 11 inside the seven-spec run.
 
 ## Deviations from Plan
 
@@ -290,9 +298,11 @@ Task 3 verify commands on the final state: the first exits **1** (a recorded rer
 
 **6. [Orchestrator option] No `.gitattributes` line for the review record.** The concern was that a later CR LF rewrite of the record would break the plan's `^key: value *$` checks. Measured: in JavaScript `$` matches before a carriage return, so the plan's patterns already pass on CR LF; on the fresh `core.autocrlf=true` clone the record has 687 carriage returns and every pattern and the control pass. No attribute was added and no plan text changed.
 
+**8. [Orchestrator instruction, outside `files_modified`] Test-infrastructure fix.** `tests/character-art.spec.js` is not among the plan's `files_modified`. After two recorded failures of its readiness check for the `vite preview` child (Playwright sets `FORCE_COLOR` for workers and the test passes the worker environment to the child, so the banner carries colour sequences between `Local` and `:` and the plain `Local:` match never fired), the orchestrator instructed the fix: strip ANSI colour sequences from an accumulating banner (`358ddee`). A first closing agent stalled after making the working-tree edit; a second one finished it (narrow confirmation, commit, third attempt, records). The third attempt, not the first two, satisfies the rerun acceptance criterion.
+
 **7. [Orchestrator exception] One repeat of a single spec file.** The plan says a non-zero rerun stops the plan and is not retried. The orchestrator allowed one repeat of the spec file holding a setup failure that looked like an infrastructure flake. It was used once; it failed the same way; both attempts are recorded. A no-browser diagnosis of the test's two child commands was also run by hand.
 
-**Total deviations:** 7 (2 on orchestrator instruction beyond the plan's rules, 1 plan expectation not met, 1 scope, 3 stricter or hardening changes). **Impact:** the registered identity changed once inside the plan; no result was relabelled.
+**Total deviations:** 8 (3 on orchestrator instruction beyond the plan's rules, 1 plan expectation not met, 1 scope, 3 stricter or hardening changes). **Impact:** the registered identity changed once inside the plan; no result was relabelled.
 
 ## Known limitations
 
@@ -304,11 +314,11 @@ Task 3 verify commands on the final state: the first exits **1** (a recorded rer
 - **Real browsers not measured.** Every browser result is headless Chromium under an adapter that models pointer lock. Whether a real browser loses a click once a lock is granted mid-press was not measured. The S&D form of the paused Skip corner and a played-out match end were not pressed.
 - **Standing line-ending fragility of the frozen gate** (`followup_line_endings: yes`, not repaired here). Of 127 frozen file identities: 38 reproduced by committed bytes, 57 only by an all-CR LF checkout, 25 only by this working copy, 7 already different as expected. Measured on fresh clones at `f7bc7c4`: a `core.autocrlf=true` clone reproduces 62 of 127 and a `core.autocrlf=false` clone 38 of 127. The 25 irreplaceable sequences are recoverable from `evidence/07-21-frozen-bytes.json`.
 - **F-13.** `tools/art/animation-budget-v2.test.mjs` fails three cases on a clone without the gitignored cache. Not changed here.
-- **CI was not observed.** The colour-sensitive readiness check in `tests/character-art.spec.js` may behave on CI as it did here; that was not checked.
+- **CI was not observed.** The readiness check is now colour-independent, but CI behaviour was not checked; the passing browser runs are local.
 
 ## Issues Encountered
 
-The seven-spec browser rerun failed on `tests/character-art.spec.js:953` (see "The failing case"). Discovered and out of scope, not fixed: that test's readiness check depends on colour being off in the child server's output.
+Two seven-spec browser attempts failed on `tests/character-art.spec.js:953` (see "Attempts 1 and 2: the failing case"); the readiness check was fixed (`358ddee`, deviation 8) and attempt 3 passed.
 
 ## Requirements
 
@@ -324,17 +334,17 @@ None.
 
 ## Next Phase Readiness
 
-- Not ready to be treated as complete: one acceptance criterion of task 07-21-03 is open (the seven-spec rerun), and the owner's explicit confirmation of the option is not on record.
-- `STATE.md` and `ROADMAP.md` were not advanced. No entry was appended to `.planning/WINDOWS.md`.
-- Plan 07-22 depends on this plan. Plans 07-13 and 07-18 must apply the D-06 check.
+- The acceptance criteria are met. Still open and not an acceptance item: the owner's explicit confirmation of the option is not on record (see "Decision provenance").
+- No entry was appended to `.planning/WINDOWS.md`.
+- Plan 07-22 depends on this plan and may now start. Plans 07-13 and 07-18 must apply the D-06 check.
 
 ## Self-Check: PASSED
 
 - Files exist: the seven created and four modified files listed in the frontmatter.
 - Commits are ancestors of `HEAD`: all fifteen listed above.
 - `src/main.js` is `f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393`; `frozen-bytes.mjs verify` reports 26 verified, 0 mismatched; `git status --short` lists only `.planning/config.json`, `.planning/state.json` and `.planning/milestone.lock`, none of them touched by this plan.
-- The self-check passing means the claims above were verified, not that the plan passed: its status is `partial`.
+- Commits 358ddee and 4d726a9 are ancestors of HEAD; attempt 3 and the narrow run were verified from their logs and the evidence record.
 
 ---
 *Phase: 07-movement-matched-and-action-safe-animation*
-*Completed: 2026-10-09 (status: partial)*
+*Completed: 2026-10-10 (status: complete)*
