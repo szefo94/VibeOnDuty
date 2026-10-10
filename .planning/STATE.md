@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 07
 current_phase_name: Movement-Matched and Action-Safe Animation
 status: executing
-stopped_at: Completed 07-17-PLAN.md (offline gate second run passed)
-last_updated: "2026-10-10T20:30:36.413Z"
+stopped_at: Completed 07-18-PLAN.md
+last_updated: "2026-10-10T22:12:48.514Z"
 last_activity: 2026-10-09
 last_activity_desc: Phase 07 execution started
-state_head: 8931baadc05f2fed69d2d35ee62c5673741ec680
+state_head: e474ac41bc4f6d654f3aa1ddbc4092189b30b0d9
 progress:
   total_phases: 12
   completed_phases: 2
   total_plans: 38
-  completed_plans: 36
+  completed_plans: 37
   percent: 17
 ---
 
@@ -28,9 +28,9 @@ See: .planning/PROJECT.md (updated 2026-10-05)
 ## Current Position
 
 Phase: 07 (Movement-Matched and Action-Safe Animation) — EXECUTING
-Plan: 10 of 19
+Plan: 11 of 19
 Status: Ready to execute
-Next action: Plan 07-16 closed (implementation review pass-with-notes at 7c93fb3; no calibration or qualifying session has run). Next: owner decides N-04 (identity width) before the calibration is registered; 07-17, 07-18 and 07-19 need an owner host_ready time. Open: G-01 CI art-test step before any push. Plan09 stays unqualified; ANIM-05 stays open. Phase5 follows accepted Phase7.
+Next action: Plan 07-18 closed (calibration valid and passed; paired verdict "passed, session 1 of 1; 0 valid sessions failed; 0 invalid"; plan 09 qualified on the paired route only, `stable-gates.mjs check` exit 0). The original absolute limits were not met (frozen command exit 1, 40 and 21 of 192 over; no frozen exit 0). Next: 07-19 strict capture, which needs an owner host_ready time no older than 12 hours, the paired session directories kept in the cache and no hashed source file changed before it runs. Open: G-01 CI art-test step before any push; AGENTS.md still says nothing has qualified. ANIM-05 stays unmarked until phase verification. Phase5 follows accepted Phase7.
 Roadmap review: User revised remaining order to6 → 7 → 5 → 2 → 3 → 4 → 8 → 9 → 10 → 11 → 12; Phase1 remains complete.
 Last activity: 2026-10-09 — Phase 07 execution started
 
@@ -89,6 +89,7 @@ Progress: [██░░░░░░░░] 17%
 | Phase 07 P15 | 20min | 2 tasks | 3 files |
 | Phase 07 P25 | record-keeping close (started 2026-10-10T12:09Z) | 2 tasks | 3 files |
 | Phase 07 P16 | 3h 15m | 4 tasks | 9 files |
+| Phase 07 P18 | 1h 38m | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -155,6 +156,9 @@ Full decisions are recorded in PROJECT.md.
 - [Phase 07]: 07-16: requirePlan09 frozen route tightened - a frozen-route record needs the frozen evaluation list and the owner's accept-frozen-pass bound to evaluation k of n; paired route (timingGate paired-same-session) accepts only a pass registry verdict under the pinned contract with every counted session re-verified from its reports.
 - [Phase 07]: 07-16: paired implementation review pass-with-notes at 7c93fb3 (after blocker I-01 fixed); the three tool files are hash-pinned and must not change before the calibration; N-04 identity width must be decided by the owner before the calibration is registered.
 - [Phase 07]: 07-17: stable gates complete at identity c1b06272; offline gate failed once (137/138, first-test cold-start timeout) then passed 138/138 on one orchestrator-decided rerun (owner did not separately approve); both runs on record, hypothesis unproven; plan09 still unqualified
+- [Phase 07]: 07-18: paired timing verdict is pass (passed, session 1 of 1; 0 valid sessions failed; 0 invalid) after a valid passed calibration; plan 09 is qualified on the paired route only
+- [Phase 07]: 07-18: the original absolute limits were not met (frozen command exit 1 on both evaluations at identity c1b06272, 40 and 21 of 192 over); no frozen exit 0 was observed and no owner frozen-pass decision exists
+- [Phase 07]: 07-18: no requirement marked complete; keep every paired session directory in the cache and change no hashed source file until the 07-19 capture has run
 
 ### Pending Todos
 
@@ -183,8 +187,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-10-10T20:30:30.903Z
-Stopped at: Completed 07-17-PLAN.md (offline gate second run passed)
+Last session: 2026-10-10T22:12:48.354Z
+Stopped at: Completed 07-18-PLAN.md
 Resume file: None
 
 User passed both Phase 6 visual checks with "pass all tests and proceed".
