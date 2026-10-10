@@ -12,6 +12,7 @@ import { ROOT, CACHE, hash, iterationPath } from './pipeline.mjs';
 import { producerContract, candidateLineage } from './animation-budget-v2.mjs';
 import { MANIFEST_PATH, verifyRuntimeDependencies } from './runtime-dependencies.mjs';
 import { ACCEPTANCE_PATH, TUPLE_PATHS, assertNoMotionTransaction } from './motion-acceptance.mjs';
+import * as paired from './animation-budget-paired.mjs';
 
 // This owns a loopback-only Vite server and separate browser contexts. It never connects
 // to multiplayer or adds a production debug/mutation API. Only the model GET is routed.
@@ -960,6 +961,159 @@ export async function recordAnimationBudget() {
   return decision;
 }
 
+// ---- Paired same-session capture (plan 07-16; contract 07-09-PAIRED-AMENDMENT-V2.md) ----
+// Both arms are byte copies of the served tree in the owned cache, each on its own strict
+// loopback listener with the same configuration. sampleAnimationPage above is reused
+// unedited: its text is the captureSampler identity both arms report. Rules, registry and
+// report shapes live in animation-budget-paired.mjs. A smoke keeps no timing value.
+const PAIRED_KINDS = { '--smoke': 'smoke', '--calibration': 'calibration' };
+const PAIRED_NOT_YET = kind => Error(`Paired ${kind} sessions are added by plan 07-16 task 3; only --smoke is available`);
+
+async function serveArm(directory, cacheDir) {
+  const port = await reviewPort();
+  const server = await createServer({ root: directory, configFile: false, base: '/', cacheDir, logLevel: 'warn',
+    server: { host: '127.0.0.1', port, strictPort: true, open: false, hmr: false,
+      fs: { strict: true, allow: [directory, cacheDir, path.join(ROOT, 'node_modules')] },
+      watch: { ignored: ['**/.planning/**', '**/tools/art/sources/**'] } } });
+  try { await server.listen(port); } catch (error) { await server.close(); throw error; }
+  return { server, url: `http://127.0.0.1:${server.httpServer.address().port}/` };
+}
+
+// The context, init script and page defaults of captureAnimationBaseline, for one arm.
+async function openArmPage(browser) {
+  const context = await browser.newContext({ viewport: { ...paired.SESSION_SETTINGS.context.viewport },
+    deviceScaleFactor: paired.SESSION_SETTINGS.context.deviceScaleFactor });
+  await context.addInitScript(() => {
+    window.__baselineRaf = window.requestAnimationFrame.bind(window);
+    window.requestAnimationFrame = () => 0;
+    HTMLCanvasElement.prototype.requestPointerLock = () => {};
+    let seed = 67245;
+    Math.random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
+  });
+  const page = await context.newPage(), errors = [], failedResponses = [];
+  page.setDefaultTimeout(45000);
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('response', response => {
+    if (response.status() >= 400 && failedResponses.length < 20)
+      failedResponses.push(`${response.status()} ${new URL(response.url()).pathname}`);
+  });
+  return { context, page, errors, failedResponses };
+}
+
+async function enterRange(page, url) {
+  await page.goto(url);
+  await page.waitForFunction(() => !document.getElementById('range-startbtn').disabled, null, { polling: 100 });
+  await page.locator('#range-startbtn').click();
+}
+
+async function sampleArm(page, tier, actorCount) {
+  let timeout;
+  try {
+    return await Promise.race([
+      sampleAnimationPage(page, { tier, actorCount, failAt: undefined, candidate: true, renderedView: true, captureFrames: false }),
+      new Promise((_resolve, reject) => {
+        timeout = setTimeout(() => reject(Error('Animation sample exceeded 180 seconds')), 180000);
+      }),
+    ]);
+  } finally { clearTimeout(timeout); }
+}
+
+// Step one: append the registration to the tracked registry and stop. The registry file is
+// then committed alone, before `--run`.
+export async function registerPairedSession(kind) {
+  paired.assertContract();
+  paired.assertPins();
+  if (kind !== 'smoke') throw PAIRED_NOT_YET(kind);
+  const working = paired.readRegistry(), committed = paired.committedRegistry();
+  paired.verifyChain(working);
+  assert.deepEqual(paired.uncommittedEvents(working, committed), [], 'Registration refused: the registry holds uncommitted events');
+  assert.equal(committed?.events?.length ?? 0, working.events.length, 'Registration refused: the committed registry holds more events');
+  const identities = await animationIdentities();
+  assert.equal(identities.captureSampler, paired.FROZEN_SAMPLER, 'Sampler is not the frozen capture sampler');
+  paired.assertServedTreeClean(identities);
+  const commit = (await promisify(execFile)('git', ['rev-parse', 'HEAD'], { cwd: ROOT, windowsHide: true })).stdout.trim();
+  const next = paired.registerSession(working, { kind, nonce: paired.newNonce(), commit,
+    identity: paired.identityHash(identities), host: await paired.hostFacts(), toolHashes: paired.toolHashes(),
+    samplerIdentity: identities.captureSampler });
+  paired.writeRegistry(next);
+  const event = next.events.at(-1);
+  console.log(JSON.stringify({ registered: true, kind, nonce: event.nonce, seq: event.seq, registry: paired.REGISTRY_PATH,
+    next: `Commit the registry file alone, then run --animation-paired --${kind} --run ${event.nonce}` }));
+  return event;
+}
+
+// Step two: one capture for one committed registration. A smoke captures one profile pair
+// (run 1, Low, one actor) and writes load and structure facts only.
+export async function runPairedSession(kind, nonce) {
+  paired.assertContract();
+  if (kind !== 'smoke') throw PAIRED_NOT_YET(kind);
+  let registry = paired.readRegistry();
+  paired.verifyChain(registry);
+  const registered = paired.assertRunnable({ nonce, working: registry, committed: paired.committedRegistry() });
+  assert.equal(registered.kind, kind, `Nonce is registered as a ${registered.kind} session`);
+  const identities = await animationIdentities();
+  assert.equal(identities.captureSampler, paired.FROZEN_SAMPLER, 'Sampler is not the frozen capture sampler');
+  const head = paired.headState(registered.commit);
+  paired.runGuard({ registered, ...head, identityNow: paired.identityHash(identities) });
+  paired.assertServedTreeClean(identities);
+  const hostBefore = await paired.hostFacts();
+  // Both arms exist, and differ in exactly the five owner files, before the session starts.
+  const arms = paired.materializeArms(registered, { files: paired.armFiles(identities) });
+  registry = paired.appendEvent(registry, { type: 'started', kind, nonce, registrationHash: paired.eventHash(registered) });
+  paired.writeRegistry(registry);
+  const startedEventHash = paired.eventHash(registry.events.at(-1));
+  const order = paired.orderFor(1, 0, 0) === 'reference-first' ? ['reference', 'candidate'] : ['candidate', 'reference'];
+  const captured = {}, diagnostics = {}, opened = [], servers = [];
+  let browser, browserVersion = null, error = null, difference = arms.difference;
+  try {
+    browser = await chromium.launch({ headless: paired.SESSION_SETTINGS.launch.headless, args: [...paired.SESSION_SETTINGS.launch.args] });
+    browserVersion = browser.version();
+    for (const arm of order) {
+      const armIdentity = paired.armIdentities(arms.arms[arm], identities);
+      const served = await serveArm(arms.arms[arm], path.join(arms.sessionDirectory, 'vite-cache-' + arm));
+      servers.push(served.server);
+      const view = await openArmPage(browser);
+      opened.push(view.context);
+      captured[arm] = { identities: armIdentity, pageErrors: view.errors };
+      diagnostics[arm] = { failedResponses: view.failedResponses };
+      await enterRange(view.page, served.url);
+      const sample = await sampleArm(view.page, 'low', 1);
+      for (const frame of sample.sequence ?? []) frame.sha256 = hash(Buffer.from(frame.image.split(',')[1], 'base64'));
+      captured[arm].sample = { run: 1, browser: browserVersion, sourceIdentitySha256: hash(JSON.stringify(armIdentity)), ...sample };
+    }
+    difference = { ...paired.compareArms(arms.arms, arms.names, Object.keys(paired.PAIRED_CONTRACT.referenceOwners)),
+      ownersVerified: arms.difference.ownersVerified };
+    assert.deepEqual(await animationIdentities(), identities, 'Source changed during capture');
+  } catch (caught) { error = caught?.message ?? String(caught); }
+  finally {
+    for (const context of opened) await context.close().catch(() => {});
+    if (browser) await browser.close().catch(() => {});
+    for (const server of servers) await server.close().catch(() => {});
+  }
+  // The arm data of a smoke is not kept: both trees and both server caches go before the report is written.
+  const armData = [arms.arms.reference, arms.arms.candidate, ...order.map(arm => path.join(arms.sessionDirectory, 'vite-cache-' + arm))];
+  for (const directory of armData) {
+    await iterationPath([arms.sessionDirectory], directory);
+    await fs.rm(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }).catch(() => {});
+  }
+  const armDataKept = (await Promise.all(armData.map(directory => fs.access(directory).then(() => true, () => false)))).some(Boolean);
+  const report = paired.smokeReport({ nonce, identity: registered.identity, commit: head.headCommit,
+    registrationEventHash: paired.eventHash(registered), startedEventHash, arms: captured, difference, browserVersion,
+    host: { before: hostBefore, after: await paired.hostFacts() }, error, diagnostics, armDataKept });
+  const bytes = Buffer.from(JSON.stringify(report, null, 2) + '\n');
+  registry = paired.appendEvent(registry, { type: 'closed', kind, nonce, outcome: report.structuralFailure ? 'structural-failure' : 'loaded',
+    structuralFailure: report.structuralFailure, valid: null, pass: null, reportHashes: { session: hash(bytes) }, browserVersion });
+  paired.writeRegistry(registry);
+  const reportPath = path.join(arms.sessionDirectory, 'smoke-session.json');
+  await fs.writeFile(reportPath, bytes);
+  if (error) console.error(error);
+  console.log(JSON.stringify({ kind, nonce, closedSeq: registry.events.at(-1).seq, structuralFailure: report.structuralFailure,
+    referencePageErrors: report.referencePageErrors, armDataKept,
+    report: path.relative(ROOT, reportPath).replaceAll('\\', '/'), sha256: hash(bytes) }));
+  if (report.structuralFailure) process.exitCode = 1;
+  return report;
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
   let operation;
@@ -970,6 +1124,13 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   };
   else if (args.length === 1 && args[0] === '--animation-budget') operation = recordAnimationBudget;
   else if(args[0]==='--animation-candidate'&&(args.length===1||args.length===2&&args[1]==='--smoke'))operation=()=>captureAnimationBaseline({candidate:true,smoke:args[1]==='--smoke'});
+  else if (args[0] === '--animation-paired') {
+    // Exactly one of --smoke, --calibration or no sub-flag (qualifying); then --register or --run <nonce>.
+    const kind = PAIRED_KINDS[args[1]] ?? 'qualifying', step = args.slice(kind === 'qualifying' ? 1 : 2);
+    if (step.length === 1 && step[0] === '--register') operation = () => registerPairedSession(kind);
+    else if (step.length === 2 && step[0] === '--run' && /^[a-f0-9]{32}$/.test(step[1])) operation = () => runPairedSession(kind, step[1]);
+    else throw Error('Use --animation-paired [--smoke | --calibration] --register, then --run <nonce>');
+  }
   else if (args[0] === '--animation-baseline' && (args.length === 1 ||
     (args.length === 2 && args[1] === '--smoke'))) {
     operation = async () => {
