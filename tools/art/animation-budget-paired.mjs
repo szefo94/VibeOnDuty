@@ -1030,9 +1030,26 @@ export function evaluatePaired(session, contract = PAIRED_CONTRACT) {
 
 // ---- session report and verify ---------------------------------------------------------------------------
 
+/** The arm difference check as it was made (contract section 2, item 4: the tool reports the count
+ *  of differing files): when the arms were materialised, before the session started, with the owner
+ *  files verified against their pins, and again after the last pair. The count must be five, the
+ *  owner files, for a qualifying session, and none for a calibration, whose second directory is a
+ *  second copy of the reference arm. `afterLastPair` is null when that second check did not hold or
+ *  was not reached; the capture error is then in both arm reports and the session is invalid.
+ *  A record of the two checks: nothing here is recomputed by `verify`, which has no arm directory. */
+export function armDifferenceRecord(kind, materialised, afterLastPair, contract = PAIRED_CONTRACT) {
+  const expectedCount = kind === 'calibration' ? 0 : Object.keys(contract.referenceOwners).length;
+  const counted = value => (value && typeof value === 'object' ? { comparedFiles: value.comparedFiles ?? null,
+    differingFiles: Array.isArray(value.differingFiles) ? [...value.differingFiles] : null, count: value.count ?? null } : null);
+  const first = counted(materialised), last = counted(afterLastPair);
+  return { expectedCount,
+    materialised: first && { ...first, ownersVerified: Array.isArray(materialised.ownersVerified) ? structuredClone(materialised.ownersVerified) : null },
+    afterLastPair: last, countHolds: first?.count === expectedCount && last?.count === expectedCount };
+}
+
 /** The session report, built once from the in-memory session after validity (and, for a valid
  *  session only, the rules) is known. Its bytes are hashed into the `closed` event. */
-export function sessionReport({ session, evaluation = null, registrationEventHash, startedEventHash, host = null, armPaths },
+export function sessionReport({ session, evaluation = null, registrationEventHash, startedEventHash, host = null, armPaths, armDifference = null },
   contract = PAIRED_CONTRACT) {
   assert.ok(session?.validity && typeof session.validity.valid === 'boolean', 'Session record has no validity block');
   assert.equal(evaluation !== null, session.validity.valid, 'The rules are evaluated for a valid session, and only for one');
@@ -1042,6 +1059,8 @@ export function sessionReport({ session, evaluation = null, registrationEventHas
     contract: { v2Sha256: contract.v2Sha256, decisionSha256: contract.decisionSha256, v2ReviewSha256: contract.v2ReviewSha256 },
     registrationEventHash, startedEventHash,
     arms: Object.fromEntries(ARMS.map(arm => [arm, { path: armPaths[arm], sha256: session.arms[arm].sha256 }])),
+    // The count of files that differ between the two arm directories, and the owner files verified (review finding I-05).
+    armDifference,
     order: structuredClone(session.order), settings: structuredClone(session.settings), browserVersion: session.browserVersion ?? null, host,
     // Recorded and marked as warm-up; used by no rule, no validity check and no verdict.
     warmup: Object.fromEntries(ARMS.map(arm => [arm, session.arms[arm].report?.paired?.warmup?.timings ?? null])),
@@ -1117,6 +1136,8 @@ export async function verifySession({ sessionBytes, registry, readArm, hashFrame
   const structuralV2Pass = session.kind === 'calibration' ? null : frozen.resultPrinted;
   const result = { kind: session.kind, nonce: session.nonce, valid: session.validity.valid, pairedBudgetPass, structuralV2Pass,
     certification: false, validity: session.validity, rule1: evaluation?.rule1 ?? null, groups: evaluation?.rule2.groups ?? [],
+    // As the runner recorded it in the hash-bound report; a reader has no arm directory to count again.
+    armDifference: report.armDifference ?? null,
     rule2Violations: evaluation?.rule2.violations ?? [], tolerances: evaluation?.tolerances ?? null,
     // The frozen gate's own result is reported as it is, whichever it is. An exit 0 is recorded and
     // changes nothing else: it is never a pass by this tool and is the owner's to judge.
@@ -1612,7 +1633,8 @@ export async function runSession({ kind, registered, pairs, capturePair, endCapt
   // 6. The session report bytes, with validity and outcome inside, then `closed`.
   const report = sessionReport({ session, evaluation, registrationEventHash, startedEventHash,
     host: { before: context.hostBefore ?? null, after: facts.hostAfter ?? null },
-    armPaths: { reference: context.paths.reference, candidate: context.paths.candidate } }, contract);
+    armPaths: { reference: context.paths.reference, candidate: context.paths.candidate },
+    armDifference: armDifferenceRecord(kind, context.difference ?? null, facts.difference ?? null, contract) }, contract);
   const sessionBytes = jsonBytes(report), reportHashes = { session: sha256(sessionBytes), reference: hashes.reference, candidate: hashes.candidate };
   registry = await append(closedEvent(kind, nonce, { valid: session.validity.valid, pass: evaluation ? evaluation.pairedBudgetPass : null,
     settings: session.settings, browserVersion: session.browserVersion, reportHashes,

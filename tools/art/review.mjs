@@ -1156,7 +1156,9 @@ export async function runPairedSession(kind, nonce) {
     },
     closeView: async view => { await view.context.close().catch(() => {}); opened.delete(view.context); } });
   const endCapture = async ({ interrupted }) => {
-    const facts = { cleanup: null, pageErrors, error: null, difference: arms.difference, armDataKept: null, hostAfter: null,
+    // `difference` is the arm difference check made again after the last pair: it stays null when that check does
+    // not hold or is not reached, and the session report records it beside the check made at materialisation.
+    const facts = { cleanup: null, pageErrors, error: null, difference: null, armDataKept: null, hostAfter: null,
       diagnostics: Object.fromEntries(PAIRED_ARMS.map(arm => [arm, { failedResponses: failedResponses[arm] }])) };
     if (!interrupted) {
       try {
