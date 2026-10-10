@@ -368,11 +368,12 @@ const hasReason = (record, pattern) => assert.ok(Array.isArray(record.reasons) &
 // A Playwright JSON report with the two titled cases, each with the given result. One file is nested in
 // a describe block, as Playwright nests suites, and another file holds a case with the same title.
 function offlineReportOf(statuses = {}) {
-  const spec = (title, file, status = 'passed') => ({ title, ok: status === 'passed' || status === 'flaky', file, line: 1,
+  const spec = (title, file, status = 'passed') => ({ title, ok: ['passed', 'flaky', 'retried'].includes(status), file, line: 1,
     tests: [{ expectedStatus: 'passed',
-      status: status === 'passed' ? 'expected' : status === 'flaky' ? 'flaky' : status === 'skipped' ? 'skipped' : 'unexpected',
+      status: status === 'passed' || status === 'retried' ? 'expected' : status === 'flaky' ? 'flaky' : status === 'skipped' ? 'skipped' : 'unexpected',
       results: status === 'skipped' ? [] : status === 'flaky' ? [{ status: 'failed', retry: 0 }, { status: 'passed', retry: 1 }]
-        : [{ status, retry: 0 }] }] });
+        // Reported as expected, yet with a second result that failed: the case did not run once and pass.
+        : status === 'retried' ? [{ status: 'passed', retry: 0 }, { status: 'failed', retry: 1 }] : [{ status, retry: 0 }] }] });
   const byFile = { 'smoke.spec.js': [spec('menu shows', 'smoke.spec.js'), spec(TITLES[THROW_ID], 'smoke.spec.js', statuses.decoy)] };
   for (const [id, title] of Object.entries(TITLES)) {
     const file = id.slice('tests/'.length, id.indexOf('#')), status = statuses[id];
@@ -556,9 +557,11 @@ test('plan09: a timing result that disagrees with the registry, or a verdict tha
   incomplete(world09(), timing => { timing.candidate.path = paired.PAIRED_CACHE + '/session-x/arm-candidate.json'; }, /no candidate in the evidence directory/);
   incomplete(world09(), timing => { timing.candidate.sha256 = 'f'.repeat(64); }, /not the candidate arm of a valid passed session/);
   incomplete(world09(), timing => { timing.frozenApplicableBudgetPass = null; }, /does not carry the frozen result/);
-  incomplete(world09(), timing => { timing.frozenEvaluations.pop(); }, /Frozen evaluation list/);
-  incomplete(world09(), timing => { timing.frozenEvaluations[0].exitCode = null; }, /Frozen evaluation list/);
-  incomplete(world09(), timing => { delete timing.frozenEvaluations; }, /Frozen evaluation list/);
+  incomplete(world09(), timing => { timing.frozenEvaluations.pop(); }, /not numbered 1 to n/);
+  incomplete(world09(), timing => { timing.frozenEvaluations[0].exitCode = null; }, /not numbered 1 to n/);
+  incomplete(world09(), timing => { timing.frozenEvaluations[1].overrunCount = '21'; }, /not numbered 1 to n/);
+  incomplete(world09(), timing => { timing.frozenEvaluations[1].reportSha256 = timing.frozenEvaluations[0].reportSha256; }, /not numbered 1 to n/);
+  incomplete(world09(), timing => { delete timing.frozenEvaluations; }, /Frozen evaluation list is missing/);
   // A real verdict that is not pass: the timing result says so truthfully, and nothing completes.
   for (const [results, verdict] of [[['fail'], 'undecided'], [['invalid'], 'undecided'], [['fail', 'fail'], 'failed'], [['pass', 'fail'], 'undecided'],
     [['pass', 'fail', 'invalid'], 'failed']]) {
@@ -577,7 +580,7 @@ test('plan09: a missing title, a title that did not pass or a non-zero offline e
   const entryOf = (record, id) => record.assertions.find(entry => entry.id === id);
   for (const id of REQUIRED_ASSERTIONS) {
     for (const [status, executed, recorded] of [['absent', false, 'missing'], ['failed', true, 'fail'], ['timedOut', true, 'fail'],
-      ['skipped', false, 'fail'], ['flaky', true, 'fail'], ['twice', false, 'ambiguous']]) {
+      ['skipped', false, 'fail'], ['flaky', true, 'fail'], ['retried', true, 'fail'], ['twice', false, 'ambiguous']]) {
       const record = judged(offlineReportOf({ [id]: status }), world.offlineCheck);
       assert.equal(record.complete, false, id + ' ' + status);
       assert.deepEqual([entryOf(record, id).executed, entryOf(record, id).status], [executed, recorded], id + ' ' + status);
@@ -702,9 +705,9 @@ test('plan09: a frozen exit 0 completes a record only with the owner decision re
   for (const [change, pattern] of [[timing => { timing.frozenApplicableBudgetPass = false; }, /did not exit 0 on the recorded candidate/],
     [timing => { timing.frozenEvaluations[2].exitCode = 1; }, /did not exit 0 on the recorded candidate/],
     [timing => { timing.frozenEvaluations[2].scanned = false; }, /scan does not find/],
-    [timing => { timing.frozenEvaluations.shift(); }, /Frozen evaluation list/],
+    [timing => { timing.frozenEvaluations.shift(); }, /not numbered 1 to n/],
     [timing => { delete timing.frozenEvaluations[0].sameIdentity; }, /plan 07-13 evaluation/],
-    [timing => { timing.frozenEvaluations[1].of = 4; }, /Frozen evaluation list/]]) {
+    [timing => { timing.frozenEvaluations[1].of = 4; }, /not numbered 1 to n/]]) {
     const refused = judged(decision, change);
     assert.equal(refused.complete, false, String(pattern));
     hasReason(refused, pattern);
