@@ -2,7 +2,7 @@
   "complete": false,
   "identities": {
     "index.html": "1f89a54e697b4f2bf2bf5b47ff15d09782514d327c0caf7f81e39cae430f6e77",
-    "public/models/enemy.glb": "8503964441a36d54d9dada52911f4869ce48bf4e32cf403a7836b9cf53c3b936",
+    "public/models/enemy.glb": "2a6bbab2034b01b1722f35e8afbdac2948978226d780fd43eb9d6df117196e4e",
     "public/textures/comic-slice.png": "7faae7a58bb4669af51c5081c772be671af8544681c762af54f9263995a4c31e",
     "src/ai/difficultyAdapter.js": "8ac49dc6fa2d40e9f8c8e431d70e354826457af99207e832c8e3d88bcaf9bc30",
     "src/ai/enemyStates.js": "5958b97ee40b481e42894edd1f8122613991275ee7411ee30f7ddbdc92cde911",
@@ -14,13 +14,13 @@
     "src/builders/assetManager.js": "4bd3f7be2842e62987cdda42e0d221d3d00dcc0fc931d06eccb764c55125a92c",
     "src/builders/characterAppearance.js": "c76293f0e83160269b503f991683e8871aeeb7c2d1649de079b0427521e0b74b",
     "src/builders/characterAppearance.test.js": "b376d6e18ad9de849366d12c5ea89646558fa4bf2b13eb86cdeae9514ab08563",
-    "src/builders/characterResources.js": "094c1a9a4bca24ee4e163fe864e139ed0ba3b43384d8c31364c1b22c740f42c4",
+    "src/builders/characterResources.js": "7b1fb1375332c9b508a6ee53beb90edc646476b7196900a1e85a8801288c8199",
     "src/builders/drone.js": "c9a4326b178d09c4a92b752c7e54046ae9a58fb1b07ceac975667e49a3270e85",
     "src/builders/enemy.js": "c18299fad3fca2ee4d52736e3f7ce355e52bfee91ff855072002a320a418dae7",
     "src/builders/enemyAnimations.js": "b95a994f9c18d7fe4988a25991073905cba9896d075f254f671114b0ebc7cffa",
     "src/builders/enemyAnimations.test.js": "7241d52a949c520439958eab3d2b7800d2663f5d04c84c287341a33db76fbaab",
     "src/builders/enemyGLTF.js": "d4197ffc7522a7f420e1b01692beace0d92be1632e6e04f8aa6606a1a7457a5f",
-    "src/builders/enemyGLTF.test.js": "990e0a628dafab497e6ccc74c20b3fbd82fcf19ccb1bd590e4e37ca2bfa33c3c",
+    "src/builders/enemyGLTF.test.js": "220594a2af5b7c8ff8d74d593b2e170ebc7e95bbc217adcbf35d08ff4767221f",
     "src/builders/enemyWeapon.js": "187266c1204072e3884eb4dd3651a9bbcc7d9ac1a844bdae595fa666ff4729fd",
     "src/builders/firstPersonRig.js": "fa3a2b0c59787949bdbf09da837253d9cc62441cf2b832acb3d1834a650c3e1f",
     "src/builders/firstPersonRig.test.js": "9dce4bc64e8cd3e3c6ff69f2d710ab6fa9848bc78a71f5fa3f5594d4001c9ea9",
@@ -31,7 +31,7 @@
     "src/builders/weapon3pTransform.js": "4e7917834ffbf4c1b5eaab9d2fe8a86f63444e743d006142c3299a0fde6f378c",
     "src/builders/weapon3pTransform.test.js": "c6cba9cf98bf64c96c5baa6382a3255e7c3f063455326edbf30471187b9d4fa3",
     "src/builders/weaponFBX.js": "86731fe249589e72c1ecc2e76e087717ab9281b24a6465f7a9a9691f4ed01a0a",
-    "src/builders/weaponHandling.js": "f9bc2d430653f7bbd765f7ea0d910fe8c09c7671434cc8a0589ccfb9bb31eeb1",
+    "src/builders/weaponHandling.js": "5ddc6e9e084c0718542a46dc7fb4bcef1f5b7516a3a833aada5521ad791c0247",
     "src/builders/weaponHandling.test.js": "ec1b7a465ae3752fdbde1641596f1e66a9761bf080d9219f59c38ff4e2d01479",
     "src/combat/damage.js": "6dab1ffddb00a50824a1b638ca558a0a069ceb2fb68654a09bd790f70d8d477f",
     "src/combat/damage.test.js": "64cae2a2bd46cdca806d4bc9d8bd00409fe32e523a569f31016e0101a691aa0b",
@@ -78,7 +78,7 @@
     "src/level.js": "b69b4267c55c08a5c832b1a5c316ebd5d8b0f2082999bec729c15a8d7f46dc0b",
     "src/lighting.js": "2b16856115f16e6e07c890da8c28ff4af9f898e7cad660ddc2fdc2dbe5ec2fbb",
     "src/loop.js": "5c28b979a75d5ed843513e774d685ca73586daa3d9cd91a81d7a0bffe7397cbe",
-    "src/main.js": "c762044675702688313ce81c7812153bdb30bc95951aa1995e69337414a882d3",
+    "src/main.js": "f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393",
     "src/map.js": "b23d2501b0d76e8a59ce84018f2ff2aff7251919ee6a7f940978cfa293b01cb1",
     "src/map.test.js": "bad26cef43b3822eb9a3f0f35e37d72c2f63d1514112e527f48b500bf714530f",
     "src/maps/bunker.js": "cfa888065a9d27527ac629d97576a4fb5f00976850488f3c57cc37d8d11c0f08",
@@ -126,7 +126,10 @@
     "style.css": "3cf82a6907773d93b90ec980492ec9f0563cd5a804afb82eb97da4e126fa2332",
     "tools/art/build_soldier.py": "1461595dbf47907671aa0a867f742c4ee35b758636a1fcb55dc571220300f432",
     "tools/art/character-params.json": "2b74289e18fd68cacece69af7fde7fe694e5fb6f6d5912ac412dc3c2899eb236",
+    "tools/art/motion-acceptance.json": "8f3c519d8fd87a5c1efcf8add162e30be52257534ec7b960b9c2f4c3d88fe155",
+    "tools/art/motion-manifest.json": "2b5712506a3c9bb9d76f6f9823bd4f07bea0c283613c0f2ea3a21c125d4e60a5",
     "tools/art/provenance.json": "7b8b9b5cfb2f86c2d0890dbc7042c1d010a9196ac6fed75b21a54318e4c451f6",
+    "tools/art/sources/motion.blend": "3d1702ccb3915a14f3647e3db9f08ea14fef25ac9eccc696057b401a6471c463",
     "tools/art/sources/soldier.blend": "d657f3d906a23e344e0188b9b060ca57f7e19d860530fe0618a6dd6a1178a4f7",
     "captureSampler": "2720e51eed272c40fe9e12ff561e4d63072f9b7548b5c270a71ec0ae527ab83f"
   },
@@ -134,87 +137,111 @@
     {
       "id": "lint",
       "command": "npm run lint",
-      "log": ".planning/research/.cache/07-10-lint-final.log",
-      "logSha256": "c10c156dd448db83743cb685b205c978afed64b48a71559e8956a1b7e9d8c9e5",
+      "log": ".planning/research/.cache/07-17-gates/lint.log",
+      "logSha256": "94a1703068e5f56072f7f9628edf50bf3c925a0a1d1c0a489b47ead5e3c741b2",
       "executed": true,
       "scope": "full",
-      "exitCode": 0
+      "exitCode": 0,
+      "startedAt": "2026-10-10T18:53:01.122Z",
+      "durationMs": 1862,
+      "environment": {
+        "CI": null,
+        "node": "v24.19.0",
+        "platform": "win32"
+      }
     },
     {
       "id": "typecheck",
       "command": "npm run typecheck",
-      "log": ".planning/research/.cache/07-10-types-final.log",
-      "logSha256": "e9dba3f8721451b178454427e10ee32da3dc405c50f271cd5eef655e6d6f18a1",
+      "log": ".planning/research/.cache/07-17-gates/typecheck.log",
+      "logSha256": "932e001e4db172b5d3937d10e631426464011d1f4791e3b81c0a18d11c835c3a",
       "executed": true,
       "scope": "full",
-      "exitCode": 0
+      "exitCode": 0,
+      "startedAt": "2026-10-10T18:50:06.737Z",
+      "durationMs": 2255,
+      "environment": {
+        "CI": null,
+        "node": "v24.19.0",
+        "platform": "win32"
+      }
     },
     {
       "id": "typecheck:mp",
       "command": "npm run typecheck:mp",
-      "log": ".planning/research/.cache/07-10-mp-types-final.log",
-      "logSha256": "8a50380935a5356f4fcc7cc1c6d9414a66b29dcee880619cbc24a1f3806b4ef7",
+      "log": ".planning/research/.cache/07-17-gates/typecheck-mp.log",
+      "logSha256": "f6a4907abdb725b0211286e3b7f3aa60e5de618dfeee24c30959ad675a0269f6",
       "executed": true,
       "scope": "full",
-      "exitCode": 0
+      "exitCode": 0,
+      "startedAt": "2026-10-10T18:50:08.993Z",
+      "durationMs": 2036,
+      "environment": {
+        "CI": null,
+        "node": "v24.19.0",
+        "platform": "win32"
+      }
     },
     {
       "id": "build",
-      "command": "npm run build -- --outDir .planning/research/.cache/07-10-build-final",
-      "log": ".planning/research/.cache/07-10-build-final.log",
-      "logSha256": "393d612064fd84e61fb595a19adab2cae65a6047ceea0feae0b4d484acc1b8f5",
+      "command": "npm run build -- --outDir .planning/research/.cache/07-17-gates/build",
+      "log": ".planning/research/.cache/07-17-gates/build.log",
+      "logSha256": "3542c28bb9420591cecfeab9b40e493f92f243efee073efeb8368c77b118dae6",
       "executed": true,
       "scope": "full",
-      "exitCode": 0
+      "exitCode": 0,
+      "startedAt": "2026-10-10T18:50:11.030Z",
+      "durationMs": 1333,
+      "environment": {
+        "CI": null,
+        "node": "v24.19.0",
+        "platform": "win32"
+      }
     },
     {
       "id": "unit",
       "command": "node node_modules/vitest/vitest.mjs run --maxWorkers=1",
-      "log": ".planning/research/.cache/07-10-units-final.log",
-      "logSha256": "8aab27601d96b663afa7a50d4d8cb1481964f4f438453acc3e7ac20c7feaed0b",
+      "log": ".planning/research/.cache/07-17-gates/unit.log",
+      "logSha256": "36a8ff077c6d90a1bfedbe01d06fcef7eb2af426d8b416d89659d6f3a29b22aa",
       "executed": true,
       "scope": "full",
-      "exitCode": 0
+      "exitCode": 0,
+      "startedAt": "2026-10-10T18:50:12.364Z",
+      "durationMs": 132014,
+      "environment": {
+        "CI": null,
+        "node": "v24.19.0",
+        "platform": "win32"
+      }
     },
     {
       "id": "offline",
       "command": "node node_modules/@playwright/test/cli.js test --config tools/art/offline-qualified.config.mjs",
-      "log": ".planning/research/.cache/07-10-offline-final-current.log",
-      "logSha256": "c73914335587867d5e7bed299f688ce21414c4b5eec4b68c94e58024b893d88b",
-      "executed": true,
-      "scope": "full",
-      "exitCode": 1
+      "log": null,
+      "logSha256": null,
+      "executed": false,
+      "scope": null,
+      "exitCode": null
     },
     {
       "id": "multiplayer",
       "command": "node node_modules/@playwright/test/cli.js test --config tools/art/multiplayer-qualified.config.mjs --workers=1",
-      "log": ".planning/research/.cache/07-10-multiplayer-final.log",
-      "logSha256": "977b835dc7da4d83dcf1b2dd8a225357481cd39ffcd663904486fbae69728eee",
-      "executed": true,
-      "scope": "full",
-      "exitCode": 1
+      "log": null,
+      "logSha256": null,
+      "executed": false,
+      "scope": null,
+      "exitCode": null
     }
   ],
   "units": {
     "passed": 323,
+    "failed": 0,
+    "skipped": 0,
     "files": 31,
-    "durationSeconds": 143.62
+    "durationSeconds": 130.71
   },
-  "offline": {
-    "passed": 125,
-    "failed": 2,
-    "skipped": 0,
-    "flaky": 0,
-    "durationMs": 1902085.853,
-    "report": ".planning/research/.cache/07-10-qualified/offline-full-current.json"
-  },
-  "multiplayer": {
-    "passed": 5,
-    "failed": 12,
-    "skipped": 0,
-    "flaky": 0,
-    "durationMs": 1383400.772,
-    "report": ".planning/research/.cache/07-10-qualified/multiplayer-full-current.json"
-  },
-  "rule": "Actual failed full command results remain nonpassing regardless of separate focused successes"
+  "offline": null,
+  "multiplayer": null,
+  "rule": "Actual failed full command results remain nonpassing regardless of separate focused successes",
+  "generatedBy": "tools/art/stable-gates.mjs"
 }
