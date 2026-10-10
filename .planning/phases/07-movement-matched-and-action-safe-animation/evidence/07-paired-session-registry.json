@@ -358,6 +358,64 @@
       "seq": 7,
       "at": "2026-10-10T21:09:56.198Z",
       "prevHash": "82143cbc5929c87b0864186330fa73f2a8700b12256b7ed8e3717f691a1eb617"
+    },
+    {
+      "type": "started",
+      "kind": "qualifying",
+      "nonce": "a16b4bbfea250ea1013d364dc385651a",
+      "registrationHash": "7c8ece8fd613248d32cb3f22d261e9fe70ea6339c875bc4ae9f9b585ba8480af",
+      "seq": 8,
+      "at": "2026-10-10T21:10:06.971Z",
+      "prevHash": "7c8ece8fd613248d32cb3f22d261e9fe70ea6339c875bc4ae9f9b585ba8480af"
+    },
+    {
+      "type": "closed",
+      "kind": "qualifying",
+      "nonce": "a16b4bbfea250ea1013d364dc385651a",
+      "outcome": "passed",
+      "valid": true,
+      "pass": true,
+      "settings": {
+        "contextAndPageLifetime": "One browser process per session. For each run, one fresh browser context and one page per arm, opened immediately before that arm's first capture of the run and kept until the last pair of the run is captured, then closed. The warm-up pair has its own fresh context and page per arm, closed before run 1 begins. A smoke captures one pair under the same rule.",
+        "launch": {
+          "headless": true,
+          "args": [
+            "--use-gl=swiftshader"
+          ]
+        },
+        "context": {
+          "viewport": {
+            "width": 1280,
+            "height": 960
+          },
+          "deviceScaleFactor": 1
+        },
+        "samplerArguments": {
+          "candidate": true,
+          "renderedView": true,
+          "captureFrames": false,
+          "failAt": null
+        },
+        "server": {
+          "host": "127.0.0.1",
+          "strictPort": true,
+          "base": "/",
+          "configFile": false,
+          "hmr": false,
+          "viteCache": "one per arm, outside the served directory"
+        }
+      },
+      "browserVersion": "147.0.7727.15",
+      "reportHashes": {
+        "session": "9b5e21205ba917a0b9c40bdea6fbb6b463c0d1bde7ddeab1cadac180b57a4377",
+        "reference": "5488c51785bb9d262f4687dd8a581de7ebe34ccf9c17cc7bfd78c1b510e59a03",
+        "candidate": "339857fec29f04ea663f4be420ec11926fd069be392402a3b8bc5ec343819424"
+      },
+      "frozenExitCode": 1,
+      "frozenOverrunCount": 21,
+      "seq": 9,
+      "at": "2026-10-10T21:43:09.166Z",
+      "prevHash": "e9a3d0d25f7caeaec3aad8ddc4dd0a59a7f6b5235d0edb54c29cbc431af22205"
     }
   ]
 }
