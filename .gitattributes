@@ -2,3 +2,11 @@
 src/builders/enemyGLTF.test.js text eol=lf
 # Reviewed plan 07-21 correction, registered by exact hash; LF on every checkout.
 src/main.js text eol=lf
+# Paired timing contract V2, pinned by exact hash (plan 07-25 review, E8); LF on every checkout.
+.planning/phases/07-movement-matched-and-action-safe-animation/07-09-PAIRED-AMENDMENT-V2.md text eol=lf
+# Owner decision on the paired contract, pinned by exact hash (E8); LF on every checkout.
+.planning/phases/07-movement-matched-and-action-safe-animation/07-09-PAIRED-AMENDMENT-DECISION.md text eol=lf
+# Review record of the paired contract V2, pinned by exact hash (E8); LF on every checkout.
+.planning/phases/07-movement-matched-and-action-safe-animation/07-09-PAIRED-AMENDMENT-V2-REVIEW.md text eol=lf
+# Paired session registry, hashed as raw bytes (E8); LF on every checkout.
+.planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-paired-session-registry.json text eol=lf
