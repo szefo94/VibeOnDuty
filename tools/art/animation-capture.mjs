@@ -10,6 +10,12 @@ import { createServer } from 'vite';
 import { ROOT, CACHE, hash, approvedArtMotion, iterationPath } from './pipeline.mjs';
 import { verifyRuntimeDependencies } from './runtime-dependencies.mjs';
 import { classifyStall } from './approach-route.mjs';
+import { readFileSync, readdirSync } from 'node:fs';
+import { canonical } from './animation-budget-v2.mjs';
+import { boundedPath } from './motion-acceptance.mjs';
+import { EVIDENCE_DIR, REGISTRY_PATH, assertContract, assertRegistryIntegrity, committedRegistry, frozenEvaluationList,
+  identityHash, registrationCommitsOf, registryHistory, registryVerdict, runFrozenCommand,
+  scanReports } from './animation-budget-paired.mjs';
 
 const EVIDENCE = path.join(ROOT, '.planning/phases/07-movement-matched-and-action-safe-animation/evidence');
 export const REQUIRED_ASSERTIONS = [
@@ -209,7 +215,233 @@ export function requireStableGates(identities, evidence) {
   }
   return true;
 }
-export function requirePlan09(identities, summary, qualification) {
+// ---- plan 07-16 task 4: the plan 09 predicate, its two routes and what it reads -------------------------
+//
+// A plan 09 qualification record qualifies on one of two routes, named by `timingGate`:
+//
+//   frozen route (no `timingGate`, or `frozen-v2`): everything the predicate required before, and now also
+//     frozenEvaluations  every frozen evaluation at this source identity, numbered in time order, each with
+//                        { evaluation, of, reportSha256, capturedAt, exitCode, overrunCount }; the plan 07-13
+//                        entry also carries sameIdentity; exactly one entry carries putForward: true
+//     frozenDecision     { path, sha256 } of the owner's decision record, whose root scalars read
+//                        decision: accept-frozen-pass, decided_by: owner, evaluation: k, evaluations: n
+//   A frozen exit 0 on a later evaluation is never a pass by this tooling: only that record lets it qualify.
+//
+//   paired route (`paired-same-session`): the earlier checks except that applicableBudgetPass is whatever
+//   the frozen command reported, and
+//     candidate          the candidate arm report of a valid passed session, inside the evidence directory
+//     paired             { v2Sha256, decisionSha256, v2ReviewSha256, registry: { path, sha256 }, identity,
+//                          verdict, passed, failed, invalid, started, allQualifying, registrationCommits,
+//                          structuralV2Pass }, equal to what the registry verdict gives for this identity
+//
+// What a paired qualification means is stated in section 10 of 07-09-PAIRED-AMENDMENT-V2.md and nowhere
+// wider: it is never the original absolute limits, a frame rate, a device or a human acceptance.
+//
+// Both routes are keyed to the source identity: the hash of the identity set the capture records (every
+// `.js` under `src/`, the named art and tool files and the sampler). That set does not cover everything
+// the page loads: the two weapon FBX files, the installed packages and the Vite configuration are outside
+// it (re-review note N-04), so neither route sees a change confined to them.
+const SHA256 = /^[a-f0-9]{64}$/;
+const DECISION_RECORD = /^\.planning\/phases\/07-movement-matched-and-action-safe-animation\/[A-Za-z0-9._-]+\.md$/;
+const EVIDENCE_REPORT = /^\.planning\/phases\/07-movement-matched-and-action-safe-animation\/evidence\/[A-Za-z0-9._-]+\.json$/;
+const PLAN_0713_RESULT = EVIDENCE_DIR + '07-13-v2-requalification.json';
+const PLAN_0713_CANDIDATE = EVIDENCE_DIR + '07-13-cost-candidate.json';
+
+// What the predicate reads beyond its three arguments: files of the repository, the registry's git
+// history and the unchanged frozen command. Production callers pass no readers, so only these can
+// qualify plan 09; controls inject synthetic ones. No reader can supply the summary, the identities
+// or the qualification record. Exported so that the defaults themselves can be exercised.
+export const PLAN09_DISK_READERS = Object.freeze({
+  file: name => readFileSync(boundedPath(ROOT, name)),
+  evidenceFiles: () => readdirSync(path.join(ROOT, EVIDENCE_DIR), { withFileTypes: true })
+    .filter(entry => entry.isFile() && entry.name.endsWith('.json')).map(entry => EVIDENCE_DIR + entry.name).sort(),
+  committedRegistry: () => committedRegistry(),
+  registryHistory: () => registryHistory(),
+  // Every complete candidate report at this source identity that a scan of the phase evidence directory
+  // and of the capture cache finds, once per report hash, with the frozen command's result for it.
+  frozenEvaluations: identities => {
+    const identity = identityHash(identities);
+    const reports = scanReports().filter(entry => identityHash(entry.report.identities) === identity), results = {};
+    for (const entry of reports) results[entry.sha256] ??= runFrozenCommand(entry.path);
+    return frozenEvaluationList(reports, identity, results);
+  },
+  frozen: name => runFrozenCommand(name),
+});
+function readOrReject(readers, name, what) {
+  try { return Buffer.from(readers.file(name)); } catch { return assert.fail(what + ' is missing or cannot be read'); }
+}
+// One plain root scalar of a record whose frontmatter decides something, read by the rules the summary
+// status is read by and no laxer: a leading closed frontmatter, plain `key:` root lines only, the key
+// exactly once in any letter case, no indented child, a plain unquoted value. Anything else is null.
+function strictRootScalar(text, key) {
+  const frontmatter = text.replaceAll('\r\n', '\n').match(/^---\n([\s\S]*?)\n---(?:\n|$)/);
+  if (!frontmatter || /[\r\t\u0085\u2028\u2029]/.test(frontmatter[1])) return null;
+  const lines = frontmatter[1].split('\n');
+  const rootLines = lines.filter(line => line && !/^[ #]/.test(line));
+  if (!rootLines.every(line => /^[A-Za-z][A-Za-z0-9_-]*:(?: *| +[^\s"'[{&*!%@`].*)$/.test(line))) return null;
+  if (/^ /.test(lines.find(line => line.trim() && !/^ *#/.test(line)) ?? ' ')) return null;
+  const found = rootLines.filter(line => line.slice(0, line.indexOf(':')).toLowerCase() === key);
+  if (found.length !== 1) return null;
+  const child = lines.slice(lines.indexOf(found[0]) + 1).find(line => line.trim() && !/^ *#/.test(line));
+  if (/^ /.test(child ?? '')) return null;
+  return found[0].match(new RegExp('^' + key + ': ([A-Za-z0-9][A-Za-z0-9._-]*) *$'))?.[1] ?? null;
+}
+// The frozen command's result for one report, by the paired tool's own reading: a result line at exit 0,
+// or at exit 1 with numeric overruns only, for the report that was named. Null when it has none.
+function frozenFactsOf(bytes, run) {
+  try {
+    const report = JSON.parse(bytes.toString('utf8')), sha256 = hash(bytes);
+    return frozenEvaluationList([{ path: 'recorded candidate', sha256, report }], identityHash(report.identities), { [sha256]: run })[0] ?? null;
+  } catch { return null; }
+}
+// The registry file with its chain, the order of every session, every event committed and every
+// committed version a prefix of the current list. `recorded` is the path and hash a record names.
+function wholeRegistry(readers, recorded) {
+  let bytes, registry;
+  try { bytes = Buffer.from(readers.file(REGISTRY_PATH)); registry = JSON.parse(bytes.toString('utf8')); }
+  catch { assert.fail('The paired session registry is missing or cannot be read'); }
+  if (recorded !== undefined) assert.ok(recorded?.path === REGISTRY_PATH && recorded.sha256 === hash(bytes),
+    'Paired plan09 qualification registry hash differs from the registry file');
+  const versions = readers.registryHistory();
+  assertRegistryIntegrity({ working: registry, committed: readers.committedRegistry(), versions });
+  return { registry, versions };
+}
+// Every frozen evaluation at this source identity, in time order: what the scan finds, the plan 07-13
+// evaluation (which also says whether it was made at this identity), and the candidate arm of every
+// closed qualifying session the registry shows for it, each once per report hash.
+function expectedFrozenEvaluations(identities, registry, readers) {
+  const scanned = readers.frozenEvaluations(identities);
+  assert.ok(Array.isArray(scanned) && scanned.every(entry => SHA256.test(entry?.reportSha256 ?? ''))
+    && new Set(scanned.map(entry => entry.reportSha256)).size === scanned.length, 'The frozen evaluation scan gave no usable list');
+  const found = new Map(scanned.map(entry => [entry.reportSha256, { reportSha256: entry.reportSha256, capturedAt: entry.capturedAt ?? null,
+    exitCode: entry.exitCode ?? null, overrunCount: entry.overrunCount ?? null, scanned: true,
+    exitZero: entry.resultPrinted === true && entry.exitCode === 0 && entry.applicableBudgetPass === true,
+    paths: Array.isArray(entry.paths) ? [...entry.paths] : [] }]));
+  const recordBytes = readOrReject(readers, PLAN_0713_RESULT, 'The plan 07-13 frozen evaluation record');
+  const candidateBytes = readOrReject(readers, PLAN_0713_CANDIDATE, 'The plan 07-13 candidate report');
+  const reportSha256 = hash(candidateBytes);
+  let record, candidate, line;
+  try { record = JSON.parse(recordBytes.toString('utf8')); candidate = JSON.parse(candidateBytes.toString('utf8')); }
+  catch { record = candidate = null; }
+  assert.equal(record?.candidate?.sha256, reportSha256, 'The plan 07-13 candidate differs from its recorded evaluation');
+  try { line = JSON.parse(String(record.stdout).trim()); } catch { line = null; }
+  assert.ok(Number.isInteger(record.exitCode) && Array.isArray(line?.overruns) && line.candidateReportSha256 === reportSha256,
+    'The plan 07-13 frozen evaluation record holds no result');
+  const plan0713 = found.get(reportSha256) ?? { reportSha256, capturedAt: record.candidate.capturedAt ?? candidate?.capturedAt ?? null,
+    exitCode: record.exitCode, overrunCount: line.overruns.length, scanned: false, exitZero: false, paths: [PLAN_0713_CANDIDATE] };
+  plan0713.sameIdentity = canonical(candidate?.identities ?? null) === canonical(identities);
+  found.set(reportSha256, plan0713);
+  const identity = hash(canonical(identities));
+  for (const registered of registry.events) {
+    if (registered.type !== 'registered' || registered.kind !== 'qualifying' || registered.identity !== identity) continue;
+    const closed = registry.events.find(event => event.type === 'closed' && event.nonce === registered.nonce);
+    const report = closed?.reportHashes?.candidate;
+    if (SHA256.test(report ?? '') && !found.has(report)) found.set(report, { reportSha256: report, capturedAt: closed.at ?? null,
+      exitCode: closed.frozenExitCode ?? null, overrunCount: closed.frozenOverrunCount ?? null, scanned: false, exitZero: false, paths: [] });
+  }
+  const time = entry => Date.parse(entry.capturedAt) || 0;
+  const ordered = [...found.values()].sort((a, b) => time(a) - time(b) || (a.reportSha256 < b.reportSha256 ? -1 : 1));
+  return ordered.map((entry, index) => ({ evaluation: index + 1, of: ordered.length, ...entry }));
+}
+// The original frozen contract allowed one evaluation and one has already failed it, so a frozen exit 0
+// on a later capture is the owner's to judge: the record must list every evaluation, put exactly one
+// scanned exit 0 forward as evaluation k of n, and carry the owner's recorded acceptance of that one.
+function requireFrozenRoute(identities, qualification, readers) {
+  const named = qualification.frozenDecision, list = qualification.frozenEvaluations;
+  assert.ok(named && typeof named.path === 'string' && SHA256.test(named.sha256 ?? ''),
+    'Frozen-route plan09 qualification names no owner decision record');
+  assert.ok(Array.isArray(list) && list.length > 0, 'Frozen-route plan09 qualification has no frozen evaluation list');
+  assert.match(named.path, DECISION_RECORD, 'Owner decision record is not a record of this phase');
+  const decision = readOrReject(readers, named.path, 'The owner decision record');
+  assert.equal(hash(decision), named.sha256, 'Owner decision record differs from the hash in the qualification');
+  const text = decision.toString('utf8');
+  assert.equal(strictRootScalar(text, 'decision'), 'accept-frozen-pass', 'Owner decision is not accept-frozen-pass');
+  assert.equal(strictRootScalar(text, 'decided_by'), 'owner', 'Decision record is not decided by the owner');
+  const expected = expectedFrozenEvaluations(identities, wholeRegistry(readers).registry, readers);
+  const missing = expected.find(entry => !list.some(stated => stated?.reportSha256 === entry.reportSha256));
+  assert.ok(!missing, 'Frozen evaluation list omits an evaluation that the scan, the registry or the plan 07-13 evidence shows: '
+    + missing?.reportSha256);
+  assert.equal(list.length, expected.length, 'Frozen evaluation list holds an entry that no scan, registry event or plan 07-13 record shows');
+  for (const [index, entry] of expected.entries()) {
+    for (const field of ['evaluation', 'of', 'reportSha256', 'capturedAt', 'exitCode', 'overrunCount'])
+      assert.equal(list[index]?.[field], entry[field], `Frozen evaluation ${entry.evaluation} of ${entry.of} differs from what was found: ${field}`);
+    if (Object.hasOwn(entry, 'sameIdentity')) assert.equal(list[index].sameIdentity, entry.sameIdentity,
+      'Frozen evaluation list does not say whether the plan 07-13 evaluation was made at this source identity');
+  }
+  const forward = list.filter(entry => entry?.putForward === true);
+  assert.equal(forward.length, 1, 'Frozen-route plan09 qualification must put forward exactly one evaluation');
+  const chosen = expected[list.indexOf(forward[0])];
+  assert.ok(chosen.scanned, 'A frozen exit 0 on a report the scan does not find cannot be put forward');
+  assert.ok(chosen.exitZero, 'The evaluation put forward is not a frozen exit 0');
+  if (Object.hasOwn(qualification, 'candidate')) assert.ok(chosen.paths.includes(qualification.candidate),
+    'The recorded candidate is not the report of the evaluation put forward');
+  assert.equal(strictRootScalar(text, 'evaluation'), String(chosen.evaluation), 'Owner decision is for another evaluation');
+  assert.equal(strictRootScalar(text, 'evaluations'), String(chosen.of), 'Owner decision was made on another count of evaluations');
+}
+// A pass comes from the registry verdict under the pinned contract, never from one report: the record
+// must equal what the whole registry gives for the current source identity, and the unchanged frozen
+// command must again print a result line for the recorded candidate.
+function requirePairedRoute(identities, qualification, readers) {
+  const record = qualification.paired;
+  assert.ok(record && typeof record === 'object', 'Paired plan09 qualification has no paired block');
+  assert.equal(typeof qualification.applicableBudgetPass, 'boolean', 'Paired plan09 qualification must carry the frozen result as reported');
+  const pinned = assertContract(name => readOrReject(readers, name, 'A paired contract record'));
+  for (const name of ['v2Sha256', 'decisionSha256', 'v2ReviewSha256'])
+    assert.equal(record[name], pinned[name], 'Paired plan09 qualification names another contract: ' + name);
+  const identity = identityHash(identities);
+  assert.equal(record.identity, identity, 'Paired plan09 qualification is for another source identity');
+  const { registry, versions } = wholeRegistry(readers, record.registry ?? null);
+  const registrationCommits = registrationCommitsOf(registry, versions);
+  const verdict = registryVerdict(registry, identity, { registrationCommits });
+  assert.equal(verdict.verdict, 'pass', 'Paired registry verdict is not pass: ' + verdict.wording);
+  assert.equal(record.verdict, 'pass', 'Paired plan09 qualification does not record the verdict as pass');
+  for (const name of ['passed', 'failed', 'invalid', 'started'])
+    assert.equal(record[name], verdict[name], 'Paired plan09 qualification denominators differ from the registry: ' + name);
+  assert.deepEqual(record.allQualifying, verdict.allQualifying, 'Paired plan09 qualification does not list every qualifying session in the registry');
+  assert.deepEqual(record.registrationCommits, registrationCommits, 'Paired plan09 qualification does not name the commit of every registration');
+  // The verdict already refuses a registry that breaks these; they are restated so that this predicate
+  // holds them by itself: the calibration is closed, valid and passed, and every session counted ran
+  // with the tool bytes, the sampler identity and the browser version the calibration ran with.
+  const calibration = verdict.calibration;
+  assert.ok(calibration?.closed === true && calibration.valid === true && calibration.pass === true,
+    'The calibration for this source identity is not closed, valid and passed');
+  for (const session of verdict.sessions) {
+    const registered = registry.events.find(event => event.type === 'registered' && event.nonce === session.nonce);
+    assert.deepEqual(registered.toolHashes, calibration.toolHashes, 'A counted qualifying session ran with other tool bytes than its calibration: ' + session.nonce);
+    assert.equal(registered.samplerIdentity, calibration.samplerIdentity,
+      'A counted qualifying session ran with another sampler identity than its calibration: ' + session.nonce);
+    if (session.closed) assert.equal(session.browserVersion, calibration.browserVersion,
+      'A counted qualifying session closed with another browser version than its calibration: ' + session.nonce);
+  }
+  // The report of every closed qualifying session in the registry, of every source identity, is present
+  // in the evidence directory with the hash its closed event holds.
+  let evidence = null;
+  for (const group of verdict.allQualifying) for (const session of group.sessions) {
+    if (!session.closed) continue;
+    evidence ??= new Map(readers.evidenceFiles().map(name => {
+      const bytes = readOrReject(readers, name, 'An evidence file');
+      return [hash(bytes), bytes];
+    }));
+    const bytes = evidence.get(session.reportHashes?.session);
+    assert.ok(bytes, 'The session report of a qualifying session is not present with the hash in its closed event: ' + session.nonce);
+    let report;
+    try { report = JSON.parse(bytes.toString('utf8')); } catch { report = null; }
+    assert.ok(report?.kind === 'qualifying' && report.nonce === session.nonce && report.outcome === session.outcome,
+      'The session report found is not the report of its registry session: ' + session.nonce);
+  }
+  assert.equal(record.structuralV2Pass, true, 'Paired plan09 qualification has no structural V2 pass');
+  assert.ok(typeof qualification.candidate === 'string' && EVIDENCE_REPORT.test(qualification.candidate),
+    'Paired plan09 qualification names no candidate in the evidence directory');
+  const candidate = readOrReject(readers, qualification.candidate, 'The recorded candidate'), candidateSha256 = hash(candidate);
+  assert.ok(verdict.sessions.some(session => session.outcome === 'passed' && session.reportHashes?.candidate === candidateSha256),
+    'The recorded candidate is not the candidate arm of a valid passed session of this source identity');
+  const frozen = frozenFactsOf(candidate, readers.frozen(qualification.candidate));
+  assert.ok(frozen?.resultPrinted === true, 'The frozen command printed no result line for the recorded candidate');
+  assert.equal(identityHash(JSON.parse(candidate.toString('utf8')).identities), identity, 'The recorded candidate is of another source identity');
+  assert.equal(qualification.applicableBudgetPass, frozen.applicableBudgetPass,
+    'Recorded applicableBudgetPass differs from what the frozen command reports for the recorded candidate');
+}
+export function requirePlan09(identities, summary, qualification, readers = PLAN09_DISK_READERS) {
   // Accept the canonical root scalar only, never historical body text or a
   // nested YAML status. Ambiguous/noncanonical status syntax fails closed.
   const frontmatter = summary.replaceAll('\r\n', '\n').match(/^---\n([\s\S]*?)\n---(?:\n|$)/);
@@ -228,7 +460,11 @@ export function requirePlan09(identities, summary, qualification) {
   verifyRuntimeDependencies(identities);
   assert.equal(qualification?.complete, true, 'Missing complete plan09 qualification');
   assert.deepEqual(qualification.identities, identities, 'Stale plan09 qualification');
-  assert.equal(qualification.applicableBudgetPass, true, 'Plan09 fixed-V2 acceptance is unqualified');
+  // The route. On the paired route the frozen result stays whatever the frozen command reported and is
+  // not required to pass; on every other record the fixed limits must have been met, as before.
+  const timingGate = Object.hasOwn(qualification, 'timingGate') ? qualification.timingGate : 'frozen-v2';
+  const pairedRoute = timingGate === 'paired-same-session';
+  if (!pairedRoute) assert.equal(qualification.applicableBudgetPass, true, 'Plan09 fixed-V2 acceptance is unqualified');
   for (const name of REQUIRED_ASSERTIONS) {
     const result = qualification.assertions?.find(a => a.id === name);
     assert.equal(result?.executed, true, 'Unrun required browser assertion: ' + name);
@@ -236,9 +472,50 @@ export function requirePlan09(identities, summary, qualification) {
     assert.equal(result?.exitCode, 0, 'Nonpassing required browser assertion: ' + name);
     assert.match(result?.logSha256 || '', /^[a-f0-9]{64}$/, 'Missing assertion log identity');
   }
+  // What plan 07-16 added is evaluated last, after every check above, so that a record rejected by an
+  // earlier check is rejected by that check and no reader is consulted for it.
+  assert.ok(pairedRoute || timingGate === 'frozen-v2', 'Unknown plan09 timing gate');
+  if (pairedRoute) requirePairedRoute(identities, qualification, readers);
+  else requireFrozenRoute(identities, qualification, readers);
   return true;
 }
 
+const PAIRED_MEANING = 'On the paired route, passed is the registry verdict of the paired same-session gate together with a printed '
+  + 'result line of the unchanged frozen command for the recorded candidate. It covers what section 10 of 07-09-PAIRED-AMENDMENT-V2.md '
+  + 'states and nothing wider: it never means the original absolute limits were met (the frozen result is '
+  + 'frozenApplicableBudgetPass, as reported), a frame rate, a device or a human acceptance.';
+// The applicable timing gate for the recorded candidate, from the captured run of the unchanged frozen
+// command. Frozen route: exit 0 with every limit met, as before. Paired route: the frozen command must
+// first have printed a result line for that candidate (exit 0, or exit 1 with numeric overruns only; a
+// failure on stderr alone is structural and nothing then passes), and only then is the paired verdict
+// asked, for the candidate's own source identity; `passed` needs both. The frozen result is recorded as
+// reported and is never rewritten.
+export async function actualV2Outcome({ qualification, frozenRun, readCandidate, runVerdict }) {
+  let value;
+  try { value = JSON.parse(frozenRun.stdout.trim()); } catch { value = null; }
+  const timingGate = qualification && Object.hasOwn(qualification, 'timingGate') ? qualification.timingGate : 'frozen-v2';
+  if (timingGate === 'frozen-v2') return { result: value, passed: frozenRun.exitCode === 0 && value?.applicableBudgetPass === true };
+  if (timingGate !== 'paired-same-session')
+    return { result: value, passed: false, timingGate: timingGate ?? null, blocker: 'Unknown plan09 timing gate' };
+  const outcome = { result: value, passed: false, timingGate, structuralV2Pass: false, frozenApplicableBudgetPass: null,
+    frozenOverrunCount: null, pairedVerdict: null, pairedWording: null, pairedVerdictExitCode: null, certification: false,
+    meaning: PAIRED_MEANING };
+  let candidate;
+  try { candidate = Buffer.from(await readCandidate()); } catch { candidate = null; }
+  const frozen = candidate && frozenFactsOf(candidate, frozenRun);
+  if (frozen?.resultPrinted !== true) return { ...outcome, blocker: 'The frozen command printed no result line for the recorded candidate' };
+  Object.assign(outcome, { structuralV2Pass: true, frozenApplicableBudgetPass: frozen.applicableBudgetPass, frozenOverrunCount: frozen.overrunCount });
+  const identity = identityHash(JSON.parse(candidate.toString('utf8')).identities);
+  if (qualification.paired?.identity !== identity)
+    return { ...outcome, blocker: 'The paired qualification is for another source identity than the recorded candidate' };
+  const run = await runVerdict(identity);
+  let verdict;
+  try { verdict = JSON.parse(String(run?.stdout ?? '').trim()); } catch { verdict = null; }
+  Object.assign(outcome, { pairedVerdict: verdict?.verdict ?? null, pairedWording: verdict?.wording ?? null,
+    pairedVerdictExitCode: Number.isInteger(run?.exitCode) ? run.exitCode : null });
+  outcome.passed = run?.exitCode === 0 && verdict?.verdict === 'pass' && verdict.identity === identity;
+  return outcome.passed ? outcome : { ...outcome, blocker: 'The paired registry verdict is not pass' };
+}
 export async function executeV2(directory) {
   const qualification = await fs.readFile(path.join(EVIDENCE, '07-09-qualification.json'), 'utf8')
     .then(JSON.parse).catch(error => { if (error.code === 'ENOENT') return null; throw error; });
@@ -248,21 +525,24 @@ export async function executeV2(directory) {
   const args = ['tools/art/animation-budget-v2.mjs', 'verify', '--budget',
     path.join(EVIDENCE, '07-budget-view-v2.json'), '--candidate', candidatePath];
   const start = Date.now();
-  const result = await promisify(execFile)(process.execPath, args,
+  const execute = commandArguments => promisify(execFile)(process.execPath, commandArguments,
     { cwd: ROOT, windowsHide: true, timeout: 120000, maxBuffer: 4000000 }).then(
     r => ({ exitCode: 0, stdout: r.stdout, stderr: r.stderr }),
     e => ({ exitCode: Number.isInteger(e.code) ? e.code : null, stdout: e.stdout || '',
       stderr: e.stderr || String(e), timedOut: !!e.killed }));
+  const result = await execute(args);
+  // For a paired qualification: the unchanged frozen command above first, then the paired verdict command.
+  let verdictRun = null;
+  const { result: value, passed, ...pairedFacts } = await actualV2Outcome({ qualification, frozenRun: result,
+    readCandidate: () => fs.readFile(candidatePath),
+    runVerdict: async identity => (verdictRun = await execute(['tools/art/animation-budget-paired.mjs', 'verdict',
+      '--registry', path.join(ROOT, REGISTRY_PATH), '--identity', identity])) });
   const log = path.join(directory, 'v2-current-source.log');
-  await fs.writeFile(log, result.stdout + '\n' + result.stderr);
-  let value;
-  try { value = JSON.parse(result.stdout.trim()); } catch { value = null; }
+  await fs.writeFile(log, result.stdout + '\n' + result.stderr
+    + (verdictRun ? '\n' + verdictRun.stdout + '\n' + verdictRun.stderr : ''));
   return { command: [process.execPath, ...args].join(' '), ...result, durationMs: Date.now() - start,
-    result: value, log: relative(log), logSha256: hash(await fs.readFile(log)),
-    passed: result.exitCode === 0 && value?.applicableBudgetPass === true };
+    result: value, log: relative(log), logSha256: hash(await fs.readFile(log)), passed, ...pairedFacts };
 }
-// ---- plan 07-16 task 4, RED: exported with a neutral shape so each control fails on its own assertion ----
-export async function actualV2Outcome() { return {}; }
 const relative = filename => path.relative(ROOT, filename).replaceAll('\\', '/');
 const reloadSeconds = { m4: 1.8, p90: 2, awp: 2.5, pistol: 1.2 };
 
