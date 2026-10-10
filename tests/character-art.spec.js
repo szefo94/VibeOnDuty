@@ -967,7 +967,11 @@ test('art slice: base-prefixed production build resolves the painted assets', as
     await new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('Owned prefix preview did not start')), 15000);
       server.once('error', reject);
-      server.stdout.on('data', (data) => { if (data.toString().includes('Local:')) { clearTimeout(timer); resolve(); } });
+      let banner = '';
+      server.stdout.on('data', (data) => {
+        banner += data.toString().replace(/\u001b\[[0-9;]*m/g, '');
+        if (banner.includes('Local:')) { clearTimeout(timer); resolve(); }
+      });
       server.once('exit', (code) => { if (code) { clearTimeout(timer); reject(new Error('Preview exited')); } });
     });
     const base = `http://127.0.0.1:${port}/art-prefix/`;
