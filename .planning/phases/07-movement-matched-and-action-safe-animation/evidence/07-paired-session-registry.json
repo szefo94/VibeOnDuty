@@ -118,6 +118,98 @@
       "seq": 3,
       "at": "2026-10-10T13:30:25.251Z",
       "prevHash": "38e11ab8d9258bdd9e6ec84ae236571691eeae847f50ad16741971992c50dd88"
+    },
+    {
+      "type": "registered",
+      "kind": "calibration",
+      "countable": false,
+      "nonce": "23e8adde9e65a967182bada166dcc98f",
+      "commit": "579cae5e69b1fa29244e698fab6005784bf196da",
+      "identity": "c1b062729e765c0086c4c9c283170cf2da3e65044ff4eeacd66937899cbc2c57",
+      "host": {
+        "at": "2026-10-10T20:34:11.714Z",
+        "hostname": "DESKTOP-NUH2KOI",
+        "platform": "win32",
+        "release": "10.0.19045",
+        "cpuModel": "AMD Ryzen 5 5600 6-Core Processor",
+        "logicalCpus": 12,
+        "powerPlan": "Balanced",
+        "powerPlanGuid": "381b4222-f694-41f0-9685-ff5bb260df2e",
+        "sampledBusyFraction": 0.009,
+        "freeMemMiB": 21371,
+        "totalMemMiB": 32672,
+        "heaviestProcesses": [
+          {
+            "name": "claude.exe",
+            "processes": 16,
+            "workingSetMiB": 2069
+          },
+          {
+            "name": "Memory Compression",
+            "processes": 1,
+            "workingSetMiB": 878
+          },
+          {
+            "name": "svchost.exe",
+            "processes": 92,
+            "workingSetMiB": 793
+          },
+          {
+            "name": "steamwebhelper.exe",
+            "processes": 8,
+            "workingSetMiB": 668
+          },
+          {
+            "name": "Discord.exe",
+            "processes": 6,
+            "workingSetMiB": 504
+          },
+          {
+            "name": "MsMpEng.exe",
+            "processes": 1,
+            "workingSetMiB": 419
+          },
+          {
+            "name": "msedgewebview2.exe",
+            "processes": 6,
+            "workingSetMiB": 277
+          },
+          {
+            "name": "node.exe",
+            "processes": 1,
+            "workingSetMiB": 213
+          },
+          {
+            "name": "Unity Hub.exe",
+            "processes": 7,
+            "workingSetMiB": 212
+          },
+          {
+            "name": "SearchApp.exe",
+            "processes": 2,
+            "workingSetMiB": 204
+          },
+          {
+            "name": "Dell.TechHub.Instrumentation.SubAgent.exe",
+            "processes": 1,
+            "workingSetMiB": 199
+          },
+          {
+            "name": "powershell.exe",
+            "processes": 5,
+            "workingSetMiB": 175
+          }
+        ]
+      },
+      "toolHashes": {
+        "tools/art/animation-budget-paired.mjs": "584bd4ca774b31365e50ef00ef6c49612109936afc732a81babae0f84fbf9b4e",
+        "tools/art/review.mjs": "fad42d2e490debc5de47c8405ba17dddf4546f31e22697bbd1eb7a2f4fc68265",
+        "tools/art/animation-capture.mjs": "20884feee9f1e121198fd3d32e6aec18640dfb46dc248218d1b9f5f4cd78bd32"
+      },
+      "samplerIdentity": "2720e51eed272c40fe9e12ff561e4d63072f9b7548b5c270a71ec0ae527ab83f",
+      "seq": 4,
+      "at": "2026-10-10T20:34:11.716Z",
+      "prevHash": "551336e9be8b58e77ca78034cb9e1a606950a6685f635a477d90fbc0c4be7a01"
     }
   ]
 }
