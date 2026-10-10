@@ -1178,6 +1178,126 @@
       ],
       "attempt": 2,
       "role": "One repeat of the single spec file that held the failing case, allowed once by the orchestrator for a failure in setup that looked like an infrastructure flake. It failed in the same way. It is a second attempt beside the first, not a replacement for it, and its passes are not added to the first run's."
+    },
+    {
+      "id": "e2e-character-art-prefix-case-attempt3-narrow",
+      "command": "npm run test:e2e -- tests/character-art.spec.js -g \"base-prefixed production build\" --workers=1",
+      "exitCode": 0,
+      "counts": {
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "flaky": 0,
+        "tests": 1
+      },
+      "endedAt": "2026-10-10T04:55:43Z",
+      "durationMs": 9900,
+      "logPath": ".planning/research/.cache/07-21/narrow-attempt3.log",
+      "logSha256": "e8865fe0d3f32ebf8104dce498863bb663a338793a657ef952dc6bca0ab783bb",
+      "mainJsSha256AtRun": "f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393",
+      "mainJsIsRegisteredCorrected": true,
+      "headAtRun": "358ddee9ab72206b9eb3f0dfde0a366645cd93dc",
+      "countsBasis": "The Playwright list-reporter summary line in the log (\"1 passed (9.9s)\"); the duration is that line. No retry is configured.",
+      "invocations": 1,
+      "workers": 1,
+      "specFiles": 1,
+      "specs": [
+        "tests/character-art.spec.js"
+      ],
+      "guardSelectorEnv": "unset",
+      "attempt": 3,
+      "role": "Narrow confirmation of the readiness-check fix, run once before the fix was committed (the working-tree edit equals commit 358ddee). It is not part of the seven-spec run and its pass is not added to any other attempt. It does not replace the two failed attempts above.",
+      "specChange": "tests/character-art.spec.js changed between attempt 2 and this run: the line server.stdout.on('data', ...includes('Local:')...) in the base-prefixed production build case was replaced by an accumulating banner string with ANSI colour sequences (/\u001b[[0-9;]*m/g) stripped before testing banner.includes('Local:'). Committed as 358ddee. Nothing else in the file changed."
+    },
+    {
+      "id": "e2e-seven-spec-attempt3",
+      "command": "npm run test:e2e -- tests/smoke.spec.js tests/animation-regressions.spec.js tests/character-art.spec.js tests/animation-review.spec.js tests/action-lifecycle.spec.js tests/offline-multiplayer-regressions.spec.js tests/pause-menu-pointer-lock.spec.js --workers=1",
+      "exitCode": 0,
+      "counts": {
+        "passed": 86,
+        "failed": 0,
+        "skipped": 0,
+        "flaky": 0,
+        "tests": 86
+      },
+      "startedAt": "2026-10-10T04:55:52Z",
+      "endedAt": "2026-10-10T05:12:44Z",
+      "durationMs": 1012000,
+      "logPath": ".planning/research/.cache/07-21/full-attempt3.log",
+      "logSha256": "de188aae205216909286a114dac3bff459af883339b3f275dcba854bd409a2ac",
+      "mainJsSha256AtRun": "f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393",
+      "mainJsIsRegisteredCorrected": true,
+      "headAtRun": "358ddee9ab72206b9eb3f0dfde0a366645cd93dc",
+      "countsBasis": "The Playwright list-reporter summary of the log (\"86 passed (16.8m)\") and the per-file counts of its result lines; no JSON reporter was used on this attempt. durationMs is the wall-clock span of the invocation (the reporter says 16.8m). No retry is configured, so a case cannot be reported flaky. The exit code is from the marker file full-attempt3.exit.",
+      "invocations": 1,
+      "workers": 1,
+      "specFiles": 7,
+      "specs": [
+        "tests/smoke.spec.js",
+        "tests/animation-regressions.spec.js",
+        "tests/character-art.spec.js",
+        "tests/animation-review.spec.js",
+        "tests/action-lifecycle.spec.js",
+        "tests/offline-multiplayer-regressions.spec.js",
+        "tests/pause-menu-pointer-lock.spec.js"
+      ],
+      "perFile": {
+        "tests/action-lifecycle.spec.js": {
+          "tests": 22,
+          "passed": 22,
+          "failed": 0,
+          "skipped": 0,
+          "flaky": 0
+        },
+        "tests/animation-regressions.spec.js": {
+          "tests": 6,
+          "passed": 6,
+          "failed": 0,
+          "skipped": 0,
+          "flaky": 0
+        },
+        "tests/animation-review.spec.js": {
+          "tests": 10,
+          "passed": 10,
+          "failed": 0,
+          "skipped": 0,
+          "flaky": 0
+        },
+        "tests/character-art.spec.js": {
+          "tests": 28,
+          "passed": 28,
+          "failed": 0,
+          "skipped": 0,
+          "flaky": 0
+        },
+        "tests/offline-multiplayer-regressions.spec.js": {
+          "tests": 1,
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "flaky": 0
+        },
+        "tests/pause-menu-pointer-lock.spec.js": {
+          "tests": 11,
+          "passed": 11,
+          "failed": 0,
+          "skipped": 0,
+          "flaky": 0
+        },
+        "tests/smoke.spec.js": {
+          "tests": 8,
+          "passed": 8,
+          "failed": 0,
+          "skipped": 0,
+          "flaky": 0
+        }
+      },
+      "guardSelectorEnv": "unset",
+      "colourEnvOverride": "none",
+      "specSha256": "4ef92d70a04b2ac04d3e0ce9b06d8968a48df875403cad5615789e21b7486177",
+      "attempt": 3,
+      "specChange": "tests/character-art.spec.js changed between attempt 2 and this attempt (commit 358ddee): the plain Local: readiness test on the vite preview stdout in the base-prefixed production build case now strips ANSI colour sequences from an accumulated banner before testing. No other file changed.",
+      "role": "Third attempt of the seven-spec run, after the readiness-check fix. Attempts 1 (e2e) and 2 (e2e-character-art-rerun) remain recorded as failed."
     }
   ],
   "reviewFollowUp": {
