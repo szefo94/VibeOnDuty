@@ -296,6 +296,17 @@ Phase 6 art ownership and reproducibility:
   recovery contexts, nine labeled previews and partial three-tier online media.
   Natural death/respawn, online routes and current09/full-suite gates stay open.
 
+- Plan 09 qualification (`requirePlan09` in `tools/art/animation-capture.mjs`) has two routes
+  selected by the record's `timingGate`: the frozen route (`frozen-v2` or absent) needs a
+  hash-bound owner decision record `accept-frozen-pass` bound to evaluation k of n; the paired
+  route (`paired-same-session`, `tools/art/animation-budget-paired.mjs`) reads the append-only
+  committed registry `evidence/07-paired-session-registry.json`: a calibration, then at most 3
+  qualifying sessions, each closed session re-verified from its reports, host equal to the
+  frozen device. Test readers are injectable only through the fourth argument; production call
+  sites pass three. The three tool files are hash-pinned by
+  `07-16-PAIRED-IMPLEMENTATION-REVIEW.md` and must not change before the calibration.
+  Nothing has qualified yet: the registry holds only the smoke session.
+
 - `tools/art/sources/soldier.blend`, `character-params.json` and `build_soldier.py`
   own the fitted anatomical human, original equipment and packed paint; `slice.blend`
   and `build_slice.py` own the shared M4/scoped Greek Columns atlas. `pipeline.mjs`
