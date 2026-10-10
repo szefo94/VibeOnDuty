@@ -1,0 +1,458 @@
+{
+  "schemaVersion": 1,
+  "plan": "07-13",
+  "recordedAt": "2026-10-10T07:25:21.247Z",
+  "sourceCommit": "8d47e0023ba4419d31dcb62f8d38d438f290a66d",
+  "candidate": {
+    "path": ".planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-13-cost-candidate.json",
+    "sha256": "5803ffe08e584488268dbd020e59ce19d5f4794d32625e29f0534238ba9894b5",
+    "bytes": 137506,
+    "copiedFrom": ".planning/research/.cache/06-art/animation-candidate/07-09-candidate.json",
+    "copiedFromSha256": "5803ffe08e584488268dbd020e59ce19d5f4794d32625e29f0534238ba9894b5",
+    "byteIdenticalCopy": true,
+    "capturedAt": "2026-10-10T07:22:59.763Z",
+    "complete": true,
+    "sampleCount": 12,
+    "profiles": [
+      "1/low/1",
+      "1/low/8",
+      "1/medium/1",
+      "1/medium/8",
+      "1/high/1",
+      "1/high/8",
+      "2/low/1",
+      "2/low/8",
+      "2/medium/1",
+      "2/medium/8",
+      "2/high/1",
+      "2/high/8"
+    ],
+    "timedFramesPerProfile": [
+      214
+    ],
+    "durationMs": 950188,
+    "device": {
+      "hostname": "DESKTOP-NUH2KOI",
+      "os": "Windows_NT",
+      "release": "10.0.19045",
+      "arch": "x64",
+      "cpu": "AMD Ryzen 5 5600 6-Core Processor              ",
+      "node": "v24.19.0",
+      "browser": "147.0.7727.15",
+      "rendererClass": "software"
+    },
+    "pixelDirectory": ".planning/research/.cache/06-art/animation-candidate/capture-1791616029475-14988"
+  },
+  "command": "node tools/art/animation-budget-v2.mjs verify --budget .planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-budget-view-v2.json --candidate .planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-13-cost-candidate.json",
+  "commandRunAt": "2026-10-10T07:23:15Z",
+  "exitCode": 1,
+  "stdout": "{\"contractVersion\":\"source-eye-view-v2\",\"referenceReportSha256\":\"6d5fd41136766209445b9694dfb0ffdf269d4a1887cffadba868dcad8a8b6aef\",\"budgetSha256\":\"6f0bf775eda9061b601023d5890a50248668a3bccbec48eeaeb7f84e7a64ba34\",\"producerContractSha256\":\"035432f721cb0661a82c288d3b5e92ce4d631a48da5bc6fbb73022897960f5e0\",\"original\":{\"baselineSha256\":\"177686a0759ca5b7dc4311e2a6e4bdba15b6c9a844546d51ad1690c00b1b0b20\",\"budgetSha256\":\"66722a272115cdc1145cf1af97a1cb583389d7ea5adb75a4534445c15a14e1ff\"},\"runtimeDependencies\":{\"manifestPath\":\"tools/art/motion-manifest.json\",\"manifestSha256\":\"2b5712506a3c9bb9d76f6f9823bd4f07bea0c283613c0f2ea3a21c125d4e60a5\",\"provenancePath\":\"tools/art/provenance.json\",\"provenanceSha256\":\"7b8b9b5cfb2f86c2d0890dbc7042c1d010a9196ac6fed75b21a54318e4c451f6\",\"acceptedManifestSha256\":\"af139b82f372c8b66c994a519fbe5a685cae23dc5b5153c8607578ef02f296c5\",\"motion\":{\"revision\":\"07-CR02-directional-crouch\",\"tuple\":{\"public/models/enemy.glb\":\"2a6bbab2034b01b1722f35e8afbdac2948978226d780fd43eb9d6df117196e4e\",\"tools/art/sources/motion.blend\":\"3d1702ccb3915a14f3647e3db9f08ea14fef25ac9eccc696057b401a6471c463\",\"tools/art/motion-manifest.json\":\"2b5712506a3c9bb9d76f6f9823bd4f07bea0c283613c0f2ea3a21c125d4e60a5\"},\"acceptanceSha256\":\"8f3c519d8fd87a5c1efcf8add162e30be52257534ec7b960b9c2f4c3d88fe155\",\"candidateProofSha256\":\"a940064e30d5cdab323459b7828f63e225b1e0a8cbc379d08dd3e7ca56f64f6e\"}},\"candidateReportSha256\":\"5803ffe08e584488268dbd020e59ce19d5f4794d32625e29f0534238ba9894b5\",\"applicableBudgetPass\":false,\"legacyBudgetPass\":false,\"legacyCameraWorkloadComparable\":false,\"overruns\":[{\"run\":1,\"tier\":\"low\",\"actorCount\":1,\"component\":\"renderMs\",\"stat\":\"p95\",\"actualMs\":1,\"upperMs\":0.900000000372529},{\"run\":1,\"tier\":\"low\",\"actorCount\":8,\"component\":\"frameIntervalMs\",\"stat\":\"p95\",\"actualMs\":370.20000000298023,\"upperMs\":370.00000000186265},{\"run\":1,\"tier\":\"medium\",\"actorCount\":1,\"component\":\"frameIntervalMs\",\"stat\":\"median\",\"actualMs\":244.59999999403954,\"upperMs\":243},{\"run\":1,\"tier\":\"medium\",\"actorCount\":1,\"component\":\"frameIntervalMs\",\"stat\":\"p95\",\"actualMs\":264,\"upperMs\":261.1000000014901},{\"run\":1,\"tier\":\"medium\",\"actorCount\":8,\"component\":\"frameIntervalMs\",\"stat\":\"median\",\"actualMs\":423.90000000596046,\"upperMs\":410.20000000298023},{\"run\":1,\"tier\":\"medium\",\"actorCount\":8,\"component\":\"frameIntervalMs\",\"stat\":\"p95\",\"actualMs\":459.79999999701977,\"upperMs\":434.6000000005588},{\"run\":1,\"tier\":\"medium\",\"actorCount\":8,\"component\":\"correctionMs\",\"stat\":\"p95\",\"actualMs\":3.7999999970197678,\"upperMs\":3.6000000033527613},{\"run\":1,\"tier\":\"medium\",\"actorCount\":8,\"component\":\"coreCorrectionMs\",\"stat\":\"p95\",\"actualMs\":2.7000000327825546,\"upperMs\":2.499999998137355},{\"run\":1,\"tier\":\"medium\",\"actorCount\":8,\"component\":\"viewMs\",\"stat\":\"p95\",\"actualMs\":0.6000000089406967,\"upperMs\":0.5},{\"run\":1,\"tier\":\"high\",\"actorCount\":1,\"component\":\"frameIntervalMs\",\"stat\":\"median\",\"actualMs\":250.5,\"upperMs\":240.2000000020489},{\"run\":1,\"tier\":\"high\",\"actorCount\":1,\"component\":\"frameIntervalMs\",\"stat\":\"p95\",\"actualMs\":277.29999999701977,\"upperMs\":264.90000000037253},{\"run\":1,\"tier\":\"high\",\"actorCount\":1,\"component\":\"renderMs\",\"stat\":\"p95\",\"actualMs\":2.5,\"upperMs\":2.099999999627471},{\"run\":1,\"tier\":\"high\",\"actorCount\":8,\"component\":\"frameIntervalMs\",\"stat\":\"median\",\"actualMs\":424.29999999701977,\"upperMs\":411.2000000011176},{\"run\":1,\"tier\":\"high\",\"actorCount\":8,\"component\":\"frameIntervalMs\",\"stat\":\"p95\",\"actualMs\":466.29999999701977,\"upperMs\":435.69999999925494},{\"run\":1,\"tier\":\"high\",\"actorCount\":8,\"component\":\"correctionMs\",\"stat\":\"p95\",\"actualMs\":4.000000014901161,\"upperMs\":3.5},{\"run\":1,\"tier\":\"high\",\"actorCount\":8,\"component\":\"coreCorrectionMs\",\"stat\":\"p95\",\"actualMs\":2.999999985098839,\"upperMs\":2.7999999951571226},{\"run\":1,\"tier\":\"high\",\"actorCount\":8,\"component\":\"viewMs\",\"stat\":\"p95\",\"actualMs\":0.5999999940395355,\"upperMs\":0.5},{\"run\":2,\"tier\":\"low\",\"actorCount\":1,\"component\":\"renderMs\",\"stat\":\"p95\",\"actualMs\":1,\"upperMs\":0.900000000372529},{\"run\":2,\"tier\":\"low\",\"actorCount\":8,\"component\":\"frameIntervalMs\",\"stat\":\"median\",\"actualMs\":367.8999999910593,\"upperMs\":360.69999999925494},{\"run\":2,\"tier\":\"low\",\"actorCount\":8,\"component\":\"frameIntervalMs\",\"stat\":\"p95\",\"actualMs\":400.5,\"upperMs\":370.00000000186265},{\"run\":2,\"tier\":\"low\",\"actorCount\":8,\"component\":\"correctionMs\",\"stat\":\"p95\",\"actualMs\":4.299999997019768,\"upperMs\":4.000000006519258},{\"run\":2,\"tier\":\"low\",\"actorCount\":8,\"component\":\"viewMs\",\"stat\":\"p95\",\"actualMs\":0.7000000029802322,\"upperMs\":0.6000000014901161},{\"run\":2,\"tier\":\"medium\",\"actorCount\":1,\"component\":\"frameIntervalMs\",\"stat\":\"median\",\"actualMs\":256.5,\"upperMs\":243},{\"run\":2,\"tier\":\"medium\",\"actorCount\":1,\"component\":\"frameIntervalMs\",\"stat\":\"p95\",\"actualMs\":294.79999999701977,\"upperMs\":261.1000000014901},{\"run\":2,\"tier\":\"medium\",\"actorCount\":1,\"component\":\"correctionMs\",\"stat\":\"p95\",\"actualMs\":1.2999999970197678,\"upperMs\":1.2000000020489097},{\"run\":2,\"tier\":\"medium\",\"actorCount\":1,\"component\":\"renderMs\",\"stat\":\"median\",\"actualMs\":1.7999999970197678,\"upperMs\":1.700000001117587},{\"run\":2,\"tier\":\"medium\",\"actorCount\":1,\"component\":\"renderMs\",\"stat\":\"p95\",\"actualMs\":2.8999999910593033,\"upperMs\":2.400000002235174},{\"run\":2,\"tier\":\"medium\",\"actorCount\":8,\"component\":\"frameIntervalMs\",\"stat\":\"median\",\"actualMs\":428.5,\"upperMs\":410.20000000298023},{\"run\":2,\"tier\":\"medium\",\"actorCount\":8,\"component\":\"frameIntervalMs\",\"stat\":\"p95\",\"actualMs\":454.70000000298023,\"upperMs\":434.6000000005588},{\"run\":2,\"tier\":\"medium\",\"actorCount\":8,\"component\":\"correctionMs\",\"stat\":\"p95\",\"actualMs\":3.699999988079071,\"upperMs\":3.6000000033527613},{\"run\":2,\"tier\":\"medium\",\"actorCount\":8,\"component\":\"coreCorrectionMs\",\"stat\":\"p95\",\"actualMs\":2.69999997317791,\"upperMs\":2.499999998137355},{\"run\":2,\"tier\":\"high\",\"actorCount\":1,\"component\":\"frameIntervalMs\",\"stat\":\"median\",\"actualMs\":252.20000000298023,\"upperMs\":240.2000000020489},{\"run\":2,\"tier\":\"high\",\"actorCount\":1,\"component\":\"frameIntervalMs\",\"stat\":\"p95\",\"actualMs\":273.70000000298023,\"upperMs\":264.90000000037253},{\"run\":2,\"tier\":\"high\",\"actorCount\":1,\"component\":\"renderMs\",\"stat\":\"p95\",\"actualMs\":2.5,\"upperMs\":2.099999999627471},{\"run\":2,\"tier\":\"high\",\"actorCount\":8,\"component\":\"frameIntervalMs\",\"stat\":\"median\",\"actualMs\":425.3999999910593,\"upperMs\":411.2000000011176},{\"run\":2,\"tier\":\"high\",\"actorCount\":8,\"component\":\"frameIntervalMs\",\"stat\":\"p95\",\"actualMs\":458.3999999910593,\"upperMs\":435.69999999925494},{\"run\":2,\"tier\":\"high\",\"actorCount\":8,\"component\":\"inertiaMs\",\"stat\":\"p95\",\"actualMs\":0.29999998211860657,\"upperMs\":0.2000000011175871},{\"run\":2,\"tier\":\"high\",\"actorCount\":8,\"component\":\"correctionMs\",\"stat\":\"p95\",\"actualMs\":4.19999997317791,\"upperMs\":3.5},{\"run\":2,\"tier\":\"high\",\"actorCount\":8,\"component\":\"coreCorrectionMs\",\"stat\":\"p95\",\"actualMs\":3.1000000089406967,\"upperMs\":2.7999999951571226},{\"run\":2,\"tier\":\"high\",\"actorCount\":8,\"component\":\"viewMs\",\"stat\":\"p95\",\"actualMs\":0.5999999940395355,\"upperMs\":0.5}],\"reductions\":[{\"run\":1,\"tier\":\"low\",\"actorCount\":8,\"resource\":\"textures\",\"before\":367,\"after\":17},{\"run\":1,\"tier\":\"medium\",\"actorCount\":8,\"resource\":\"textures\",\"before\":368,\"after\":18},{\"run\":1,\"tier\":\"high\",\"actorCount\":8,\"resource\":\"textures\",\"before\":368,\"after\":18},{\"run\":2,\"tier\":\"low\",\"actorCount\":8,\"resource\":\"textures\",\"before\":367,\"after\":17},{\"run\":2,\"tier\":\"medium\",\"actorCount\":8,\"resource\":\"textures\",\"before\":368,\"after\":18},{\"run\":2,\"tier\":\"high\",\"actorCount\":8,\"resource\":\"textures\",\"before\":368,\"after\":18}],\"certification\":false}\n",
+  "stderr": "",
+  "structural": "pass",
+  "structuralMessage": null,
+  "structuralDetail": {
+    "meaning": "pass = stdout holds the result JSON, so the command reached the end of verifyCandidate and the pixel check without throwing; every structural predicate before the numeric comparison held",
+    "viewSourceCallbacksInCandidate": [
+      3
+    ],
+    "viewSourceCallbacksFrozen": [
+      3
+    ],
+    "stderrMessagesSeen": []
+  },
+  "applicableBudgetPass": false,
+  "overrunCount": 40,
+  "statisticsEvaluated": 192,
+  "overrunsByComponent": {
+    "renderMs": 6,
+    "frameIntervalMs": 19,
+    "correctionMs": 6,
+    "coreCorrectionMs": 4,
+    "viewMs": 4,
+    "inertiaMs": 1
+  },
+  "overrunsByProfile": {
+    "1/low/1": 1,
+    "1/low/8": 1,
+    "1/medium/1": 2,
+    "1/medium/8": 5,
+    "1/high/1": 3,
+    "1/high/8": 5,
+    "2/low/1": 1,
+    "2/low/8": 4,
+    "2/medium/1": 5,
+    "2/medium/8": 4,
+    "2/high/1": 3,
+    "2/high/8": 6
+  },
+  "overrunsByStat": {
+    "p95": 30,
+    "median": 10
+  },
+  "overrunRatioActualToLimit": {
+    "min": 1.0005405405435583,
+    "max": 1.49999990221113,
+    "zeroLimitOverruns": 0
+  },
+  "frameInterval": [
+    {
+      "run": 1,
+      "tier": "low",
+      "actorCount": 1,
+      "medianMs": 209.5,
+      "medianUpperMs": 244.70000000018626,
+      "p95Ms": 230.70000000298023,
+      "p95UpperMs": 261.40000000130385
+    },
+    {
+      "run": 1,
+      "tier": "low",
+      "actorCount": 8,
+      "medianMs": 345.79999999701977,
+      "medianUpperMs": 360.69999999925494,
+      "p95Ms": 370.20000000298023,
+      "p95UpperMs": 370.00000000186265
+    },
+    {
+      "run": 1,
+      "tier": "medium",
+      "actorCount": 1,
+      "medianMs": 244.59999999403954,
+      "medianUpperMs": 243,
+      "p95Ms": 264,
+      "p95UpperMs": 261.1000000014901
+    },
+    {
+      "run": 1,
+      "tier": "medium",
+      "actorCount": 8,
+      "medianMs": 423.90000000596046,
+      "medianUpperMs": 410.20000000298023,
+      "p95Ms": 459.79999999701977,
+      "p95UpperMs": 434.6000000005588
+    },
+    {
+      "run": 1,
+      "tier": "high",
+      "actorCount": 1,
+      "medianMs": 250.5,
+      "medianUpperMs": 240.2000000020489,
+      "p95Ms": 277.29999999701977,
+      "p95UpperMs": 264.90000000037253
+    },
+    {
+      "run": 1,
+      "tier": "high",
+      "actorCount": 8,
+      "medianMs": 424.29999999701977,
+      "medianUpperMs": 411.2000000011176,
+      "p95Ms": 466.29999999701977,
+      "p95UpperMs": 435.69999999925494
+    },
+    {
+      "run": 2,
+      "tier": "low",
+      "actorCount": 1,
+      "medianMs": 237.40000000596046,
+      "medianUpperMs": 244.70000000018626,
+      "p95Ms": 258.40000000596046,
+      "p95UpperMs": 261.40000000130385
+    },
+    {
+      "run": 2,
+      "tier": "low",
+      "actorCount": 8,
+      "medianMs": 367.8999999910593,
+      "medianUpperMs": 360.69999999925494,
+      "p95Ms": 400.5,
+      "p95UpperMs": 370.00000000186265
+    },
+    {
+      "run": 2,
+      "tier": "medium",
+      "actorCount": 1,
+      "medianMs": 256.5,
+      "medianUpperMs": 243,
+      "p95Ms": 294.79999999701977,
+      "p95UpperMs": 261.1000000014901
+    },
+    {
+      "run": 2,
+      "tier": "medium",
+      "actorCount": 8,
+      "medianMs": 428.5,
+      "medianUpperMs": 410.20000000298023,
+      "p95Ms": 454.70000000298023,
+      "p95UpperMs": 434.6000000005588
+    },
+    {
+      "run": 2,
+      "tier": "high",
+      "actorCount": 1,
+      "medianMs": 252.20000000298023,
+      "medianUpperMs": 240.2000000020489,
+      "p95Ms": 273.70000000298023,
+      "p95UpperMs": 264.90000000037253
+    },
+    {
+      "run": 2,
+      "tier": "high",
+      "actorCount": 8,
+      "medianMs": 425.3999999910593,
+      "medianUpperMs": 411.2000000011176,
+      "p95Ms": 458.3999999910593,
+      "p95UpperMs": 435.69999999925494
+    }
+  ],
+  "routing": "numeric-only-fail",
+  "certification": false,
+  "capture": {
+    "count": 1,
+    "command": "node tools/art/review.mjs --animation-candidate",
+    "startedAt": "2026-10-10T07:07:03Z",
+    "endedAt": "2026-10-10T07:22:59Z",
+    "exitCode": 0,
+    "finalStdoutLine": "{\"report\":\"C:\\\\Programowanie\\\\VibeOnDuty\\\\.planning\\\\research\\\\.cache\\\\06-art\\\\animation-candidate\\\\07-09-candidate.json\",\"complete\":true}",
+    "stdoutSha256": "b6cd9b70bd86c855c2514a7030c0a5b839c0bbd47c8527f1090f008491e383e4",
+    "stdoutBytes": 11934,
+    "stderr": "",
+    "sourceChangedDuringCapture": false,
+    "logsKeptAt": ".planning/research/.cache/07-13-requalification/ (gitignored)",
+    "previousCacheReport": {
+      "note": "the producer overwrites the cache report; the earlier one (source 2e2f90f, 2026-10-09T13:47:23.794Z) was copied aside first",
+      "sha256": "c884065f9152a639b7cf2ca8159e05799d75dcc0707fda987c27270fec45c6fa",
+      "keptAt": ".planning/research/.cache/06-art/animation-candidate/07-09-candidate.before-07-13.c884065f.json (gitignored)"
+    },
+    "rerun": "none; no second capture was made"
+  },
+  "mainJsIdentityCheck": {
+    "reason": "Review findings D-06 and F-08 of 07-21-SOURCE-EXCEPTION-REVIEW.md: the gate accepts src/main.js at the frozen hash or at the registered corrected hash, so the gate result alone does not show the fix is in the measured build",
+    "frozenReferenceSha256": "c762044675702688313ce81c7812153bdb30bc95951aa1995e69337414a882d3",
+    "registeredCorrectedSha256": "f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393",
+    "candidateIdentity": "f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393",
+    "onDiskSha256AfterRun": "f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393",
+    "candidateEqualsRegisteredCorrected": true,
+    "candidateEqualsFrozenReference": false,
+    "onDiskEqualsCandidate": true,
+    "result": "the measured build contains the 07-21 pause-menu fix"
+  },
+  "identityPreflight": {
+    "note": "read-only comparison of on-disk bytes with the 127 frozen reference file identities, made before the capture; the gate itself is the authority",
+    "total": 127,
+    "equalToFrozen": 119,
+    "differing": [
+      {
+        "name": "public/models/enemy.glb",
+        "mutableRuntimeOwner": false,
+        "exactRegisteredException": true
+      },
+      {
+        "name": "src/builders/characterResources.js",
+        "mutableRuntimeOwner": true,
+        "exactRegisteredException": false
+      },
+      {
+        "name": "src/builders/enemyAnimations.js",
+        "mutableRuntimeOwner": true,
+        "exactRegisteredException": false
+      },
+      {
+        "name": "src/builders/enemyGLTF.js",
+        "mutableRuntimeOwner": true,
+        "exactRegisteredException": false
+      },
+      {
+        "name": "src/builders/enemyGLTF.test.js",
+        "mutableRuntimeOwner": false,
+        "exactRegisteredException": true
+      },
+      {
+        "name": "src/builders/firstPersonRig.js",
+        "mutableRuntimeOwner": true,
+        "exactRegisteredException": false
+      },
+      {
+        "name": "src/builders/weaponHandling.js",
+        "mutableRuntimeOwner": true,
+        "exactRegisteredException": false
+      },
+      {
+        "name": "src/main.js",
+        "mutableRuntimeOwner": false,
+        "exactRegisteredException": true
+      }
+    ],
+    "wouldReject": []
+  },
+  "pureControls": {
+    "command": "node --test tools/art/animation-budget-v2.test.mjs tools/art/motion-promotion.test.mjs",
+    "exitCode": 0,
+    "tests": 81,
+    "pass": 81,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "runBeforeCapture": true,
+    "logSha256": "d8f799f19af2b56dd3b3a05e77946f2273b937c5e86c2fa02996e03fe1b6df52"
+  },
+  "frozenBytesVerify": {
+    "command": "node tools/art/frozen-bytes.mjs verify",
+    "before": "26 verified, 0 mismatched",
+    "after": "26 verified, 0 mismatched"
+  },
+  "goldenHashes": {
+    "before": {
+      "07-baseline.json": "177686a0759ca5b7dc4311e2a6e4bdba15b6c9a844546d51ad1690c00b1b0b20",
+      "07-budget.json": "66722a272115cdc1145cf1af97a1cb583389d7ea5adb75a4534445c15a14e1ff",
+      "07-09-view-reference-v2.json": "6d5fd41136766209445b9694dfb0ffdf269d4a1887cffadba868dcad8a8b6aef",
+      "07-budget-view-v2.json": "6f0bf775eda9061b601023d5890a50248668a3bccbec48eeaeb7f84e7a64ba34"
+    },
+    "after": {
+      "07-baseline.json": "177686a0759ca5b7dc4311e2a6e4bdba15b6c9a844546d51ad1690c00b1b0b20",
+      "07-budget.json": "66722a272115cdc1145cf1af97a1cb583389d7ea5adb75a4534445c15a14e1ff",
+      "07-09-view-reference-v2.json": "6d5fd41136766209445b9694dfb0ffdf269d4a1887cffadba868dcad8a8b6aef",
+      "07-budget-view-v2.json": "6f0bf775eda9061b601023d5890a50248668a3bccbec48eeaeb7f84e7a64ba34"
+    },
+    "unchanged": true,
+    "expected": {
+      "07-baseline.json": "177686a0759ca5b7dc4311e2a6e4bdba15b6c9a844546d51ad1690c00b1b0b20",
+      "07-budget.json": "66722a272115cdc1145cf1af97a1cb583389d7ea5adb75a4534445c15a14e1ff",
+      "07-09-view-reference-v2.json": "6d5fd41136766209445b9694dfb0ffdf269d4a1887cffadba868dcad8a8b6aef",
+      "07-budget-view-v2.json": "6f0bf775eda9061b601023d5890a50248668a3bccbec48eeaeb7f84e7a64ba34"
+    }
+  },
+  "protectedToolAndPageHashes": {
+    "note": "hashed before the pure controls and again after the gate run; identical both times",
+    "src/main.js": "f768954fff3a55b6b53347e062ff4e06de551ea00e921b461b1ac5a4748bc393",
+    "tools/art/animation-budget-v2.mjs": "65ed6f129f77e4098c32f9b227435a804a483087ee983014199d4834dd09e777",
+    "tools/art/review.mjs": "70cdb56ccd2503ca8627669785490dc7c91ac3cf688ea86e4889e4ddd4a16629",
+    "tools/art/motion-acceptance.mjs": "b1bea59b49d6ef999ebb832df1aacde9cf7fb544cfcf93b4fe8613042e767e82",
+    "index.html": "1f89a54e697b4f2bf2bf5b47ff15d09782514d327c0caf7f81e39cae430f6e77",
+    "style.css": "3cf82a6907773d93b90ec980492ec9f0563cd5a804afb82eb97da4e126fa2332"
+  },
+  "host": {
+    "recordedLike": "07-09-HOST-DRIFT.md: CPU, power plan, visibly running heavy applications, sampled CPU load",
+    "hostname": "DESKTOP-NUH2KOI",
+    "cpu": "AMD Ryzen 5 5600 6-Core Processor (6 cores, 12 logical, 3501 MHz nominal)",
+    "memory": "32672 MB total, 16358 MB free before the capture",
+    "os": "Windows 10 Pro 10.0.19045",
+    "powerPlan": {
+      "name": "Zrównoważony (Balanced)",
+      "guid": "381b4222-f694-41f0-9685-ff5bb260df2e",
+      "sameBeforeAndAfter": true,
+      "changedForThisRun": false,
+      "note": "The 2026-10-09 full recapture in 07-09-HOST-DRIFT.md was made under the High performance plan; this one was not. The plan was left as found."
+    },
+    "cpuBusyPercent": {
+      "source": "Win32_PerfFormattedData_PerfOS_Processor _Total, ten samples one second apart",
+      "beforeCapture": {
+        "at": "2026-10-10T07:06Z",
+        "samples": [
+          23,
+          35,
+          43,
+          13,
+          12,
+          6,
+          7,
+          10,
+          16,
+          6
+        ]
+      },
+      "afterCapture": {
+        "at": "2026-10-10T07:23:40Z",
+        "samples": [
+          14,
+          7,
+          6,
+          4,
+          1,
+          5,
+          7,
+          0,
+          7,
+          6
+        ]
+      },
+      "duringCapture": "not sampled, so that nothing else ran beside the capture; the only concurrent activity started by this plan was an idle wait loop on the exit marker"
+    },
+    "runningApplications": {
+      "at": "2026-10-10T07:06Z",
+      "byWorkingSetMB": [
+        {
+          "name": "brave",
+          "processes": 34,
+          "workingSetMB": 3141
+        },
+        {
+          "name": "claude",
+          "processes": 18,
+          "workingSetMB": 2598
+        },
+        {
+          "name": "Code (VS Code)",
+          "processes": 21,
+          "workingSetMB": 1837
+        },
+        {
+          "name": "Discord",
+          "processes": 6,
+          "workingSetMB": 596
+        },
+        {
+          "name": "MsMpEng (Defender)",
+          "processes": 1,
+          "workingSetMB": 335
+        },
+        {
+          "name": "Unity Hub",
+          "processes": 7,
+          "workingSetMB": 230
+        }
+      ],
+      "alsoPresent": [
+        "codex.exe x2",
+        "codex-windows-sandbox-service.exe x1"
+      ],
+      "topCpuSecondsOverFiveSeconds": [
+        {
+          "name": "claude",
+          "pid": 28364,
+          "cpuSeconds": 3
+        },
+        {
+          "name": "claude",
+          "pid": 27560,
+          "cpuSeconds": 2.11
+        },
+        {
+          "name": "powershell (this sampler)",
+          "pid": 5984,
+          "cpuSeconds": 0.95
+        },
+        {
+          "name": "Code",
+          "pid": 30156,
+          "cpuSeconds": 0.67
+        },
+        {
+          "name": "Code",
+          "pid": 26252,
+          "cpuSeconds": 0.36
+        },
+        {
+          "name": "claude",
+          "pid": 2604,
+          "cpuSeconds": 0.3
+        }
+      ],
+      "otherInteractiveSessions": "Eighteen claude processes (this session's among them) and two codex processes were running, so other agent sessions may have been active on this desktop during the capture. None was stopped, paused or otherwise disturbed.",
+      "ownedProcessesBefore": "no node, chrome, chromium, headless_shell or blender process; no listener on ports 5173 or 2567",
+      "ownedProcessesAfter": "no node, chrome, chromium, headless_shell or blender process left behind"
+    },
+    "weight": "Information for reading the result against host drift. Not a gate, not an excuse for an overrun, and not a controlled measurement."
+  },
+  "sequencing": "Run by owner decision before the collector tracer gap closed: plans 07-12, 07-20 and 07-22 are partial (last tracer failure: natural death did not occur within 120 simulation seconds). No tracer is treated as passed and this result does not depend on one; tools/art/animation-capture.mjs is not in the frozen identity set.",
+  "limits": "One capture on a shared desktop under the Balanced power plan with other applications running; software renderer (SwiftShader). Not a device or frame-rate certification and not a plan 09 qualification. A numeric overrun is recorded as a failure of the frozen gate."
+}
