@@ -10,6 +10,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as paired from './animation-budget-paired.mjs';
+// Read only: the frozen tool's own `qualify` and lineage, to check an arm report against them.
+import { candidateLineage, qualify } from './animation-budget-v2.mjs';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const HEX = (character, length = 64) => character.repeat(length);
@@ -1357,4 +1359,908 @@ test('the verify command line refuses the recorded smoke session: a smoke is nev
   assert.notEqual(run.status, 0);
   assert.match(run.stderr, /smoke is never evaluated/);
   assert.equal(run.stdout.trim(), '');
+});
+
+// =============================================================================================
+// Task 07-16-03: registry integrity and the session runner
+// =============================================================================================
+
+const TOOLS = Object.fromEntries(paired.TOOL_PATHS.map(name => [name, HEX('d')]));
+const SAMPLER = HEX('e'), BROWSER = frozenReference.device.browser;
+const sessionEntry = (kind, nonce, overrides = {}) => ({ kind, nonce, commit: COMMIT, identity: IDENTITY, host: { note: 'synthetic' },
+  toolHashes: { ...TOOLS }, samplerIdentity: SAMPLER, ...overrides });
+const reportHashesOf = nonce => ({ session: sha256('session ' + nonce), reference: sha256('reference ' + nonce),
+  candidate: sha256('candidate ' + nonce) });
+// What the tool hands to closeSession: a smoke is 'loaded' or 'structural-failure', the other kinds 'pass', 'fail' or 'invalid'.
+function outcomeOf(kind, result, nonce) {
+  if (kind === 'smoke') return { structuralFailure: result === 'structural-failure', browserVersion: BROWSER,
+    reportHashes: { session: reportHashesOf(nonce).session } };
+  return { valid: result !== 'invalid', pass: result === 'invalid' ? null : result === 'pass', settings: settings(), browserVersion: BROWSER,
+    reportHashes: reportHashesOf(nonce), ...(kind === 'qualifying' ? { frozenExitCode: 1, frozenOverrunCount: 40 } : {}) };
+}
+// One session driven through the registry as far as `result` says: 'registered', 'started', or closed with an outcome.
+function driven(registry, kind, nonce, result, now, overrides) {
+  let next = paired.registerSession(registry, sessionEntry(kind, nonce, overrides), now);
+  if (result === 'registered') return next;
+  const registration = next.events.find(event => event.nonce === nonce && event.type === 'registered');
+  next = paired.appendEvent(next, { type: 'started', kind, nonce,
+    registrationHash: registration ? paired.eventHash(registration) : HEX('0') }, now);
+  if (result === 'started') return next;
+  return paired.closeSession(next, nonce, outcomeOf(kind, result, nonce), now);
+}
+// A registry holding a passed calibration and the given qualifying sessions, for one source identity.
+function registryOf(results, { identity = IDENTITY, base = paired.emptyRegistry(), now = clock(), first = 30 } = {}) {
+  let registry = driven(base, 'calibration', NONCE(first), 'pass', now, { identity });
+  results.forEach((result, index) => { registry = driven(registry, 'qualifying', NONCE(first + 1 + index), result, now, { identity }); });
+  return registry;
+}
+const verdictOf = results => paired.registryVerdict(registryOf(results), IDENTITY);
+const counts = verdict => [verdict.started, verdict.passed, verdict.failed, verdict.invalid, verdict.verdict];
+const unchained = event => Object.fromEntries(Object.entries(event).filter(([key]) => key !== 'seq' && key !== 'prevHash'));
+
+// ---- registry rules ---------------------------------------------------------------------------------
+
+test('unregistered session: a session that is not in the registry counts for nothing', () => {
+  const registry = registryOf(['fail']);
+  const verdict = paired.registryVerdict(registry, IDENTITY);
+  assert.deepEqual(counts(verdict), [1, 0, 1, 0, 'undecided']);
+  // A passing report under a nonce the registry does not hold has nowhere to enter the verdict.
+  assert.equal(verdict.allQualifying.flatMap(group => group.sessions).some(session => session.nonce === NONCE(99)), false);
+  assert.throws(() => paired.closeSession(registry, NONCE(99), outcomeOf('qualifying', 'pass', NONCE(99)), clock()), /not in the registry/);
+  // An event written by hand for a nonce that was never registered makes the verdict refuse.
+  const stray = paired.appendEvent(registry, { type: 'closed', kind: 'qualifying', nonce: NONCE(99),
+    ...outcomeOf('qualifying', 'pass', NONCE(99)) }, clock());
+  assert.throws(() => paired.registryVerdict(stray, IDENTITY), /no registration/);
+  // Sessions of another source identity do not count for this one.
+  const other = registryOf(['pass'], { identity: OTHER_IDENTITY, base: registry, first: 50 });
+  assert.equal(paired.registryVerdict(other, IDENTITY).verdict, 'undecided');
+  assert.equal(paired.registryVerdict(other, OTHER_IDENTITY).verdict, 'pass');
+});
+
+test('qualifying without calibration refused: a qualifying session needs a closed, valid and passed calibration for the same source identity', () => {
+  const now = clock();
+  const register = registry => paired.registerSession(registry, sessionEntry('qualifying', NONCE(40)), now);
+  assert.throws(() => register(paired.emptyRegistry()), /Qualifying session refused: no calibration/);
+  for (const [state, pattern] of [['registered', /never closed/], ['started', /never closed/], ['invalid', /is invalid/], ['fail', /failed/]])
+    assert.throws(() => register(driven(paired.emptyRegistry(), 'calibration', NONCE(30), state, now)), pattern, state);
+  // A passed calibration of another source identity gates nothing here.
+  assert.throws(() => register(driven(paired.emptyRegistry(), 'calibration', NONCE(30), 'pass', now, { identity: OTHER_IDENTITY })),
+    /no calibration/);
+  const event = register(driven(paired.emptyRegistry(), 'calibration', NONCE(30), 'pass', now)).events.at(-1);
+  assert.deepEqual([event.type, event.kind, event.nonce, event.identity, event.countable, event.seq],
+    ['registered', 'qualifying', NONCE(40), IDENTITY, true, 4]);
+});
+
+test('second calibration refused: exactly one calibration per source identity, including after one that crashed', () => {
+  const now = clock();
+  const event = paired.registerSession(paired.emptyRegistry(), sessionEntry('calibration', NONCE(30)), now).events.at(-1);
+  assert.deepEqual([event?.type, event?.kind, event?.nonce, event?.commit, event?.identity, event?.samplerIdentity, event?.countable],
+    ['registered', 'calibration', NONCE(30), COMMIT, IDENTITY, SAMPLER, false]);
+  assert.deepEqual(event.toolHashes, TOOLS);
+  assert.deepEqual(event.host, { note: 'synthetic' });
+  for (const state of ['registered', 'started', 'invalid', 'fail', 'pass']) {
+    const registry = driven(paired.emptyRegistry(), 'calibration', NONCE(30), state, clock());
+    assert.throws(() => paired.registerSession(registry, sessionEntry('calibration', NONCE(31)), now), /exactly one calibration/, state);
+    // Another source identity has its own calibration.
+    assert.equal(paired.registerSession(registry, sessionEntry('calibration', NONCE(31), { identity: OTHER_IDENTITY }), now)
+      .events.at(-1).identity, OTHER_IDENTITY, state);
+  }
+});
+
+test('fourth qualifying refused: at most 3 qualifying sessions per source identity whatever their outcome, and smoke and calibration entries never count toward the cap', () => {
+  const now = clock();
+  let registry = driven(paired.emptyRegistry(), 'smoke', NONCE(1), 'loaded', now);
+  registry = registryOf(['pass', 'registered', 'invalid'], { base: registry, now });
+  assert.deepEqual(paired.countableSessions(registry, IDENTITY).map(event => event.nonce), [NONCE(31), NONCE(32), NONCE(33)]);
+  assert.deepEqual(registry.events.filter(event => event.type === 'registered').map(event => [event.kind, event.countable]),
+    [['smoke', false], ['calibration', false], ['qualifying', true], ['qualifying', true], ['qualifying', true]]);
+  assert.throws(() => paired.registerSession(registry, sessionEntry('qualifying', NONCE(34)), now), /fourth is refused/);
+  assert.equal(paired.registryVerdict(registry, IDENTITY).started, 3);
+  // The cap is per source identity.
+  const other = registryOf(['fail'], { identity: OTHER_IDENTITY, base: registry, now, first: 50 });
+  assert.equal(paired.countableSessions(other, OTHER_IDENTITY).length, 1);
+  assert.equal(paired.registryVerdict(other, OTHER_IDENTITY).started, 1);
+  assert.equal(paired.registryVerdict(other, IDENTITY).started, 3);
+});
+
+test('registered-never-closed counts as invalid: a session registered and never closed still counts toward the cap and the verdict', () => {
+  for (const state of ['registered', 'started']) {
+    const one = verdictOf([state]);
+    assert.deepEqual(counts(one), [1, 0, 0, 1, 'undecided'], state);
+    assert.deepEqual([one.sessions[0].outcome, one.sessions[0].closed], ['invalid', false], state);
+    assert.deepEqual(counts(verdictOf(['fail', state])), [2, 0, 1, 1, 'failed'], state);
+  }
+  // It uses one of the three: after two never-closed sessions a single session is left.
+  const registry = registryOf(['registered', 'started', 'pass']);
+  assert.throws(() => paired.registerSession(registry, sessionEntry('qualifying', NONCE(39)), clock()), /fourth is refused/);
+  assert.deepEqual(counts(paired.registryVerdict(registry, IDENTITY)), [3, 1, 0, 2, 'pass']);
+});
+
+test('changed tool hash refuses a qualifying registration: a calibration applies only to the tool bytes it ran with', () => {
+  const now = clock(), registry = registryOf([], { now });
+  for (const name of paired.TOOL_PATHS)
+    assert.throws(() => paired.registerSession(registry, sessionEntry('qualifying', NONCE(40), { toolHashes: { ...TOOLS, [name]: HEX('9') } }), now),
+      error => /Qualifying session refused/.test(error.message) && error.message.includes(name) && /paired route/.test(error.message), name);
+  assert.equal(paired.registerSession(registry, sessionEntry('qualifying', NONCE(40)), now).events.at(-1).kind, 'qualifying');
+});
+
+test('changed sampler identity refuses it: a qualifying registration with another sampler identity than the calibration\'s is refused', () => {
+  const now = clock(), registry = registryOf([], { now });
+  assert.throws(() => paired.registerSession(registry, sessionEntry('qualifying', NONCE(40), { samplerIdentity: HEX('9') }), now),
+    error => /Qualifying session refused/.test(error.message) && /sampler identity/.test(error.message) && /paired route/.test(error.message));
+  assert.equal(paired.registerSession(registry, sessionEntry('qualifying', NONCE(40)), now).events.at(-1).samplerIdentity, SAMPLER);
+});
+
+test('changed browser version refuses a run: a qualifying capture is refused when the browser version differs from the calibration\'s closed event', () => {
+  const now = clock(), registry = registryOf(['registered'], { now });
+  const registered = registry.events.find(event => event.type === 'registered' && event.kind === 'qualifying');
+  const facts = { registry, registered, toolHashes: { ...TOOLS }, samplerIdentity: SAMPLER, browserVersion: BROWSER };
+  assert.equal(paired.assertRunScope(facts), true);
+  assert.throws(() => paired.assertRunScope({ ...facts, browserVersion: '148.0.0.0' }),
+    error => /Run refused/.test(error.message) && /browser version/.test(error.message) && /paired route/.test(error.message));
+  assert.throws(() => paired.assertRunScope({ ...facts, browserVersion: undefined }), /browser version/);
+  // The tool bytes and the sampler are still those of the registration, and so of the calibration.
+  for (const name of paired.TOOL_PATHS)
+    assert.throws(() => paired.assertRunScope({ ...facts, toolHashes: { ...TOOLS, [name]: HEX('9') } }),
+      error => /Run refused/.test(error.message) && error.message.includes(name), name);
+  assert.throws(() => paired.assertRunScope({ ...facts, samplerIdentity: HEX('9') }), /sampler identity/);
+  // A calibration has no earlier browser version to match; its own registered tool bytes still bind its run.
+  const alone = driven(paired.emptyRegistry(), 'calibration', NONCE(30), 'registered', now), calibration = alone.events.at(-1);
+  const own = { registry: alone, registered: calibration, toolHashes: { ...TOOLS }, samplerIdentity: SAMPLER, browserVersion: '148.0.0.0' };
+  assert.equal(paired.assertRunScope(own), true);
+  assert.throws(() => paired.assertRunScope({ ...own, toolHashes: { ...TOOLS, [paired.TOOL_PATHS[0]]: HEX('9') } }), /changed since/);
+});
+
+// ---- chain and history --------------------------------------------------------------------------------
+
+test('removed event: registryVerdict refuses a registry with a removed event', () => {
+  const registry = registryOf(['pass']);
+  assert.equal(paired.registryVerdict(registry, IDENTITY).verdict, 'pass');
+  const removed = structuredClone(registry); removed.events.splice(3, 1);
+  assert.throws(() => paired.registryVerdict(removed, IDENTITY), /Registry chain broken at sequence 4/);
+  // Renumbering what is left does not repair the hash link.
+  removed.events.forEach((event, index) => { event.seq = index + 1; });
+  assert.throws(() => paired.registryVerdict(removed, IDENTITY), /Registry chain broken at sequence 4/);
+});
+
+test('reordered events: registryVerdict refuses a registry with two swapped events', () => {
+  const registry = registryOf(['fail', 'pass']);
+  assert.equal(paired.registryVerdict(registry, IDENTITY).verdict, 'undecided');
+  const swapped = structuredClone(registry);
+  [swapped.events[5], swapped.events[8]] = [swapped.events[8], swapped.events[5]];
+  assert.throws(() => paired.registryVerdict(swapped, IDENTITY), /Registry chain broken at sequence 6/);
+});
+
+test('edited event: registryVerdict refuses a registry with an edited event', () => {
+  const registry = registryOf(['fail', 'pass']);
+  assert.equal(paired.registryVerdict(registry, IDENTITY).failed, 1);
+  // The first qualifying session's close rewritten from failed to passed.
+  const edited = structuredClone(registry); edited.events[5].pass = true;
+  assert.throws(() => paired.registryVerdict(edited, IDENTITY), /Registry chain broken at sequence 7/);
+});
+
+test('historyPrefixCheck passes only when every committed version is a prefix of the current list, event hash by event hash', () => {
+  const full = registryOf(['pass']);
+  const versions = [1, 3, 4, 6].map((length, index) => ({ commit: HEX(String(index + 1), 40),
+    registry: { ...full, events: full.events.slice(0, length) } }));
+  assert.deepEqual(paired.historyPrefixCheck(full, versions), { versions: 4, everyVersionIsPrefix: true });
+  assert.deepEqual(paired.historyPrefixCheck(full, []), { versions: 0, everyVersionIsPrefix: true });
+  // A committed version in which one event differs is not a prefix, even though it is shorter.
+  const edited = structuredClone(versions); edited[1].registry.events[2].pass = false;
+  assert.throws(() => paired.historyPrefixCheck(full, edited),
+    error => /not a prefix/.test(error.message) && error.message.includes(edited[1].commit) && /sequence 3/.test(error.message));
+});
+
+test('dropped tail committed: a registry whose newest events were dropped and committed is refused', () => {
+  const full = registryOf(['fail']), truncated = { ...full, events: full.events.slice(0, 3) };
+  // The chain of the truncated registry is intact: only the history shows the three dropped events.
+  assert.equal(paired.verifyChain(truncated).events, 3);
+  assert.equal(full.events.length, 6);
+  const versions = [{ commit: HEX('1', 40), registry: full }, { commit: HEX('2', 40), registry: truncated }];
+  assert.throws(() => paired.historyPrefixCheck(truncated, versions),
+    error => /events were dropped/.test(error.message) && error.message.includes(HEX('1', 40)));
+  assert.throws(() => paired.assertRegistryIntegrity({ working: truncated, committed: truncated, versions }), /events were dropped/);
+  // The same history is a prefix history of the full registry, in either order.
+  assert.equal(paired.assertRegistryIntegrity({ working: full, committed: full, versions: [versions[1], versions[0]] })
+    .everyCommittedVersionIsPrefix, true);
+});
+
+test('shallow history: a shallow or unreadable registry history is refused', () => {
+  const full = registryOf(['pass']), HEAD_COMMITS = [HEX('1', 40), HEX('2', 40)];
+  const reader = overrides => ({ isShallow: () => 'false', listCommits: () => ({ head: [...HEAD_COMMITS], all: [...HEAD_COMMITS].reverse() }),
+    showVersion: commit => JSON.stringify({ ...full, events: full.events.slice(0, commit === HEAD_COMMITS[0] ? 3 : 6) }), ...overrides });
+  const versions = paired.registryHistory(reader());
+  assert.deepEqual(versions.map(version => [version.commit, version.registry.events.length, version.onHead]),
+    [[HEAD_COMMITS[0], 3, true], [HEAD_COMMITS[1], 6, true]]);
+  assert.throws(() => paired.registryHistory(reader({ isShallow: () => 'true' })), /Registry history is shallow/);
+  assert.throws(() => paired.registryHistory(reader({ isShallow: () => { throw Error('not a git repository'); } })), /cannot be read/);
+  assert.throws(() => paired.registryHistory(reader({ listCommits: () => { throw Error('bad object'); } })), /cannot be read/);
+  assert.throws(() => paired.registryHistory(reader({ showVersion: () => { throw Error('path does not exist'); } })),
+    error => /cannot be read/.test(error.message) && error.message.includes(HEAD_COMMITS[0]));
+  for (const text of ['not json', '{"events": 3}', 'null'])
+    assert.throws(() => paired.registryHistory(reader({ showVersion: () => text })), /cannot be read/, text);
+  // A version that only another ref holds is read too.
+  const side = HEX('3', 40);
+  assert.deepEqual(paired.registryHistory(reader({ listCommits: () => ({ head: [...HEAD_COMMITS], all: [side, ...HEAD_COMMITS] }) }))
+    .map(version => [version.commit, version.onHead]), [[HEAD_COMMITS[0], true], [HEAD_COMMITS[1], true], [side, false]]);
+  // A version that cannot be read passes no prefix check, and committed events with no version to read have no history.
+  assert.throws(() => paired.historyPrefixCheck(full, [{ commit: HEAD_COMMITS[0], registry: null }]), /cannot be read/);
+  assert.throws(() => paired.historyPrefixCheck(full, null), /cannot be read/);
+  assert.throws(() => paired.assertRegistryIntegrity({ working: full, committed: full, versions: [] }), /cannot be read/);
+});
+
+test('uncommitted event: an event not in the committed registry is refused', () => {
+  const full = registryOf(['pass']), committed = { ...full, events: full.events.slice(0, 5) };
+  const history = registry => [{ commit: HEX('1', 40), registry }];
+  assert.throws(() => paired.assertRegistryIntegrity({ working: full, committed, versions: history(committed) }),
+    /not in the committed registry: sequence 6/);
+  assert.throws(() => paired.assertRegistryIntegrity({ working: full, committed: null, versions: [] }), /not in the committed registry/);
+  // The newest event edited in the working tree: the chain cannot show it, the committed registry does.
+  const edited = structuredClone(full); edited.events[5].pass = false;
+  assert.equal(paired.verifyChain(edited).events, 6);
+  assert.throws(() => paired.assertRegistryIntegrity({ working: edited, committed: full, versions: history(full) }),
+    /not in the committed registry: sequence 6/);
+  // A committed registry that holds more events than the working one is refused as well.
+  assert.throws(() => paired.assertRegistryIntegrity({ working: committed, committed: full, versions: history(committed) }),
+    /committed registry holds more events/);
+  const summary = paired.assertRegistryIntegrity({ working: full, committed: full, versions: history(full) });
+  assert.deepEqual([summary.chain, summary.events, summary.everyEventCommitted, summary.committedVersions, summary.everyCommittedVersionIsPrefix],
+    ['valid', 6, true, 1, true]);
+});
+
+test('the verdict names the commit that first contains each registration, read from the history on HEAD', () => {
+  const full = registryOf(['pass']);
+  const versions = [[HEX('1', 40), 1, true], [HEX('2', 40), 3, true], [HEX('4', 40), 4, false], [HEX('3', 40), 6, true]]
+    .map(([commit, length, onHead]) => ({ commit, onHead, registry: { ...full, events: full.events.slice(0, length) } }));
+  const commits = paired.registrationCommitsOf(full, versions);
+  assert.deepEqual(commits, [{ nonce: NONCE(30), kind: 'calibration', seq: 1, commit: HEX('1', 40) },
+    { nonce: NONCE(31), kind: 'qualifying', seq: 4, commit: HEX('3', 40) }]);
+  assert.deepEqual(paired.registryVerdict(full, IDENTITY, { registrationCommits: commits }).registrationCommits, commits);
+  assert.equal('registrationCommits' in paired.registryVerdict(full, IDENTITY), false);
+  // A list that omits a registration is refused, and a registration no commit on HEAD holds has no commit to name.
+  assert.throws(() => paired.registryVerdict(full, IDENTITY, { registrationCommits: commits.slice(0, 1) }), /commit of every registration/);
+  assert.throws(() => paired.registrationCommitsOf(full, versions.slice(0, 3)), /no commit on HEAD/);
+});
+
+// ---- started events ------------------------------------------------------------------------------------
+
+test('mismatched registration hash: a session report whose registration event hash does not match its registry event is rejected', async () => {
+  const built = close(fixture('calibration'), report => { report.registrationEventHash = HEX('0'); });
+  await assert.rejects(verify(built), /registration event hash/);
+  // The hash of another session's registration is not this session's either.
+  const foreign = paired.eventHash(fixture('qualifying').registry.events[0]);
+  await assert.rejects(verify(close(fixture('qualifying'), report => { report.registrationEventHash = foreign; })), /registration event hash/);
+  assert.equal((await verify(close(fixture('calibration')))).exitCode, 0);
+});
+
+test('mismatched started event hash: a session report whose started event hash does not match its registry event is rejected', async () => {
+  const built = close(fixture('calibration'), report => { report.startedEventHash = HEX('0'); });
+  await assert.rejects(verify(built), /started event hash/);
+  const swapped = close(fixture('qualifying'), report => { report.startedEventHash = report.registrationEventHash; });
+  await assert.rejects(verify(swapped), /started event hash/);
+});
+
+test('closed without started: a closed event without a preceding started event for the nonce is rejected', async () => {
+  const now = clock();
+  const registered = paired.registerSession(paired.emptyRegistry(), sessionEntry('calibration', NONCE(30)), now);
+  const outcome = outcomeOf('calibration', 'pass', NONCE(30));
+  assert.throws(() => paired.closeSession(registered, NONCE(30), outcome, now), /no started event/);
+  // Written by hand, the chain is intact and the order of the session is not.
+  const forged = paired.appendEvent(registered, { type: 'closed', kind: 'calibration', nonce: NONCE(30), ...outcome }, now);
+  assert.equal(paired.verifyChain(forged).events, 2);
+  assert.throws(() => paired.verifyLifecycle(forged), /sequence 2: a closed event without a preceding started event/);
+  assert.throws(() => paired.registryVerdict(forged, IDENTITY), /without a preceding started event/);
+  assert.throws(() => paired.assertRegistryIntegrity({ working: forged, committed: forged, versions: [{ commit: HEX('1', 40), registry: forged }] }),
+    /without a preceding started event/);
+  // A started event that does not carry the hash of its registration event is not that session's start.
+  const unbound = paired.appendEvent(registered, { type: 'started', kind: 'calibration', nonce: NONCE(30), registrationHash: HEX('0') }, now);
+  assert.throws(() => paired.verifyLifecycle(unbound), /hash of its registration/);
+  // A session is closed once.
+  const closed = driven(paired.emptyRegistry(), 'calibration', NONCE(30), 'pass', clock());
+  assert.throws(() => paired.closeSession(closed, NONCE(30), outcome, now), /already closed/);
+  // verify reads the same order for the session it is given.
+  const built = close(fixture('calibration'));
+  const [registration, , closing] = built.registry.events.filter(event => event.nonce === SESSION_NONCE);
+  let registry = paired.appendEvent(paired.emptyRegistry(), unchained(registration), now);
+  registry = paired.appendEvent(registry, unchained(closing), now);
+  await assert.rejects(verify({ ...built, registry }), /without a preceding started event/);
+});
+
+// ---- closed event ---------------------------------------------------------------------------------------
+
+test('qualifying closed carries both frozen fields: the closed event of a qualifying session records frozenExitCode and frozenOverrunCount', async () => {
+  const now = clock(), registry = registryOf(['started'], { now }), outcome = outcomeOf('qualifying', 'fail', NONCE(31));
+  const closed = paired.closeSession(registry, NONCE(31), { ...outcome, frozenOverrunCount: 37 }, now).events.at(-1);
+  assert.deepEqual([closed.type, closed.kind, closed.outcome, closed.valid, closed.pass, closed.frozenExitCode, closed.frozenOverrunCount,
+    closed.browserVersion], ['closed', 'qualifying', 'failed', true, false, 1, 37, BROWSER]);
+  assert.deepEqual(closed.reportHashes, reportHashesOf(NONCE(31)));
+  assert.deepEqual(closed.settings, paired.SESSION_SETTINGS);
+  // A qualifying outcome that lacks one of them is not a qualifying close.
+  for (const missing of ['frozenExitCode', 'frozenOverrunCount'])
+    assert.throws(() => paired.closeSession(registry, NONCE(31),
+      Object.fromEntries(Object.entries(outcome).filter(([key]) => key !== missing)), now), /frozen/, missing);
+  // A structural failure of the frozen tool has an exit code and no overrun count; such a session is invalid.
+  const structural = paired.closeSession(registry, NONCE(31),
+    { ...outcomeOf('qualifying', 'invalid', NONCE(31)), frozenOverrunCount: null }, now).events.at(-1);
+  assert.deepEqual([structural.outcome, structural.valid, structural.pass, structural.frozenExitCode, structural.frozenOverrunCount],
+    ['invalid', false, null, 1, null]);
+  // An outcome whose pass does not follow from its validity is refused.
+  assert.throws(() => paired.closeSession(registry, NONCE(31), { ...outcome, valid: false }, now), /pass/);
+  assert.throws(() => paired.closeSession(registry, NONCE(31), { ...outcome, pass: null }, now), /pass/);
+  // The runner writes them from the frozen command's captured result.
+  const run = await runner('qualifying');
+  assert.deepEqual([run.closed?.kind, run.closed?.frozenExitCode, run.closed?.frozenOverrunCount], ['qualifying', 1, 40]);
+});
+
+test('calibration closed carries no frozen field: a calibration\'s and a smoke\'s closed event record neither', async () => {
+  const now = clock(), frozen = event => Object.keys(event).filter(key => key.startsWith('frozen'));
+  const calibration = driven(paired.emptyRegistry(), 'calibration', NONCE(30), 'started', now);
+  const closed = paired.closeSession(calibration, NONCE(30), outcomeOf('calibration', 'pass', NONCE(30)), now).events.at(-1);
+  assert.deepEqual([closed.type, closed.kind, closed.outcome, closed.valid, closed.pass], ['closed', 'calibration', 'passed', true, true]);
+  assert.deepEqual(frozen(closed), []);
+  assert.throws(() => paired.closeSession(calibration, NONCE(30),
+    { ...outcomeOf('calibration', 'pass', NONCE(30)), frozenExitCode: 1, frozenOverrunCount: 40 }, now), /no frozen/);
+  const smoke = driven(paired.emptyRegistry(), 'smoke', NONCE(1), 'started', now);
+  const loaded = paired.closeSession(smoke, NONCE(1), outcomeOf('smoke', 'loaded', NONCE(1)), now).events.at(-1);
+  assert.deepEqual([loaded.kind, loaded.outcome, loaded.structuralFailure, loaded.valid, loaded.pass], ['smoke', 'loaded', false, null, null]);
+  assert.deepEqual(frozen(loaded), []);
+  assert.throws(() => paired.closeSession(smoke, NONCE(1),
+    { ...outcomeOf('smoke', 'loaded', NONCE(1)), frozenExitCode: 0, frozenOverrunCount: 0 }, now), /no frozen/);
+  // The runner closes a calibration the same way.
+  const run = await runner('calibration');
+  assert.equal(run.closed?.kind, 'calibration');
+  assert.deepEqual(frozen(run.closed), []);
+});
+
+test('verify refuses an outcome different from closed: the outcome verify recomputes must equal the one in the session\'s closed event', async () => {
+  // The newest event rewritten: no later event holds its hash, so the chain cannot show the edit.
+  const relabel = (built, change) => ({ ...built, registry: { ...built.registry,
+    events: [...built.registry.events.slice(0, -1), { ...built.registry.events.at(-1), ...change }] } });
+  const failed = close(fixture('calibration', made => scale(made.session, 'candidate', () => true, 1.08, ['frameIntervalMs'])));
+  assert.deepEqual([(await verify(failed)).result.pairedBudgetPass, failed.registry.events.at(-1).pass], [false, false]);
+  await assert.rejects(verify(relabel(failed, { pass: true })), /differs from the closed event/);
+  const invalid = close(fixture('calibration', made => { made.session.order[2].first = 'reference-first'; }));
+  await assert.rejects(verify(relabel(invalid, { valid: true, pass: true })), /differs from the closed event/);
+  const passed = close(fixture('qualifying'));
+  await assert.rejects(verify(relabel(passed, { pass: false })), /differs from the closed event/);
+  await assert.rejects(verify(relabel(passed, { valid: false, pass: null })), /differs from the closed event/);
+  await assert.rejects(verify(relabel(passed, { outcome: 'failed' })), /differs from the closed event/);
+  assert.equal((await verify(passed)).exitCode, 0);
+  // The frozen command's result is compared with the closed event too, and reported; it changes no paired result.
+  const outcome = await verify(passed);
+  assert.equal(outcome.result.frozenFieldsMatchClosed, true);
+  assert.equal((await verify(passed, { runFrozen: async () => frozenOutput(1, 39) })).result.frozenFieldsMatchClosed, false);
+});
+
+// ---- the session runner, driven through injected effects ---------------------------------------------------
+
+// Every timing value of the fake captures ends in the digits 7373, so a timing value is recognisable wherever it appears.
+const STAMP = '7373', marked = value => Number(`${Math.floor(value)}.${STAMP}`);
+const markedTimings = () => Object.fromEntries(COMPONENTS.map(name =>
+  [name, { median: marked(BASE[name][0]), p95: marked(BASE[name][1]), min: marked(0), max: marked(BASE[name][1] * 2) }]));
+// What may not be printed or logged before a session is closed: a timing value, a ratio, a rule result, frozen output.
+const TIMING_WORDS = /7373|ratio|aggregate|median|p95|rule ?[12]|overrun|budget|valid|pass|fail|outcome|FROZEN/i;
+const FROZEN_RUN = { exitCode: 1, stderr: 'FROZEN-STDERR-MARKER\n', stdout: JSON.stringify({ applicableBudgetPass: false,
+  overruns: Array.from({ length: 40 }, () => ({ actualMs: marked(251), upperMs: 250 })), certification: false }) + '\n' };
+const SESSION_DIRECTORY = `.planning/research/.cache/06-art/animation-paired/session-${SESSION_NONCE}`;
+const RUNNER_PATHS = { reference: `${SESSION_DIRECTORY}/arm-reference.json`, candidate: `${SESSION_DIRECTORY}/arm-candidate.json`,
+  session: `${SESSION_DIRECTORY}/session.json` };
+const v2BudgetBytes = readFileSync(path.join(ROOT, EVIDENCE, '07-budget-view-v2.json'));
+const v2Budget = JSON.parse(v2BudgetBytes.toString('utf8'));
+const DIFFERENCE = { comparedFiles: 139, differingFiles: [...OWNERS].sort(), count: 5, onlyOwnersDiffer: true };
+function armIdentitiesOf(arm, kind) {
+  const identities = structuredClone(frozenReference.identities), referenceTree = arm === 'reference' || kind === 'calibration';
+  for (const [index, name] of OWNERS.entries())
+    identities[name] = referenceTree ? paired.PAIRED_CONTRACT.referenceOwners[name].sha256 : HEX(String(index + 1));
+  return identities;
+}
+
+// One session of the runner with every effect replaced by a recorder. `trace` holds every effect in the order it happened.
+function runnerRig(kind, options = {}) {
+  let time = T0;
+  const tick = (step = 1000) => new Date(time += step).toISOString();
+  let registry = paired.emptyRegistry();
+  if (kind === 'qualifying') {
+    registry = driven(registry, 'calibration', CALIBRATION_NONCE, 'started', tick);
+    const calibrated = outcomeOf('calibration', 'pass', CALIBRATION_NONCE);
+    options.calibrationSettings?.(calibrated.settings);
+    registry = paired.closeSession(registry, CALIBRATION_NONCE, calibrated, tick);
+  }
+  registry = paired.registerSession(registry, sessionEntry(kind, SESSION_NONCE), tick);
+  const registered = registry.events.find(event => event.nonce === SESSION_NONCE && event.type === 'registered');
+  const trace = [], identities = { reference: armIdentitiesOf('reference', kind), candidate: armIdentitiesOf('candidate', kind) };
+  const sampleFor = (arm, pair) => {
+    const sample = structuredClone(frozenReference.samples.find(sameProfile(pair)));
+    sample.sourceIdentitySha256 = sha256(JSON.stringify(identities[arm]));
+    sample.timings = markedTimings();
+    options.sample?.(sample, arm, pair);
+    return sample;
+  };
+  const pairs = options.pairs ?? (kind === 'smoke' ? [paired.SMOKE_PAIR] : paired.sessionScheme());
+  const effects = {
+    appendEvent: async event => {
+      registry = paired.appendEvent(registry, event, tick);
+      trace.push({ type: 'append', event: registry.events.at(-1) });
+      return registry;
+    },
+    capturePair: async (pair, index) => {
+      trace.push({ type: 'capture', index });
+      if (options.failAtPair === index) throw Error('browser crashed');
+      const captured = {}, first = options.captureOrder?.(pair) ?? pair.first;
+      for (const arm of first === 'reference-first' ? ['reference', 'candidate'] : ['candidate', 'reference']) {
+        const startedAt = tick();
+        captured[arm] = { startedAt, endedAt: tick(9000), sample: sampleFor(arm, pair) };
+      }
+      return captured;
+    },
+    endCapture: async facts => {
+      trace.push({ type: 'endCapture', interrupted: facts?.interrupted === true });
+      return { cleanup: { browserClosed: true, serverClosed: true }, hostAfter: { note: 'after' }, pageErrors: { reference: [], candidate: [] },
+        diagnostics: null, difference: structuredClone(DIFFERENCE), armDataKept: false, error: null, ...options.facts };
+    },
+    hashFrameImages: async () => ({ ok: true }),
+    write: async (name, bytes) => { trace.push({ type: 'write', name, text: Buffer.from(bytes).toString('utf8') }); },
+    log: message => { trace.push({ type: 'log', message: String(message) }); },
+    runFrozen: async name => {
+      trace.push({ type: 'frozen', name });
+      if (options.frozenThrows) throw Error('the frozen command was killed');
+      return options.frozen ?? FROZEN_RUN;
+    },
+  };
+  const context = { revision: COMMIT, browserVersion: BROWSER, hostBefore: { note: 'before' }, armIdentities: identities, paths: RUNNER_PATHS,
+    knownReportHashes: [], difference: structuredClone(DIFFERENCE),
+    device: Object.fromEntries(Object.entries(frozenReference.device).filter(([key]) => key !== 'rendererClass')),
+    runtimeDependencies: { reference: { note: 'synthetic' }, candidate: { note: 'synthetic' } },
+    baselineSha256: frozenReference.baselineSha256, compare: () => structuredClone(frozenReference.comparison), v2Budget, v2BudgetBytes };
+  return { kind, trace, effects, context, registered, pairs, tick, registry: () => registry,
+    input: () => ({ kind, registered, pairs, ...effects, context, now: tick }) };
+}
+async function runner(kind, options) {
+  const rig = runnerRig(kind, options);
+  let result = null, error = null;
+  try { result = await paired.runSession(rig.input()); } catch (caught) { error = caught; }
+  const appended = rig.trace.filter(entry => entry.type === 'append').map(entry => entry.event);
+  const writes = rig.trace.filter(entry => entry.type === 'write');
+  return { ...rig, result, error, registry: rig.registry(), appended, writes,
+    closed: appended.find(event => event.type === 'closed') ?? null, started: appended.find(event => event.type === 'started') ?? null,
+    logs: rig.trace.filter(entry => entry.type === 'log'), written: name => writes.find(entry => entry.name === RUNNER_PATHS[name]) ?? null,
+    closedAt: rig.trace.findIndex(entry => entry.type === 'append' && entry.event.type === 'closed'),
+    lastCapture: rig.trace.findLastIndex(entry => entry.type === 'capture') };
+}
+// The trace reduced to what the order rules are about.
+const steps = run => run.trace.map(entry => entry.type === 'append' ? entry.event.type : entry.type === 'frozen' ? 'frozen'
+  : entry.type === 'write' ? 'write ' + (Object.keys(RUNNER_PATHS).find(key => RUNNER_PATHS[key] === entry.name) ?? entry.name) : null)
+  .filter(Boolean);
+
+test('no timing before close: before the closed event is appended nothing carrying a timing value, ratio, rule result or frozen-command output is printed, logged or written, except the candidate arm report a qualifying session needs', async () => {
+  for (const kind of ['qualifying', 'calibration']) {
+    const run = await runner(kind);
+    assert.equal(run.error, null, kind);
+    assert.equal(run.trace.filter(entry => entry.type === 'capture').length, 13, kind);
+    assert.ok(run.closedAt > run.lastCapture, `${kind}: closed is appended after the last pair`);
+    const before = run.trace.slice(0, run.closedAt);
+    // Nothing printed or logged; progress is logged, and it carries none of it.
+    assert.ok(before.some(entry => entry.type === 'log'), kind);
+    for (const entry of before.filter(entry => entry.type === 'log')) assert.equal(TIMING_WORDS.test(entry.message), false, `${kind}: ${entry.message}`);
+    // Nothing written before the last pair, and after it only the file the frozen command must read.
+    assert.deepEqual(run.trace.slice(0, run.lastCapture + 1).filter(entry => entry.type === 'write'), [], kind);
+    assert.deepEqual(before.filter(entry => entry.type === 'write').map(entry => entry.name), kind === 'qualifying' ? [RUNNER_PATHS.candidate] : [], kind);
+    // No registry event carries a timing value.
+    for (const event of run.appended) assert.equal(JSON.stringify(event).includes(STAMP), false, `${kind} ${event.type}`);
+    // Only after the close is the result shown.
+    assert.ok(run.trace.slice(run.closedAt).some(entry => entry.type === 'log' && /outcome/.test(entry.message)), kind);
+  }
+});
+
+test('frozen-command output not logged before closed: the frozen command is reached only through the injected runFrozen, and its captured output is shown only after the close', async () => {
+  const run = await runner('qualifying');
+  const frozenAt = run.trace.findIndex(entry => entry.type === 'frozen');
+  assert.deepEqual(run.trace.filter(entry => entry.type === 'frozen').map(entry => entry.name), [RUNNER_PATHS.candidate]);
+  assert.ok(frozenAt > run.lastCapture && frozenAt < run.closedAt);
+  // The candidate arm report is on disk before the frozen command reads it.
+  assert.ok(run.trace.findIndex(entry => entry.type === 'write' && entry.name === RUNNER_PATHS.candidate) < frozenAt);
+  const shows = entry => entry.type === 'log' && /FROZEN-STDERR-MARKER|overruns|applicableBudgetPass/.test(entry.message);
+  assert.deepEqual(run.trace.slice(0, run.closedAt).filter(shows), []);
+  assert.ok(run.trace.slice(run.closedAt).some(shows), 'the captured output is shown after the close');
+  // A calibration runs no frozen command, and is closed by a runner that was given none.
+  assert.deepEqual((await runner('calibration')).trace.filter(entry => entry.type === 'frozen'), []);
+  const without = runnerRig('calibration'); delete without.effects.runFrozen;
+  assert.equal((await paired.runSession(without.input())).closed?.kind, 'calibration');
+  // A qualifying session is refused without one, before its started event.
+  const missing = runnerRig('qualifying'); delete missing.effects.runFrozen;
+  await assert.rejects(paired.runSession(missing.input()), /runFrozen/);
+  assert.deepEqual(missing.trace, []);
+});
+
+test('write order for a qualifying session and for a calibration: the candidate arm report first and alone, then after closed the reference arm report and the session report; for a calibration every write comes after closed', async () => {
+  assert.deepEqual(steps(await runner('qualifying')), ['started', 'write candidate', 'frozen', 'closed', 'write reference', 'write session']);
+  assert.deepEqual(steps(await runner('calibration')), ['started', 'closed', 'write candidate', 'write reference', 'write session']);
+  // The same order whatever the outcome: a failed and an invalid qualifying session.
+  const failing = { sample: (sample, arm) => { if (arm === 'candidate') sample.timings.frameIntervalMs.median *= 1.5; } };
+  for (const options of [failing, { captureOrder: () => 'reference-first' }])
+    assert.deepEqual(steps(await runner('qualifying', options)), ['started', 'write candidate', 'frozen', 'closed', 'write reference', 'write session']);
+});
+
+test('interrupted before the last pair leaves no timing: the registry keeps its events and nothing is written or shown', async () => {
+  for (const kind of ['qualifying', 'calibration']) for (const failAtPair of [0, 5, 12]) {
+    const run = await runner(kind, { failAtPair }), label = `${kind}, pair ${failAtPair}`;
+    assert.ok(run.error instanceof Error, label);
+    assert.match(run.error.message, /interrupted/, label);
+    assert.deepEqual(run.appended.map(event => event.type), ['started'], label);
+    assert.deepEqual(run.writes, [], label);
+    assert.deepEqual(run.trace.filter(entry => entry.type === 'frozen'), [], label);
+    for (const entry of run.logs) assert.equal(TIMING_WORDS.test(entry.message), false, `${label}: ${entry.message}`);
+    assert.equal(TIMING_WORDS.test(run.error.message), false, label);
+    assert.equal(JSON.stringify(run.registry).includes(STAMP), false, label);
+    // The browser and the listeners are released, and the session cannot be run again.
+    assert.deepEqual(run.trace.filter(entry => entry.type === 'endCapture').map(entry => entry.interrupted), [true], label);
+    assert.throws(() => paired.assertRunnable({ nonce: SESSION_NONCE, working: run.registry,
+      committed: { ...run.registry, events: run.registry.events.slice(0, -1) } }), /Session already started/, label);
+  }
+  // It still counts: registered, started and never closed is an invalid session.
+  const interrupted = await runner('qualifying', { failAtPair: 5 });
+  assert.deepEqual(counts(paired.registryVerdict(interrupted.registry, IDENTITY)), [1, 0, 0, 1, 'undecided']);
+});
+
+test('interrupted between the last pair and closed leaves at most the candidate arm report: no reference arm report, session report, ratio or rule result', async () => {
+  const run = await runner('qualifying', { frozenThrows: true });
+  assert.ok(run.error instanceof Error);
+  assert.deepEqual(steps(run), ['started', 'write candidate', 'frozen']);
+  // One arm's absolute timings and nothing a paired ratio can be formed from.
+  const report = JSON.parse(run.writes[0].text);
+  assert.deepEqual([report.paired.arm, report.paired.nonce, report.samples.length], ['candidate', SESSION_NONCE, 12]);
+  assert.equal(/"ratio"|"aggregate"|"rule1"|"rule2"|"validity"|"pairedBudgetPass"|"evaluation"/.test(run.writes[0].text), false);
+  assert.equal(run.writes[0].text.includes(paired.PAIRED_CONTRACT.referenceOwners[OWNERS[0]].sha256), false, 'no reference arm identity');
+  for (const entry of run.logs) assert.equal(TIMING_WORDS.test(entry.message), false, entry.message);
+  assert.deepEqual(counts(paired.registryVerdict(run.registry, IDENTITY)), [1, 0, 0, 1, 'undecided']);
+  // A calibration has no such window: it writes nothing before closed.
+  assert.deepEqual(steps(await runner('calibration')).slice(0, 2), ['started', 'closed']);
+});
+
+test('validity block inside the hashed report bytes: the session report bytes whose hash goes into closed already hold the validity block and the outcome, and those bytes are the ones written', async () => {
+  const failing = { sample: (sample, arm) => { if (arm === 'candidate') sample.timings.frameIntervalMs.median *= 1.5; } };
+  for (const [kind, options, outcome] of [['calibration', {}, 'passed'], ['qualifying', {}, 'passed'], ['qualifying', failing, 'failed'],
+    ['calibration', { captureOrder: () => 'reference-first' }, 'invalid']]) {
+    const run = await runner(kind, options), label = `${kind} ${outcome}`, write = run.written('session');
+    assert.ok(write && run.closed, label);
+    assert.equal(sha256(Buffer.from(write.text)), run.closed.reportHashes.session, label);
+    const report = JSON.parse(write.text);
+    assert.equal(typeof report.validity?.valid, 'boolean', label);
+    assert.deepEqual([report.outcome, run.closed.outcome, run.closed.valid, run.closed.pass],
+      [outcome, outcome, outcome !== 'invalid', outcome === 'invalid' ? null : outcome === 'passed'], label);
+    assert.equal(report.evaluation === null, outcome === 'invalid', label);
+    assert.deepEqual([report.kind, report.nonce, report.identity, report.complete], [kind, SESSION_NONCE, IDENTITY, true], label);
+    assert.deepEqual([report.registrationEventHash, report.startedEventHash],
+      [paired.eventHash(run.registered), paired.eventHash(run.started)], label);
+    // The arm reports written are the bytes hashed, and the session report names them.
+    for (const arm of ['reference', 'candidate']) {
+      assert.equal(sha256(Buffer.from(run.written(arm).text)), run.closed.reportHashes[arm], `${label} ${arm}`);
+      assert.deepEqual(report.arms[arm], { path: RUNNER_PATHS[arm], sha256: run.closed.reportHashes[arm] }, `${label} ${arm}`);
+    }
+    assert.deepEqual(report.host, { before: { note: 'before' }, after: { note: 'after' } }, label);
+    assert.deepEqual(run.result.closed, run.closed, label);
+  }
+});
+
+test('the runner and verify agree: verify accepts the bytes the runner wrote and the closed event it appended, for every outcome', async () => {
+  const failing = { sample: (sample, arm) => { if (arm === 'candidate') sample.timings.frameIntervalMs.median *= 1.5; } };
+  for (const [kind, options, expected] of [['calibration', {}, [0, true, true]], ['qualifying', {}, [0, true, true]],
+    ['qualifying', failing, [1, true, false]], ['calibration', { captureOrder: () => 'reference-first' }, [1, false, null]]]) {
+    const run = await runner(kind, options), label = `${kind} ${expected}`;
+    assert.ok(run.written('session'), label);
+    const files = Object.fromEntries(run.writes.map(entry => [entry.name, Buffer.from(entry.text)]));
+    const outcome = await paired.verifySession({ sessionBytes: files[RUNNER_PATHS.session], registry: run.registry,
+      readArm: async (arm, name) => files[name], hashFrameImages: async () => ({ ok: true }), runFrozen: async () => FROZEN_RUN,
+      knownReportHashes: [] });
+    assert.deepEqual([outcome.exitCode, outcome.result.valid, outcome.result.pairedBudgetPass], expected, label);
+    assert.equal(outcome.result.kind, kind, label);
+  }
+});
+
+test('equal session settings across kinds: every session report records context and page lifetime, launch flags, sampler arguments and browser version, and a calibration and a qualifying session produced by the same build record equal values', async () => {
+  const reports = {}, closed = {};
+  for (const kind of ['calibration', 'qualifying', 'smoke']) {
+    const run = await runner(kind);
+    assert.ok(run.written('session'), kind);
+    reports[kind] = JSON.parse(run.written('session').text); closed[kind] = run.closed;
+    assert.ok(reports[kind].settings.contextAndPageLifetime && reports[kind].settings.launch && reports[kind].settings.samplerArguments, kind);
+    assert.equal(reports[kind].browserVersion, BROWSER, kind);
+    assert.equal(closed[kind].browserVersion, BROWSER, kind);
+  }
+  assert.deepEqual(reports.calibration.settings, reports.qualifying.settings);
+  assert.deepEqual(reports.smoke.settings, reports.qualifying.settings);
+  assert.deepEqual(reports.qualifying.settings, paired.SESSION_SETTINGS);
+  // The closed event carries them: it is where a qualifying session's validity reads what its calibration recorded.
+  assert.deepEqual(closed.calibration.settings, paired.SESSION_SETTINGS);
+  assert.deepEqual(closed.qualifying.settings, closed.calibration.settings);
+  // The check with teeth: a qualifying session whose calibration recorded other settings is closed as invalid.
+  const other = await runner('qualifying', { calibrationSettings: value => { value.launch.args.push('--disable-gpu-vsync'); } });
+  assert.deepEqual([other.closed.outcome, JSON.parse(other.written('session').text).validity.checks.settings.ok], ['invalid', false]);
+});
+
+test('a smoke goes through the same runner: started, one pair, closed, and a report that holds no timing', async () => {
+  const run = await runner('smoke');
+  assert.deepEqual(steps(run), ['started', 'closed', 'write session']);
+  assert.equal(run.trace.filter(entry => entry.type === 'capture').length, 1);
+  const report = JSON.parse(run.writes[0].text);
+  assert.deepEqual([report.kind, report.complete, report.structuralFailure, report.nonce, report.referencePageErrors],
+    ['smoke', false, false, SESSION_NONCE, 0]);
+  assert.deepEqual([report.registrationEventHash, report.startedEventHash], [paired.eventHash(run.registered), paired.eventHash(run.started)]);
+  for (const forbidden of [STAMP, '"timings"', '"ratio"', '"median"']) assert.equal(run.writes[0].text.includes(forbidden), false, forbidden);
+  assert.deepEqual([run.closed.kind, run.closed.outcome, run.closed.structuralFailure, run.closed.valid, run.closed.pass],
+    ['smoke', 'loaded', false, null, null]);
+  assert.deepEqual(run.closed.reportHashes, { session: sha256(Buffer.from(run.writes[0].text)) });
+  for (const entry of run.logs) assert.equal(entry.message.includes(STAMP), false, entry.message);
+  // A capture that fails is recorded as a structural failure, and the smoke is still closed.
+  const failed = await runner('smoke', { failAtPair: 0 });
+  assert.equal(failed.error, null);
+  assert.deepEqual([failed.closed.outcome, failed.closed.structuralFailure, JSON.parse(failed.writes[0].text).error],
+    ['structural-failure', true, 'browser crashed']);
+});
+
+test('the runner closes a session with a page error, an unfinished capture, a frozen structural failure or another order as invalid, and evaluates no rule for it', async () => {
+  for (const [label, kind, options, check] of [
+    ['page error', 'calibration', { facts: { pageErrors: { reference: ['TypeError: x is not a function'], candidate: [] } } }, 'complete'],
+    ['source changed during capture', 'qualifying', { facts: { error: 'Source changed during capture' } }, 'complete'],
+    ['browser not closed', 'calibration', { facts: { cleanup: { browserClosed: false, serverClosed: true } } }, 'complete'],
+    ['frozen structural failure', 'qualifying', { frozen: { exitCode: 1, stdout: '', stderr: 'Protected source changed: src/scene.js\n' } }, 'structure'],
+    ['order not the scheme', 'qualifying', { captureOrder: () => 'reference-first' }, 'order'],
+  ]) {
+    const run = await runner(kind, options);
+    assert.ok(run.closed && run.written('session'), label);
+    const report = JSON.parse(run.written('session').text);
+    assert.deepEqual([run.closed.valid, run.closed.pass, run.closed.outcome, report.evaluation], [false, null, 'invalid', null], label);
+    assert.equal(report.validity.checks[check].ok, false, label);
+    assert.equal(run.error, null, label);
+  }
+  const structural = await runner('qualifying', { frozen: { exitCode: 1, stdout: '', stderr: 'Protected source changed: src/scene.js\n' } });
+  assert.deepEqual([structural.closed.frozenExitCode, structural.closed.frozenOverrunCount], [1, null]);
+  // The recorded order is the one the captures show, not the one that was asked for.
+  const order = JSON.parse((await runner('calibration', { captureOrder: () => 'reference-first' })).written('session').text).order;
+  assert.deepEqual([...new Set(order.map(entry => entry.first))], ['reference-first']);
+});
+
+test('an arm report built by the runner is a candidate-format report that passes qualify and carries the paired block', async () => {
+  const run = await runner('qualifying');
+  for (const arm of ['reference', 'candidate']) {
+    assert.ok(run.written(arm), arm);
+    const report = JSON.parse(run.written(arm).text);
+    assert.deepEqual(report.producerContract, qualify(report), arm);
+    assert.deepEqual(report.v2Lineage, candidateLineage(v2Budget, v2BudgetBytes, report), arm);
+    assert.deepEqual([report.complete, report.certification, report.humanMotionAcceptance, report.revision, report.baselineSha256],
+      [true, false, 'pending', COMMIT, frozenReference.baselineSha256], arm);
+    assert.deepEqual(report.device, frozenReference.device, arm);
+    assert.deepEqual(report.cleanup, { browserClosed: true, serverClosed: true }, arm);
+    assert.deepEqual(report.identities, run.context.armIdentities[arm], arm);
+    assert.ok(report.samples.every(sample => sample.sourceIdentitySha256 === sha256(JSON.stringify(report.identities))), arm);
+    assert.deepEqual(report.samples.map(sample => `${sample.run}/${sample.tier}/${sample.actorCount}`),
+      PROFILES.map(profile => `${profile.run}/${profile.tier}/${profile.actorCount}`), arm);
+    assert.deepEqual([report.paired.contractVersion, report.paired.nonce, report.paired.arm, report.paired.kind, report.paired.captures.length],
+      ['paired-same-session-v2', SESSION_NONCE, arm, 'qualifying', 13], arm);
+    // The warm-up pair is recorded, marked as warm-up, and is not among the 12 measured profiles.
+    assert.deepEqual([report.paired.warmup.warmup, report.paired.warmup.run, report.paired.warmup.tier, report.paired.warmup.actorCount],
+      [true, 1, 'low', 1], arm);
+    assert.equal(report.paired.warmup.timings.frameIntervalMs.median, marked(BASE.frameIntervalMs[0]), arm);
+    assert.ok(Date.parse(report.capturedAt) > Date.parse(v2Budget.referenceCapturedAt), arm);
+  }
+});
+
+// ---- verdict ---------------------------------------------------------------------------------------------
+
+test('majority verdicts with denominators: the contract\'s verdict table, each result worded with its denominator', () => {
+  for (const [results, verdict, passed, failed, invalid, wording] of [
+    [[], 'undecided', 0, 0, 0],
+    [['pass'], 'pass', 1, 0, 0, 'passed, session 1 of 1; 0 valid sessions failed; 0 invalid'],
+    [['fail'], 'undecided', 0, 1, 0],
+    [['invalid'], 'undecided', 0, 0, 1],
+    [['pass', 'fail'], 'undecided', 1, 1, 0],
+    [['fail', 'fail'], 'failed', 0, 2, 0],
+    [['fail', 'invalid'], 'failed', 0, 1, 1],
+    [['invalid', 'invalid'], 'undecided', 0, 0, 2],
+    [['invalid', 'pass'], 'pass', 1, 0, 1, 'passed, session 2 of 2; 0 valid sessions failed; 1 invalid'],
+    [['fail', 'pass', 'pass'], 'pass', 2, 1, 0, 'passed, session 3 of 3; 1 valid sessions failed; 0 invalid'],
+    [['pass', 'fail', 'invalid'], 'failed', 1, 1, 1],
+    [['pass', 'fail', 'fail'], 'failed', 1, 2, 0],
+    [['invalid', 'invalid', 'invalid'], 'failed', 0, 0, 3],
+    [['invalid', 'invalid', 'pass'], 'pass', 1, 0, 2, 'passed, session 3 of 3; 0 valid sessions failed; 2 invalid'],
+    [['pass', 'pass', 'fail'], 'pass', 2, 1, 0, 'passed, session 1 of 3; 1 valid sessions failed; 0 invalid'],
+  ]) {
+    const result = verdictOf(results), label = results.join(',') || 'no session';
+    assert.deepEqual(counts(result), [results.length, passed, failed, invalid, verdict], label);
+    // The four numbers are in the wording whatever the verdict.
+    assert.equal(result.wording, wording ?? `${verdict}, ${results.length} of at most 3 sessions started; ${passed} valid sessions passed; ` +
+      `${failed} valid sessions failed; ${invalid} invalid`, label);
+    assert.equal(result.certification, false, label);
+    assert.equal(result.identity, IDENTITY, label);
+  }
+});
+
+test('early failed after two valid fails: failed as soon as a pass is arithmetically impossible within the cap', () => {
+  assert.deepEqual(counts(verdictOf(['fail', 'fail'])), [2, 0, 2, 0, 'failed']);
+  // The session that is left cannot change it: one pass does not exceed two fails.
+  assert.equal(verdictOf(['fail', 'fail', 'pass']).verdict, 'failed');
+  assert.equal(verdictOf(['fail', 'invalid']).verdict, 'failed');
+  // And not earlier than that.
+  assert.equal(verdictOf(['fail']).verdict, 'undecided');
+  assert.equal(verdictOf(['invalid', 'invalid']).verdict, 'undecided');
+  assert.equal(verdictOf(['invalid', 'fail']).verdict, 'failed');
+});
+
+test('no early pass: the verdict is pass only when valid passes exceed valid fails, never from a session that is not closed, not valid or outvoted', () => {
+  assert.equal(verdictOf(['pass']).verdict, 'pass');
+  for (const results of [[], ['registered'], ['started'], ['invalid'], ['fail', 'pass'], ['pass', 'fail'], ['invalid', 'fail', 'pass']])
+    assert.ok(['undecided', 'failed'].includes(verdictOf(results).verdict), results.join(',') || 'no session');
+  // A closed event that claims a pass without being valid, or whose pass is no boolean, is no pass.
+  for (const change of [{ valid: false, pass: true }, { valid: null, pass: true }, { valid: true, pass: 'yes' }, { valid: 'true', pass: true }]) {
+    const registry = paired.appendEvent(registryOf(['started']), { type: 'closed', kind: 'qualifying', nonce: NONCE(31),
+      ...outcomeOf('qualifying', 'pass', NONCE(31)), ...change }, clock());
+    assert.deepEqual(counts(paired.registryVerdict(registry, IDENTITY)), [1, 0, 0, 1, 'undecided'], JSON.stringify(change));
+  }
+  // A verdict needs the identity it is asked for: a pass for one source identity is none for another.
+  assert.equal(paired.registryVerdict(registryOf(['pass']), OTHER_IDENTITY).verdict, 'undecided');
+});
+
+test('a session after a pass can undo it: a session registered after a pass counts and the verdict is recomputed from the whole registry', () => {
+  assert.equal(verdictOf(['pass']).verdict, 'pass');
+  assert.equal(verdictOf(['pass', 'fail']).verdict, 'undecided');
+  assert.equal(verdictOf(['pass', 'fail', 'fail']).verdict, 'failed');
+  // Registered and not yet closed, it is already in the denominator.
+  const counted = verdictOf(['pass', 'registered']);
+  assert.deepEqual(counts(counted), [2, 1, 0, 1, 'pass']);
+  assert.equal(counted.wording, 'passed, session 1 of 2; 0 valid sessions failed; 1 invalid');
+  // A pass that was undone and regained is the pass of the session that regained it.
+  assert.equal(verdictOf(['pass', 'fail', 'pass']).wording, 'passed, session 3 of 3; 1 valid sessions failed; 0 invalid');
+});
+
+test('sessions and count of earlier identities listed: allQualifying holds every qualifying session in the registry grouped by source identity, with the number of identities tried', () => {
+  const now = clock();
+  let registry = registryOf(['fail', 'fail'], { identity: OTHER_IDENTITY, now, first: 50 });
+  registry = registryOf(['pass'], { base: registry, now });
+  const current = paired.registryVerdict(registry, IDENTITY), earlier = paired.registryVerdict(registry, OTHER_IDENTITY);
+  assert.deepEqual([counts(current), counts(earlier)], [[1, 1, 0, 0, 'pass'], [2, 0, 2, 0, 'failed']]);
+  assert.equal(current.identitiesTried, 2);
+  assert.deepEqual(current.allQualifying, earlier.allQualifying);
+  assert.deepEqual(current.allQualifying.map(group => [group.identity, group.started, group.passed, group.failed, group.invalid, group.verdict,
+    group.sessions.map(session => [session.nonce, session.outcome])]),
+  [[OTHER_IDENTITY, 2, 0, 2, 0, 'failed', [[NONCE(51), 'failed'], [NONCE(52), 'failed']]], [IDENTITY, 1, 1, 0, 0, 'pass', [[NONCE(31), 'passed']]]]);
+  // Each listed session carries what a final record needs to name it.
+  const [session] = current.allQualifying[1].sessions;
+  assert.deepEqual([session.position, session.commit, session.closed, session.valid, session.pass, session.frozenExitCode, session.frozenOverrunCount],
+    [1, COMMIT, true, true, true, 1, 40]);
+  assert.deepEqual(session.reportHashes, reportHashesOf(NONCE(31)));
+  assert.deepEqual(current.sessions, current.allQualifying[1].sessions);
+  // An identity with a calibration and no qualifying session was not tried, and a smoke is no qualifying session.
+  let untried = driven(paired.emptyRegistry(), 'smoke', NONCE(1), 'loaded', now);
+  untried = driven(untried, 'calibration', NONCE(30), 'fail', now);
+  const none = paired.registryVerdict(untried, IDENTITY);
+  assert.deepEqual([none.identitiesTried, none.allQualifying, counts(none)], [0, [], [0, 0, 0, 0, 'undecided']]);
+  assert.deepEqual([none.calibration.nonce, none.calibration.valid, none.calibration.pass], [NONCE(30), true, false]);
+});
+
+// ---- frozen evaluations -------------------------------------------------------------------------------------
+
+const CACHE = '.planning/research/.cache/06-art', EVIDENCE_ROOT = EVIDENCE.slice(0, -1);
+function candidateReport(capturedAt, mutate) {
+  const report = structuredClone(frozenReference);
+  for (const [index, name] of OWNERS.entries()) report.identities[name] = HEX(String(index + 1));
+  report.capturedAt = capturedAt;
+  mutate?.(report);
+  return report;
+}
+const CANDIDATE_IDENTITY = paired.identityHash(candidateReport('2026-10-10T07:00:00.000Z').identities);
+// A directory lister and a reader over an in-memory tree of repo-relative path to bytes; `walked` records each directory listed.
+function tree(files) {
+  const walked = [];
+  const list = directory => {
+    walked.push(directory);
+    const entries = new Map();
+    for (const name of Object.keys(files)) {
+      if (!name.startsWith(directory + '/')) continue;
+      const [head, ...rest] = name.slice(directory.length + 1).split('/');
+      entries.set(head, rest.length > 0);
+    }
+    return [...entries].map(([name, isDirectory]) => ({ name, directory: isDirectory, file: !isDirectory }));
+  };
+  return { walked, list, read: name => { assert.ok(name in files, 'no such file: ' + name); return files[name]; } };
+}
+
+test('directory scan finds reports under animation-candidate/ and under animation-paired/, as well as one under the phase evidence directory', () => {
+  const stray = bytesOf(candidateReport('2026-10-10T07:00:00.000Z'));
+  const arm = bytesOf(candidateReport('2026-10-11T09:00:00.000Z', report => { report.paired = { nonce: SESSION_NONCE, kind: 'qualifying', arm: 'candidate' }; }));
+  const copied = bytesOf(candidateReport('2026-10-09T07:00:00.000Z'));
+  const places = { candidate: `${CACHE}/animation-candidate/07-09-candidate.json`, paired: `${SESSION_DIRECTORY}/arm-candidate.json`,
+    evidence: `${EVIDENCE}07-13-cost-candidate.json` };
+  const files = { [places.candidate]: stray, [places.paired]: arm, [places.evidence]: copied,
+    // Not complete reports: an unfinished capture, one profile's metrics, a served manifest, a broken file, an image, the registry.
+    [`${CACHE}/animation-candidate/07-09-view-smoke.json`]: bytesOf(candidateReport('2026-10-08T07:00:00.000Z', report => { report.complete = false; })),
+    [`${CACHE}/animation-candidate/capture-1/run-1-low-1-metrics.json`]: bytesOf(frozenReference.samples[0]),
+    [`${SESSION_DIRECTORY}/reference/tools/art/motion-manifest.json`]: Buffer.from('{"actions":[]}'),
+    [`${CACHE}/notes.json`]: Buffer.from('not json'),
+    [`${CACHE}/animation-candidate/capture-1/run-0-low-1-0000.png`]: Buffer.from('png'),
+    [`${EVIDENCE}07-paired-session-registry.json`]: bytesOf(paired.emptyRegistry()) };
+  const fake = tree(files);
+  assert.deepEqual([...paired.FROZEN_EVALUATION_ROOTS], [EVIDENCE_ROOT, CACHE]);
+  const found = paired.scanReports({ list: fake.list, read: fake.read });
+  assert.deepEqual(found.map(entry => entry.path).sort(), Object.values(places).sort());
+  for (const entry of found) assert.equal(entry.sha256, sha256(files[entry.path]), entry.path);
+  // Each root is walked, the cache recursively.
+  for (const directory of [EVIDENCE_ROOT, CACHE, `${CACHE}/animation-candidate`, `${CACHE}/animation-candidate/capture-1`,
+    `${CACHE}/animation-paired`, SESSION_DIRECTORY, `${SESSION_DIRECTORY}/reference/tools/art`])
+    assert.ok(fake.walked.includes(directory), directory);
+  // A root left out of the scan hides what lies under it: the list of roots is what makes the scan complete.
+  assert.deepEqual(paired.scanReports({ roots: [`${CACHE}/animation-candidate`], list: fake.list, read: fake.read }).map(entry => entry.path),
+    [places.candidate]);
+  // All three are frozen evaluations at the candidate identity, in time order.
+  const results = Object.fromEntries(found.map(entry => [entry.sha256, FROZEN_RUN]));
+  assert.deepEqual(paired.frozenEvaluationList(found, CANDIDATE_IDENTITY, results).map(entry => entry.paths),
+    [[places.evidence], [places.candidate], [places.paired]]);
+});
+
+test('duplicate report listed once: the same report found in two places is one frozen evaluation', () => {
+  const bytes = bytesOf(candidateReport('2026-10-10T07:00:00.000Z'));
+  const places = [`${CACHE}/animation-candidate/07-09-candidate.json`, `${EVIDENCE}07-13-cost-candidate.json`];
+  const fake = tree({ [places[0]]: bytes, [places[1]]: bytes });
+  const reports = paired.scanReports({ list: fake.list, read: fake.read });
+  assert.equal(reports.length, 2);
+  const list = paired.frozenEvaluationList(reports, CANDIDATE_IDENTITY, { [sha256(bytes)]: FROZEN_RUN });
+  assert.equal(list.length, 1);
+  assert.deepEqual([list[0].evaluation, list[0].of, list[0].reportSha256, list[0].exitCode, list[0].overrunCount, list[0].applicableBudgetPass],
+    [1, 1, sha256(bytes), 1, 40, false]);
+  assert.deepEqual(list[0].paths, [...places].sort());
+});
+
+test('stray single-arm candidate in the frozen evaluation list: every complete candidate report at the identity is listed in time order with the frozen command\'s result, whether or not it belongs to a session', () => {
+  const entry = (name, report) => ({ path: name, sha256: sha256(bytesOf(report)), report });
+  const arm = entry('arm.json', candidateReport('2026-10-11T09:00:00.000Z', report => { report.paired = { nonce: SESSION_NONCE, kind: 'qualifying', arm: 'candidate' }; }));
+  const stray = entry('stray.json', candidateReport('2026-10-10T07:00:00.000Z'));
+  const reports = [arm, stray,
+    entry('other-source.json', candidateReport('2026-10-10T08:00:00.000Z', report => { report.identities['src/main.js'] = HEX('9'); })),
+    entry('reference-arm.json', candidateReport('2026-10-11T09:00:00.000Z', report => {
+      for (const name of OWNERS) report.identities[name] = paired.PAIRED_CONTRACT.referenceOwners[name].sha256; })),
+    entry('unfinished.json', candidateReport('2026-10-10T09:00:00.000Z', report => { report.complete = false; })),
+    entry('truncated.json', candidateReport('2026-10-10T09:30:00.000Z', report => { report.samples.pop(); }))];
+  const results = Object.fromEntries(reports.map(report => [report.sha256, FROZEN_RUN]));
+  results[stray.sha256] = frozenOutput(0, 0);
+  const list = paired.frozenEvaluationList(reports, CANDIDATE_IDENTITY, results);
+  assert.deepEqual(list.map(item => [item.evaluation, item.of, item.reportSha256, item.session?.nonce ?? null, item.exitCode, item.overrunCount,
+    item.applicableBudgetPass, item.exitZeroObserved, item.capturedAt]),
+  [[1, 2, stray.sha256, null, 0, 0, true, true, '2026-10-10T07:00:00.000Z'],
+    [2, 2, arm.sha256, SESSION_NONCE, 1, 40, false, false, '2026-10-11T09:00:00.000Z']]);
+  // A structural failure of the frozen tool is listed as that and not left out.
+  results[arm.sha256] = { exitCode: 1, stdout: '', stderr: 'Stale current source hash: src/main.js\n' };
+  const structural = paired.frozenEvaluationList(reports, CANDIDATE_IDENTITY, results)[1];
+  assert.deepEqual([structural.exitCode, structural.resultPrinted, structural.overrunCount, structural.applicableBudgetPass], [1, false, null, null]);
+  // Each entry carries the frozen command's result: a listed report without one is refused.
+  assert.throws(() => paired.frozenEvaluationList(reports, CANDIDATE_IDENTITY, {}), /No frozen command result/);
+  // Another source identity has its own list.
+  assert.deepEqual(paired.frozenEvaluationList(reports, paired.identityHash(reports[2].report.identities), results).map(item => item.paths),
+    [['other-source.json']]);
+});
+
+// ---- calibration arms -----------------------------------------------------------------------------------
+
+test('a calibration materialises two reference copies: no file differs between the arms and each holds the five pinned owner files', () => {
+  const made = armFixture();
+  try {
+    const result = paired.materializeArms({ ...made.registered, kind: 'calibration' }, made.options());
+    assert.deepEqual([result.difference.count, result.difference.differingFiles, result.difference.identical], [0, [], true]);
+    assert.equal(result.difference.comparedFiles, made.files.length);
+    for (const arm of ['reference', 'candidate']) for (const name of made.files)
+      assert.deepEqual(readFileSync(path.join(result.arms[arm], name)),
+        OWNERS.includes(name) ? made.blobs[name] : readFileSync(path.join(made.root, name)), `${arm} ${name}`);
+    assert.deepEqual(result.difference.ownersVerified.map(owner => owner.arm).sort(), [...Array(5).fill('candidate'), ...Array(5).fill('reference')]);
+  } finally { made.remove(); }
+  // Any difference between the two copies is refused, naming the path, and leaves no arm behind.
+  const altered = armFixture();
+  try {
+    assert.throws(() => paired.materializeArms({ ...altered.registered, kind: 'calibration' }, altered.options({
+      copy: (from, to) => writeFileSync(to, to.includes('candidate') && from.endsWith('main.js') ? 'altered' : readFileSync(from)) })),
+    /src\/main\.js/);
+    assert.equal(existsSync(path.join(altered.cacheRoot, 'session-' + NONCE(5))), false);
+  } finally { altered.remove(); }
+  // A qualifying pair still differs in exactly the five owner files.
+  const qualifying = armFixture();
+  try {
+    assert.equal(paired.materializeArms({ ...qualifying.registered, kind: 'qualifying' }, qualifying.options()).difference.count, 5);
+  } finally { qualifying.remove(); }
 });

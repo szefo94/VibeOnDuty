@@ -334,7 +334,7 @@ export function countableSessions(registry, identity) {
 export function registerSession(registry, entry, now) {
   verifyChain(registry);
   assert.ok(SESSION_KINDS.includes(entry?.kind), 'Unknown session kind');
-  if (entry.kind !== 'smoke') throw Error(`Registration of a ${entry.kind} session is not implemented yet (plan 07-16 task 3)`);
+  if (entry.kind !== 'smoke') return registry; // task 07-16-03, RED: neutral, nothing is registered
   assert.ok(NONCE.test(entry.nonce ?? ''), 'Registration needs a session nonce');
   assert.ok(!registry.events.some(event => event.nonce === entry.nonce), 'Session nonce is already in the registry');
   assert.ok(HEX64.test(entry.identity ?? ''), 'Registration needs the source identity hash');
@@ -919,6 +919,28 @@ export async function verifySession({ sessionBytes, registry, readArm, hashFrame
   const passed = session.validity.valid && pairedBudgetPass === true && (session.kind === 'calibration' || structuralV2Pass === true);
   return { result, exitCode: passed ? 0 : 1 };
 }
+
+// ---- task 07-16-03, RED: exported with neutral shapes so each control fails on its own assertion ----
+
+export const SMOKE_PAIR = Object.freeze({ warmup: false, run: 1, tier: 'low', actorCount: 1, first: orderFor(1, 0, 0) });
+export const FROZEN_BUDGET_PATH = EVIDENCE_DIR + '07-budget-view-v2.json';
+export const FROZEN_EVALUATION_ROOTS = Object.freeze([]);
+export function closedEvent() { return null; }
+export function closeSession(registry) { return registry; }
+export function verifyLifecycle() { return new Map(); }
+export function assertRunScope() { return null; }
+export function historyPrefixCheck() { return { versions: null, everyVersionIsPrefix: null }; }
+export function registryHistory() { return []; }
+export function assertRegistryIntegrity() { return {}; }
+export function registrationCommitsOf() { return []; }
+export function registryVerdict() {
+  return { verdict: null, passed: null, failed: null, invalid: null, started: null, wording: '', sessions: [], allQualifying: [],
+    identitiesTried: null };
+}
+export function scanReports() { return []; }
+export function frozenEvaluationList() { return []; }
+export function buildArmReport() { return {}; }
+export async function runSession() { return { registry: null, closed: null, report: null, sessionBytes: null, reportHashes: null }; }
 
 // ---- command line ----------------------------------------------------------------------------------------
 
