@@ -258,11 +258,15 @@ export function updateFirstPersonRig(rig, { pose, camera, weapon = null,
   rig.motionSample = sampleFirstPersonMotion(rig.motion, active ? pose : { alive:false }, dt);
   rig.body.position.copy(rig.source.position); rig.body.quaternion.copy(rig.source.quaternion);
   rig.body.scale.copy(rig.source.scale);
-  // Keep the same unscaled body and floor. A bounded view-only fore/aft fit
-  // exposes thighs and knees under the chest when looking down, without moving
-  // the simulated root/eye or changing the third-person silhouette.
+  // Keep the same unscaled body and floor. A bounded view-only fore/aft fit keeps
+  // the eye in front of the chest at every pitch, standing and crouched: the body
+  // sits .18 m back at a level view, as before, and .1 m further back at the pitch
+  // bound of the presentation, which is how far the torso lean (.55 x pitch) brings
+  // the neck base forward. The earlier term moved the body forward under the camera
+  // instead, which put the eye behind the chest and exposed the back. Neither moves
+  // the simulated root/eye or changes the third-person silhouette.
   const pitch = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ').x;
-  const bodyForward = -.18 + .43 * Math.max(0, Math.min(1, -pitch / 1.1));
+  const bodyForward = -.18 - .1 * Math.max(0, Math.min(1, -pitch / 1.1));
   rig.body.position.add(V(0, 0, bodyForward).applyQuaternion(rig.source.quaternion));
   // Camera pitch is applied once at the view root. World torso pitch was already
   // corrected for world aiming, so use its pre-correction sample for view arms.
