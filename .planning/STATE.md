@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 07
 current_phase_name: Movement-Matched and Action-Safe Animation
 status: executing
-stopped_at: Completed 07-34-PLAN.md
-last_updated: "2026-10-11T09:17:47.555Z"
+stopped_at: Completed 07-29-PLAN.md
+last_updated: "2026-10-11T09:54:34.471Z"
 last_activity: 2026-10-09
 last_activity_desc: Phase 07 execution started
-state_head: 097aa8144c1b1639d40fab7a726722972d2952d4
+state_head: 490f16fa59b5b241d0fa892dc2e8e05421f0d224
 progress:
   total_phases: 12
   completed_phases: 2
   total_plans: 47
-  completed_plans: 42
+  completed_plans: 43
   percent: 17
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-05)
 ## Current Position
 
 Phase: 07 (Movement-Matched and Action-Safe Animation) — EXECUTING
-Plan: 15 of 19
+Plan: 16 of 19
 Status: Ready to execute
 Next action: Plan 07-18 closed (calibration valid and passed; paired verdict "passed, session 1 of 1; 0 valid sessions failed; 0 invalid"; plan 09 qualified on the paired route only, `stable-gates.mjs check` exit 0). The original absolute limits were not met (frozen command exit 1, 40 and 21 of 192 over; no frozen exit 0). Next: 07-19 strict capture, which needs an owner host_ready time no older than 12 hours, the paired session directories kept in the cache and no hashed source file changed before it runs. Open: G-01 CI art-test step before any push; AGENTS.md still says nothing has qualified. ANIM-05 stays unmarked until phase verification. Phase5 follows accepted Phase7.
 Roadmap review: User revised remaining order to6 → 7 → 5 → 2 → 3 → 4 → 8 → 9 → 10 → 11 → 12; Phase1 remains complete.
@@ -94,6 +94,7 @@ Progress: [██░░░░░░░░] 17%
 | Phase 07 P27 | 41 min | 2 tasks | 4 files |
 | Phase 07 P28 | 18 min | 1 tasks | 2 files |
 | Phase 07 P34 | 31 min | 2 tasks | 4 files |
+| Phase 07 P29 | long | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -197,8 +198,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-10-11T09:17:38.547Z
-Stopped at: Completed 07-34-PLAN.md
+Last session: 2026-10-11T09:54:34.292Z
+Stopped at: Completed 07-29-PLAN.md
 Resume file: None
 
 User passed both Phase 6 visual checks with "pass all tests and proceed".
