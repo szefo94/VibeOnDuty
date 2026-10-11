@@ -798,6 +798,10 @@ describe('M4 standing, gaits, sprint and jump at every key', () => {
 });
 
 // ── The first-person body view, upward aim and the look-down limits ───────
+// Named for what it is (plan 07-38, review B-02): the two guard cases of Amendment 1 below count torso
+// vertices in view, inside the frustum between the near plane and 0.6 m, and those of them nearer than
+// 0.30 m. They measure neither the distance from the eye to a surface nor whether the eye is inside a
+// mesh; src/builders/firstPersonBodyView.test.js measures both.
 describe('the first-person body view with the lean on', () => {
   const VIEW_STATES = ['standing sweep', 'crouched sweep', 'crouched, planning pitches', 'look down', 'crouch walk sweep'];
   const MEASURES = [['handler', v => v.handler], ['lean undone', v => v.undone], ['corrections restored', v => v.restored],
@@ -1041,6 +1045,111 @@ describe('an enemy-style actor with a mounted weapon, through the driver only', 
       expect(value - previous, `update ${update}: one step`).toBeLessThan(0.5);
     });
     expect(shares[29]).toBeGreaterThan(LIMIT.eased);
+  }, SLOW);
+});
+
+// ── Three conditions under which a handler must not lean (plan 07-38, review W-10) ──
+describe('a handler that must not lean', () => {
+  /**
+   * A copy of the conditions of the handler's rule (crouchLean of weaponHandling.js): whether a handler
+   * given this pose leans the skeleton it holds. `without` leaves one condition out, as a handler that
+   * lost it would decide.
+   */
+  const leansByRule = (owner, pose, without = '') =>
+    !(!owner.skeleton || (without !== 'anchor' && owner.fixedAnchor === true) || (without !== 'weapon' && pose.weapon !== owner.weapon))
+    && (without === 'alive' || pose.alive !== false) && pose.crouching === true;
+  /** The largest turn, in radians, of the given bones away from the given rotations. */
+  const turnedFrom = (bones, rotations) => Math.max(...bones.map((node, i) => turn(rotations[i], node.quaternion)));
+  /** This file's four rotations on a skeleton, as a handler without the condition would apply them; returns the undo. */
+  function leanHere(root, bones, radians) {
+    const kept = bones.map(node => node.quaternion.clone());
+    root.updateMatrixWorld(true);
+    const axis = new THREE.Vector3(1, 0, 0).applyQuaternion(root.getWorldQuaternion(new THREE.Quaternion()));
+    bones.forEach((node, i) => worldTurn(node, axis, i ? -radians : radians));
+    return () => { bones.forEach((node, i) => node.quaternion.copy(kept[i])); root.updateMatrixWorld(true); };
+  }
+  /** A crouched M4 player, settled, with the lean on. */
+  function crouchedPlayer() {
+    const player = livePlayer(), rows = play(player, 'm4', [...repeat('standing', 30), ...repeat('crouch, settling', 120, { crouching: true })]);
+    expect(rows.at(-1).applied / constant(), 'the third-person handler leans the crouched player').toBeGreaterThan(0.99);
+    return player;
+  }
+
+  it('a fixed-anchor handler of the first-person view never leans the arms view it holds', () => {
+    const player = crouchedPlayer(), { rig, actor } = player, pose = actor.presentation;
+    const viewOwner = [...rig.handlers].find(each => each.weapon === 'm4'), sourceOwner = owner3p('m4');
+    expect(viewOwner.fixedAnchor).toBe(true);
+    expect(viewOwner.skeleton, 'the view handler holds the arms view').toBe(rig.arms);
+    expect(pose.crouching === true && pose.alive !== false && pose.weapon === viewOwner.weapon).toBe(true);
+    const armBones = LEAN_BONES.map(name => rig.armPairs.find(([, node]) => node.name === name)[1]);
+    // What updateFirstPersonRig gives the arms view: the rotations the source had before its handler leaned it.
+    const unleaned = LEAN_BONES.map(name => sourceOwner.corrections.get(bone(actor.mesh, name)));
+    expect(unleaned.every(Boolean)).toBe(true);
+    expect(viewOwner.crouchLean).toBe(0);
+    for (const node of armBones) expect(viewOwner.corrections.has(node), node.name).toBe(false);
+    expect(turnedFrom(armBones, unleaned)).toBeLessThanOrEqual(LIMIT.same);
+    // The copy of the rule agrees with both handlers, and without the condition it leans the arms view.
+    expect(leansByRule(sourceOwner, pose)).toBe(true);
+    expect(leansByRule(viewOwner, pose)).toBe(false);
+    expect(leansByRule(viewOwner, pose, 'anchor')).toBe(true);
+    // Control: the rotations that decision applies to the arms view fail the measure asserted above.
+    const undo = leanHere(rig.arms, armBones, constant());
+    try { expect(turnedFrom(armBones, unleaned)).toBeGreaterThan(0.9 * constant()); } finally { undo(); }
+    expect(turnedFrom(armBones, unleaned)).toBeLessThanOrEqual(LIMIT.same);
+  }, SLOW);
+
+  it('a handler whose weapon is not the weapon of the pose never leans the skeleton it holds', () => {
+    const player = crouchedPlayer(), { actor } = player, pose = actor.presentation, other = owner3p('pistol');
+    guns.restorePlayerWeaponHandling();
+    const bones = LEAN_BONES.map(name => bone(actor.mesh, name)), found = bones.map(node => node.quaternion.clone());
+    const mount = other.mountRest;
+    // The game hands the skeleton to the handler of the pose's weapon only (updatePlayerWeaponHandling of
+    // src/builders/weapon.js). Here the pistol's handler holds it while the pose carries the M4.
+    other.skeleton = actor.mesh;
+    try {
+      expect(pose.crouching === true && pose.alive !== false && pose.weapon === 'm4' && other.weapon === 'pistol').toBe(true);
+      for (let update = 1; update <= 3; update++) {
+        handling.updateWeaponHandling(other, { ...pose, sampleTimeSeconds: pose.sampleTimeSeconds + update * DT });
+        expect(other.crouchLean, `update ${update}`).toBe(0);
+        for (const node of bones) expect(other.corrections.has(node), `update ${update}: ${node.name}`).toBe(false);
+        expect(turnedFrom(bones, found), `update ${update}`).toBeLessThanOrEqual(LIMIT.same);
+      }
+      expect(leansByRule(other, pose)).toBe(false);
+      expect(leansByRule(other, pose, 'weapon')).toBe(true);
+      // Control: the rotations that decision applies to the skeleton fail the measure asserted above.
+      const undo = leanHere(actor.mesh, bones, constant());
+      try { expect(turnedFrom(bones, found)).toBeGreaterThan(0.9 * constant()); } finally { undo(); }
+    } finally {
+      handling.restoreWeaponHandlingBones(other);
+      other.skeleton = null; other.mountRest = mount;
+    }
+    expect(turnedFrom(bones, found)).toBeLessThanOrEqual(LIMIT.same);
+  }, SLOW);
+
+  it('a pose that is not alive never leans', () => {
+    const player = livePlayer();
+    play(player, 'm4', repeat('standing', 60));
+    const { actor } = player, pose = actor.presentation, time = pose.sampleTimeSeconds, owner = owner3p('m4');
+    const bones = LEAN_BONES.map(name => bone(actor.mesh, name));
+    // A reset pose takes its target at once: dead and crouching, the target is no lean.
+    const dead = { ...pose, crouching: true, alive: false, reset: true, sampleTimeSeconds: time + DT };
+    expect(again(player, dead)).toBe(0);
+    expect(owner.crouchLean).toBe(0);
+    for (const node of bones) expect(owner.corrections.has(node), node.name).toBe(false);
+    expect(leansByRule(owner, dead)).toBe(false);
+    expect(leansByRule(owner, dead, 'alive')).toBe(true);
+    // The same pose alive leans by the constant, so the case above measured a handler that can lean.
+    const alive = { ...dead, alive: true, sampleTimeSeconds: time + 2 * DT };
+    expect(leansByRule(owner, alive)).toBe(true);
+    expect(again(player, alive) / constant()).toBeCloseTo(1, 9);
+    // Dying while crouched: the lean is gone 0.5 s later, as after a release.
+    let left;
+    for (let update = 3; update <= 32; update++) left = again(player, { ...pose, crouching: true, alive: false, sampleTimeSeconds: time + update * DT });
+    expect(left / constant(), '0.5 s after the death').toBeLessThan(LIMIT.released);
+    // Control: the rotations a handler without the condition applies fail the measure of a pose that does not lean.
+    guns.restorePlayerWeaponHandling();
+    const found = bones.map(node => node.quaternion.clone()), undo = leanHere(actor.mesh, bones, constant());
+    try { expect(turnedFrom(bones, found)).toBeGreaterThan(0.9 * constant()); } finally { undo(); }
   }, SLOW);
 });
 
