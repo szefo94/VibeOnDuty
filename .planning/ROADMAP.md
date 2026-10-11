@@ -187,12 +187,15 @@ Plans:
 4. A creator imports or retargets approved reusable motion onto the selected rig, regenerates runtime clips, and reviews the resulting transitions through the Blender-to-game workflow.
 5. Repeated spawn, character replacement, and disposal keep shared templates usable and release instance resources within the measured browser budget.
 
-**Plans:** 30/34 plans executed, 22 tasks across 9 waves; independent plan verification passed on 2026-10-05
+**Plans:** 30/37 plans executed, 22 tasks across 9 waves; independent plan verification passed on 2026-10-05
 - [x] 07-27-PLAN.md — live play on composed clips with inherited motion-captured legs under the authored weapon pose; inertia fix; composed-pose guards (Wave A)
 - [x] 07-28-PLAN.md — first-person look-down body view fix (Wave A)
 - [x] 07-34-PLAN.md — first-person contact regression: crouch and jump pelvis held over the root; contact guard for four weapons (Wave A, runs before the rest of 07-29)
 - [x] 07-29-PLAN.md — browser check, focused specs, fast gates (Wave A; resumes after 07-34)
 - [ ] 07-33-PLAN.md — independent opus/high review, then the blocking owner live check (Wave A, runs after 07-29)
+- [ ] 07-35-PLAN.md — crouch torso lean (owner item L-01): one constant in the weapon handler, weapon level, first person unchanged (Wave A)
+- [ ] 07-36-PLAN.md — browser proof, focused set, fast gates, non-binding owner preview of the lean (Wave A)
+- [ ] 07-37-PLAN.md — delta opus/high review, then the binding owner check with the open items named (Wave A)
 - [ ] 07-30-PLAN.md — identity inventory and stable gates at the new identity (Wave B, after owner approval)
 - [ ] 07-31-PLAN.md — paired calibration, sessions and plan 09 record at the new identity (Wave B)
 - [ ] 07-32-PLAN.md — strict capture at the new identity, documentation, re-derived requirement status (Wave B)
