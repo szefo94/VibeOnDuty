@@ -37,20 +37,26 @@ coverage:
     description: Full moving current/preview/online matrix and unchanged fixed-budget qualification
     requirement: ANIM-02
     verification:
-      - {kind: integration, ref: evidence/07-motion-review.json, status: fail}
+      - {kind: integration, ref: "evidence/07-motion-review.json#actualV2.frozenApplicableBudgetPass false (moving matrix complete on 2026-10-11; the unchanged fixed budget was not met, 21 of 192 over)", status: fail}
       - {kind: integration, ref: evidence/07-10-current-source-smoke-result.json, status: fail}
     human_judgment: false
   - id: D3
     description: Full stable regression gates at the current protected runtime
     requirement: ANIM-05
     verification:
-      - {kind: integration, ref: evidence/07-10-stable-gates.json, status: fail}
+      - {kind: integration, ref: "evidence/07-10-stable-gates.json (complete, all seven gates exit 0; offline on the second of two runs)", status: pass}
     human_judgment: false
   - id: D4
     description: Natural grips, anatomy, feet, ADS comfort and smooth moving quality
     verification: []
     human_judgment: true
     rationale: Actual source-bound media and automated predicates cannot record a human aesthetic verdict or representative-device FPS certification.
+  - id: D5
+    description: "Full moving current, preview and online matrix complete; plan 09 budget qualified by the owner-approved paired same-session gate (edits to the five owner files after c973458 added no cost within tolerance in the offline Training Range capture), not by the fixed budget"
+    requirement: ANIM-02
+    verification:
+      - {kind: integration, ref: "evidence/07-motion-review.json and evidence/07-18-timing-result.json", status: pass}
+    human_judgment: false
 actuals:
   tokens: 2282691
   tasks: 0
@@ -59,7 +65,7 @@ plan_head_before: c293c16b603c57c6f39f8525669c4eb5724ce136
 plan_head_after: 08099bd8c24aa6aea2654ddca520e45bc5952de3
 duration: approximately 678min plan wall span including prior interruption; approximately145min final continuation
 completed: 2026-10-07
-status: halted
+status: complete
 execution_active: false
 ---
 
@@ -147,3 +153,29 @@ None introduced. Missing executed coverage and failing gates are explicit deferr
 ## Self-Check: PASSED — Artifact Integrity Only
 
 Referenced artifacts and commits exist. Current protected source and media identity checks agree with saved evidence. Owned collection and fixture handles are retired. This section verifies artifact integrity only; qualification is governed by the actual gates recorded above.
+
+## 2026-10-11: strict capture exit 0 (plan 07-19); automated qualification complete, human review open
+
+Everything above this section describes the state on 2026-10-07 and is kept as history. The statements there that qualification "remains halted" and that gates "remain open" were true then; this section records what changed. Written by plan 07-19 task 2 from `evidence/07-motion-review.json` (sha256 `615e5d22eb156ca76670338e3b182702da98e840cbdaae3c39f5aec3a807d574`, commit `23de5a4`).
+
+- **Command and exit code:** `node tools/art/review.mjs --animation-capture`, no sub-mode, run once on 2026-10-11 from 03:35:06 to 04:11:06 local. Exit code **0**. Report `complete: true`, `status: automated-qualified-human-pending`, `durationMs` 2159077 (36.0 minutes), `canceled: false`.
+- **Rows and unions, one unspliced run:** 45 current rows (45 distinct tier, variant and view keys; 15 per tier, all completed, the nine P90-fallback rows included), 9 preview rows that keep their Preview and Phase 5 labels, 3 blocked-gait unions, 3 shared-movement unions, 3 offline combat unions (each complete, with a menu return), and the online union complete on Low, Medium and High with 6 movies, all `continuousFullPixels: true`. 24 movies in total. `collectionErrors` is empty.
+- **Dependency flags:** `matrixComplete`, `stableGatesPass`, `plan09Qualified`, `protectedBytesUnchanged`, `creatorTracer.complete` and `actualV2.passed` are all true. `humanMotionAcceptance` is `pending` and `certification` is `false`.
+- **This was the second full capture of plan 07-19.** The first (2026-10-10, exit 1) was partial only on the online route and is archived as `evidence/07-motion-review-partial-2026-10-10.json`. Between the two the collector's online route was changed and independently reviewed (plan 07-26, `07-26-COLLECTOR-REVIEW.md`); `toolingIdentities['moving-online.mjs']` is `228ddb43408d90910c112d3ae0687ff2469a8338976253ab38aa01f24c8a8b5d`, the reviewed hash.
+- **Online route as recorded** (the collector does not judge the lane; these are its additive fields): outside-lane samples 0 in all 12 legs; back-offs 0 except one on High leg (34,22); tier wall time 45225 ms, 57099 ms and 66366 ms; match time left 558.3 s, 547.7 s and 538.4 s.
+- **Timing gate.** Plan 09 was qualified by the owner-approved paired same-session gate, not by the fixed budget: `actualV2.timingGate` is `paired-same-session`, `pairedVerdict` `pass`. Paired result, with its denominator, from `evidence/07-18-timing-result.json`: **passed, session 1 of 1; 0 valid sessions failed; 0 invalid.** The unchanged frozen command exited 1 in this capture too (`frozenApplicableBudgetPass: false`, 21 of 192 over, on `evidence/07-18-cost-candidate.json`); the earlier evaluation at this identity was 40 of 192 over. That is why coverage D2 stays `fail` and D5 was added.
+- **What the paired result means** (`evidence/07-18-timing-result.json#meaning.means`): "in one software-rendered session on this host, in the offline Training Range workload, the five owner files as they are now did not cost more than the same five files at the freeze, within 5% typically and 25% in any single profile for the frame interval, and within about one timer tick for the small script components; and every structural check of the frozen gate still passed."
+- **What it does not mean** (copied from `meaning.doesNotMean`):
+  - "That the original fixed limits were met. The recorded frozen evaluations failed them (plan 07-13: 40 of 192 over), and that stays recorded. A paired pass is never worded as meeting the original absolute limits."
+  - "Any frame-rate claim, any representative-device claim, or any human motion or quality acceptance. An agent's review is none of these either."
+  - "That Phase 7 as a whole did not add animation cost, or did not make the game slower. Cost that was present at the freeze, including the first-person view from plan 07-07, is in both arms and cancels. The first-person view cost is invisible to the paired predicate, and it is equally invisible to the frozen limits, which were also taken with that view present. Neither gate tells you what the view costs."
+  - "Anything about any file outside the five owner files. Their cost is identical in both arms."
+  - "Anything about online play, or about any workload other than offline Training Range with 1 and 8 source actors."
+  - "That the current owner files are as fast as they have been. They are compared with the pre-tuning owner files, so a later slowdown smaller than the tuning gain passes."
+  - "That sub-millisecond components did not regress by less than one timer step plus tolerance."
+  - "That zero limits still hold exactly."
+  - "Anything about a real GPU or another host. The sessions are software-rendered on one desktop."
+  - "That any earlier failed report has become a pass, or that a smoke or a calibration session is a qualification."
+- **Stable gates (D3):** `evidence/07-10-stable-gates.json` is complete with all seven gates at exit 0; the offline gate passed on the second of two full runs (plan 07-17), and the failed first run stays on record.
+- **Index:** `evidence/07-motion-review-index.html` lists this capture first and every earlier attempt as historical. All 85 referenced movies exist with the recorded size and hash, and the 45 row images of this capture match their hashes.
+- **Still open:** the human review of D-01 to D-11 moving quality, the natural offline death and respawn and the two-client online reload, death and fresh life (D4, a person's own words, recorded separately from every automated record); representative-device frame rate; inherited rig, motion and weapon FBX terms; the unproven cause of the 2026-10-07 Low/P90-fallback observer loss (it did not recur in this run). No requirement is marked complete here. Software-rendered headless measurements on one desktop are not device or frame-rate certification, and no agent has recorded a human motion or aesthetic pass.
