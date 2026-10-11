@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 07
 current_phase_name: Movement-Matched and Action-Safe Animation
 status: executing
-stopped_at: Completed 07-18-PLAN.md
-last_updated: "2026-10-10T22:12:48.514Z"
+stopped_at: Completed 07-26-PLAN.md
+last_updated: "2026-10-11T01:34:23.123Z"
 last_activity: 2026-10-09
 last_activity_desc: Phase 07 execution started
-state_head: e474ac41bc4f6d654f3aa1ddbc4092189b30b0d9
+state_head: d3b1a51632286652b650c6f4b41fecb6b80f1d17
 progress:
   total_phases: 12
   completed_phases: 2
-  total_plans: 38
-  completed_plans: 37
+  total_plans: 39
+  completed_plans: 38
   percent: 17
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-05)
 ## Current Position
 
 Phase: 07 (Movement-Matched and Action-Safe Animation) — EXECUTING
-Plan: 11 of 19
+Plan: 12 of 19
 Status: Ready to execute
 Next action: Plan 07-18 closed (calibration valid and passed; paired verdict "passed, session 1 of 1; 0 valid sessions failed; 0 invalid"; plan 09 qualified on the paired route only, `stable-gates.mjs check` exit 0). The original absolute limits were not met (frozen command exit 1, 40 and 21 of 192 over; no frozen exit 0). Next: 07-19 strict capture, which needs an owner host_ready time no older than 12 hours, the paired session directories kept in the cache and no hashed source file changed before it runs. Open: G-01 CI art-test step before any push; AGENTS.md still says nothing has qualified. ANIM-05 stays unmarked until phase verification. Phase5 follows accepted Phase7.
 Roadmap review: User revised remaining order to6 → 7 → 5 → 2 → 3 → 4 → 8 → 9 → 10 → 11 → 12; Phase1 remains complete.
@@ -90,6 +90,7 @@ Progress: [██░░░░░░░░] 17%
 | Phase 07 P25 | record-keeping close (started 2026-10-10T12:09Z) | 2 tasks | 3 files |
 | Phase 07 P16 | 3h 15m | 4 tasks | 9 files |
 | Phase 07 P18 | 1h 38m | 3 tasks | 11 files |
+| Phase 07 P26 | 1h 55m | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -159,6 +160,7 @@ Full decisions are recorded in PROJECT.md.
 - [Phase 07]: 07-18: paired timing verdict is pass (passed, session 1 of 1; 0 valid sessions failed; 0 invalid) after a valid passed calibration; plan 09 is qualified on the paired route only
 - [Phase 07]: 07-18: the original absolute limits were not met (frozen command exit 1 on both evaluations at identity c1b06272, 40 and 21 of 192 over); no frozen exit 0 was observed and no owner frozen-pass decision exists
 - [Phase 07]: 07-18: no requirement marked complete; keep every paired session directory in the cache and change no hashed source file until the 07-19 capture has run
+- [Phase 07]: 07-26: the control's stop criterion was changed after run-04 failed (orchestrator under the owner's standing instruction, not separately approved by the owner); collector review approved with notes W-01 to W-05
 
 ### Pending Todos
 
@@ -187,8 +189,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-10-10T22:12:48.354Z
-Stopped at: Completed 07-18-PLAN.md
+Last session: 2026-10-11T01:34:22.965Z
+Stopped at: Completed 07-26-PLAN.md
 Resume file: None
 
 User passed both Phase 6 visual checks with "pass all tests and proceed".
