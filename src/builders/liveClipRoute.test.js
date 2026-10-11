@@ -358,7 +358,11 @@ const figures = { states: {}, actions: {}, clips: {}, death: {}, controls: {} };
 /** Twelve phases of one state for every actor; `action` adds an upper body action at 12 phases of its own. */
 function playState(name, actors, action = null) {
   const state = STATES[name], run = simulation(actors), poses = actors.map(() => []), seen = [];
-  const record = pose => { seen.push(pose); actors.forEach((actor, i) => poses[i].push(measure(actor.mesh))); };
+  let layers;
+  const record = pose => {
+    seen.push(pose); actors.forEach((actor, i) => poses[i].push(measure(actor.mesh)));
+    layers = actors.map(actor => driver.inspectPresentationLayers(actor));
+  };
   const act = phase => (action ? { action: { ...action, elapsed: action.total * phase } } : {});
   if (state.jump) {
     // Start and landing are shorter than the inertia of their entry, so that blend is cut here;
@@ -379,7 +383,7 @@ function playState(name, actors, action = null) {
     run(Math.ceil(1 / dt) + 2, dt, { ...state.more, ...act(0) }, velocity);
     for (let i = 0; i < PHASES; i++) run(1, dt, { ...state.more, ...act(i / PHASES) }, velocity, record);
   }
-  return { poses, seen, layers: actors.map(actor => driver.inspectPresentationLayers(actor)) };
+  return { poses, seen, layers };
 }
 /** Weapon and chest of the composed actor against the actor of before this plan, phase by phase. */
 function expectDirection(label, composed, before, facing = false) {
@@ -552,6 +556,10 @@ describe('every in-scope state through the driver', () => {
     const { poses: [mine, before], seen, layers } = playState(name, [composed, today]);
     expect(mine).toHaveLength(PHASES);
     if (state.jump) for (const pose of seen) expect(pose.jump, name).toBe(state.jump);
+    for (const layer of layers[0].filter(entry => entry.clip.endsWith('_lower'))) {
+      expect(layer.clip, `${name}: selected legs`).toMatch(/^live_/);
+      expect(layer.tracks, `${name}: ${layer.clip}`).toHaveLength(10);
+    }
     const seenDirection = expectDirection(name, mine, before, state.facing);
     const legs = legFigures(mine);
     expect(legs.kneeLargest, `${name}: largest forward knee offset`).toBeGreaterThanOrEqual(LIMIT.kneeForward);
