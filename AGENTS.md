@@ -245,8 +245,10 @@ in one browser is unexplained.
 - Ordered-bone/inverse-bind world skeleton consolidation is per actor. Mutable
   skeletons never cross actor/view ownership. Owned reference/collection caches
   preserve first depth-first lookup, include new lazy mask actions and invalidate
-  on replacement/generation/retirement. The frozen source-eye V2 performance gate
-  remains unqualified; texture reductions establish no timing pass.
+  on replacement/generation/retirement. The frozen source-eye V2 absolute limits were
+  not met (frozen command exit 1 at the final identity; 40, then 21 of 192 statistics over);
+  plan 09 is qualified on the owner-approved paired same-session route only, see
+  "Validation and deployment". Texture reductions establish no timing pass.
 
 - Start with `builders/enemyGLTF.js` (load/clone, `ALIASES`, clip preparation),
   `builders/enemyAnimations.js` (locomotion weights, overrides, inertia, diagnostics),
@@ -312,9 +314,41 @@ Phase 6 art ownership and reproducibility:
   logger restoration in `enemyAnimations.js` changes its runtime identity only.
   New facts go to evidence/docs.
   Current coverage/limits belong to `07-10-SUMMARY.md` and `07-motion-review.json`.
-  The final separate index retains42 fresh current contexts plus3 Low/P90-fallback
-  recovery contexts, nine labeled previews and partial three-tier online media.
-  Natural death/respawn, online routes and current09/full-suite gates stay open.
+  State on 2026-10-11 (plan 07-19): the strict command exited 0 once, as one unspliced run of
+  36 minutes: 45 current rows (the nine P90-fallback rows included), nine labeled previews,
+  three blocked-gait, three shared-movement and three offline combat unions with natural death,
+  respawn and menu return, and the two-client online M4 union complete on Low, Medium and High
+  (0 samples outside the lane, one back-off). Report status
+  `automated-qualified-human-pending`. It was the second full capture of that plan; the first
+  was partial on the online route and is kept as
+  `evidence/07-motion-review-partial-2026-10-10.json`. `07-motion-review-index.html` lists the
+  qualifying capture first and every earlier attempt as historical.
+- Timing gate behind that capture: plan 09 is qualified on the paired same-session route
+  (owner approval conditional on eight review changes, `07-09-PAIRED-AMENDMENT-DECISION.md`;
+  contract `07-09-PAIRED-AMENDMENT-V2.md`; result "passed, session 1 of 1; 0 valid sessions
+  failed; 0 invalid"). It shows only that edits to the five owner files after `c973458` added no
+  cost, within tolerance, in the offline Training Range capture on this host. It is not the
+  original limits (not met), says nothing about the first-person view's cost, Phase 7 as a
+  whole or online play. Available and not run: the exact frozen source can be rebuilt byte for
+  byte and captured on today's host.
+- Final stable gates at identity `c1b06272…2c57` (`evidence/07-10-stable-gates.json`): lint,
+  both typechecks and build exit 0, **323 unit tests in 31 files**, **138 offline browser
+  tests**, **18 production multiplayer tests**. The offline gate passed on the second of two
+  full runs; the first failed one case (the first test timed out while the game was loading;
+  cause not diagnosed) and stays on record.
+- Still open after Phase 7 automation: human motion and aesthetic acceptance (no agent records
+  it; `humanMotionAcceptance` is `pending`), representative-device frame rate (all timing is
+  software-rendered headless on one desktop, Balanced power plan, Discord and Steam running
+  during the timing sessions; no device or FPS certification), inherited rig, motion and weapon
+  FBX terms, and G-01 (CI art-test step on a fresh checkout; fix before any push).
+- Phase 7 gate tools: `tools/art/stable-gates.mjs` runs the seven gates serially
+  (`run --gates <ids | all>`), reads them back (`check`, `check --only stable`) and builds the
+  plan 09 record (`plan09`). `tools/art/multiplayer-ab.mjs` attributes a multiplayer failure
+  between two sources (`control` / `run --reference <commit>`). The moving collector bounds its
+  combat-path and game-event waits in observed simulation seconds with separate wall guards
+  (plan 07-20). `tools/art/animation-budget-paired.mjs` with `review.mjs --animation-paired`
+  registers, runs and judges paired sessions. `tools/art/frozen-bytes.mjs verify` checks the
+  frozen identities. Heavy jobs run one at a time.
 
 - Plan 09 qualification (`requirePlan09` in `tools/art/animation-capture.mjs`) has two routes
   selected by the record's `timingGate`: the frozen route (`frozen-v2` or absent) needs a

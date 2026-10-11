@@ -46,6 +46,62 @@ weapon/view/tier and online footage while explicitly recording the unresolved
 shared combat union. It keeps every original full acceptance predicate and
 cannot produce a complete report while that coverage is missing.
 
+### Phase 7 gate and qualification commands (2026-10-11)
+
+Heavy jobs (suites, captures, paired sessions, controls) run one at a time; they share
+output directories and their timing is sensitive to load. State as of this date: stable
+gates complete, plan 09 qualified on the paired route only (the frozen absolute limits
+were not met), strict capture exit 0, human review pending.
+
+```sh
+node tools/art/stable-gates.mjs run --gates all
+node tools/art/stable-gates.mjs run --gates offline
+node tools/art/stable-gates.mjs check
+node tools/art/stable-gates.mjs check --only stable
+node tools/art/stable-gates.mjs plan09 --timing <timing result> --registry <registry> --offline-report <Playwright JSON report>
+node tools/art/multiplayer-ab.mjs control --reference <commit>
+node tools/art/multiplayer-ab.mjs run --reference <commit> --grep <title> --repeats <n>
+node tools/art/review.mjs --animation-paired --smoke --register
+node tools/art/review.mjs --animation-paired --calibration --register
+node tools/art/review.mjs --animation-paired --register
+node tools/art/review.mjs --animation-paired [--smoke | --calibration] --run <nonce>
+node tools/art/animation-budget-paired.mjs chain --registry <registry>
+node tools/art/animation-budget-paired.mjs verify --budget <frozen V2 budget> --session <session report> --registry <registry>
+node tools/art/animation-budget-paired.mjs verdict --registry <registry> --identity <hash>
+node tools/art/animation-budget-paired.mjs frozen-evaluations --identity <hash>
+node tools/art/frozen-bytes.mjs verify
+node tools/art/approach-fixture-control.mjs
+node tools/art/moving-online-control.mjs --label <new label> [--tiers <list>] [--warm-up-minutes <n>]
+node tools/art/moving-online-control.mjs --read <label>[,<label>...] --tiers <list>
+```
+
+- `stable-gates.mjs run --gates <ids | all>` (plan 07-17): run after any source change that
+  moves the protected identity, before a paired session or a capture. It runs lint, both
+  typechecks, build, units, the offline suite and the multiplayer suite serially and writes
+  `evidence/07-10-stable-gates.json`. Name single gates (for example `offline`) to rerun one.
+- `stable-gates.mjs check` (plans 07-17, 07-18): run before every capture and after any
+  edit near protected files. It launches nothing; `--only stable` leaves plan 09 out.
+- `stable-gates.mjs plan09` (plan 07-18): run once after a paired verdict, to build the plan
+  09 qualification record from the timing result, the registry and the offline report.
+- `multiplayer-ab.mjs` (plan 07-14): run when a multiplayer case fails and it is unclear
+  whether the current source or the host is responsible. Both sub-commands take a reference
+  commit; `run` repeats one case, interleaved, on this working tree and on a scratch copy of
+  the reference extracted with `git archive`. See the file header for `control`.
+- `review.mjs --animation-paired` (plans 07-16, 07-18): register a session, commit the
+  registry file alone, then run it by its nonce. A smoke proves the tooling, one calibration
+  comes before at most three qualifying sessions. Do not start one without the owner; the
+  registry is append-only and each session takes about 33 minutes.
+- `animation-budget-paired.mjs` (plans 07-16, 07-18): `chain` checks the registry, `verify`
+  recomputes one closed session from its reports, `verdict` applies the majority rule,
+  `frozen-evaluations` lists frozen results at an identity. None launches a browser.
+- `frozen-bytes.mjs verify` (plan 07-21): run after any git operation that could rewrite
+  working-tree bytes, and before a gate run. Its `restore` sub-command rewrites files and is
+  an owner decision, not a routine step.
+- `approach-fixture-control.mjs` (plan 07-23) and `moving-online-control.mjs` (plan 07-26):
+  labelled collector controls for the offline combat approach and the online route. Run one
+  when the collector's steering changes. Their output goes to the gitignored cache and is
+  not evidence.
+
 ## `retarget.py` — rebuild `public/models/enemy.glb`
 
 `enemy.glb` shipped with clips from two sources on incompatible rigs: 24 authored on

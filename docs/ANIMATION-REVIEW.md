@@ -1,5 +1,82 @@
 # Animation and model review
 
+## Qualification state — 2026-10-11
+
+Automated qualification of Phase 7 motion is complete. Human review has not happened.
+The section below this one (2026-10-07) describes an earlier, partial state and is kept
+as history; where the two differ, this section is current.
+
+The qualification path, in the order it has to run:
+
+1. **Stable gates.** `node tools/art/stable-gates.mjs run --gates all` runs lint, both
+   typechecks, build, units, the offline browser suite and the production multiplayer
+   suite one after another; `node tools/art/stable-gates.mjs check` reads the record back.
+   Record: phase 07 `evidence/07-10-stable-gates.json`, all seven gates at exit 0 (323
+   unit tests in 31 files, 138 offline browser tests, 18 multiplayer tests). The offline
+   gate passed on the second of two full runs; the first failed one case (the first test
+   timed out while the game was loading, cause not diagnosed) and stays on record.
+2. **Timing gate.** The frozen source-eye V2 command still decides the original absolute
+   limits, and they were **not met**: exit 1 on both evaluations at the final source
+   identity (40, then 21 of 192 statistics over). The owner approved a second route, the
+   paired same-session gate (`07-09-PAIRED-AMENDMENT-DECISION.md`, contract
+   `07-09-PAIRED-AMENDMENT-V2.md`): `node tools/art/review.mjs --animation-paired`
+   registers and runs sessions, `node tools/art/animation-budget-paired.mjs` verifies and
+   judges them. Result in `evidence/07-18-timing-result.json`: passed, session 1 of 1;
+   0 valid sessions failed; 0 invalid (one calibration, one qualifying session).
+3. **Plan 09 record.** `evidence/07-09-qualification.json`, `complete: true`,
+   `timingGate: paired-same-session`, `applicableBudgetPass: false`.
+4. **Strict capture.** `node tools/art/review.mjs --animation-capture` exited 0 on
+   2026-10-11: one unspliced run of 36 minutes with 45 current weapon, view and tier
+   rows, nine labeled previews, three blocked-gait, three shared-movement and three
+   offline combat unions (natural damage, death, respawn and menu return), and a
+   two-client online M4 union on Low, Medium and High with reload, death and a fresh
+   life. Report `evidence/07-motion-review.json`, status
+   `automated-qualified-human-pending`. This was the second full capture; the first
+   (2026-10-10) was partial because the collector's own online route did not reach its
+   third waypoint, and it is kept as `evidence/07-motion-review-partial-2026-10-10.json`.
+   The collector's route was then changed and independently reviewed (plan 07-26). In the
+   qualifying run the online legs recorded 0 samples outside the lane and one back-off;
+   the collector does not judge the lane itself, so read
+   `online.samples[*].legs[].outsideLaneSamples` in any later report.
+
+The playable index is phase 07 `evidence/07-motion-review-index.html`
+(`.planning/phases/07-movement-matched-and-action-safe-animation/evidence/`). It lists the
+qualifying capture first and every earlier attempt as historical. Its movies live in the
+gitignored cache on the capturing machine.
+
+What a paired pass means, in the contract's words: in one software-rendered session on
+this host, in the offline Training Range workload, the five owner files as they are now
+did not cost more than the same five files at the freeze (`c973458`), within 5% typically
+and 25% in any single profile for the frame interval, and within about one timer tick for
+the small script components; and every structural check of the frozen gate still passed.
+What it does not mean: that the original fixed limits were met; any frame rate,
+representative device or human acceptance; anything about the first-person view's cost
+(it is in both arms and cancels), Phase 7 as a whole, files outside the five owner files,
+online play or another workload; anything about a real GPU or another host. Available and
+not run: the exact frozen source can be rebuilt byte for byte and captured on today's
+host.
+
+All timing here is software-rendered headless Chromium on one desktop under the Balanced
+power plan, with Discord and Steam running during the timing sessions. It is not device
+or FPS certification.
+
+What the human review must cover (a person, in their own words, recorded separately from
+every automated record with the source and export identities reviewed): restrained weapon
+and camera motion with steady ADS; real first-person arms, hands, torso and legs with
+credible hand contact; physical magazine and bolt handling fitted to reload time for M4,
+P90, AWP and pistol; a short ADS raise and lower with no bounce; planted turns and stops
+with feet matching speed; the lowered two-handed sprint carry; compact jump, landing and
+recovery; torso-led small turns and foot repositioning on larger ones; melee and throw
+taking priority with no overlap, duplicate release or ammo award; a short directional
+death collapse that settles; the natural offline death and respawn; and the two-client
+online reload, death and fresh life. One-handed supersprint, slide, dive, prone, reload
+x1.15 and supersprint cancellation are labeled previews only and belong to Phase 5. No
+agent can record this verdict; it is pending.
+
+Also open: inherited rig, motion and weapon FBX terms; representative-device frame rate;
+review finding G-01 (the CI step running `npm run test:art` cannot pass on a fresh
+checkout and must be fixed before any push).
+
 ## Current moving collection and qualification — 2026-10-07
 
 `node tools/art/review.mjs --animation-capture` owns a free loopback root-base
