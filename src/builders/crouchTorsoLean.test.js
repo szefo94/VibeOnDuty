@@ -94,10 +94,15 @@ function livePlayer() {
 }
 const owner3p = weapon => guns.playerWeaponHandling.get(`3p:${weapon}`);
 const bone = (mesh, name) => mesh.getObjectByName(name);
+/** Radians between two rotations. Mixer output is not exactly unit length, so this does not assume it. */
+function turn(from, to) {
+  const d = from.clone().conjugate().multiply(to);
+  return 2 * Math.atan2(Math.hypot(d.x, d.y, d.z), Math.abs(d.w));
+}
 /** Radians the handler turned spine_01 on its last update: the bone against the value it saved. */
 function applied(mesh, owner) {
   const spine = bone(mesh, 'spine_01'), saved = owner.corrections.get(spine);
-  return saved ? saved.angleTo(spine.quaternion) : 0;
+  return saved ? turn(saved, spine.quaternion) : 0;
 }
 /** `measure()` on the same pose with the lean undone, then the handler's pose again. */
 function undone(mesh, owner, measure) {
@@ -155,7 +160,7 @@ function play(player, weapon, ticks, { leans = true } = {}) {
     const row = { state: tick.state, gait: actor.presentation.gait.map(entry => entry.key).join('+'),
       upper: actor.presentation.upper, applied: applied(actor.mesh, owner), amount: owner.crouchLean,
       leaners: [...guns.playerWeaponHandling.values()].filter(each => each.corrections.has(bone(actor.mesh, 'spine_01'))).length,
-      lean, plain, handTurn: lean.hand.angleTo(plain.hand) * DEG, left: owner.contacts?.leftError };
+      lean, plain, handTurn: turn(plain.hand, lean.hand) * DEG, left: owner.contacts?.leftError };
     view.updateFirstPersonRig(rig, { pose: actor.presentation, camera, weapon: guns.wpn, dt: tick.dt,
       active: true, thirdPerson: false,
       spineQuaternion: actor._presentationCorrection?.get(bone(actor.mesh, 'spine_03')),
