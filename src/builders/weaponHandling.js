@@ -24,6 +24,10 @@ export function getWeaponHandling(root) { return owners.get(root) ?? null; }
 // angle, so the chest leans while both arms, the mounted weapon and the head keep their
 // orientation. A whole number of degrees from 6 to 13 (crouchTorsoLean.test.js).
 export const CROUCH_TORSO_LEAN_RAD = 12 * Math.PI / 180;
+// The lean fades with upward aim, so that the leaned torso never comes up in front of the
+// first-person eye: whole up to the first pitch, none from the second, a smoothstep between.
+export const CROUCH_LEAN_FADE_START_RAD = .3;
+export const CROUCH_LEAN_FADE_END_RAD = .8;
 const CROUCH_LEAN_EASE_SECONDS = .1; // time constant of the eased crouch amount
 const CROUCH_LEAN_STEP_SECONDS = .1; // a longer step between two sample times is not eased
 const CROUCH_LEAN_MIN_RAD = .0005; // below this no bone is turned
@@ -159,7 +163,10 @@ function crouchLean(owner, pose) {
   else if (step > 0) amount += (target - amount) * (1 - Math.exp(-step / CROUCH_LEAN_EASE_SECONDS));
   owner.crouchLean = Number.isFinite(amount) ? amount : target;
   owner.crouchLeanTime = time; owner.crouchLeanSkeleton = owner.skeleton;
-  return owner.crouchLean * CROUCH_TORSO_LEAN_RAD;
+  // The fade multiplies after the easing, so it follows the pose's pitch on the same update.
+  const fade = 1 - smooth(((Number.isFinite(pose.pitch) ? pose.pitch : 0) - CROUCH_LEAN_FADE_START_RAD)
+    / (CROUCH_LEAN_FADE_END_RAD - CROUCH_LEAN_FADE_START_RAD));
+  return owner.crouchLean * CROUCH_TORSO_LEAN_RAD * fade;
 }
 // Four saved-and-restored rotations about the lateral axis of the skeleton root.
 function leanTorso(owner, radians) {
