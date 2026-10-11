@@ -21,7 +21,11 @@ import { RIFLE_MOVEMENT_CLIPS } from './rifleClips.js';
 // fixed in the plan from measurement, before this file existed, and is never loosened here.
 const LIMIT = Object.freeze({
   weaponYaw: 3.5, weaponYawRange: 6.3, weaponPitch: 2.5, spineYaw: 3.5, // degrees
-  kneeForward: 0.06, crouchKnee: 0.15, crouchPelvis: 0.55, standingPelvis: 0.85, // metres
+  // crouchKnee was 0.15 for the leg shape of plan 07-27 (measured 0.172 and 0.179). Plan 07-34 holds the
+  // crouched pelvis over the feet and re-derived this one limit from measurement before that change was
+  // written: 0.237 in crouch idle and 0.152 in crouch walk at 12 phases, 0.137 over all 39 keys of the
+  // crouch walk. It is 0.12 and does not change again, whatever the built clips measure.
+  kneeForward: 0.06, crouchKnee: 0.12, crouchPelvis: 0.55, standingPelvis: 0.85, // metres
   ankleFromInherited: 0.03, crouchBall: 0.03, idleBall: 0.05, lowestFoot: -0.03,
   landFoot: -0.02, airborneFoot: -0.12, deathPelvis: 0.12,
   hitDegrees: 30, hitFactor: 5, // largest bone rotation of the damage additive, and against the authored one
@@ -30,6 +34,15 @@ const LIMIT = Object.freeze({
   // quaternion component to change by less than this over 8 frames.
   plantedFootTurn: 0.001,
 });
+// Limits of plan 07-34 for the pelvis of the composed crouch and jump clips, fixed in that plan before
+// the composition was changed. In `pelvis.position` the pelvis is a child of the turned root: local x
+// is lateral, local y is fore and aft and local z is the height.
+const HOLD = Object.freeze({
+  pelvisLevel: 0.001, // horizontal pelvis position against the authored clip, per component
+  shoulderShift: 0.001, // fore and aft, against the composed standing pose
+  overRoot: 0.02, // head bone and spine_03 in crouch idle against their standing fore and aft positions
+});
+const HELD_PELVIS = /^(crouch|jump)_/; // the action ids composed without pelvis sway
 const DEG = 180 / Math.PI;
 const SIDES = ['l', 'r'];
 const LOWER_TRACKS = ['pelvis.position', 'pelvis.quaternion', 'thigh_l.quaternion', 'thigh_r.quaternion',
@@ -434,6 +447,27 @@ const WHOLE = { death: 'Death01', death_front: 'Death01', death_back: 'Death01',
   death_right: 'Death01', hit: 'hit', damage: 'hit' };
 const valueAt = (track, time) => Array.from(track.createInterpolant().evaluate(time));
 const authoredOf = id => named(manifest.actions.find(action => action.id === id).clip);
+/** Horizontal pelvis position (bone local x and y) the authored clip of an action has at `time` of its own length; the rest position where it has no such track. */
+const authoredLevel = (id, time) => {
+  const track = authoredOf(id).tracks.find(entry => entry.name === 'pelvis.position');
+  return (track ? valueAt(track, time) : gltf.scene.getObjectByName('pelvis').position.toArray()).slice(0, 2);
+};
+/** A fresh skeleton with the tracks of each [clip, time, upper] layer set as keyed; `upper` true or false takes that mask of the clip only. */
+function posed(...layers) {
+  const mesh = skeletonClone(gltf.scene);
+  for (const [clip, time, upper = null] of layers)
+    for (const track of (upper === null ? clip : driver.copyPresentationMask(clip, upper)).tracks) {
+      const split = track.name.lastIndexOf('.');
+      mesh.getObjectByName(track.name.slice(0, split))[track.name.slice(split + 1)].fromArray(valueAt(track, time));
+    }
+  return mesh;
+}
+/** Midpoint of the two upper arm bones in the character frame, in metres. */
+function shoulderCentre(mesh) {
+  mesh.updateMatrixWorld(true);
+  return mesh.getObjectByName('upperarm_l').getWorldPosition(new THREE.Vector3())
+    .add(mesh.getObjectByName('upperarm_r').getWorldPosition(new THREE.Vector3())).multiplyScalar(0.5);
+}
 
 describe('the live route, clip by clip', () => {
   it('composes every routed action from its inherited legs and its authored upper body', () => {
@@ -467,6 +501,15 @@ describe('the live route, clip by clip', () => {
       const keys = timing === 'held' ? 1 : stamps.length;
       for (let k = 0; k < keys; k++) {
         const theirs = valueAt(height, stamps[k]);
+        // Plan 07-34: a crouch or jump clip keeps the inherited height (local z) only; its two horizontal
+        // components are the authored clip's, or the rest value for a clip without that track.
+        if (HELD_PELVIS.test(id)) {
+          const level = authoredLevel(id, stamps[k] * authored.duration / inherited.duration);
+          expect(position.values[k * 3 + 2], `${id} pelvis height, key ${k}`).toBeCloseTo(theirs[2], 6);
+          for (const axis of [0, 1]) expect(Math.abs(position.values[k * 3 + axis] - level[axis]),
+            `${id} pelvis local ${'xy'[axis]}, key ${k}`).toBeLessThanOrEqual(HOLD.pelvisLevel);
+          continue;
+        }
         for (let axis = 0; axis < 3; axis++) expect(position.values[k * 3 + axis]).toBeCloseTo(theirs[axis], 6);
       }
       for (const side of SIDES) {
@@ -547,6 +590,51 @@ describe('the live route, clip by clip', () => {
       expect(dot(prior, 0, next, 0), `loop to land, ${next.name}`).toBeGreaterThanOrEqual(0);
       expect(dot(prior, prior.values.length - 4, next, 0), `loop end to land, ${next.name}`).toBeGreaterThanOrEqual(0);
     }
+  });
+});
+
+// ── Plan 07-34: the pelvis of a composed crouch or jump clip stays over the root ──
+// Plan 07-27 composed these clips with the whole inherited pelvis position, which in the rifle crouch is
+// 0.23 m behind the root; head, chest and the first-person shoulders rode on it. Checked on the built
+// clips at every key. Shoulders, head and chest are measured as the driver layers the pose: the legs and
+// pelvis of the clip under the upper mask of the M4 ready clip, against the composed standing pose.
+const HELD_CLIPS = ['crouch_idle'];
+describe('the pelvis of a composed crouch or jump clip stays over the root', () => {
+  it.each(HELD_CLIPS)('live_%s: pelvis level as authored, height as inherited, shoulders where standing has them, ankles as inherited', id => {
+    const clip = live.get(id), inherited = named(ROUTE[id][0]), authored = authoredOf(id), ready = live.get('m4_ready');
+    expect(clip, `live_${id}`).toBeDefined();
+    const position = clip.tracks.find(track => track.name === 'pelvis.position');
+    const height = inherited.tracks.find(track => track.name === 'pelvis.position');
+    const standing = posed([ready, 0]), reference = measure(standing), shoulders = shoulderCentre(standing);
+    const seen = { keys: position.times.length, pelvisLevel: 0, shoulderShift: 0, ankle: 0, head: [], chest: [], ball: 0 };
+    position.times.forEach((time, k) => {
+      const theirTime = time * inherited.duration / clip.duration;
+      const [x, y, z] = position.values.slice(k * 3, k * 3 + 3);
+      const level = authoredLevel(id, time * authored.duration / clip.duration);
+      seen.pelvisLevel = Math.max(seen.pelvisLevel, Math.abs(x - level[0]), Math.abs(y - level[1]));
+      expect(Math.abs(x - level[0]), `key ${k}: pelvis local x against the authored clip`).toBeLessThanOrEqual(HOLD.pelvisLevel);
+      expect(Math.abs(y - level[1]), `key ${k}: pelvis local y against the authored clip`).toBeLessThanOrEqual(HOLD.pelvisLevel);
+      expect(z, `key ${k}: pelvis height against the inherited clip`).toBeCloseTo(valueAt(height, theirTime)[2], 6);
+      const layered = posed([clip, time, false], [ready, 0, true]);
+      const shift = shoulderCentre(layered).z - shoulders.z;
+      seen.shoulderShift = Math.max(seen.shoulderShift, Math.abs(shift));
+      expect(Math.abs(shift), `key ${k}: shoulder shift against composed standing`).toBeLessThanOrEqual(HOLD.shoulderShift);
+      const mine = measure(layered), theirs = measure(posed([inherited, theirTime]));
+      for (const side of SIDES) {
+        const distance = mine.ankle[side].distanceTo(theirs.ankle[side]);
+        seen.ankle = Math.max(seen.ankle, distance);
+        expect(distance, `key ${k}: ankle ${side} from the inherited ankle`).toBeLessThanOrEqual(LIMIT.ankleFromInherited);
+      }
+      seen.head.push(mine.head.z - reference.head.z); seen.chest.push(mine.chest.z - reference.chest.z);
+      if (id !== 'crouch_idle') return;
+      expect(Math.abs(mine.head.z - reference.head.z), `key ${k}: head fore and aft against standing`).toBeLessThanOrEqual(HOLD.overRoot);
+      expect(Math.abs(mine.chest.z - reference.chest.z), `key ${k}: spine_03 fore and aft against standing`).toBeLessThanOrEqual(HOLD.overRoot);
+      for (const side of SIDES) {
+        seen.ball = Math.max(seen.ball, mine.ball[side].y);
+        expect(mine.ball[side].y, `key ${k}: ball ${side} above the root`).toBeLessThanOrEqual(LIMIT.crouchBall);
+      }
+    });
+    (figures.hold ??= {})[id] = { ...seen, head: span(seen.head), chest: span(seen.chest) };
   });
 });
 
