@@ -187,12 +187,12 @@ Plans:
 4. A creator imports or retargets approved reusable motion onto the selected rig, regenerates runtime clips, and reviews the resulting transitions through the Blender-to-game workflow.
 5. Repeated spawn, character replacement, and disposal keep shared templates usable and release instance resources within the measured browser budget.
 
-**Plans:** 34/38 plans executed, 22 tasks across 9 waves; independent plan verification passed on 2026-10-05
+**Plans:** 35/38 plans executed, 22 tasks across 9 waves; independent plan verification passed on 2026-10-05
 - [x] 07-27-PLAN.md — live play on composed clips with inherited motion-captured legs under the authored weapon pose; inertia fix; composed-pose guards (Wave A)
 - [x] 07-28-PLAN.md — first-person look-down body view fix (Wave A)
 - [x] 07-34-PLAN.md — first-person contact regression: crouch and jump pelvis held over the root; contact guard for four weapons (Wave A, runs before the rest of 07-29)
 - [x] 07-29-PLAN.md — browser check, focused specs, fast gates (Wave A; resumes after 07-34)
-- [ ] 07-33-PLAN.md — independent opus/high review, then the blocking owner live check (Wave A, runs after 07-29)
+- [x] 07-33-PLAN.md — independent opus/high review, then the blocking owner live check (Wave A, runs after 07-29)
 - [x] 07-35-PLAN.md — crouch torso lean (owner item L-01): one constant in the weapon handler, weapon level, first person unchanged (Wave A)
 - [x] 07-36-PLAN.md — browser proof, focused set, fast gates, non-binding owner preview of the lean (Wave A)
 - [x] 07-38-PLAN.md — first-person own-body view in crouch: browser measurement through the real loop, lean kept out of the body view, eye clearance (Wave A, before 07-37)
@@ -374,7 +374,7 @@ Armor plates remain future longer-mode scope. Monetization and generic authentic
 | 4. Bot-Filled Matches on Measured Pi Hosting | 0/TBD | Not started | - |
 | 5. Omnimovement with Reliable Body and Camera Collision | 0/TBD | Not started | - |
 | 6. Human Characters and Comic-Book Blender Iteration | 6/6 | Complete    | 2026-10-05 |
-| 7. Movement-Matched and Action-Safe Animation | 34/38 | In Progress|  |
+| 7. Movement-Matched and Action-Safe Animation | 35/38 | In Progress|  |
 | 8. Distinct Weapons and Authoritative Fast Combat | 0/TBD | Not started | - |
 | 9. Live Loadouts, Attachments, and Durable Unlocks | 0/TBD | Not started | - |
 | 10. Useful Equipment, Score Streaks, and Reconnaissance | 0/TBD | Not started | - |
