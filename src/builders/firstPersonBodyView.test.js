@@ -4,7 +4,7 @@ import { env } from 'node:process';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import manifest from '../../tools/art/motion-manifest.json';
-import { MOVE_SPEED, PLAYER_H, PLAYER_H_CROUCH, WEAPONS } from '../config.js';
+import { GRAVITY, JUMP_FORCE, MOVE_SPEED, PLAYER_H, PLAYER_H_CROUCH, ROLL_ANIM_DUR, WEAPONS } from '../config.js';
 
 vi.mock('../scene.js', () => ({ scene: new THREE.Scene(), camera: new THREE.PerspectiveCamera(75, 4 / 3, 0.05, 100) }));
 vi.mock('../materials.js', () => ({ mm: (color, roughness, metalness = 0) =>
@@ -32,6 +32,8 @@ const LIMIT = Object.freeze({
   pitchStep: 0.1, // radians between neighbouring pitches of a sweep, at most
   skinning: 1e-4, // metres: this file's skinning of a vertex against the skinning of three
   phase: 1e-6, // a sample taken at a key is within this of the key, as a share of the clip
+  clearance: 0.10, // metres from the eye to the nearest drawn surface: twice the near plane of src/scene.js
+  room: 0.10, // metres between the rule's margin and the nearest measured height on either side of it
 });
 const DT = 1 / 60, STEP = 0.05; // seconds per tick: the display rate, and the cap of src/loop.js
 const ROOT = new THREE.Vector3(3.25, 0.5, -7.75); // away from the origin, so no check passes by a zero
@@ -39,6 +41,8 @@ const BREATH_START = 0.875; // seconds into the breathing layer; the builder sta
 const SLOW = 30000; // milliseconds allowed to a case that builds players and runs hundreds of frames
 const WEAPON = 'm4';
 const LEAN_BONES = ['spine_01', 'clavicle_l', 'clavicle_r', 'neck_01'];
+// The lower body of Amendment 1: a vertex whose heaviest bone is the pelvis or a leg bone.
+const LOWER_BODY = /^(pelvis|thigh|calf|foot|ball)/;
 const PITCH_LIMIT = 1.38; // player.pitch is clamped to this (src/main.js, src/loop.js)
 const PITCHES = [...Array.from({ length: Math.ceil(2 * PITCH_LIMIT / LIMIT.pitchStep) },
   (_, i) => +(PITCH_LIMIT - i * LIMIT.pitchStep).toFixed(2)), -PITCH_LIMIT];
@@ -82,28 +86,47 @@ afterAll(() => {
 // ── Surfaces of the body view ─────────────────────────────────────────────
 const bone = (mesh, name) => mesh.getObjectByName(name);
 const owner3p = () => guns.playerWeaponHandling.get(`3p:${WEAPON}`);
-const partsOf = new WeakMap();
-/** The drawn meshes of the body view, each with its drawn triangles and whether they close a volume. */
-function drawnParts(rig) {
-  if (partsOf.has(rig)) return partsOf.get(rig);
-  const parts = [];
-  rig.body.traverse(mesh => {
-    if (!mesh.isSkinnedMesh || !mesh.visible || !mesh.geometry.index) return;
-    const { position, skinIndex, skinWeight } = mesh.geometry.attributes, index = Uint32Array.from(mesh.geometry.index.array);
-    const vertices = Uint32Array.from(new Set(index)), used = new Set(), edges = new Map();
-    for (const vertex of vertices) for (let j = 0; j < 4; j++) if (skinWeight.getComponent(vertex, j) !== 0) used.add(skinIndex.getComponent(vertex, j));
-    const key = vertex => `${Math.round(position.getX(vertex) * 1e5)}/${Math.round(position.getY(vertex) * 1e5)}/${Math.round(position.getZ(vertex) * 1e5)}`;
-    for (let t = 0; t < index.length; t += 3) for (let j = 0; j < 3; j++) {
+const partOf = new WeakMap();
+/** A mesh of the body view with the geometry it holds now: its triangles, whether they close a volume, and how many reach above the hips. */
+function partFor(mesh) {
+  const cached = partOf.get(mesh.geometry);
+  if (cached) return cached;
+  const { position, skinIndex, skinWeight } = mesh.geometry.attributes, index = Uint32Array.from(mesh.geometry.index.array);
+  const vertices = Uint32Array.from(new Set(index)), used = new Set(), edges = new Map(), upper = new Set();
+  for (const vertex of vertices) {
+    let most = -1, heaviest = '';
+    for (let j = 0; j < 4; j++) {
+      const weight = skinWeight.getComponent(vertex, j);
+      if (weight !== 0) used.add(skinIndex.getComponent(vertex, j));
+      if (weight > most) { most = weight; heaviest = mesh.skeleton.bones[skinIndex.getComponent(vertex, j)]?.name ?? ''; }
+    }
+    if (!LOWER_BODY.test(heaviest)) upper.add(vertex);
+  }
+  const key = vertex => `${Math.round(position.getX(vertex) * 1e5)}/${Math.round(position.getY(vertex) * 1e5)}/${Math.round(position.getZ(vertex) * 1e5)}`;
+  let upperTriangles = 0;
+  for (let t = 0; t < index.length; t += 3) {
+    if (upper.has(index[t]) || upper.has(index[t + 1]) || upper.has(index[t + 2])) upperTriangles++;
+    for (let j = 0; j < 3; j++) {
       const a = key(index[t + j]), b = key(index[t + (j + 1) % 3]);
       if (a === b) continue; // a triangle folded onto a welded seam has no edge there
       const edge = a < b ? `${a}|${b}` : `${b}|${a}`;
       edges.set(edge, (edges.get(edge) ?? 0) + 1);
     }
-    const open = [...edges.values()].filter(count => count !== 2).length;
-    parts.push({ mesh, name: mesh.name, position, skinIndex, skinWeight, index, vertices, used: [...used],
-      world: new Float64Array(position.count * 3), closed: open === 0, openEdges: open, triangles: index.length / 3 });
+  }
+  const open = [...edges.values()].filter(count => count !== 2).length;
+  const part = { mesh, name: mesh.name, position, skinIndex, skinWeight, index, vertices, used: [...used], upperTriangles,
+    world: new Float64Array(position.count * 3), closed: open === 0, openEdges: open, triangles: index.length / 3,
+    caps: mesh.geometry.userData.boundaryCaps ?? 0 };
+  partOf.set(mesh.geometry, part);
+  return part;
+}
+/** The meshes of the body view that first person draws on this frame: visible, on the camera's layer, with triangles. */
+function drawnParts(rig, camera) {
+  const parts = [];
+  rig.body.traverse(mesh => {
+    if (!mesh.isSkinnedMesh || !mesh.visible || !mesh.layers.test(camera.layers) || !mesh.geometry.index?.count) return;
+    parts.push(partFor(mesh));
   });
-  partsOf.set(rig, parts);
   return parts;
 }
 /** Every drawn vertex in world space minus the eye, as the skinning shader places it. */
@@ -168,9 +191,10 @@ function crosses(d, ax, ay, az, bx, by, bz, cx, cy, cz) {
  * meshes that hold the eye. `eye` defaults to the camera; a control passes another point.
  */
 function surfaces(rig, camera, eye = camera.position) {
-  let nearest = Infinity, nearestMesh = '';
+  let nearest = Infinity, nearestMesh = '', triangles = 0, upperTriangles = 0;
   const inside = [];
-  for (const part of drawnParts(rig)) {
+  for (const part of drawnParts(rig, camera)) {
+    triangles += part.triangles; upperTriangles += part.upperTriangles;
     const at = skin(part, eye), { index } = part, odd = [0, 0, 0];
     for (let t = 0; t < index.length; t += 3) {
       const a = index[t] * 3, b = index[t + 1] * 3, c = index[t + 2] * 3;
@@ -181,7 +205,7 @@ function surfaces(rig, camera, eye = camera.position) {
     }
     if (odd.some(Boolean)) inside.push(`${part.name} (${odd.join('')})`);
   }
-  return { clearance: Math.sqrt(nearest), nearestMesh, inside };
+  return { clearance: Math.sqrt(nearest), nearestMesh, inside, triangles, upperTriangles };
 }
 
 // ── The live player and one frame, as src/loop.js runs it ─────────────────
@@ -192,8 +216,11 @@ function livePlayer() {
   actor.actions._breathing.time = BREATH_START;
   // The game mounts its one third-person weapon group on the right hand of its one player.
   guns.attachWeapon3pToHand(bone(actor.mesh, 'hand_r'), WEAPON3P_ROT, WEAPON3P_GRIP);
-  return { actor, rig: glb.playerFirstPersonRig, camera: new THREE.PerspectiveCamera(75, 4 / 3, 0.05, 100),
-    time: 0, x: ROOT.x, z: ROOT.z, yaw: 0, turning: 0 };
+  const rig = glb.playerFirstPersonRig, built = [];
+  // The body view as the rig builds it: what every mesh holds before any frame.
+  rig.body.traverse(mesh => { if (mesh.isSkinnedMesh) built.push({ mesh, geometry: mesh.geometry, visible: mesh.visible, layers: mesh.layers.mask }); });
+  return { actor, rig, built, chest: rig.bodyPairs.find(([, node]) => node.name === 'spine_03')[1],
+    camera: new THREE.PerspectiveCamera(75, 4 / 3, 0.05, 100), time: 0, x: ROOT.x, z: ROOT.z, yaw: 0, turning: 0 };
 }
 const layerAction = (actor, upper) => [...actor._presentationActive.keys()]
   .find(action => action.getClip().name.endsWith(upper ? '_upper' : '_lower'));
@@ -217,7 +244,9 @@ const matricesOf = rig => rig.bodyPairs.flatMap(([, node]) => node.matrixWorld.e
 /**
  * One frame. A tick is plain data: `dt`, `state`, and optionally `crouching`, `pitch`, `turn` (rad/s,
  * or a function of the seconds turned so far), `velocity` [right, forward] in m/s, `aiming`, `action`,
- * `reads` and `phase` (the tick was timed to land on a key). `measure: false` runs the frame only.
+ * `lift` (metres the eye is above its standing or crouched height, with `onGround: false` and `fall`, the
+ * vertical speed, in a jump), `reads` and `phase` (the tick was timed to land on a key). `measure: false`
+ * runs the frame only.
  */
 function frame(player, tick) {
   const { actor, rig, camera } = player, owner = owner3p(), dt = tick.dt ?? DT, pitch = tick.pitch ?? 0;
@@ -227,15 +256,15 @@ function frame(player, tick) {
   const [right, forward] = tick.velocity ?? [0, 0], sin = Math.sin(player.yaw), cos = Math.cos(player.yaw);
   player.x += (right * cos - forward * sin) * dt; player.z += (-right * sin - forward * cos) * dt;
   guns.restorePlayerWeaponHandling();
-  camera.position.set(player.x, ROOT.y + eyeHeight, player.z);
+  camera.position.set(player.x, ROOT.y + eyeHeight + (tick.lift ?? 0), player.z);
   camera.quaternion.setFromEuler(new THREE.Euler(pitch, player.yaw, 0, 'YXZ'));
   camera.updateMatrixWorld(true);
-  actor.mesh.position.set(player.x, ROOT.y, player.z);
+  actor.mesh.position.set(player.x, camera.position.y - eyeHeight, player.z); // the root hangs under the eye (src/loop.js)
   actor.mesh.rotation.y = player.yaw + Math.PI;
   driver.tickPresentation(actor, { identity: 'local', generation: 0,
     position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
     sampleTimeSeconds: player.time, bodyYaw: player.yaw, aimYaw: player.yaw, pitch,
-    crouching, onGround: true, sprinting: false, weapon: WEAPON, alive: true,
+    crouching, onGround: tick.onGround !== false, verticalVelocity: tick.fall ?? 0, sprinting: false, weapon: WEAPON, alive: true,
     aiming: tick.aiming === true, action: tick.action ?? { kind: 'ready' } }, dt, false);
   driver.finishPresentation(actor, dt);
   const pose = actor.presentation;
@@ -261,6 +290,9 @@ function frame(player, tick) {
     const difference = Math.abs(shown[i] - undone[i]);
     if (difference > row.difference) { row.difference = difference; row.differs = rig.bodyPairs[Math.floor(i / 16)][1].name; }
   }
+  // The eye above the chest bone of the body view, and whether every mesh holds what the rig built.
+  row.eyeOverChest = camera.position.y - player.chest.getWorldPosition(new THREE.Vector3()).y;
+  row.asBuilt = player.built.every(each => each.mesh.geometry === each.geometry && each.mesh.visible === each.visible && each.mesh.layers.mask === each.layers);
   return Object.assign(row, surfaces(rig, camera));
 }
 const repeat = (count, tick) => Array.from({ length: count }, () => ({ dt: DT, measure: false, ...tick }));
@@ -320,8 +352,25 @@ describe('the first-person body view on the real rig and meshes', () => {
           { reads: 'gait', phases: phasesOf(player.actor, false), seconds: cycle('crouch') / CROUCH_SPEED });
       }
     });
-    // The view turning, standing and crouched: the feet stay planted and the body yaw lags.
-    for (const stance of ['standing', 'crouched']) lastPlayer = play(function* () {
+    // Changes of stance and the squats of the game, every frame measured: a crouch pressed and released,
+    // a jump from standing and its landing, a melee, a throw and a roll.
+    play(function* () {
+      yield* repeat(30, {});
+      for (let i = 0; i < 90; i++) yield { dt: DT, state: 'crouch pressed', crouching };
+      for (let i = 0; i < 90; i++) yield { dt: DT, state: 'crouch released' };
+      let fall = JUMP_FORCE, lift = 0;
+      while (lift > 0 || fall > 0) {
+        fall -= GRAVITY * DT; lift = Math.max(0, lift + fall * DT);
+        yield { dt: DT, state: 'jump', lift, fall, onGround: lift <= 0 };
+      }
+      for (let i = 0; i < 60; i++) yield { dt: DT, state: 'jump' };
+      for (const [kind, total] of [['melee', 0.7], ['throw', 0.9], ['roll', ROLL_ANIM_DUR]]) {
+        for (let i = 0; i <= 60; i++) yield { dt: DT, state: `standing ${kind}`, action: { kind, total, elapsed: total * i / 60 } };
+        yield* repeat(30, {});
+      }
+    });
+    // The view turning, crouched and standing: the feet stay planted and the body yaw lags.
+    for (const stance of ['crouched', 'standing']) lastPlayer = play(function* () {
       yield* repeat(30, {});
       if (stance === 'crouched') yield* repeat(120, { crouching });
       for (const [name, rate, ticks] of TURNS) {
@@ -330,7 +379,15 @@ describe('the first-person body view on the real rig and meshes', () => {
           yield { dt: DT, state: `${stance}, ${name}`, crouching: stance === 'crouched', pitch, turn: rate };
       }
     });
-    figures.meshes = drawnParts(lastPlayer.rig).map(part => ({ name: part.name, triangles: part.triangles, closed: part.closed, openEdges: part.openEdges }));
+    figures.meshes = drawnParts(lastPlayer.rig, lastPlayer.camera).map(part => ({ name: part.name, triangles: part.triangles, closed: part.closed, openEdges: part.openEdges }));
+    // The eye over the chest bone of the body view, by the eye height the loop uses for the state.
+    const heights = list => { const values = list.map(row => row.eyeOverChest); return [Math.min(...values), Math.max(...values)]; };
+    figures.eyeOverChest = { standingEye: heights(rows.filter(row => !row.crouching)), crouchedEye: heights(rows.filter(row => row.crouching)),
+      margin: view.BODY_VIEW_TORSO_BELOW_EYE ?? null,
+      byState: Object.fromEntries([...new Set(rows.map(row => row.state))].map(state => [state, heights(of(state))])) };
+    figures.drawn = Object.fromEntries([...new Set(rows.map(row => row.state))].map(state => { const at = of(state);
+      return [state, { samples: at.length, triangles: [Math.min(...at.map(row => row.triangles)), Math.max(...at.map(row => row.triangles))],
+        upperTriangles: [Math.min(...at.map(row => row.upperTriangles)), Math.max(...at.map(row => row.upperTriangles))], asBuilt: at.filter(row => row.asBuilt).length }]; }));
     for (const state of STILL) {
       const at = of(state), leaned = worst(at, row => row.difference);
       figures.lean[state] = { samples: at.length, appliedDegrees: [Math.min(...at.map(row => row.applied)), Math.max(...at.map(row => row.applied))].map(r => r * 180 / Math.PI),
@@ -403,7 +460,7 @@ describe('the first-person body view on the real rig and meshes', () => {
   it('places a vertex where the skinning of three places it', () => {
     const { rig, camera } = lastPlayer, vector = new THREE.Vector3();
     let largest = 0, checked = 0;
-    for (const part of drawnParts(rig)) {
+    for (const part of drawnParts(rig, camera)) {
       part.mesh.skeleton.update();
       const at = skin(part, camera.position);
       for (let i = 0; i < part.vertices.length; i += 37) {
@@ -418,7 +475,7 @@ describe('the first-person body view on the real rig and meshes', () => {
   });
 
   it('control: an eye 2 mm under the chest plate is found inside it, 2 mm over it outside, and on it the clearance is zero', () => {
-    const { rig, camera } = lastPlayer, plate = drawnParts(rig).find(part => part.name === 'ChestPlate');
+    const { rig, camera } = lastPlayer, plate = drawnParts(rig, camera).find(part => part.name === 'ChestPlate');
     const at = skin(plate, new THREE.Vector3()), corner = i => new THREE.Vector3(at[i * 3], at[i * 3 + 1], at[i * 3 + 2]);
     // The largest triangle of the plate; its front face looks out of the closed mesh.
     let largest = null;
@@ -454,6 +511,69 @@ describe('the first-person body view on the real rig and meshes', () => {
     expect(row.applied).toBeGreaterThan(0.1);
     expect(Math.max(...leaned.map((value, i) => Math.abs(value - undone[i])))).toBeGreaterThan(1000 * LIMIT.bone);
   }, SLOW);
+
+  // ── Amendment 1, decision E: hips and legs only unless the chest is clearly below the eye ──
+  const CROUCHED_MOVING = TURNS.map(([name]) => `crouched, ${name}`);
+  const STANDING_STATES = ['standing', ...TURNS.map(([name]) => `standing, ${name}`), 'crouch released', 'jump', 'standing melee', 'standing throw', 'standing roll'];
+  const CROUCHED_STATES = [...CROUCHED, ...CROUCHED_MOVING, 'crouch pressed'];
+
+  it.each([...CROUCHED, ...CROUCHED_MOVING])('%s: the nearest drawn surface is at least 0.10 m from the eye', state => {
+    const at = of(state), nearest = worst(at, row => -row.clearance);
+    expect(at.length).toBeGreaterThan(0);
+    expect(nearest.clearance, `${nearest.nearestMesh} at pitch ${nearest.pitch}`).toBeGreaterThanOrEqual(LIMIT.clearance);
+  });
+
+  it.each(['standing', ...TURNS.map(([name]) => `standing, ${name}`)])('%s: the nearest drawn surface is at least 0.10 m from the eye', state => {
+    const nearest = worst(of(state), row => -row.clearance);
+    expect(nearest.clearance, `${nearest.nearestMesh} at pitch ${nearest.pitch}`).toBeGreaterThanOrEqual(LIMIT.clearance);
+  });
+
+  it.each([...CROUCHED_MOVING, 'crouch pressed'])('%s: the eye is inside no closed mesh of the body view', state => {
+    const held = of(state).filter(row => row.inside.length);
+    expect(held.map(row => `pitch ${row.pitch}: ${row.inside.join(', ')}`).slice(0, 5)).toEqual([]);
+  });
+
+  it.each(CROUCHED_STATES)('%s: only hips and legs are drawn', state => {
+    const at = of(state);
+    expect(at.length).toBeGreaterThan(0);
+    for (const row of at) {
+      expect(row.upperTriangles, `pitch ${row.pitch}: drawn triangles that reach above the hips`).toBe(0);
+      expect(row.triangles, `pitch ${row.pitch}: drawn triangles`).toBeGreaterThan(1000);
+    }
+  });
+
+  it.each(STANDING_STATES)('%s: every mesh of the body view holds what the rig built', state => {
+    const at = of(state);
+    expect(at.length).toBeGreaterThan(0);
+    for (const row of at) {
+      expect(row.asBuilt, `pitch ${row.pitch}`).toBe(true);
+      expect(row.upperTriangles, `pitch ${row.pitch}: the torso is drawn`).toBeGreaterThan(1000);
+    }
+  });
+
+  it('switches on the frame a crouch is pressed and on the frame it is released, and at no other frame', () => {
+    const order = rows.filter(row => ['crouch pressed', 'crouch released', 'jump', 'standing melee', 'standing throw', 'standing roll'].includes(row.state));
+    const switches = order.filter((row, i) => i > 0 && (row.upperTriangles === 0) !== (order[i - 1].upperTriangles === 0));
+    expect(switches.map(row => row.state)).toEqual(['crouch released']);
+    expect(of('crouch pressed')[0].upperTriangles).toBe(0);
+    expect(of('crouch released')[0].upperTriangles).toBeGreaterThan(1000);
+  });
+
+  it('has room on both sides of its margin: the chest is clearly below a standing eye and not below a crouched one', () => {
+    const margin = view.BODY_VIEW_TORSO_BELOW_EYE;
+    expect(margin).toBeTypeOf('number');
+    // Every frame measured in this file, by the eye height the loop gives the state.
+    const standing = rows.filter(row => !row.crouching), crouched = rows.filter(row => row.crouching);
+    expect(standing.length).toBeGreaterThan(1000); expect(crouched.length).toBeGreaterThan(1000);
+    expect(Math.min(...standing.map(row => row.eyeOverChest)) - margin).toBeGreaterThanOrEqual(LIMIT.room);
+    expect(margin - Math.max(...crouched.map(row => row.eyeOverChest))).toBeGreaterThanOrEqual(LIMIT.room);
+  });
+
+  it('keeps the standing look-down view: chest, hips and legs drawn at the lowest pitch', () => {
+    const down = of('standing').find(row => row.pitch === -PITCH_LIMIT);
+    expect(down.asBuilt).toBe(true);
+    expect(down.triangles).toBe(lastPlayer.built.reduce((sum, each) => sum + (each.visible ? each.geometry.index.count / 3 : 0), 0));
+  });
 
   it('records the clearance of the eye from the drawn body view, still and turning', () => {
     for (const row of rows) expect(Number.isFinite(row.clearance) && row.clearance >= 0, row.state).toBe(true);
