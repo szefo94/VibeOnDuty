@@ -106,14 +106,37 @@ const findClip = findMotionClip;
 // are unchanged, and the vod7_ clips stay resolvable through them.
 //
 // action id -> [legacy key of the inherited source, pelvis sway, timing]
-//   sway    share of the inherited pelvis's deviation from its own clip mean
+//   sway    share of the inherited pelvis's deviation from its own clip mean: a
+//           quarter for the gaits, none for crouch and jump, whose rifle_ sources
+//           already hold the chest fixed in the character frame
 //   'held'  the legs are one frame of the source, with two equal keys: the driver
 //           plays a standing lower layer in real time and a blocked player must
 //           not move a foot. The clip keeps the authored duration, so the upper
 //           body the driver plays from it is frame for frame what it was.
-const LIVE_ROUTE = { crouch_idle: ['crouch', 0] };
+//   'upper' the driver plays this clip's upper mask in real time (sprint carry),
+//           so it keeps the authored duration too and the leg keys are scaled to it.
+// Every other clip keeps the inherited duration; the authored upper keys follow it.
+const LIVE_SWAY = 0.25;
+const LIVE_ROUTE = {
+  walk_forward: ['walk', LIVE_SWAY], walk_back: ['walk_back', LIVE_SWAY],
+  walk_left: ['strafe_l', LIVE_SWAY], walk_right: ['strafe_r', LIVE_SWAY],
+  run_forward: ['run', LIVE_SWAY], run_back: ['run_back', LIVE_SWAY],
+  run_left: ['strafe_l', LIVE_SWAY], run_right: ['strafe_r', LIVE_SWAY],
+  sprint: ['run', LIVE_SWAY, 'upper'],
+  // The inherited set has one crouch walk; every crouch direction shows it.
+  crouch_idle: ['crouch', 0], crouch_forward: ['crouch_walk', 0], crouch_back: ['crouch_walk', 0],
+  crouch_left: ['crouch_walk', 0], crouch_right: ['crouch_walk', 0],
+  jump_start: ['jump_start', 0], jump_loop: ['jump_loop', 0], jump_land: ['jump_land', 0],
+  // Stop, reversal and turns show the idle legs under their own authored upper body.
+  stop: ['idle', 0, 'held'], reversal: ['idle', 0, 'held'],
+  turn_left: ['idle', 0, 'held'], turn_right: ['idle', 0, 'held'],
+};
 for (const action of motionManifest.actions)
   if (action.kind === 'ready' && !action.previewOnly) LIVE_ROUTE[action.id] = ['idle', 0, 'held'];
+// Played whole, not composed: one inherited death for every direction, and the
+// inherited hit as the damage source.
+const LIVE_WHOLE = { death_front: 'death', death_back: 'death', death_left: 'death',
+  death_right: 'death', damage: 'hit' };
 const LIVE_LEGS = ['l', 'r'].map((side) => ['thigh', 'calf', 'foot', 'ball'].map((bone) => `${bone}_${side}`));
 const _liveClips = new WeakMap(); // prepared animations -> Map(action id -> clip)
 
@@ -219,10 +242,10 @@ export function buildLiveClips(scene, animations) {
     }
     mean.normalize();
     const base = Q().fromArray(authoredPelvis.values);
-    const duration = held ? authored[0].duration : inherited.duration;
+    const duration = held || timing === 'upper' ? authored[0].duration : inherited.duration;
     const solved = keys.map((k) => solve(k, base, mean, sway));
     if (held) { keys.push(keys[0]); solved.push(solved[0]); }
-    const times = held ? [0, duration] : Array.from(stamps);
+    const times = held ? [0, duration] : Array.from(stamps, (t) => t * duration / inherited.duration);
     const names = ['pelvis', ...LIVE_LEGS.flat()];
     const upper = copyPresentationMask(authored[0], true).tracks;
     // Authored upper keys follow the composed duration; their values are untouched.
@@ -237,8 +260,24 @@ export function buildLiveClips(scene, animations) {
     composed.push(clip);
   }
   mixer.uncacheRoot(source);
+  for (const [id, key] of Object.entries(LIVE_WHOLE)) {
+    const inherited = inheritedClip(animations, key);
+    if (inherited) live.set(id, inherited);
+  }
   // Same hemisphere rules as the prepared set, against the same reference clip.
   normaliseClipQuatSigns(composed, findClip(animations, 'idle'));
+  // The jump chain: every shared rotation stays on one hemisphere across both boundaries.
+  const align = (from, to, firstFrame) => {
+    for (const track of (from && to ? to.tracks : [])) {
+      const prior = track.name.endsWith('.quaternion') && from.tracks.find((t) => t.name === track.name);
+      if (!prior) continue;
+      const v = track.values, r = prior.values, at = firstFrame ? 0 : r.length - 4;
+      if (r[at] * v[0] + r[at + 1] * v[1] + r[at + 2] * v[2] + r[at + 3] * v[3] < 0)
+        for (let i = 0; i < v.length; i++) v[i] = -v[i];
+    }
+  };
+  align(live.get('jump_start'), live.get('jump_loop'), false);
+  align(live.get('jump_loop'), live.get('jump_land'), true);
   return live;
 }
 
@@ -378,8 +417,9 @@ function _sharedBreathClip() {
 }
 function _sharedHitAdditiveClip() {
   if (_hitAddClip !== null) return _hitAddClip;
-  const hitClip  = findClip(gltfTemplate.animations, 'hit');
-  const idleClip = findClip(gltfTemplate.animations, 'idle');
+  // The inherited hit against the inherited idle, as before the authored repertoire.
+  const hitClip  = inheritedClip(gltfTemplate.animations, 'hit');
+  const idleClip = inheritedClip(gltfTemplate.animations, 'idle');
   if (!hitClip || !idleClip) return (_hitAddClip = false);
   _hitAddClip = THREE.AnimationUtils.makeClipAdditive(hitClip.clone(), 0, idleClip);
   _hitAddClip.name = '_hit_additive';
