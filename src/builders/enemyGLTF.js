@@ -109,6 +109,12 @@ const findClip = findMotionClip;
 //   sway    share of the inherited pelvis's deviation from its own clip mean: a
 //           quarter for the gaits, none for crouch and jump, whose rifle_ sources
 //           already hold the chest fixed in the character frame
+//           Crouch and jump also keep the pelvis over the root: it takes only its
+//           height from the inherited clip and its horizontal position from the
+//           authored one. The rifle_ crouch has the pelvis 0.23 m behind the root,
+//           and the first-person arms copy the shoulders that ride on it, which put
+//           the support hand out of reach of the weapon. The ankles stay where the
+//           inherited clip has them; the legs are solved to them from the held hips.
 //   'held'  the legs are one frame of the source, with two equal keys: the driver
 //           plays a standing lower layer in real time and a blocked player must
 //           not move a foot. The clip keeps the authored duration, so the upper
@@ -166,6 +172,7 @@ export function buildLiveClips(scene, animations) {
   const worldQ = (name) => source.getObjectByName(name).getWorldQuaternion(Q());
   const worldP = (name) => source.getObjectByName(name).getWorldPosition(V());
   const rootQ = pelvis.parent.getWorldQuaternion(Q());
+  const rest = pelvis.position.clone(); // the target is a fresh clone: its bind pose
 
   // The inherited pose at each key time, in the character frame.
   const sample = (clip, times) => {
@@ -235,6 +242,16 @@ export function buildLiveClips(scene, animations) {
     if (authored.length !== 1 || !authoredPelvis || !stamps) continue;
     const held = timing === 'held';
     const keys = sample(inherited, held ? [0] : Array.from(stamps));
+    if (!sway && !held) {
+      // Crouch and jump: the pelvis is a child of the turned root, so local z is its height.
+      // Local x and y come from the authored clip at the same point of the clip, or from
+      // the rest position where that clip keys no pelvis position (jump_loop).
+      const level = authored[0].tracks.find((t) => t.name === 'pelvis.position')?.createInterpolant();
+      keys.forEach((k, i) => {
+        const [x, y] = level?.evaluate(stamps[i] * authored[0].duration / inherited.duration) ?? [rest.x, rest.y];
+        k.position.x = x; k.position.y = y;
+      });
+    }
     const mean = Q().set(0, 0, 0, 0);
     for (const { pelvis: q } of keys) {
       const sign = mean.lengthSq() && mean.dot(q) < 0 ? -1 : 1;
