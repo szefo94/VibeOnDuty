@@ -220,16 +220,24 @@ test('lit: full-pitch standing/crouched body and V handoff retain one anatomy an
     const {player}=await import(src+'entities/player.js');
     (await import(src+'input.js')).setGameRunning(false);
     const rig=g.playerFirstPersonRig,actor={mesh:g.playerMesh,mixer:g.playerMixer,actions:g.playerActions};
+    g.playerMixer.stopAllAction(); // this driver object owns every layer; the loop's own object left its standing layer running
     const eye=camera.position.clone(),aim=camera.quaternion.clone(),sourceRoot=actor.mesh.position.clone();
-    const frames=[],samples=[]; let tick=0;
+    const frames=[],samples=[]; let tick=0,settleTicks=0;
     try {
       for(const crouching of [false,true]) for(const pitch of [-1.38,-.9,0,1.38]) {
         camera.position.copy(eye); if(crouching)camera.position.y-=.8;
         camera.quaternion.setFromEuler(new T.Euler(pitch,player.yaw,0,'YXZ'));
         w.restorePlayerWeaponHandling();
-        const pose=driver.tickPresentation(actor,{identity:'pitch-view',weapon:'m4',
+        const observation={identity:'pitch-view',weapon:'m4',
           position:{x:eye.x,y:camera.position.y,z:eye.z},sampleTimeSeconds:++tick*.05,
-          bodyYaw:player.yaw,aimYaw:player.yaw,pitch,crouching,onGround:true,alive:true,action:{kind:'ready'}},.05);
+          bodyYaw:player.yaw,aimYaw:player.yaw,pitch,crouching,onGround:true,alive:true,action:{kind:'ready'}};
+        let pose=driver.tickPresentation(actor,observation,.05);
+        if(crouching&&pitch===-1.38){ // the first crouched sample is taken settled: ticks of 0.05 s, no wall time
+          const pelvisY=()=>{actor.mesh.updateMatrixWorld(true);return actor.mesh.getObjectByName('pelvis').getWorldPosition(new T.Vector3()).y;};
+          let last=pelvisY(),done=false;
+          for(let n=1;n<=40&&!done;n++){pose=driver.tickPresentation(actor,observation,.05);const y=pelvisY();done=n>=10&&Math.abs(y-last)<1e-4;last=y;settleTicks=n;}
+          if(!done)throw new Error('crouch pose did not settle within 40 ticks');
+        }
         w.updatePlayerWeaponHandling(pose,actor.mesh);
         fp.updateFirstPersonRig(rig,{pose,camera,weapon:w.wpn,dt:.05,
           rawCorrections:w.playerWeaponHandling.get('3p:m4').corrections,
@@ -256,7 +264,7 @@ test('lit: full-pitch standing/crouched body and V handoff retain one anatomy an
           if(firstPerson)frames.push({name:`${crouching?'crouch':'stand'}-${pitch}.png`,data:renderer.domElement.toDataURL('image/png')});
         }
       }
-      return {frames,samples,sourceRoot:sourceRoot.toArray(),bodyMeshes:(()=>{const a=[];rig.body.traverse(n=>{if(n.isSkinnedMesh&&n.visible)a.push(n.name)});return a;})()};
+      return {frames,samples,settleTicks,sourceRoot:sourceRoot.toArray(),bodyMeshes:(()=>{const a=[];rig.body.traverse(n=>{if(n.isSkinnedMesh&&n.visible)a.push(n.name)});return a;})()};
     } finally {camera.position.copy(eye);camera.quaternion.copy(aim);}
   });
   for(const frame of result.frames)await writeFile(info.outputPath(frame.name),Buffer.from(frame.data.split(',')[1],'base64'));
@@ -266,8 +274,12 @@ test('lit: full-pitch standing/crouched body and V handoff retain one anatomy an
   expect(result.samples.every(s=>s.root.join(',')===result.sourceRoot.join(',')&&s.floor===result.sourceRoot[1])).toBe(true);
   expect(result.samples.every(s=>s.during.join(',')===(s.firstPerson?'false,true,true,true,false,false':'true,false,false,false,false,true'))).toBe(true);
   expect(['ChestPlate','LowerChestPlate','KneeGuard_l','KneeGuard_r','BootToe_l','BootToe_r'].every(name=>result.bodyMeshes.includes(name))).toBe(true);
-  expect(result.samples.filter(s=>s.firstPerson&&s.pitch===-1.38).every(s=>s.downPoints.every(p=>
+  expect(result.samples.filter(s=>s.firstPerson&&s.pitch===-1.38&&!s.crouching).every(s=>s.downPoints.every(p=>
     Math.abs(p.screen[0])<1&&Math.abs(p.screen[1])<1&&Math.abs(p.floorDelta)<1e-6))).toBe(true);
+  // Crouched, settled: knees and the left ankle at least 0.1 inside the screen edge; foot_r, the rear foot of
+  // the crouch stance, is not asserted on screen (measured screen y -1.708, below the bottom edge). All four stay on the floor.
+  expect(result.samples.filter(s=>s.firstPerson&&s.pitch===-1.38&&s.crouching).every(s=>s.downPoints.every(p=>
+    Math.abs(p.floorDelta)<1e-6&&(p.name==='foot_r'||(Math.abs(p.screen[0])<.9&&Math.abs(p.screen[1])<.9))))).toBe(true);
 });
 for(const missing of [false,true])test(`p90 view: ${missing?'missing':'inspected'} FBX selects truthful articulated fallback`,async({page})=>{
   if(missing){await page.route('**/models/FBX/P90.fbx',route=>route.fulfill({status:404,body:''}));await page.goto(url);await expect(page.locator('#range-startbtn')).toBeEnabled();await page.locator('#range-startbtn').click();}
