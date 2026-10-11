@@ -6,6 +6,8 @@ import { createWeaponHandling, getWeaponHandling, updateWeaponHandling, restoreW
 
 const armName = /^(upperarm|lowerarm|hand|index|middle|ring|pinky|thumb)_/;
 const hiddenName = /^(head|neck|eye|jaw)/i;
+// The four bones the weapon handler turns for the crouched torso lean (weaponHandling.js).
+const leanName = new Set(['spine_01', 'clavicle_l', 'clavicle_r', 'neck_01']);
 const V = (...xyz) => new THREE.Vector3(...xyz);
 
 /** Cosmetic transition only; action phase, camera and gameplay stay read-only. */
@@ -172,8 +174,10 @@ export function createFirstPersonRig({ source }) {
   // first depth-first name match used by Three's getObjectByName, once per rig.
   const armBones = new Map();
   arms.root.traverse(node => { if (!armBones.has(node.name)) armBones.set(node.name, node); });
+  const bodyBones = new Map();
+  body.root.traverse(node => { if (!bodyBones.has(node.name)) bodyBones.set(node.name, node); });
   const rig = { source, arms: arms.root, body: body.root, armPairs: arms.pairs,
-    armBones,
+    armBones, bodyBones,
     bodyPairs: body.pairs, meshPairs: [...arms.meshPairs,...body.meshPairs],
     disposed: false, handlers: new Set(), updates: 0, pose: null };
   rig.releaseSource = registerCharacterDisposer(source, () => disposeFirstPersonRig(rig));
@@ -250,8 +254,12 @@ export function updateFirstPersonRig(rig, { pose, camera, weapon = null,
   copyAccents(rig.meshPairs);
   // Source handling is post-mixer. Reuse its saved authored pose before applying
   // the view's independent gun targets; never curl an already curled finger.
-  for (const [sourceBone, quaternion] of rawCorrections)
+  for (const [sourceBone, quaternion] of rawCorrections) {
     rig.armBones.get(sourceBone.name)?.quaternion.copy(quaternion);
+    // The crouch lean is the world body's. The body view takes back those four
+    // bones only and keeps the solved arm bones it copied.
+    if (leanName.has(sourceBone.name)) rig.bodyBones.get(sourceBone.name)?.quaternion.copy(quaternion);
+  }
   rig.pose = active ? pose : null; rig.updates++;
   if (rig.identity !== pose?.identity) { rig.motion = {}; rig.identity = pose?.identity; }
   rig.motion ??= {};
@@ -323,7 +331,7 @@ export function resetFirstPersonRigGeneration(rig) {
 
 export function disposeFirstPersonRig(rig) {
   if (!rig || rig.disposed) return;
-  rig.armBones.clear();
+  rig.armBones.clear(); rig.bodyBones.clear();
   rig.releaseSource?.(); rig.releaseSource = null;
   for (const owner of rig.handlers) disposeWeaponHandling(owner);
   rig.handlers.clear(); disposeCharacter(rig.arms); disposeCharacter(rig.body);
