@@ -15,7 +15,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { scene } from '../scene.js';
 import { buildEnemy } from './enemy.js';
-import { buildEnemyMixer, attachSkeletonDebug, buildGLTFBreathingClip } from './enemyAnimations.js';
+import { buildEnemyMixer, attachSkeletonDebug, buildGLTFBreathingClip, copyPresentationMask } from './enemyAnimations.js';
 import { attachEnemyWeapon } from './enemyWeapon.js';
 import { attachWeapons3pToHand } from './weaponFBX.js';
 import { buildRifleMovementClips } from './rifleClips.js';
@@ -94,6 +94,160 @@ export function findMotionClip(animations, key, weapon = 'm4') {
 }
 const findClip = findMotionClip;
 
+// ── Live composition ───────────────────────────────────────────────────────
+// The owner's motion review found the authored vod7_ legs unusable in play: the
+// knees bend backwards and the pelvis never moves. Live play therefore gets clips
+// composed once at load, with the inherited motion-captured legs and pelvis height
+// under the authored upper body. Swapping the lower mask alone is not enough: the
+// mocap pelvis is turned about 40 degrees and the authored spine and arms would
+// carry the weapon off with it. So the pelvis keeps the authored orientation and
+// each leg is solved again, to put its ankle back where the inherited clip has it.
+// These clips exist at runtime only. The GLB, the prepared set and findMotionClip
+// are unchanged, and the vod7_ clips stay resolvable through them.
+//
+// action id -> [legacy key of the inherited source, pelvis sway, timing]
+//   sway    share of the inherited pelvis's deviation from its own clip mean
+//   'held'  the legs are one frame of the source, with two equal keys: the driver
+//           plays a standing lower layer in real time and a blocked player must
+//           not move a foot. The clip keeps the authored duration, so the upper
+//           body the driver plays from it is frame for frame what it was.
+const LIVE_ROUTE = { crouch_idle: ['crouch', 0] };
+for (const action of motionManifest.actions)
+  if (action.kind === 'ready' && !action.previewOnly) LIVE_ROUTE[action.id] = ['idle', 0, 'held'];
+const LIVE_LEGS = ['l', 'r'].map((side) => ['thigh', 'calf', 'foot', 'ball'].map((bone) => `${bone}_${side}`));
+const _liveClips = new WeakMap(); // prepared animations -> Map(action id -> clip)
+
+/** The clip a legacy key had before the authored repertoire: its inherited source. */
+function inheritedClip(animations, key) {
+  for (const alias of (ALIASES[key] || [])) {
+    const found = animations.find((c) => c.name === alias);
+    if (found) return found;
+  }
+  return null;
+}
+
+/**
+ * Compose the live clips for a prepared set, once, and keep them beside it.
+ * Every composed clip is `live_<action id>` with ten lower tracks (pelvis position and
+ * the rotations of pelvis, thighs, calves, feet and balls) and the authored upper tracks.
+ */
+export function buildLiveClips(scene, animations) {
+  const live = new Map();
+  _liveClips.set(animations, live);
+  const source = skeletonClone(scene), target = skeletonClone(scene);
+  const pelvis = target.getObjectByName('pelvis');
+  if (!pelvis || LIVE_LEGS.flat().some((name) => !target.getObjectByName(name))) return live;
+  target.updateMatrixWorld(true);
+  const mixer = new THREE.AnimationMixer(source);
+  const Q = () => new THREE.Quaternion(), V = () => new THREE.Vector3();
+  const worldQ = (name) => source.getObjectByName(name).getWorldQuaternion(Q());
+  const worldP = (name) => source.getObjectByName(name).getWorldPosition(V());
+  const rootQ = pelvis.parent.getWorldQuaternion(Q());
+
+  // The inherited pose at each key time, in the character frame.
+  const sample = (clip, times) => {
+    const action = mixer.clipAction(clip).setLoop(THREE.LoopOnce, 1);
+    action.clampWhenFinished = true;
+    action.reset().play();
+    const keys = times.map((time) => {
+      mixer.setTime(time);
+      source.updateMatrixWorld(true);
+      return { position: source.getObjectByName('pelvis').position.clone(), pelvis: worldQ('pelvis'),
+        legs: LIVE_LEGS.map(([thigh, calf, foot, ball]) => ({
+          hip: worldP(thigh), knee: worldP(calf), ankle: worldP(foot),
+          thigh: worldQ(thigh), calf: worldQ(calf), foot: worldQ(foot),
+          ball: source.getObjectByName(ball).quaternion.clone() })) };
+    });
+    mixer.stopAllAction();
+    return keys;
+  };
+
+  // One key: [pelvis, then thigh, calf, foot, ball of each side] as local rotations.
+  const solve = (key, authoredPelvis, mean, sway) => {
+    let local = authoredPelvis;
+    if (sway) {
+      const deviation = key.pelvis.clone().multiply(mean.clone().invert());
+      if (deviation.w < 0) deviation.set(-deviation.x, -deviation.y, -deviation.z, -deviation.w);
+      const world = Q().slerp(deviation, sway).multiply(rootQ).multiply(authoredPelvis);
+      local = rootQ.clone().invert().multiply(world);
+    }
+    pelvis.position.copy(key.position);
+    pelvis.quaternion.copy(local);
+    pelvis.updateWorldMatrix(false, true);
+    const pelvisQ = pelvis.getWorldQuaternion(Q()), out = [local.clone()];
+    key.legs.forEach((leg, side) => {
+      // Turning the pelvis moved the hip. Two-bone solve with the inherited bone lengths
+      // and knee plane; out of reach, the leg stays fully extended toward the ankle.
+      const hip = target.getObjectByName(LIVE_LEGS[side][0]).getWorldPosition(V());
+      const upper = leg.knee.distanceTo(leg.hip), lower = leg.ankle.distanceTo(leg.knee);
+      const along = leg.ankle.clone().sub(hip);
+      const reach = Math.min(along.length(), upper + lower - 1e-4);
+      along.normalize();
+      const a = (upper * upper - lower * lower + reach * reach) / (2 * reach);
+      const h = Math.sqrt(Math.max(0, upper * upper - a * a));
+      const inheritedAlong = leg.ankle.clone().sub(leg.hip).normalize();
+      const bend = leg.knee.clone().sub(leg.hip);
+      bend.addScaledVector(inheritedAlong, -bend.dot(inheritedAlong));
+      bend.addScaledVector(along, -bend.dot(along)).normalize();
+      const knee = hip.clone().addScaledVector(along, a).addScaledVector(bend, h);
+      const ankle = hip.clone().addScaledVector(along, reach);
+      const thigh = Q().setFromUnitVectors(leg.knee.clone().sub(leg.hip).normalize(),
+        knee.clone().sub(hip).normalize()).multiply(leg.thigh);
+      const calf = Q().setFromUnitVectors(leg.ankle.clone().sub(leg.knee).normalize(),
+        ankle.clone().sub(knee).normalize()).multiply(leg.calf);
+      // The foot keeps its inherited orientation in the character frame.
+      out.push(pelvisQ.clone().invert().multiply(thigh), thigh.clone().invert().multiply(calf),
+        calf.clone().invert().multiply(leg.foot), leg.ball);
+    });
+    return out;
+  };
+
+  const composed = [];
+  for (const [id, [key, sway, timing]] of Object.entries(LIVE_ROUTE)) {
+    const spec = motionManifest.actions.find((a) => a.id === id);
+    const authored = animations.filter((c) => c.name === spec?.clip);
+    const inherited = inheritedClip(animations, key);
+    const authoredPelvis = authored[0]?.tracks.find((t) => t.name === 'pelvis.quaternion');
+    const stamps = inherited?.tracks.find((t) => t.name === 'pelvis.quaternion')?.times;
+    if (authored.length !== 1 || !authoredPelvis || !stamps) continue;
+    const held = timing === 'held';
+    const keys = sample(inherited, held ? [0] : Array.from(stamps));
+    const mean = Q().set(0, 0, 0, 0);
+    for (const { pelvis: q } of keys) {
+      const sign = mean.lengthSq() && mean.dot(q) < 0 ? -1 : 1;
+      mean.set(mean.x + sign * q.x, mean.y + sign * q.y, mean.z + sign * q.z, mean.w + sign * q.w);
+    }
+    mean.normalize();
+    const base = Q().fromArray(authoredPelvis.values);
+    const duration = held ? authored[0].duration : inherited.duration;
+    const solved = keys.map((k) => solve(k, base, mean, sway));
+    if (held) { keys.push(keys[0]); solved.push(solved[0]); }
+    const times = held ? [0, duration] : Array.from(stamps);
+    const names = ['pelvis', ...LIVE_LEGS.flat()];
+    const upper = copyPresentationMask(authored[0], true).tracks;
+    // Authored upper keys follow the composed duration; their values are untouched.
+    if (authored[0].duration !== duration)
+      for (const track of upper) track.times = track.times.map((t) => t * duration / authored[0].duration);
+    const clip = new THREE.AnimationClip(`live_${id}`, duration, [
+      new THREE.VectorKeyframeTrack('pelvis.position', times, keys.flatMap((k) => k.position.toArray())),
+      ...names.map((name, i) => new THREE.QuaternionKeyframeTrack(`${name}.quaternion`, times,
+        solved.flatMap((rotations) => rotations[i].toArray()))),
+      ...upper]);
+    live.set(id, clip);
+    composed.push(clip);
+  }
+  mixer.uncacheRoot(source);
+  // Same hemisphere rules as the prepared set, against the same reference clip.
+  normaliseClipQuatSigns(composed, findClip(animations, 'idle'));
+  return live;
+}
+
+/** The clip live play shows for a key: the composed one where routed, else findMotionClip's. */
+export function findLiveClip(animations, key, weapon = 'm4') {
+  const id = getMotionDefinition(key, weapon)?.id;
+  return _liveClips.get(animations)?.get(id) ?? findMotionClip(animations, key, weapon);
+}
+
 // ── Note on the "+90°X CORR" theory (disproven) ───────────────────────────
 // Earlier revisions assumed merge_animations.py had baked a +90°X rotation into the
 // 12 retargeted clips (walk/run/attack/shoot/reload/hit/jump_loop/nade/run_back/
@@ -120,8 +274,7 @@ const findClip = findMotionClip;
 //      already fixed, flipping the whole track keeps all frames consistent.
 //
 // Result: walk at ANY frame T is on the same hemisphere as crouch at frame 0.
-function normaliseClipQuatSigns(clips) {
-  const refClip = findClip(clips, 'idle');
+function normaliseClipQuatSigns(clips, refClip = findClip(clips, 'idle')) {
   const ref = {};
   if (refClip) {
     for (const track of refClip.tracks) {
@@ -315,6 +468,7 @@ export async function tryLoadEnemyGLTF() {
   try {
     const loader = new GLTFLoader();
     const gltf = prepareEnemyClips(await loader.loadAsync(import.meta.env.BASE_URL + 'models/enemy.glb'));
+    buildLiveClips(gltf.scene, gltf.animations);
     preserveTemplateGeometry(gltf.scene);
     // Align jump phase clip boundaries — sign-flip guard after shared-space normalisation.
     gltfTemplate = gltf;
@@ -370,7 +524,7 @@ export function buildEnemyMesh(wx, wz, role = 'assault') {
   const weaponKey = { assault: 'm4', smg: 'p90', sniper: 'awp', pistol: 'pistol' }[role] || 'm4';
 
   for (const key of CLIP_KEYS) {
-    const clip = findClip(gltfTemplate.animations, key, weaponKey);
+    const clip = findLiveClip(gltfTemplate.animations, key, weaponKey);
     if (!clip) continue;
     const action = mixer.clipAction(clip);
     if (['death', 'hit', 'shoot', 'roll', 'jump_start', 'jump_land', 'reload', 'punch_cross', 'punch_jab', 'nade'].includes(key) || getMotionDefinition(key, weaponKey)?.loop === false) {
@@ -465,7 +619,7 @@ export function buildPlayerMesh() {
   const mixer = new THREE.AnimationMixer(clone);
   const actions = {};
   for (const key of CLIP_KEYS) {
-    const clip = findClip(gltfTemplate.animations, key);
+    const clip = findLiveClip(gltfTemplate.animations, key);
     if (!clip) continue;
     const action = mixer.clipAction(clip);
     if (['death', 'hit', 'shoot', 'roll', 'jump_start', 'jump_land', 'reload', 'punch_cross', 'punch_jab', 'nade'].includes(key) || getMotionDefinition(key)?.loop === false) {
@@ -517,7 +671,7 @@ export function createReviewCharacter(weapon = 'm4') {
   consolidateCharacterSkeletons(mesh);
   const mixer = new THREE.AnimationMixer(mesh), actions = {};
   for (const key of CLIP_KEYS) {
-    const clip = findClip(gltfTemplate.animations, key, weapon);
+    const clip = findLiveClip(gltfTemplate.animations, key, weapon);
     if (clip) actions[key] = mixer.clipAction(clip);
   }
   mesh.traverse(node => { if (node.isMesh) { node.frustumCulled = false; node.castShadow = true; } });
