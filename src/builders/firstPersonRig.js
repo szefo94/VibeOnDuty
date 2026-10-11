@@ -8,6 +8,11 @@ const armName = /^(upperarm|lowerarm|hand|index|middle|ring|pinky|thumb)_/;
 const hiddenName = /^(head|neck|eye|jaw)/i;
 // The four bones the weapon handler turns for the crouched torso lean (weaponHandling.js).
 const leanName = new Set(['spine_01', 'clavicle_l', 'clavicle_r', 'neck_01']);
+// The lower body of the body view: what is skinned most heavily to the pelvis or a leg bone.
+const lowerName = /^(pelvis|thigh|calf|foot|ball)/;
+/** Metres the chest bone must be below the eye for the body view to draw its torso. Standing it
+ * is .375 m below, and never under .32 m in a jump, a squat or a roll; crouched it is at the eye. */
+export const BODY_VIEW_TORSO_BELOW_EYE = .15;
 const V = (...xyz) => new THREE.Vector3(...xyz);
 
 /** Cosmetic transition only; action phase, camera and gameplay stay read-only. */
@@ -24,7 +29,7 @@ export function sampleFirstPersonMotion(state, pose, dt) {
   return Object.freeze({ aim: state.aim, sway, cameraBob: 0, cameraRoll: 0 });
 }
 
-function region(mesh, vertex) {
+function region(mesh, vertex, lower = false) {
   const indices = mesh.geometry.attributes.skinIndex;
   const weights = mesh.geometry.attributes.skinWeight;
   if (!indices || !weights) return 'body';
@@ -34,7 +39,7 @@ function region(mesh, vertex) {
     if (weight > best) { best = weight; name = mesh.skeleton.bones[indices.array[vertex * 4 + j]]?.name ?? ''; }
   }
   return hiddenName.test(name) ? 'head' : /^upperarm_/.test(name) ? 'upperArms'
-    : armName.test(name) ? 'arms' : 'body';
+    : armName.test(name) ? 'arms' : lower && lowerName.test(name) ? 'lower' : 'body';
 }
 
 /** Select into an owned buffer. Authored normals and source topology stay intact.
@@ -52,7 +57,7 @@ export function selectViewGeometry(mesh, wanted) {
     const start = output.length;
     for (let offset = group.start; offset < group.start + group.count; offset += 3) {
       const ids = [index[offset], index[offset + 1], index[offset + 2]];
-      if (!ids.every(i => region(mesh, i) === wanted)) continue;
+      if (!ids.every(i => region(mesh, i, wanted === 'lower') === wanted)) continue;
       output.push(...ids); triangles++;
       for (let j = 0; j < 3; j++) {
         const a = ids[j], b = ids[(j + 1) % 3], ka = vertexKey(a), kb = vertexKey(b);
@@ -168,6 +173,29 @@ function makeView(source, selection) {
   return { root, pairs, meshPairs };
 }
 
+/** Hips-and-legs alternates of the body view. Leg and boot meshes are the same in both and get
+ * none; a torso mesh leaves the camera's layer; only a mesh cut at the waist gets a second geometry. */
+function lowerBodyParts(meshPairs) {
+  const parts = [];
+  for (const [, mesh] of meshPairs) {
+    const whole = mesh.geometry, index = whole.index?.array, like = { geometry: whole, skeleton: mesh.skeleton };
+    if (!index?.length) continue;
+    let lower = 0;
+    for (let i = 0; i < index.length; i += 3)
+      if ([index[i], index[i + 1], index[i + 2]].every(vertex => region(like, vertex, true) === 'lower')) lower++;
+    if (lower * 3 === index.length) continue;
+    parts.push({ mesh, whole, lower: lower ? selectViewGeometry(like, 'lower') : null, layers: mesh.layers.mask });
+  }
+  return parts;
+}
+function showLowerBody(rig, lowerOnly) {
+  rig.lowerOnly = lowerOnly;
+  for (const part of rig.lowerBody) {
+    if (part.lower) part.mesh.geometry = lowerOnly ? part.lower : part.whole;
+    else part.mesh.layers.mask = lowerOnly ? 0 : part.layers;
+  }
+}
+
 export function createFirstPersonRig({ source }) {
   const arms = makeView(source, 'arms'), body = makeView(source, 'body');
   // The owned view hierarchy is fixed until retirement. Preserve exactly the
@@ -178,6 +206,7 @@ export function createFirstPersonRig({ source }) {
   body.root.traverse(node => { if (!bodyBones.has(node.name)) bodyBones.set(node.name, node); });
   const rig = { source, arms: arms.root, body: body.root, armPairs: arms.pairs,
     armBones, bodyBones,
+    lowerBody: lowerBodyParts(body.meshPairs), chest: bodyBones.get('spine_03') ?? null, lowerOnly: false,
     bodyPairs: body.pairs, meshPairs: [...arms.meshPairs,...body.meshPairs],
     disposed: false, handlers: new Set(), updates: 0, pose: null };
   rig.releaseSource = registerCharacterDisposer(source, () => disposeFirstPersonRig(rig));
@@ -282,6 +311,10 @@ export function updateFirstPersonRig(rig, { pose, camera, weapon = null,
   rig.arms.quaternion.copy(camera.quaternion).multiply(new THREE.Quaternion().setFromAxisAngle(V(0, 1, 0), Math.PI));
   rig.arms.position.copy(camera.position).add(V(0, -eyeHeight, -.25).applyQuaternion(camera.quaternion));
   rig.arms.scale.copy(rig.source.scale); rig.arms.updateMatrixWorld(true); rig.body.updateMatrixWorld(true);
+  // Hips and legs only, unless the chest is clearly below the eye. A crouched torso sits
+  // at eye height, where the planted-feet twist of a turning view carries it across the eye.
+  const lowerOnly = !!rig.chest && camera.position.y - rig.chest.matrixWorld.elements[13] < BODY_VIEW_TORSO_BELOW_EYE;
+  if (lowerOnly !== rig.lowerOnly) showLowerBody(rig, lowerOnly);
   // View shoulders retain the same anatomical lengths in every stance. The
   // source body's crouch displacement belongs to the world clone; translating
   // the view root avoids lowering its forearms twice relative to crouched eyes.
@@ -332,6 +365,10 @@ export function resetFirstPersonRigGeneration(rig) {
 export function disposeFirstPersonRig(rig) {
   if (!rig || rig.disposed) return;
   rig.armBones.clear(); rig.bodyBones.clear();
+  // The body meshes take back what they were built with; the alternates retire here, once.
+  showLowerBody(rig, false);
+  for (const part of rig.lowerBody) part.lower?.dispose();
+  rig.lowerBody.length = 0; rig.chest = null;
   rig.releaseSource?.(); rig.releaseSource = null;
   for (const owner of rig.handlers) disposeWeaponHandling(owner);
   rig.handlers.clear(); disposeCharacter(rig.arms); disposeCharacter(rig.body);
