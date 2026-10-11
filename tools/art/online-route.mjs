@@ -35,17 +35,28 @@ export const CROUCH_SPEED_M_S = CROUCH_SPEED; // src/shared/movement.js: MOVE_SP
 // samples while crouched.
 export const INPUT_LIFE_S = 0.5;
 export const INPUT_LIFE_STEP_M = CROUCH_SPEED_M_S * INPUT_LIFE_S; // 2.16
-// Keys are released on the first sample whose remaining distance along the driven axis to the
-// waypoint centre is at most this. It is the smallest threshold for which a sample one full step
-// past the threshold, followed by a full-life stop, still rests inside the far side of the box:
-// RELEASE_AT_M - 2 * INPUT_LIFE_STEP_M = -ARRIVAL_TOLERANCE_M. A release exactly at the threshold with
-// the measured stop step rests at RELEASE_AT_M - STOP_LEAD_M = 1.20, inside the near side.
-export const RELEASE_AT_M = 2 * INPUT_LIFE_STEP_M - ARRIVAL_TOLERANCE_M; // 3.07
-// Crouch is requested this far out so that it is in effect before the release threshold even when
-// the body still covers one standing input life (3 m) first.
-export const CROUCH_WITHIN_M = 8;
+// At capture frame rate an input is accepted about every second frame, so a crouched body still
+// travels about two frame times after the sample on which its release was decided, and never more
+// than one input life. Measured in the control runs tracer-high-2, run-01 and run-02 (crouched first
+// stops): 1.30 to 1.73 m at 5.2 to 6.6 frames per second, 1.58 to 2.16 m at 4.1 to 5.3.
+export const ACCEPT_PERIOD_FRAMES = 2;
+export const STOP_STEP_MIN_M = 1.3; // smallest measured crouched stop step; used while no frame rate is known
+// Largest measured distance of a release sample inside its threshold in those runs (28 first stops).
+export const SAMPLE_STEP_M = 0.95;
+export const RELEASE_MARGIN_M = 0.3;
+// The longest step from rest: the key takes effect up to one sample step before the release is
+// decided, then the body stops within one input life.
+export const MAX_STEP_FROM_REST_M = SAMPLE_STEP_M + INPUT_LIFE_STEP_M; // 3.11
+// A body at rest closer than this to the centre, but outside the box, could pass the far side of the
+// box with one step toward it. It steps back first and approaches again.
+export const BACK_OFF_WITHIN_M = MAX_STEP_FROM_REST_M - ARRIVAL_TOLERANCE_M; // 1.86
+// Crouch is requested this far out so that it is in effect before the release threshold: run-01 and
+// run-02 still found a standing body at 3.1 to 3.5 m when crouch was requested at 8 m.
+export const CROUCH_WITHIN_M = 12;
 export const STANDING_FACTOR = MOVE_SPEED / CROUCH_SPEED_M_S; // a body not yet crouched travels this much further
 export const PROGRESS_SEEN_M = 0.05; // a held key counts as effective once the body moved this far or reports moving
+export const FRAME_RATE_WINDOW_MS = 3000;
+export const FRAME_RATE_MIN_MS = 1000;
 export const MAX_STOP_LAG_MS = MAX_STOP_STEP_M / CROUCH_SPEED_M_S * 1000;
 // Same rule as the offline approach (plan 07-23): 5 simulation seconds at 30 Hz with a key held.
 export const STALL_TICKS = 150;
@@ -136,10 +147,46 @@ export function shouldCrouch(position, waypoint, key, yaw = 0) {
   return remaining(position, waypoint, key, yaw) <= CROUCH_WITHIN_M + EPSILON;
 }
 
+// The smallest crouched stop step expected at a frame rate: two frame times, at most one input life.
+export function expectedStopStep(framesPerSecond) {
+  if (!(framesPerSecond > 0)) return STOP_STEP_MIN_M;
+  return Math.min(INPUT_LIFE_STEP_M, ACCEPT_PERIOD_FRAMES / framesPerSecond * CROUCH_SPEED_M_S);
+}
+
+// Keys are released on the first sample whose remaining distance along the driven axis to the
+// waypoint centre is at most this: a release exactly at the threshold with the smallest expected stop
+// step rests RELEASE_MARGIN_M inside the near side of the box.
+export function releaseAt(framesPerSecond) {
+  return ARRIVAL_TOLERANCE_M + expectedStopStep(framesPerSecond) - RELEASE_MARGIN_M;
+}
+
 // `crouching` is the authoritative stance of the sample; a body that is not crouched yet is
-// released earlier by the speed ratio.
-export function shouldRelease(position, waypoint, key, yaw = 0, crouching = true) {
-  return remaining(position, waypoint, key, yaw) <= RELEASE_AT_M * (crouching ? 1 : STANDING_FACTOR) + EPSILON;
+// released earlier by the speed ratio. `framesPerSecond` is the recent measured frame rate or null.
+export function shouldRelease(position, waypoint, key, yaw = 0, crouching = true, framesPerSecond = null) {
+  return remaining(position, waypoint, key, yaw) <= releaseAt(framesPerSecond) * (crouching ? 1 : STANDING_FACTOR) + EPSILON;
+}
+
+// `key` is the key toward the waypoint. True for a body outside the box whose step toward the
+// waypoint could pass the far side of the box.
+export function shouldBackOff(position, waypoint, key, yaw = 0) {
+  const distance = remaining(position, waypoint, key, yaw);
+  return distance > ARRIVAL_TOLERANCE_M + EPSILON && distance < BACK_OFF_WITHIN_M;
+}
+
+export function oppositeKey(key) {
+  return { KeyW: 'KeyS', KeyS: 'KeyW', KeyA: 'KeyD', KeyD: 'KeyA' }[key] ?? null;
+}
+
+// Frame rate over the last FRAME_RATE_WINDOW_MS of samples { wallMs, frames }; null while the
+// samples span less than FRAME_RATE_MIN_MS.
+export function recentFramesPerSecond(samples) {
+  const list = Array.isArray(samples) ? samples : [];
+  const last = list.at(-1);
+  if (!last) return null;
+  let first = last;
+  for (let index = list.length - 1; index >= 0 && last.wallMs - list[index].wallMs <= FRAME_RATE_WINDOW_MS; index--) first = list[index];
+  const span = last.wallMs - first.wallMs;
+  return span >= FRAME_RATE_MIN_MS ? (last.frames - first.frames) / (span / 1000) : null;
 }
 
 // samples: { tick, along, held } in time order. 'stalled' when the trailing run of samples with a

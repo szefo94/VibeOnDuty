@@ -18,7 +18,7 @@ import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ROOT } from './pipeline.mjs';
-import { MAX_STOP_STEP_M, STOP_LEAD_M, RELEASE_AT_M, CROUCH_WITHIN_M, ARRIVAL_TOLERANCE_M, MATCH_SECONDS, TIER_DEADLINE_MS,
+import { MAX_STOP_STEP_M, STOP_LEAD_M, RELEASE_MARGIN_M, BACK_OFF_WITHIN_M, CROUCH_WITHIN_M, ARRIVAL_TOLERANCE_M, MATCH_SECONDS, TIER_DEADLINE_MS,
   TIER_TEARDOWN_ALLOWANCE_MS, WAYPOINTS } from './online-route.mjs';
 
 export const CONTROL_LABEL = 'collector control of the online route; not moving-review evidence';
@@ -74,7 +74,7 @@ function printRecord(record) {
     for (const leg of tier.legs ?? [])
       console.log(`[control ${record.label}]   leg (${leg.waypoint}): ${leg.wallMs} ms, ${leg.ticks} ticks, `
         + `${fixed(leg.framesPerSecond)} frames per second, staleInputSamples ${leg.staleInputSamples} (sampled lower bound), `
-        + `corrections ${leg.corrections}, largest stop step ${fixed(leg.largestStopStepM, 2)} m, `
+        + `corrections ${leg.corrections}, back-offs ${leg.backOffs ?? 0}, largest stop step ${fixed(leg.largestStopStepM, 2)} m, `
         + `outside lane ${leg.outsideLaneSamples}; stops released/rest `
         + `${(leg.stops ?? []).map(stop => `${fixed(stop.releasedAtM, 2)}/${fixed(stop.restAtM, 2)}`).join(' ') || 'none'}`);
     if (tier.failure) console.log(`[control ${record.label}]   failure ${JSON.stringify(tier.failure)}`);
@@ -170,7 +170,7 @@ export async function runControl({ label, tiers, warmUpMinutes, exactRejections 
   await fs.mkdir(CONTROL_DIRECTORY, { recursive: true });
   const record = { label, controlLabel: CONTROL_LABEL, status: 'started', startedAt: new Date().toISOString(),
     diagnostic: exactRejections === true, requestedTiers: tiers, ...await currentHashes(),
-    constants: { STOP_LEAD_M, RELEASE_AT_M, CROUCH_WITHIN_M, ARRIVAL_TOLERANCE_M, MAX_STOP_STEP_M, MATCH_SECONDS, TIER_DEADLINE_MS, TIER_TEARDOWN_ALLOWANCE_MS,
+    constants: { STOP_LEAD_M, RELEASE_MARGIN_M, BACK_OFF_WITHIN_M, CROUCH_WITHIN_M, ARRIVAL_TOLERANCE_M, MAX_STOP_STEP_M, MATCH_SECONDS, TIER_DEADLINE_MS, TIER_TEARDOWN_ALLOWANCE_MS,
       MAX_TIER_WALL_MS, MIN_TIME_REMAINING_S },
     warmUp: { requestedMinutes: warmUpMinutes, actualMinutes: 0 }, tiers: [] };
   // Exclusive create: a label is never reused, also when a run dies before it finishes.

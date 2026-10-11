@@ -7,7 +7,8 @@ import { MOUSE_SENS } from '../../src/config.js';
 // Every number of the route and every bound lives in the tested pure helper; none is repeated here.
 import { MAX_CORRECTIONS, MATCH_SECONDS, TIER_DEADLINE_MS, LEG_BOUND_MS, ACTION_BOUND_MS, DEATH_BOUND_MS,
   FRESH_LIFE_BOUND_MS, POLL_MS, RETRY_MS, HEALTH_IDLE_MS, PROGRESS_SEEN_M, routeLegs, insideBox, outsideLane, chooseKey, alongTrack,
-  shouldCrouch, shouldRelease, classifyLeg, legSummary, boundedMs } from './online-route.mjs';
+  shouldCrouch, shouldRelease, shouldBackOff, oppositeKey, recentFramesPerSecond, classifyLeg, legSummary,
+  boundedMs } from './online-route.mjs';
 
 // The collector sends only ordinary keyboard and mouse input and only observes through
 // window.__mpDebug() and its own window properties (__movingFrames, __movingSeen, __movingObserver).
@@ -57,7 +58,7 @@ async function walk(page, budget, from, waypoint, legs) {
   const started = Date.now(), samples = [];
   const length = Math.hypot(waypoint[0] - from[0], waypoint[1] - from[1]);
   const bound = boundedMs(budget.startedAt, started, LEG_BOUND_MS);
-  let held = null, crouching = false, presses = 0, last = null;
+  let held = null, crouching = false, presses = 0, backOffs = 0, last = null;
   const read = async () => {
     const { state, frames } = await page.evaluate(() => ({ state: window.__mpDebug(), frames: window.__movingFrames ?? 0 }));
     const p = own(state);
@@ -93,9 +94,14 @@ async function walk(page, budget, from, waypoint, legs) {
       let s = await read();
       if (insideBox(s, waypoint)) return;
       check();
-      const key = chooseKey(s, s.yaw, waypoint);
+      const toward = chooseKey(s, s.yaw, waypoint);
       if (++presses > MAX_CORRECTIONS) throw fail('corrections');
-      if (shouldCrouch(s, waypoint, key, s.yaw)) { crouching = true; await page.keyboard.down('ControlLeft'); }
+      // A body at rest just outside the box steps back first: one step toward the waypoint could
+      // pass the far side of the box.
+      const backOff = shouldBackOff(s, waypoint, toward, s.yaw);
+      const key = backOff ? oppositeKey(toward) : toward;
+      if (backOff) backOffs++;
+      if (shouldCrouch(s, waypoint, toward, s.yaw)) { crouching = true; await page.keyboard.down('ControlLeft'); }
       const pressedAt = s.along;
       let effective = false;
       held = key;
@@ -104,12 +110,14 @@ async function walk(page, budget, from, waypoint, legs) {
         await sleep(POLL_MS);
         s = await read();
         // A key is never released before it took effect: a press that the server has not applied yet
-        // would otherwise be a tap without movement.
+        // would otherwise be a tap without movement. A step back ends as soon as it took effect.
         effective = effective || s.moving || Math.abs(s.along - pressedAt) > PROGRESS_SEEN_M;
-        if (effective && (shouldRelease(s, waypoint, key, s.yaw, s.crouching) || chooseKey(s, s.yaw, waypoint) !== key)) break;
+        const framesPerSecond = recentFramesPerSecond(samples) ?? budget.framesPerSecond ?? null;
+        if (effective && (backOff || shouldRelease(s, waypoint, toward, s.yaw, s.crouching, framesPerSecond)
+          || chooseKey(s, s.yaw, waypoint) !== toward)) break;
         if (classifyLeg(samples) === 'stalled') throw fail('stalled');
         check();
-        if (!crouching && shouldCrouch(s, waypoint, key, s.yaw)) { crouching = true; await page.keyboard.down('ControlLeft'); }
+        if (!crouching && shouldCrouch(s, waypoint, toward, s.yaw)) { crouching = true; await page.keyboard.down('ControlLeft'); }
       }
       await release();
       // Decide again only when the player is reported not moving and two consecutive snapshots, the
@@ -124,7 +132,10 @@ async function walk(page, budget, from, waypoint, legs) {
     }
   } finally {
     await release().catch(() => {});
-    legs.push({ waypoint, ...legSummary(samples) });
+    const summary = legSummary(samples);
+    // The next leg starts with this leg's frame rate until it has measured its own.
+    if (summary.framesPerSecond !== null) budget.framesPerSecond = summary.framesPerSecond;
+    legs.push({ waypoint, backOffs, ...summary });
   }
 }
 async function aim(page, budget, targetId) {
@@ -234,7 +245,11 @@ async function runTier(browser, directory, tier, fixture, budget, { contexts, pa
   await offer(budget, 'reload', async () => { await focus(b, budget); await b.keyboard.press('KeyR'); },
     () => a.evaluate(() => window.__movingSeen()), s => !!s.reload);
   await holdFireUntilDeath(a, b, budget, targetId);
-  await until(budget, () => a.evaluate(() => window.__movingSeen()), s => !!s.fresh, FRESH_LIFE_BOUND_MS);
+  // The observer reads authoritative state every 10 ms; the remote actor of the new life appears with
+  // the next rendered frame. Wait, within the same bound, until the observer has seen both agree; the
+  // assertions below are unchanged.
+  await until(budget, () => a.evaluate(() => window.__movingSeen()),
+    s => !!s.fresh && s.fresh.actor.lifeGeneration === s.fresh.p.lifeGeneration, FRESH_LIFE_BOUND_MS);
   const seen = await a.evaluate(() => { clearInterval(window.__movingObserver); return window.__movingSeen(); });
   assert.equal(seen.reload.actor.pose.upper, 'reload');
   assert.equal(seen.death.actor.clip, 'death_front');
