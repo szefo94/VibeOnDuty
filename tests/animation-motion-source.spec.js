@@ -41,6 +41,16 @@ async function enter(page) {
     // Raw authored source motion has its own clone/mixer. The live player's
     // normal ready contact correction must continue owning the live player.
     const actor = g.usingGLTF ? g.createReviewCharacter('m4') : null;
+    // The panel clone resolves live (composed) clips on purpose. This spec proves the authored
+    // source motion, so the actions it plays are rebound to clips from g.findMotionClip.
+    if (actor) {
+      const { GLTFLoader } = await import(src + '../node_modules/three/examples/jsm/loaders/GLTFLoader.js');
+      const template = await new GLTFLoader().loadAsync(new URL('models/enemy.glb', location.href).href);
+      for (const key of ['walk', 'reload', 'turn_left']) {
+        const clip = g.findMotionClip(template.animations, key, 'm4');
+        if (clip) actor.actions[key] = actor.mixer.clipAction(clip);
+      }
+    }
     let raf, previous, disposed = false;
     if (actor) {
       actor.mesh.position.copy(g.playerMesh.position);
