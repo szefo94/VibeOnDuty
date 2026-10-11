@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 07
 current_phase_name: Movement-Matched and Action-Safe Animation
 status: executing
-stopped_at: Completed 07-28-PLAN.md
-last_updated: "2026-10-11T07:52:46.902Z"
+stopped_at: Completed 07-34-PLAN.md
+last_updated: "2026-10-11T09:17:47.555Z"
 last_activity: 2026-10-09
 last_activity_desc: Phase 07 execution started
-state_head: 1196f04a84f6c3a16d549d84532b70fcb928fd52
+state_head: 097aa8144c1b1639d40fab7a726722972d2952d4
 progress:
   total_phases: 12
   completed_phases: 2
-  total_plans: 46
-  completed_plans: 41
+  total_plans: 47
+  completed_plans: 42
   percent: 17
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-05)
 ## Current Position
 
 Phase: 07 (Movement-Matched and Action-Safe Animation) — EXECUTING
-Plan: 14 of 19
+Plan: 15 of 19
 Status: Ready to execute
 Next action: Plan 07-18 closed (calibration valid and passed; paired verdict "passed, session 1 of 1; 0 valid sessions failed; 0 invalid"; plan 09 qualified on the paired route only, `stable-gates.mjs check` exit 0). The original absolute limits were not met (frozen command exit 1, 40 and 21 of 192 over; no frozen exit 0). Next: 07-19 strict capture, which needs an owner host_ready time no older than 12 hours, the paired session directories kept in the cache and no hashed source file changed before it runs. Open: G-01 CI art-test step before any push; AGENTS.md still says nothing has qualified. ANIM-05 stays unmarked until phase verification. Phase5 follows accepted Phase7.
 Roadmap review: User revised remaining order to6 → 7 → 5 → 2 → 3 → 4 → 8 → 9 → 10 → 11 → 12; Phase1 remains complete.
@@ -93,6 +93,7 @@ Progress: [██░░░░░░░░] 17%
 | Phase 07 P26 | 1h 55m | 3 tasks | 7 files |
 | Phase 07 P27 | 41 min | 2 tasks | 4 files |
 | Phase 07 P28 | 18 min | 1 tasks | 2 files |
+| Phase 07 P34 | 31 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -165,6 +166,8 @@ Full decisions are recorded in PROJECT.md.
 - [Phase 07]: 07-26: the control's stop criterion was changed after run-04 failed (orchestrator under the owner's standing instruction, not separately approved by the owner); collector review approved with notes W-01 to W-05
 - [Phase 07]: [07-28] First-person body view moves 0.10 m back (not 0.43 m forward) as the camera pitches down; -0.18 m at a level view as before. Size from the measured 0.099 m forward travel of the neck base under the torso lean of the driver.
 - [Phase 07]: [07-28] H-01 (back visible during reload in a capture movie) is not explained by the look-down offset: at the collector pitches (0 and +0.423) old and new offset are equal and the eye is 0.184 m in front of the chest. Open, not diagnosed.
+- [Phase 07]: Plan 07-34: composed crouch and jump clips keep the authored horizontal pelvis position and take only the height from the inherited clip; applied to every composed clip without sway that is not a held idle clip — The first-person arms copy the shoulders that ride on the pelvis; the inherited rifle crouch has it 0.23 m behind the root, which left the support hand up to 0.150 m short. Measured after: 0 for M4, pistol, AWP and P90 in every listed state (unit tests only, no browser).
+- [Phase 07]: Plan 07-34: crouch smallest-knee guard re-derived once, from 0.15 m to 0.12 m, declared in the plan before the composition changed; it does not change again — Built clips measure 0.237 m (crouch idle) and 0.137 m (crouch walk) over every key; every other limit of plan 07-27 is unchanged.
 
 ### Pending Todos
 
@@ -194,8 +197,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-10-11T07:52:35.145Z
-Stopped at: Completed 07-28-PLAN.md
+Last session: 2026-10-11T09:17:38.547Z
+Stopped at: Completed 07-34-PLAN.md
 Resume file: None
 
 User passed both Phase 6 visual checks with "pass all tests and proceed".
