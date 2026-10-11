@@ -23,6 +23,7 @@ import { MAX_STOP_STEP_M, STOP_LEAD_M, RELEASE_MARGIN_M, BACK_OFF_WITHIN_M, CROU
 
 export const CONTROL_LABEL = 'collector control of the online route; not moving-review evidence';
 export const CONTROL_DIRECTORY = path.join(ROOT, '.planning/research/.cache/07-26');
+export const CRITERION_VERSION = 2;
 export const MAX_TIER_WALL_MS = 360000;
 export const MIN_TIME_REMAINING_S = 240;
 export const REQUIRED_WARM_UP_MINUTES = 35; // for records whose label starts with `warm-`
@@ -43,6 +44,8 @@ async function currentHashes() {
 export function judge(record, tiers, hashes) {
   const reasons = [];
   if (!record || record.controlLabel !== CONTROL_LABEL) reasons.push('record does not carry the control label');
+  if (record?.criterionVersion !== CRITERION_VERSION)
+    reasons.push(`record was made under a superseded stop criterion (criterionVersion ${record?.criterionVersion ?? 'missing'}, ${CRITERION_VERSION} required)`);
   if (record?.diagnostic) reasons.push('diagnostic record (--exact-rejections) never counts');
   if (record?.status !== 'finished') reasons.push(`record status is ${record?.status ?? 'missing'}`);
   for (const key of Object.keys(BOUND_FILES))
@@ -59,7 +62,15 @@ export function judge(record, tiers, hashes) {
     if ((tier.legs?.length ?? 0) !== WAYPOINTS.length) reasons.push(`${name}: ${tier.legs?.length ?? 0} legs, ${WAYPOINTS.length} expected`);
     for (const leg of tier.legs ?? []) {
       const at = `(${leg.waypoint})`;
-      if (!(leg.largestStopStepM <= MAX_STOP_STEP_M)) reasons.push(`${name}: leg ${at} stop step ${leg.largestStopStepM} m above ${MAX_STOP_STEP_M}`);
+      // Stop criterion version 2 (plan 07-26, Amendment 2): the stop step length is recorded, not judged.
+      const stops = leg.stops ?? [];
+      if (stops.length === 0) reasons.push(`${name}: leg ${at} has no recorded stop`);
+      else {
+        for (const stop of stops)
+          if (!(stop.restAtM >= -ARRIVAL_TOLERANCE_M)) reasons.push(`${name}: leg ${at} has a stop at rest ${stop.restAtM} m, beyond the far side of the arrival box`);
+        const last = stops.at(-1);
+        if (!(Math.abs(last.restAtM) <= ARRIVAL_TOLERANCE_M)) reasons.push(`${name}: leg ${at} last stop at rest ${last.restAtM} m, outside the arrival box`);
+      }
       if (leg.outsideLaneSamples !== 0) reasons.push(`${name}: leg ${at} has ${leg.outsideLaneSamples} samples outside the lane`);
     }
   }
@@ -168,7 +179,7 @@ export async function runControl({ label, tiers, warmUpMinutes, exactRejections 
     spawnSync('git', ['check-ignore', '-q', path.relative(ROOT, recordPath(label))], { cwd: ROOT }));
   if (check.status !== 0) throw Error('The control cache directory is not gitignored; refusing to write a record');
   await fs.mkdir(CONTROL_DIRECTORY, { recursive: true });
-  const record = { label, controlLabel: CONTROL_LABEL, status: 'started', startedAt: new Date().toISOString(),
+  const record = { label, controlLabel: CONTROL_LABEL, criterionVersion: CRITERION_VERSION, status: 'started', startedAt: new Date().toISOString(),
     diagnostic: exactRejections === true, requestedTiers: tiers, ...await currentHashes(),
     constants: { STOP_LEAD_M, RELEASE_MARGIN_M, BACK_OFF_WITHIN_M, CROUCH_WITHIN_M, ARRIVAL_TOLERANCE_M, MAX_STOP_STEP_M, MATCH_SECONDS, TIER_DEADLINE_MS, TIER_TEARDOWN_ALLOWANCE_MS,
       MAX_TIER_WALL_MS, MIN_TIME_REMAINING_S },
