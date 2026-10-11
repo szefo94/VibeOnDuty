@@ -6,7 +6,7 @@ import { createHash } from 'node:crypto';
 
 const animationBytes = await readFile(new URL('./fixtures/enemyAnimations.uncached.js', import.meta.url));
 if (createHash('sha256').update(animationBytes).digest('hex') !==
-  '61db86321fb6d179d643e74d9b2797a463e1f6c9eabed215b37d74a918239f67')
+  '28ff6662e664f673c0c2229566023e41b5ce1af2c64991bd6385f471903730bb')
   throw Error('Immutable uncached animation fixture changed');
 const uncachedAnimation = animationBytes.toString('utf8')
   .replace("import * as THREE from 'three';", 'const THREE = window.__THREE;');

@@ -517,9 +517,9 @@ export function tickPresentation(e, raw, dt, updateMixer = true) {
     key = pose.upper === 'melee' ? (pose.action.variant === 'punch_jab' ? 'melee_jab' : 'melee_cross') : pose.upper;
     add(key, null, 1, pose.action.total > 0 ? pose.action.phase : null);
   } else {
-    key = pose.jump ? `jump_${pose.jump}` : pose.turn || pose.transition || 'loco';
+    key = pose.jump ? `jump_${pose.jump}` : (!pose.crouching && pose.turn) || pose.transition || 'loco';
     if (pose.jump) add(key, false, 1, pose.jump === 'loop' ? null : pose.jumpPhase);
-    else if (pose.turn) add(key, false, 1, pose.turnPhase);
+    else if (pose.turn && !pose.crouching) add(key, false, 1, pose.turnPhase); // both turn clips stand
     else if (pose.transition) add(key, false, 1, pose.transitionPhase);
     else for (const gait of pose.gait) add(gait.key, false, gait.weight,
       pose.moving ? pose.phase : null, pose.moving ? pose.cadence : null);
