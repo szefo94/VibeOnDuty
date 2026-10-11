@@ -56,3 +56,11 @@ Animation review panel:
 | H-14 | First person: crouching and standing are fine; prone does not lower the view to near the ground (stays at standing height) and the hands are upside down. |
 
 The owner's request: "Please adjust". No item is approved and no verdict is stated.
+
+## Reply 3 (2026-10-11), after the diagnosis (`.planning/debug/phase7-human-motion-review.md`), verbatim
+
+The orchestrator had asked two questions: (1) for in-game motion, return live play to the inherited motion-captured clips (recommended) or repair the scripted clips; (2) leave slide, dive, prone and supersprint for Phase 5 (recommended) or redo them now. After asking what Phase 5 contains, the owner replied:
+
+> ok, maybe lets plan tis omnimovement in separate phase as you say, leave it to lean at every animation in separate wit live review, for now lets see what we can continue with, this movement i would now leave for later
+
+Recorded from this reply: slide, dive, prone and supersprint are left for the omnimovement phase (Phase 5), where each animation gets its own live review by the owner. Whether "this movement ... for later" also covers the in-game defects (H-04 to H-08, H-13) is not stated; the orchestrator asked.
