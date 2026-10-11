@@ -13,3 +13,18 @@
   ink and blackened a crouched frame by more than 5 percent, the pattern of the frames on record from
   2026-10-11 13:26 UTC. Whether an enemy stood there in that run cannot be told from its files.
   **Not fixed:** `src/entities/enemies.js` is outside plan 07-38.
+
+- A crouched character stands up on its legs for each foot turn
+  status: open
+  **Found in:** plan 07-38, task 3 (read from source and measured in Node on the real rig).
+  **What:** when the view has twisted more than 0.42 rad from planted feet, the driver plays a foot
+  turn of 0.4 s on the lower layer (`key = pose.jump ? ... : pose.turn || ...`,
+  `src/builders/enemyAnimations.js` line 520). Both turn clips are the held frame of the standing idle
+  (`turn_left: ['idle', 0, 'held']`, `src/builders/enemyGLTF.js` line 138); there is no crouched one. So
+  the legs of a crouched actor take the standing pose for the turn: the pelvis goes from 0.47 m to
+  0.877 m above the root, which is 0.027 m above the crouched eye of 0.85 m.
+  **Why it matters here:** the first-person body view copies those legs, so hips and thighs pass
+  through the eye while a crouched view turns (nearest surface 0.000 to 0.109 m; a black shape over
+  11 to 39 percent of the screen in 2 to 5 of about 120 frames of a swing). It is also what third
+  person and other players see of a crouched character turning on the spot.
+  **Not fixed:** both files are outside plan 07-38, and `enemyAnimations.js` is pinned to commit 3665406.
