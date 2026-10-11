@@ -2,7 +2,7 @@
 status: preview
 lean: right
 lean_degrees: 12
-shown_commit: eb43041b0ca38d5dcbd0ad27d5e9a3d5c7a84d0c
+shown_commit: eb4304115911b00565fa7acaac25c6619148972d
 reviewed_by: owner
 date: 2026-10-11
 ---
@@ -22,3 +22,7 @@ The owner's reply, verbatim:
 > ok, lets proceed, now crouch is looking okay, what would be the next step?>
 
 Recorded from it: `lean: right` at 12 degrees ("now crouch is looking okay"; "lets proceed"). The owner named no other issue in this reply. It is not a verdict on the repair as a whole or on the open items, which are put to the owner in plan 07-37.
+
+## Correction by the orchestrator (2026-10-11)
+
+The `shown_commit` line first carried a hash that is not a git object: the orchestrator wrote the short hash `eb43041` out to 40 characters wrongly. It is corrected above to the full hash that `git rev-parse eb43041` returns. Nothing else in this record changed; the owner's words are as first written.
