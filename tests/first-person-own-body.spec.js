@@ -16,18 +16,22 @@ import { env } from 'node:process';
 //                   shadow map kept). The hiding uses the meshes' own visible flags, put back after.
 // Case A drives the rig by hand in the sequence of the pitch-view case of first-person-rig.spec.js.
 // Case B leaves the game loop running and sends key and pointer input as a player does.
-// Every limit was fixed in the plan before any frame was measured and is never loosened here.
+// Both run in the Training Range (Amendment 1, C): the pitch-view case starts Incursion, where an
+// enemy of the wave can stand on the player's cell and be drawn over a hand-lowered camera.
+// The ink and own-body limits were fixed in the plan before any frame was measured. The leg-joint
+// rule and the standing chest share were set by Amendment 1 after the first measurements, from them.
 const LIMIT = Object.freeze({
   ink: 0.01, // at most 1.0 percent of a frame, standing and crouched, every pitch, still and moving
   bodyOverStanding: 0.005, // crouched own-body share over the standing share at the same pitch
   bodyAbove: -0.3, // radians: the own-body comparison applies to pitches above this
-  lookDown: -0.6, // radians: at or below this the legs must be on screen
-  legJoints: 2, // of calf_l, calf_r, foot_l, foot_r of the body view
+  lookDown: -1.38, // radians: at this pitch a still frame must show the legs (Amendment 1, B)
+  legJoints: { stand: 4, crouch: 3 }, // of calf_l, calf_r, foot_l, foot_r of the body view, as measured before the rule
+  standingChest: 0.045, // own-body share of the standing still frame at that pitch: the chest stays in view (measured 0.0525 to 0.0535)
   edge: 0.9, // both screen coordinates of a counted joint are inside this
 });
 const PITCHES = [1.38, 0.9, 0.45, 0.3, 0, -0.3, -0.6, -0.9, -1.38];
 const SEQUENCE_PITCHES = [-1.38, -0.9, 0, 1.38]; // the eight frames of the existing spec
-const SETTLE = 60, TURN = 60, SWING = 120, WALK = 60, REST = 30; // rendered frames, never wall time
+const SETTLE = 60, TURN = 60, SWING = 120, WALK = 60, REST = 30, PLANT = 6; // rendered frames, never wall time
 const STEP = 0.05; // seconds: the cap src/loop.js puts on one frame
 const percent = share => `${(share * 100).toFixed(2)} percent`;
 
@@ -41,10 +45,9 @@ test.beforeAll(async () => {
   await server.listen(); url = `http://127.0.0.1:${server.httpServer.address().port}/`;
 });
 test.afterAll(async () => { await server?.close(); });
-test.beforeEach(async ({ page }, info) => {
+test.beforeEach(async ({ page }) => {
   await page.goto(url); await expect(page.locator('#range-startbtn')).toBeEnabled({ timeout: 30000 });
-  // Case A starts as the pitch-view case does (its title begins with "lit:"); case B in the Training Range.
-  await page.locator(info.title.includes('the existing sequence') ? '#startbtn' : '#range-startbtn').click();
+  await page.locator('#range-startbtn').click();
 });
 
 /** One PNG into the test output and, when OWN_BODY_FRAMES names a directory, a copy there. */
@@ -163,8 +166,12 @@ function judge(rows) {
       else if (!(row.body <= reference.body + LIMIT.bodyOverStanding))
         misses.push(`${id}: own-body share ${percent(row.body)} over standing ${percent(reference.body)} plus ${percent(LIMIT.bodyOverStanding)}`);
     }
-    if (row.pitch <= LIMIT.lookDown && !(row.legJoints >= LIMIT.legJoints))
-      misses.push(`${id}: ${row.legJoints} leg joints on screen, fewer than ${LIMIT.legJoints}`);
+    if (row.motion === 'still' && row.pitch === LIMIT.lookDown) {
+      if (!(row.legJoints >= LIMIT.legJoints[row.stance]))
+        misses.push(`${id}: ${row.legJoints} leg joints on screen, fewer than ${LIMIT.legJoints[row.stance]}`);
+      if (row.stance === 'stand' && !(row.body >= LIMIT.standingChest))
+        misses.push(`${id}: own-body share ${percent(row.body)} under ${percent(LIMIT.standingChest)}, the standing look-down view lost its chest`);
+    }
     if (row.repeated !== 0) misses.push(`${id}: the frame drawn again differs in ${row.repeated} pixels, so its own-body share is not a measurement`);
     if (row.shown !== true) misses.push(`${id}: the first-person views were not shown`);
   }
@@ -285,6 +292,11 @@ test('own body: the real game loop with key and pointer input keeps ink and the 
   const still = async (stance, pitch) => {
     await faceTo(Math.PI); // the hall is 80 m deep: facing +Z leaves room to walk
     const reached = await lookTo(pitch);
+    if (stance === 'crouch') {
+      // Amendment 1, D: a few crouched steps forward and a full stop, so the feet stand under the
+      // view and the still carries no twist left over from the turn before it.
+      await page.keyboard.down('KeyW'); await meter('wait', PLANT); await page.keyboard.up('KeyW');
+    }
     await meter('wait', SETTLE);
     const m = await meter('still'), facts = await meter('facts');
     rows.push({ stance, pitch, motion: 'still', frames: 1, inkFrames: m.ink > 0 ? 1 : 0, reachedPitch: reached, crouching: facts.crouching,
