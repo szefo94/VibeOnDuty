@@ -4,10 +4,10 @@ current_phase: 07
 current_phase_name: Movement-Matched and Action-Safe Animation
 status: executing
 stopped_at: Completed 07-38-PLAN.md
-last_updated: "2026-10-11T17:37:24.754Z"
+last_updated: "2026-10-11T17:37:51.478Z"
 last_activity: 2026-10-09
 last_activity_desc: Phase 07 execution started
-state_head: ac4f2b1a4b78691057b461cc0838ea996ed9584d
+state_head: 7172451e80b3d99d4b677436bd01441c4f4fd8d2
 progress:
   total_phases: 12
   completed_phases: 2
@@ -175,6 +175,9 @@ Full decisions are recorded in PROJECT.md.
 - [Phase 07]: Plan 07-35: the crouched torso lean lives in the weapon handler (CROUCH_TORSO_LEAN_RAD, 12 degrees, allowed 6 to 13), eased by the pose's sample time and faded between +0.3 and +0.8 rad of upward aim
 - [Phase 07]: Plan 07-35 Amendment 1 (orchestrator, after a failing run): the first-person body-view guard compares both halves with the same sample with the lean undone; the absolute wording fails with no lean at all
 - [Phase 07]: Plan 07-35: lean bands in the test follow the plan's planning table by degrees of lean, so the file can be re-run at 6 to 13 degrees in plan 07-36
+- [Phase 07]: 07-38: the first-person body view takes back the four lean bones and draws hips and legs only unless the chest bone is at least 0.15 m below the eye (stateless, no hysteresis)
+- [Phase 07]: 07-38 Amendment 2: a crouched foot turn is not played on the leg layer (two lines of the driver); the reference-driver fixture and its pin follow by the bounded rule of 07-29
+- [Phase 07]: 07-38: torso meshes of the body view leave the camera layer in crouch and keep their visible flags; review warning W-08 is most likely another character on the player cell in Incursion (constructed, not observed)
 
 ### Pending Todos
 
