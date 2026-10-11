@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 07
 current_phase_name: Movement-Matched and Action-Safe Animation
 status: executing
-stopped_at: Completed 07-26-PLAN.md
-last_updated: "2026-10-11T07:32:02.542Z"
+stopped_at: Completed 07-28-PLAN.md
+last_updated: "2026-10-11T07:52:46.902Z"
 last_activity: 2026-10-09
 last_activity_desc: Phase 07 execution started
-state_head: e302f31d7cdf9562eeb7d06feab8784e3491a0f3
+state_head: 1196f04a84f6c3a16d549d84532b70fcb928fd52
 progress:
   total_phases: 12
   completed_phases: 2
   total_plans: 46
-  completed_plans: 40
+  completed_plans: 41
   percent: 17
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-05)
 ## Current Position
 
 Phase: 07 (Movement-Matched and Action-Safe Animation) — EXECUTING
-Plan: 13 of 19
+Plan: 14 of 19
 Status: Ready to execute
 Next action: Plan 07-18 closed (calibration valid and passed; paired verdict "passed, session 1 of 1; 0 valid sessions failed; 0 invalid"; plan 09 qualified on the paired route only, `stable-gates.mjs check` exit 0). The original absolute limits were not met (frozen command exit 1, 40 and 21 of 192 over; no frozen exit 0). Next: 07-19 strict capture, which needs an owner host_ready time no older than 12 hours, the paired session directories kept in the cache and no hashed source file changed before it runs. Open: G-01 CI art-test step before any push; AGENTS.md still says nothing has qualified. ANIM-05 stays unmarked until phase verification. Phase5 follows accepted Phase7.
 Roadmap review: User revised remaining order to6 → 7 → 5 → 2 → 3 → 4 → 8 → 9 → 10 → 11 → 12; Phase1 remains complete.
@@ -92,6 +92,7 @@ Progress: [██░░░░░░░░] 17%
 | Phase 07 P18 | 1h 38m | 3 tasks | 11 files |
 | Phase 07 P26 | 1h 55m | 3 tasks | 7 files |
 | Phase 07 P27 | 41 min | 2 tasks | 4 files |
+| Phase 07 P28 | 18 min | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -162,6 +163,8 @@ Full decisions are recorded in PROJECT.md.
 - [Phase 07]: 07-18: the original absolute limits were not met (frozen command exit 1 on both evaluations at identity c1b06272, 40 and 21 of 192 over); no frozen exit 0 was observed and no owner frozen-pass decision exists
 - [Phase 07]: 07-18: no requirement marked complete; keep every paired session directory in the cache and change no hashed source file until the 07-19 capture has run
 - [Phase 07]: 07-26: the control's stop criterion was changed after run-04 failed (orchestrator under the owner's standing instruction, not separately approved by the owner); collector review approved with notes W-01 to W-05
+- [Phase 07]: [07-28] First-person body view moves 0.10 m back (not 0.43 m forward) as the camera pitches down; -0.18 m at a level view as before. Size from the measured 0.099 m forward travel of the neck base under the torso lean of the driver.
+- [Phase 07]: [07-28] H-01 (back visible during reload in a capture movie) is not explained by the look-down offset: at the collector pitches (0 and +0.423) old and new offset are equal and the eye is 0.184 m in front of the chest. Open, not diagnosed.
 
 ### Pending Todos
 
@@ -177,6 +180,7 @@ None yet.
 - Plan07-09 budget_contract checkpoint: qualified retirement and12 actual view profiles committed; legacy budget unmet/noncomparable, world51-equal-skeleton sharing requires root review. No09completion or golden-envelope change.
 - Plan07-09 exact two owner caches are qualified at f89d820. Actual unchanged-producer current smoke fails14 fixed Low/one statistics; named V2 CLI exits1 Incomplete report. Earlier complete135-flag failure is preserved separately. No current full candidate/plan/requirement advance; unrelated browser jobs remain running.
 - Plan07-09 qualifies45/46 distinct current resource/action/handling cases and1/2 legacy keepers. Original throw1ms and repeated-removal checks stopped in setup before assertions (WINDOWS42/43); targeted qualification remains open without changed tests/timeouts.
+- [07-28] Predicted in Node, not run in a browser: tests/first-person-rig.spec.js:269-270 (calves and feet on screen at pitch -1.38) fails in its crouched sample with the new body view offset (right foot y -1.26, right calf -1.08). Plan 07-29 runs that file and may edit it only for an assertion that states the old offset; decide before dispatch. Figures in 07-28-SUMMARY.md.
 
 ### Roadmap Evolution
 
@@ -190,8 +194,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-10-11T01:34:22.965Z
-Stopped at: Completed 07-26-PLAN.md
+Last session: 2026-10-11T07:52:35.145Z
+Stopped at: Completed 07-28-PLAN.md
 Resume file: None
 
 User passed both Phase 6 visual checks with "pass all tests and proceed".
