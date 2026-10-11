@@ -293,7 +293,7 @@ function bodyViews(rig, camera, owner, pitch, aim) {
     rig.body.updateMatrixWorld(true);
   };
   const out = { pitch, aim, handler: torsoInView(rig, camera), ahead: chestAhead(rig, camera), variants: {} };
-  const amount = owner.crouchLean ?? 0, fade = fadeOf(pitch), theirs = LEAN_BONES.map(name => viewBone(rig, name).quaternion.clone());
+  const amount = owner.crouchLean ?? 0, fade = fadeOf(pitch), theirs = LEAN_BONES.map(name => rig.bodyPairs.find(([, node]) => node.name === name)[0].quaternion.clone());
   corrected(LEAN_BONES); out.undone = torsoInView(rig, camera);
   corrected(null); out.restored = torsoInView(rig, camera);
   leaned(amount * constant() * fade);
