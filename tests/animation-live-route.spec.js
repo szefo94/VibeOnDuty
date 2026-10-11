@@ -62,6 +62,8 @@ async function runState(page, { settle, samples }) {
         out.ankle[side] = ankle.toArray(); out.ball[side] = position(`ball_${side}`).toArray();
       }
       out.lowestFoot = Math.min(...SIDES.flatMap(side => [out.ankle[side][1], out.ball[side][1]]));
+      // Plan 07-36: forward pitch of the chest in the body's frame (positive leans forward).
+      out.chestPitch = new T.Euler().setFromQuaternion(rotation('spine_03'), 'YXZ').x * 180 / Math.PI;
       return out;
     };
     for (let i = 0; i < settle; i++) await frame();
@@ -119,6 +121,14 @@ test('live: standing, walking and crouching show the composed pose with weapon a
 
   const standingPelvis = mean(standing.map(s => s.pelvis));
   const standingPitch = mean(standing.map(s => s.weaponPitch));
+  // Plan 07-36: the crouch lean, read from the page together with the chest pitches.
+  const leanDegrees = await page.evaluate(async () => {
+    const module = await import(new URL('src/builders/weaponHandling.js', location.href).href);
+    return module.CROUCH_TORSO_LEAN_RAD * 180 / Math.PI;
+  });
+  const standingChest = mean(standing.map(s => s.chestPitch));
+  const crouchedChest = mean(crouched.map(s => s.chestPitch));
+  const risenChest = mean(risen.map(s => s.chestPitch));
   const figures = {
     scale: standing[0].scale, rootY: [standing[0].rootY, crouched[0].rootY],
     standing: { pelvis: standingPelvis, weaponYaw: [Math.min(...standing.map(s => s.weaponYaw)), Math.max(...standing.map(s => s.weaponYaw))],
@@ -204,5 +214,14 @@ test('live: standing, walking and crouching show the composed pose with weapon a
 
   // releasing crouch brings the pelvis back to the standing value
   for (const s of risen) expect(Math.abs(s.pelvis - standingPelvis)).toBeLessThanOrEqual(LIMIT.standAgain);
+  // Plan 07-36: the crouched chest leans forward by the constant (within 2 degrees) and is back
+  // within 0.5 degrees of the standing value after release; the weapon and yaw limits above hold.
+  console.log('LIVE-ROUTE-LEAN ' + JSON.stringify({ leanDegrees, standingChest, crouchedChest, risenChest,
+    leanMeasured: crouchedChest - standingChest, afterRelease: risenChest - standingChest,
+    crouchedWeaponYaw: [Math.min(...crouched.map(s => s.weaponYaw)), Math.max(...crouched.map(s => s.weaponYaw))],
+    crouchedWeaponPitch: [Math.min(...crouched.map(s => s.weaponPitch)), Math.max(...crouched.map(s => s.weaponPitch))],
+    crouchedSpineYaw: [Math.min(...crouched.map(s => s.spineYaw)), Math.max(...crouched.map(s => s.spineYaw))] }));
+  expect(Math.abs(crouchedChest - standingChest - leanDegrees)).toBeLessThanOrEqual(2);
+  expect(Math.abs(risenChest - standingChest)).toBeLessThanOrEqual(0.5);
   expect(errors).toEqual([]);
 });
