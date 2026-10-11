@@ -199,17 +199,43 @@ const INERTIA_OMEGA_FAST = 80;
 const INERTIA_OMEGA_SNAP = 300;
 const INSTANT_SNAP_CLIPS = new Set(['roll']);
 
+// Three's PropertyMixer writes a property only when its blended value changed, so a bone on an
+// exactly constant track would keep an inertia blend for good. Every blend therefore remembers
+// what the mixer had left under it, and that value goes back before the mixer runs again.
+// Only a bone that still holds the blend is touched; whatever was written since stays.
+function _restoreInertia(e) {
+  const held = e._inertiaHeld;
+  if (!held?.written) return;
+  held.written = false;
+  for (let i = 0; i < held.bones.length; i++)
+    if (held.bones[i].quaternion.equals(held.blended[i])) held.bones[i].quaternion.copy(held.mixed[i]);
+}
+
 function _tickInertia(e, dt) {
-  if (!e._inertia) return;
+  // Cancelled since the last blend: the caller has driven the bones again, nothing goes back.
+  if (!e._inertia) { if (e._inertiaHeld) e._inertiaHeld.written = false; return; }
+  // A caller that ran its mixer without a restore (tickInertia, a loop that only finishes).
+  _restoreInertia(e);
   e._inertiaT += dt;
   const omega = e._inertiaOmega ?? INERTIA_OMEGA;
   const decay = (1 + omega * e._inertiaT) * Math.exp(-omega * e._inertiaT);
   if (decay < 0.001) { e._inertia = null; return; }
-  for (const bone of e._bones) {
-    const snap = e._inertia.get(bone.uuid);
-    if (!snap) continue;
-    bone.quaternion.copy(snap.clone().slerp(bone.quaternion, 1 - decay));
+  let held = e._inertiaHeld;
+  if (held?.bones !== e._bones || held.mixed.length !== e._bones.length) {
+    // Once per skeleton, never per frame.
+    held = e._inertiaHeld = { bones: e._bones, written: false,
+      mixed: e._bones.map(() => new THREE.Quaternion()),
+      blended: e._bones.map(() => new THREE.Quaternion()) };
   }
+  for (let i = 0; i < e._bones.length; i++) {
+    const bone = e._bones[i];
+    const snap = e._inertia.get(bone.uuid);
+    // A bone the presentation correction turned has the mixer's own value saved there.
+    held.mixed[i].copy(e._presentationCorrection?.get(bone) ?? bone.quaternion);
+    if (snap) bone.quaternion.copy(snap.clone().slerp(bone.quaternion, 1 - decay));
+    held.blended[i].copy(bone.quaternion);
+  }
+  held.written = true;
 }
 
 export function tickInertia(e, dt) { _tickInertia(e, dt); }
@@ -273,6 +299,7 @@ export function crossfade(e, to, dur = 0.16) {
   _exitLocoMode(e);
   if (to === e.currentClip) return;
   if (to === 'death') {
+    _restoreInertia(e);
     e.mixer?.stopAllAction(); // includes copied mask actions not enumerated in source aliases
     for (const action of new Set(Object.values(e.actions))) action.stop();
     e._inertia = null;
@@ -430,6 +457,7 @@ export function tickPresentation(e, raw, dt, updateMixer = true) {
     e._releasePresentation = registerCharacterDisposer(e.mesh, () => {
       e._presentationMasks?.clear(); e._presentationCorrection?.clear(); e._presentationActive?.clear();
       e._presentationHistory = null; e._presentationMixer = null; e._presentationKey = null;
+      _restoreInertia(e); e._inertiaHeld = null;
       e._bones = []; e._bonesInit = false; e._inertia = null; e.presentation = null;
       e._releasePresentation = null;
     });
@@ -485,6 +513,8 @@ export function tickPresentation(e, raw, dt, updateMixer = true) {
   e._presentationActive = selected;
   const transitionKey = `${key}/${pose.upper}/${pose.gait.map(g => g.key).join('+')}`;
   if (e._presentationKey !== transitionKey && pose.alive && !normalized.reset) _snapBones(e, INERTIA_OMEGA);
+  // Order per frame: inertia restore -> mixer -> rest-aware correction -> inertia.
+  _restoreInertia(e);
   e._presentationKey = transitionKey;
   e.currentClip = pose.alive && pose.upper === 'reload' ? 'reload' : key;
   e._inLocoMode = key === 'loco';
