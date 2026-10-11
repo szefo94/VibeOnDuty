@@ -19,6 +19,16 @@ const definitions = {
 const owners = new WeakMap();
 export function getWeaponHandling(root) { return owners.get(root) ?? null; }
 
+// A crouched torso leans forward by this one amount: spine_01 turns forward about the
+// character's lateral axis and clavicle_l, clavicle_r and neck_01 turn back by the same
+// angle, so the chest leans while both arms, the mounted weapon and the head keep their
+// orientation. A whole number of degrees from 6 to 13 (crouchTorsoLean.test.js).
+export const CROUCH_TORSO_LEAN_RAD = 12 * Math.PI / 180;
+const CROUCH_LEAN_EASE_SECONDS = .1; // time constant of the eased crouch amount
+const CROUCH_LEAN_STEP_SECONDS = .1; // a longer step between two sample times is not eased
+const CROUCH_LEAN_MIN_RAD = .0005; // below this no bone is turned
+const CROUCH_LEAN_COUNTER = ['clavicle_l', 'clavicle_r', 'neck_01'];
+
 // Object3D lookup visits the root then its children depth first. Keep the first
 // match (including non-bones) and absence semantics, never a pose or transform.
 function indexNames(root, lookup) {
@@ -100,6 +110,7 @@ export function createWeaponHandling({ weapon, root, skeleton = null }) {
   const owner = { weapon, root, skeleton, parts, props: [], disposed: false, sample: null,
     boneLookup: new Map(), socketLookup: new Map(), lookupRoot: null, lookupSkeleton: null,
     corrections: new Map(), updates: 0, contacts: null,
+    crouchLean: 0, crouchLeanTime: null, crouchLeanSkeleton: null,
     rest: new Map(Object.values(parts).filter(Boolean).map(part =>
       [part, { position: part.position.clone(), quaternion: part.quaternion.clone() }])) };
   owners.set(root, owner);
@@ -127,6 +138,38 @@ function worldRotate(owner, bone, delta) {
 function align(owner, bone, from, to) {
   if (from.lengthSq() < 1e-10 || to.lengthSq() < 1e-10) return;
   worldRotate(owner, bone, new THREE.Quaternion().setFromUnitVectors(from.normalize(), to.normalize()));
+}
+
+// The eased crouch amount of the handler that carries the pose's current weapon on a
+// skeleton, stepped by the pose's own sample time. One rule for every caller: ease on a
+// step of up to 0.1 s; hold on a repeated time (a remote actor between snapshots, a
+// paused review panel); take the target at once on a backward or longer step, a reset
+// pose, a missing time, or a handler that was not the active one. Returns radians.
+function crouchLean(owner, pose) {
+  if (!owner.skeleton || owner.fixedAnchor || pose.weapon !== owner.weapon) {
+    owner.crouchLean = 0; owner.crouchLeanSkeleton = null;
+    return 0;
+  }
+  const target = pose.alive !== false && pose.crouching === true ? 1 : 0;
+  const time = Number.isFinite(pose.sampleTimeSeconds) ? pose.sampleTimeSeconds : null;
+  const step = time === null || !Number.isFinite(owner.crouchLeanTime) ? NaN : time - owner.crouchLeanTime;
+  let amount = owner.crouchLean;
+  if (owner.crouchLeanSkeleton !== owner.skeleton || pose.reset === true
+    || !(step >= 0 && step <= CROUCH_LEAN_STEP_SECONDS)) amount = target;
+  else if (step > 0) amount += (target - amount) * (1 - Math.exp(-step / CROUCH_LEAN_EASE_SECONDS));
+  owner.crouchLean = Number.isFinite(amount) ? amount : target;
+  owner.crouchLeanTime = time; owner.crouchLeanSkeleton = owner.skeleton;
+  return owner.crouchLean * CROUCH_TORSO_LEAN_RAD;
+}
+// Four saved-and-restored rotations about the lateral axis of the skeleton root.
+function leanTorso(owner, radians) {
+  const spine = owner.boneLookup.get('spine_01');
+  const counter = CROUCH_LEAN_COUNTER.map(name => owner.boneLookup.get(name));
+  if (!spine?.parent || counter.some(bone => !bone?.parent)) return;
+  const axis = V(1, 0, 0).applyQuaternion(owner.skeleton.getWorldQuaternion(new THREE.Quaternion()));
+  worldRotate(owner, spine, new THREE.Quaternion().setFromAxisAngle(axis, radians));
+  const back = new THREE.Quaternion().setFromAxisAngle(axis, -radians);
+  for (const bone of counter) worldRotate(owner, bone, back);
 }
 
 // Analytic two-segment solve; authored elbow plane is retained and reach clamps.
@@ -216,6 +259,9 @@ export function updateWeaponHandling(owner, pose) {
   const def = definitions[owner.weapon];
   if (owner.parts.magazine) owner.parts.magazine.position.add(V(...sample.magazine).sub(V(...def.magazine)));
   if (owner.parts.charging) owner.parts.charging.position.add(V(...sample.charging).sub(V(...def.charging)));
+  // Before the arm solves, and also while an action suppresses them.
+  const lean = crouchLean(owner, pose);
+  if (lean > CROUCH_LEAN_MIN_RAD) leanTorso(owner, lean);
   if (owner.skeleton && pose.alive !== false && pose.weapon === owner.weapon
     && !['throw', 'melee', 'dance', 'roll'].includes(pose.upper)) {
     owner.skeleton.updateMatrixWorld(true);
