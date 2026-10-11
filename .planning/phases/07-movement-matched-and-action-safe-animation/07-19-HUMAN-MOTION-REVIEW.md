@@ -64,3 +64,11 @@ The orchestrator had asked two questions: (1) for in-game motion, return live pl
 > ok, maybe lets plan tis omnimovement in separate phase as you say, leave it to lean at every animation in separate wit live review, for now lets see what we can continue with, this movement i would now leave for later
 
 Recorded from this reply: slide, dive, prone and supersprint are left for the omnimovement phase (Phase 5), where each animation gets its own live review by the owner. Whether "this movement ... for later" also covers the in-game defects (H-04 to H-08, H-13) is not stated; the orchestrator asked.
+
+## Reply 4 (2026-10-11), verbatim
+
+The orchestrator offered two options and named the replies: "Small repair now, then Phase 5 (recommended). I switch live play back to the old motion-captured clips and fix the crouch bug and the look-down view. ... You'd do one short live check afterwards." or "Leave everything, go straight to Phase 5", asking for "repair now" or "straight to phase 5". The owner replied:
+
+> repair now
+
+Recorded decision: repair now. Live play returns to the inherited motion-captured clips for the in-scope actions, the third-person crouch bug and the first-person look-down view are fixed, and the owner does a live check afterwards. The damage reaction was named in the orchestrator's earlier description of this route, not in the option the owner answered; it is in the repair's scope only as far as the plan states and the owner's live check judges it. No motion is approved by this reply.
