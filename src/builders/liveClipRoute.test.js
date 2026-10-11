@@ -598,7 +598,8 @@ describe('the live route, clip by clip', () => {
 // 0.23 m behind the root; head, chest and the first-person shoulders rode on it. Checked on the built
 // clips at every key. Shoulders, head and chest are measured as the driver layers the pose: the legs and
 // pelvis of the clip under the upper mask of the M4 ready clip, against the composed standing pose.
-const HELD_CLIPS = ['crouch_idle'];
+const HELD_CLIPS = ['crouch_idle', 'crouch_forward', 'crouch_back', 'crouch_left', 'crouch_right',
+  'jump_start', 'jump_loop', 'jump_land'];
 describe('the pelvis of a composed crouch or jump clip stays over the root', () => {
   it.each(HELD_CLIPS)('live_%s: pelvis level as authored, height as inherited, shoulders where standing has them, ankles as inherited', id => {
     const clip = live.get(id), inherited = named(ROUTE[id][0]), authored = authoredOf(id), ready = live.get('m4_ready');
@@ -606,7 +607,9 @@ describe('the pelvis of a composed crouch or jump clip stays over the root', () 
     const position = clip.tracks.find(track => track.name === 'pelvis.position');
     const height = inherited.tracks.find(track => track.name === 'pelvis.position');
     const standing = posed([ready, 0]), reference = measure(standing), shoulders = shoulderCentre(standing);
-    const seen = { keys: position.times.length, pelvisLevel: 0, shoulderShift: 0, ankle: 0, head: [], chest: [], ball: 0 };
+    const seen = { keys: position.times.length, pelvisLevel: 0, shoulderShift: 0, ankle: 0, head: [], chest: [], ball: 0,
+      pelvis: [], headHeight: [], lowestFoot: Infinity, knee: { l: [], r: [] }, kneePlace: { l: [], r: [] },
+      anklePlace: { l: [], r: [] }, inheritedKneePlace: { l: [], r: [] }, straight: [] };
     position.times.forEach((time, k) => {
       const theirTime = time * inherited.duration / clip.duration;
       const [x, y, z] = position.values.slice(k * 3, k * 3 + 3);
@@ -619,13 +622,31 @@ describe('the pelvis of a composed crouch or jump clip stays over the root', () 
       const shift = shoulderCentre(layered).z - shoulders.z;
       seen.shoulderShift = Math.max(seen.shoulderShift, Math.abs(shift));
       expect(Math.abs(shift), `key ${k}: shoulder shift against composed standing`).toBeLessThanOrEqual(HOLD.shoulderShift);
-      const mine = measure(layered), theirs = measure(posed([inherited, theirTime]));
+      const whole = posed([inherited, theirTime]), mine = measure(layered), theirs = measure(whole);
+      theirs.kneePlace = Object.fromEntries(SIDES.map(side =>
+        [side, whole.getObjectByName(`calf_${side}`).getWorldPosition(new THREE.Vector3()).toArray()]));
       for (const side of SIDES) {
         const distance = mine.ankle[side].distanceTo(theirs.ankle[side]);
         seen.ankle = Math.max(seen.ankle, distance);
         expect(distance, `key ${k}: ankle ${side} from the inherited ankle`).toBeLessThanOrEqual(LIMIT.ankleFromInherited);
       }
       seen.head.push(mine.head.z - reference.head.z); seen.chest.push(mine.chest.z - reference.chest.z);
+      // Recorded for the summary at every key of the built clip; the crouch knee limit is asserted too.
+      seen.pelvis.push([x, y, z]); seen.headHeight.push(mine.head.y);
+      seen.lowestFoot = Math.min(seen.lowestFoot, mine.lowestFoot);
+      for (const side of SIDES) {
+        const [hip, knee, ankle] = ['thigh', 'calf', 'foot'].map(bone =>
+          layered.getObjectByName(`${bone}_${side}`).getWorldPosition(new THREE.Vector3()));
+        seen.knee[side].push(mine.knee[side]); seen.kneePlace[side].push(knee.toArray());
+        seen.anklePlace[side].push(ankle.toArray());
+        seen.inheritedKneePlace[side].push(theirs.kneePlace[side]);
+        // The solve leaves a leg that cannot reach its ankle fully extended, 1e-4 m short of straight.
+        const slack = hip.distanceTo(knee) + knee.distanceTo(ankle) - hip.distanceTo(ankle);
+        if (slack <= 1.5e-4) seen.straight.push({ key: k, time, side, knee: mine.knee[side],
+          fromInherited: mine.ankle[side].distanceTo(theirs.ankle[side]) });
+        if (id.startsWith('crouch_')) expect(mine.knee[side], `key ${k}: knee ${side} in front of the hip to ankle line`)
+          .toBeGreaterThanOrEqual(LIMIT.crouchKnee);
+      }
       if (id !== 'crouch_idle') return;
       expect(Math.abs(mine.head.z - reference.head.z), `key ${k}: head fore and aft against standing`).toBeLessThanOrEqual(HOLD.overRoot);
       expect(Math.abs(mine.chest.z - reference.chest.z), `key ${k}: spine_03 fore and aft against standing`).toBeLessThanOrEqual(HOLD.overRoot);
@@ -634,7 +655,15 @@ describe('the pelvis of a composed crouch or jump clip stays over the root', () 
         expect(mine.ball[side].y, `key ${k}: ball ${side} above the root`).toBeLessThanOrEqual(LIMIT.crouchBall);
       }
     });
-    (figures.hold ??= {})[id] = { ...seen, head: span(seen.head), chest: span(seen.chest) };
+    const places = list => [0, 1, 2].map(axis => span(list.map(place => place[axis])));
+    (figures.hold ??= {})[id] = { ...seen, head: span(seen.head), chest: span(seen.chest),
+      pelvis: places(seen.pelvis), headHeight: span(seen.headHeight),
+      knee: Object.fromEntries(SIDES.map(side => [side, span(seen.knee[side])])),
+      kneeSmallest: Math.min(...SIDES.flatMap(side => seen.knee[side])),
+      kneeLargest: Math.max(...SIDES.flatMap(side => seen.knee[side])),
+      kneePlace: Object.fromEntries(SIDES.map(side => [side, places(seen.kneePlace[side])])),
+      anklePlace: Object.fromEntries(SIDES.map(side => [side, places(seen.anklePlace[side])])),
+      inheritedKneePlace: Object.fromEntries(SIDES.map(side => [side, places(seen.inheritedKneePlace[side])])) };
   });
 });
 

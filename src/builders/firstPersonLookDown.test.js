@@ -170,10 +170,11 @@ describe('first-person look-down view on the real rig', () => {
         expect(sample.upper).toBe('ready');
       }
     }
-    // The pose itself, level view: the chest is behind the root in the composed crouch (plan 07-27).
+    // The pose itself, level view: the chest of the composed crouch is over the root, where the standing
+    // chest is (plan 07-34; under plan 07-27 it was 0.235 m behind the root).
     const standing = at(runs.get('standing/0'), 0), crouched = at(runs.get('crouched/0'), 0);
     expect(-standing.offset - standing.chest, 'standing chest in front of the root').toBeCloseTo(-0.005, 2);
-    expect(-crouched.offset - crouched.chest, 'crouched chest in front of the root').toBeCloseTo(-0.235, 2);
+    expect(-crouched.offset - crouched.chest, 'crouched chest in front of the root').toBeCloseTo(-0.005, 2);
   });
 
   it.each(CASES)('%s, yaw %i: the eye stays at least 0.10 m in front of the chest at every pitch', (stance, yaw) => {
