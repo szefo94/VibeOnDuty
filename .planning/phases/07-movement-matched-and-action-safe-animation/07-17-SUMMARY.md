@@ -18,7 +18,7 @@ actuals:
   commits: 8
 plan_head_before: fecdb048be58eb9065e3d559fb09291466406c57
 plan_head_after: 92a21eb18c94dd16e80269b01822629fc551381f
-requirements-completed: [ANIM-02, ANIM-03, ANIM-04, ANIM-05]
+requirements-completed: []
 duration: segment B 41 min of runs, segment C 24.2 min offline rerun
 completed: 2026-10-10
 ---
