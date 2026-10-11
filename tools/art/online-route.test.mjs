@@ -7,7 +7,7 @@ import { WAYPOINTS, START, ARRIVAL_TOLERANCE_M, LANE_MARGIN_M, STOP_LEAD_M, MAX_
   CROUCH_SPEED_M_S, STALL_TICKS, STALL_PROGRESS_M, MAX_CORRECTIONS, MATCH_SECONDS, TIER_DEADLINE_MS,
   TIER_TEARDOWN_ALLOWANCE_MS, LEG_BOUND_MS, ACTION_BOUND_MS, DEATH_BOUND_MS, routeLegs, laneCells,
   blockedLaneCells, insideBox, outsideLane, chooseKey, alongTrack, shouldCrouch, shouldRelease, classifyLeg,
-  legSummary, boundedMs } from './online-route.mjs';
+  legSummary, boundedMs, RELEASE_AT_M, INPUT_LIFE_S, INPUT_LIFE_STEP_M, STANDING_FACTOR, PROGRESS_SEEN_M } from './online-route.mjs';
 
 const map = { tiles: bunkerData.tiles, heightmap: bunkerData.heightmap, width: bunkerData.width, height: bunkerData.height };
 const copyWith = (column, row, tile) => ({ ...map,
@@ -31,8 +31,8 @@ test('constants: the route values are the derived ones and agree with the shared
   assert.equal(MATCH_SECONDS, 600);
   assert.equal(MAX_STOP_STEP_M, STOP_LEAD_M + ARRIVAL_TOLERANCE_M);
   assert.ok(STOP_LEAD_M <= CROUCH_WITHIN_M);
-  assert.ok(STOP_LEAD_M > 0);
-  assert.equal(CROUCH_WITHIN_M, 4);
+  assert.equal(STOP_LEAD_M, 1.87, 'the median stop step measured by the tracer');
+  assert.equal(CROUCH_WITHIN_M, 8);
   assert.ok(Math.abs(CROUCH_SPEED_M_S - MOVE_SPEED * 0.72) < 1e-12);
   assert.equal(STALL_TICKS, 150);
   assert.equal(STALL_PROGRESS_M, 0.5);
@@ -154,25 +154,53 @@ test('alongTrack measures signed progress from the start of a leg toward its way
 });
 
 test('shouldCrouch is true within the crouch distance along the driven axis', () => {
-  assert.equal(shouldCrouch({ x: 62, z: 22 + 4 }, [62, 22], 'KeyW'), true);
-  assert.equal(shouldCrouch({ x: 62, z: 22 + 4.01 }, [62, 22], 'KeyW'), false);
+  assert.equal(shouldCrouch({ x: 62, z: 22 + CROUCH_WITHIN_M }, [62, 22], 'KeyW'), true);
+  assert.equal(shouldCrouch({ x: 62, z: 22 + CROUCH_WITHIN_M + 0.01 }, [62, 22], 'KeyW'), false);
   assert.equal(shouldCrouch({ x: 63.2, z: 22 + 3 }, [62, 22], 'KeyW'), true, 'sideways offset does not count');
   assert.equal(shouldCrouch({ x: 66, z: 46 }, [62, 46], 'KeyA'), true, 'leg 1 is 4 m long');
-  assert.equal(shouldCrouch({ x: 40, z: 22 }, [34, 22], 'KeyA'), false);
+  assert.equal(shouldCrouch({ x: 44, z: 22 }, [34, 22], 'KeyA'), false);
 });
 
-test('shouldRelease is true at the stop lead, false just beyond it and true once the centre is passed', () => {
+test('release threshold: derived from the input life so that the stop rests inside the box on both sides', () => {
+  assert.equal(INPUT_LIFE_S, 0.5);
+  assert.ok(Math.abs(INPUT_LIFE_STEP_M - CROUCH_SPEED_M_S * INPUT_LIFE_S) < 1e-12);
+  assert.ok(Math.abs(INPUT_LIFE_STEP_M - 2.16) < 1e-12);
+  // Far side: a sample one full step past the threshold, then a full-life stop.
+  assert.ok(RELEASE_AT_M - 2 * INPUT_LIFE_STEP_M >= -ARRIVAL_TOLERANCE_M - 1e-12);
+  // Near side: a release exactly at the threshold with the measured stop step.
+  assert.ok(RELEASE_AT_M - STOP_LEAD_M <= ARRIVAL_TOLERANCE_M);
+  assert.ok(STOP_LEAD_M <= INPUT_LIFE_STEP_M, 'the measured stop step fits in one input life');
+  assert.ok(Math.abs(RELEASE_AT_M - 3.07) < 1e-12);
+  // Crouch is in effect before the threshold even after one standing input life.
+  assert.ok(Math.abs(STANDING_FACTOR - MOVE_SPEED / CROUCH_SPEED_M_S) < 1e-12);
+  assert.ok(CROUCH_WITHIN_M >= RELEASE_AT_M + MOVE_SPEED * INPUT_LIFE_S);
+  assert.ok(CROUCH_WITHIN_M >= RELEASE_AT_M * STANDING_FACTOR);
+  // A standing full-life stop (3 m) is still below the control's stop-step limit.
+  assert.ok(MOVE_SPEED * INPUT_LIFE_S <= MAX_STOP_STEP_M);
+  assert.ok(PROGRESS_SEEN_M > 0 && PROGRESS_SEEN_M < STALL_PROGRESS_M);
+  // A single step from rest anywhere between the box and the threshold rests inside the box.
+  for (const rest of [ARRIVAL_TOLERANCE_M + 0.01, 2, RELEASE_AT_M])
+    for (const step of [STOP_LEAD_M, INPUT_LIFE_STEP_M])
+      assert.ok(Math.abs(rest - step) <= ARRIVAL_TOLERANCE_M, `${rest} - ${step}`);
+});
+
+test('shouldRelease is true at the release threshold, false just beyond it and true once the centre is passed', () => {
+  assert.equal(shouldRelease({ x: 62, z: 22 + RELEASE_AT_M }, [62, 22], 'KeyW'), true);
+  assert.equal(shouldRelease({ x: 62, z: 22 + RELEASE_AT_M + 0.01 }, [62, 22], 'KeyW'), false);
   assert.equal(shouldRelease({ x: 62, z: 22 + STOP_LEAD_M }, [62, 22], 'KeyW'), true);
-  assert.equal(shouldRelease({ x: 62, z: 22 + STOP_LEAD_M + 0.01 }, [62, 22], 'KeyW'), false);
   assert.equal(shouldRelease({ x: 62, z: 22 - 0.4 }, [62, 22], 'KeyW'), true, 'centre passed');
-  assert.equal(shouldRelease({ x: 34, z: 46 - STOP_LEAD_M - 0.01 }, [34, 46], 'KeyS'), false);
-  assert.equal(shouldRelease({ x: 34, z: 46 - STOP_LEAD_M }, [34, 46], 'KeyS'), true);
-  assert.equal(shouldRelease({ x: 34 + STOP_LEAD_M + 0.5, z: 22 }, [34, 22], 'KeyA'), false);
+  assert.equal(shouldRelease({ x: 34, z: 46 - RELEASE_AT_M - 0.01 }, [34, 46], 'KeyS'), false);
+  assert.equal(shouldRelease({ x: 34, z: 46 - RELEASE_AT_M }, [34, 46], 'KeyS'), true);
+  assert.equal(shouldRelease({ x: 34 + RELEASE_AT_M + 0.5, z: 22 }, [34, 22], 'KeyA'), false);
   assert.equal(shouldRelease({ x: 34 - 0.1, z: 22 }, [34, 22], 'KeyA'), true);
-  assert.equal(shouldRelease({ x: 62 - STOP_LEAD_M, z: 22 }, [62, 22], 'KeyD'), true);
+  assert.equal(shouldRelease({ x: 62 - RELEASE_AT_M, z: 22 }, [62, 22], 'KeyD'), true);
   // With yaw pi/2 KeyW drives west.
-  assert.equal(shouldRelease({ x: 62 + STOP_LEAD_M + 1, z: 46 }, [62, 46], 'KeyW', Math.PI / 2), false);
-  assert.equal(shouldRelease({ x: 62 + STOP_LEAD_M, z: 46 }, [62, 46], 'KeyW', Math.PI / 2), true);
+  assert.equal(shouldRelease({ x: 62 + RELEASE_AT_M + 1, z: 46 }, [62, 46], 'KeyW', Math.PI / 2), false);
+  assert.equal(shouldRelease({ x: 62 + RELEASE_AT_M, z: 46 }, [62, 46], 'KeyW', Math.PI / 2), true);
+  // A body that is not crouched yet is released earlier by the speed ratio.
+  assert.equal(shouldRelease({ x: 62, z: 22 + RELEASE_AT_M + 0.5 }, [62, 22], 'KeyW', 0, false), true);
+  assert.equal(shouldRelease({ x: 62, z: 22 + RELEASE_AT_M * STANDING_FACTOR + 0.01 }, [62, 22], 'KeyW', 0, false), false);
+  assert.equal(shouldRelease({ x: 62, z: 22 + RELEASE_AT_M + 0.5 }, [62, 22], 'KeyW', 0, true), false);
 });
 
 test('classifyLeg: stalled only when a key was held for the stall window without progress', () => {
@@ -197,7 +225,7 @@ test('classifyLeg: stalled only when a key was held for the stall window without
 
 test('legSummary reports ticks, wall time, frame rate, sampled rejections, corrections, stop steps and lane exits', () => {
   const s = (tick, wallMs, frames, along, held, lastInputRejection = null, outside = false) =>
-    ({ tick, wallMs, frames, along, held, lastInputRejection, outside });
+    ({ tick, wallMs, frames, along, held, lastInputRejection, outside, remaining: 12 - along, locked: tick !== 200 });
   const samples = [
     s(100, 0, 10, 0, null),
     s(110, 400, 12, 0.5, 'KeyW'),
@@ -220,6 +248,8 @@ test('legSummary reports ticks, wall time, frame rate, sampled rejections, corre
   assert.deepEqual(summary.stopStepsM.map(v => +v.toFixed(3)), [1.4, 0.3]);
   assert.equal(summary.outsideLaneSamples, 1);
   assert.equal(summary.samples, 10);
+  assert.equal(summary.unlockedSamples, 1);
+  assert.deepEqual(summary.stops.map(stop => [+stop.releasedAtM.toFixed(3), +stop.restAtM.toFixed(3)]), [[2, 0.6], [0.4, 0.1]]);
   const empty = legSummary([]);
   assert.deepEqual([empty.ticks, empty.wallMs, empty.framesPerSecond, empty.staleInputSamples, empty.corrections,
     empty.largestStopStepM, empty.outsideLaneSamples], [0, 0, null, 0, 0, 0, 0]);
