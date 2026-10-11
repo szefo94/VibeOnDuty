@@ -15,7 +15,9 @@
   **Not fixed:** `src/entities/enemies.js` is outside plan 07-38.
 
 - A crouched character stands up on its legs for each foot turn
-  status: open
+  status: resolved
+  **Resolved in:** plan 07-38, Amendment 2, decision F (commit `83f5ca5`): the driver no longer plays a
+  foot turn on the leg layer while the pose is crouching. The text below is the finding as first logged.
   **Found in:** plan 07-38, task 3 (read from source and measured in Node on the real rig).
   **What:** when the view has twisted more than 0.42 rad from planted feet, the driver plays a foot
   turn of 0.4 s on the lower layer (`key = pose.jump ? ... : pose.turn || ...`,
