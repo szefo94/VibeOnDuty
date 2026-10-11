@@ -204,6 +204,26 @@ G-01, the CI step running `npm run test:art` cannot pass on a fresh checkout (th
 `tools/art/animation-budget-v2.test.mjs` need the gitignored cache); fix it before any push, no
 plan in this set does.
 
+Moving collector online route (plan 07-26): `tools/art/moving-online.mjs` hold-walks the four
+waypoints with ordinary keys, one axis per leg, and releases them before a per-axis 1.25 m
+arrival box derived from the one-cell lanes of `bunker` (release distance follows the measured
+frame rate; a step back is taken when at rest just outside the box). Fire, reload and the death
+hold are offered again within bounds; the match lasts 600 seconds and a tier gives up at
+540000 ms. A leg without progress fails as `stalled` with position, frames per second and
+`staleInputSamples`; that field is not a measurement (the debug snapshot keeps the last
+rejection reason, so it equals the sample count). All route numbers and pure functions live in
+`tools/art/online-route.mjs`. `tools/art/moving-online-control.mjs` is a labelled collector
+control that writes only to the gitignored cache and is not evidence. The collector itself
+never judges the lane: read `online.samples[*].legs[].outsideLaneSamples` in a capture report.
+Its stop criterion was changed after a control run had failed and measures no margin; review
+notes W-01 to W-05 in `07-26-COLLECTOR-REVIEW.md` list the remaining risks. Game finding,
+observed under software rendering only and not fixed here: an online player below about
+5 frames per second loses most of their input, because each intent carries the last
+acknowledged tick (`sendIntent` and the heartbeat in `src/network/onlineSession.js`) and the
+server rejects ticks older than `MAX_ACK_AGE_TICKS` in `src/shared/protocol.js` as
+`stale_input`. It belongs to a later netcode phase. The slower Low tier after about 35 minutes
+in one browser is unexplained.
+
 ## Character animation and weapons
 
 - Current accepted `enemy.glb` contains **107 clip occurrences**: the exact 48 inherited
@@ -304,8 +324,13 @@ Phase 6 art ownership and reproducibility:
   qualifying sessions, each closed session re-verified from its reports, host equal to the
   frozen device. Test readers are injectable only through the fourth argument; production call
   sites pass three. The three tool files are hash-pinned by
-  `07-16-PAIRED-IMPLEMENTATION-REVIEW.md` and must not change before the calibration.
-  Nothing has qualified yet: the registry holds only the smoke session.
+  `07-16-PAIRED-IMPLEMENTATION-REVIEW.md` and stay unchanged.
+  State after plan 07-18 (2026-10-11): calibration `23e8adde…` and qualifying session
+  `a16b4bbf…` closed valid and passed (verdict: passed, session 1 of 1; 0 valid sessions failed;
+  0 invalid), so plan 09 is qualified on the paired same-session route only. The frozen
+  absolute V2 limits were not met: the frozen command exited 1 on both evaluations at this
+  identity (40, then 21 of 192 over). The paired session directories in the gitignored cache
+  must stay, because every plan 09 check re-verifies them against the current tree.
 
 - `tools/art/sources/soldier.blend`, `character-params.json` and `build_soldier.py`
   own the fitted anatomical human, original equipment and packed paint; `slice.blend`
