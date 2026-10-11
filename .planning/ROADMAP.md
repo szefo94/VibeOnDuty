@@ -187,7 +187,13 @@ Plans:
 4. A creator imports or retargets approved reusable motion onto the selected rig, regenerates runtime clips, and reviews the resulting transitions through the Blender-to-game workflow.
 5. Repeated spawn, character replacement, and disposal keep shared templates usable and release instance resources within the measured browser budget.
 
-**Plans:** 25/26 plans executed, 22 tasks across 9 waves; independent plan verification passed on 2026-10-05
+**Plans:** 25/32 plans executed, 22 tasks across 9 waves; independent plan verification passed on 2026-10-05
+- [ ] 07-27-PLAN.md — live play back on inherited motion-captured clips for the in-scope actions; inertia fix; skeleton guards (Wave A)
+- [ ] 07-28-PLAN.md — first-person look-down body view fix (Wave A)
+- [ ] 07-29-PLAN.md — browser check, fast gates, blocking owner live check (Wave A)
+- [ ] 07-30-PLAN.md — identity inventory, independent review, stable gates at the new identity (Wave B, after owner approval)
+- [ ] 07-31-PLAN.md — paired calibration, sessions and plan 09 record at the new identity (Wave B)
+- [ ] 07-32-PLAN.md — strict capture at the new identity, documentation, re-derived requirement status (Wave B)
 - [x] 07-26-PLAN.md — collector online route robust at capture frame rate; control runs and independent review before the one new strict capture of 07-19
 - [x] 07-25-PLAN.md
 - [x] 07-24-PLAN.md
