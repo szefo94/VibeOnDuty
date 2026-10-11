@@ -283,7 +283,7 @@ Over the whole sweep: 0.130 to 0.232 m crouched, 0.128 to 0.232 m in the crouch 
 
 ## What did not change
 
-- No clip, no driver byte, no rig byte: `src/builders/enemyAnimations.js` is byte-identical to commit `3665406` (SHA-256 `f150cb50…2885`); `enemyGLTF.js` (`802b7414…1781`) and `firstPersonRig.js` (`c0db631c…f1d1`) equal the review record.
+- No clip, no driver byte, no rig byte: `src/builders/enemyAnimations.js` is byte-identical to commit `3665406` (SHA-256 `f150cb50…2885`); `enemyGLTF.js` (`802b7414…1781`) and `firstPersonRig.js` (`c0db631c…acd1`) equal the review record.
 - Legs, pelvis and feet: no clip changes, and the handler turns only `spine_01`, `clavicle_l`, `clavicle_r` and `neck_01`.
 - The first-person arms: bone for bone what they are without the lean.
 - Standing, the eight gaits, sprint and the jump chain: no bone differs.
