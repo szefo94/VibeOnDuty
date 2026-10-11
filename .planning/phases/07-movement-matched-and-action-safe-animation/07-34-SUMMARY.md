@@ -131,7 +131,7 @@ Largest values after the change, as printed by the test:
 
 What this says, and what it does not:
 
-- **AWP and P90 had never been measured.** With the authored clips their contact error is 0 in every listed state, the crouched reload included. Before this plan the AWP was 0.115 to 0.131 m short in crouch and 0.006 to 0.020 m around a jump; the P90 0.079 to 0.095 m short in crouch and 0.136 to 0.140 m in the crouched reload. The pistol was short only in the crouched reload (0.076 to 0.079 m).
+- **AWP and P90 had never been measured.** With the authored clips their contact error is 0 in every listed state, the crouched reload included. Before this plan the largest shortfall per state and tick rate was 0.115 to 0.131 m in the crouch states and 0.006 to 0.020 m around a jump for the AWP, and 0.079 to 0.095 m in the crouch states and 0.136 to 0.140 m in the crouched reload for the P90. The pistol was short only in the crouched reload (0.076 to 0.079 m). These ranges are per-state maxima, not every tick.
 - **Gaits were not a finding.** The view shoulders of the composed player move 0.173 to 0.201 m in front of the eye in the gaits (authored 0.181 to 0.189 m), from the quarter pelvis sway. The error stays 0 for all four weapons. Nothing was returned to the orchestrator, no number was changed.
 - In crouch and through the jump chain the view shoulders are now where the authored-clip player has them (crouch 0.181 to 0.189 m in front of the eye, both players). Before, they were 0.036 to 0.051 m behind the eye in crouch.
 - An error of 0 means the target is inside the arm's reach: the two-segment solve clamps at full reach, so the figure is the shortfall, not a fit quality.
