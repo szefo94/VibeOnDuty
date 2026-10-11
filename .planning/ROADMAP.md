@@ -187,8 +187,8 @@ Plans:
 4. A creator imports or retargets approved reusable motion onto the selected rig, regenerates runtime clips, and reviews the resulting transitions through the Blender-to-game workflow.
 5. Repeated spawn, character replacement, and disposal keep shared templates usable and release instance resources within the measured browser budget.
 
-**Plans:** 25/33 plans executed, 22 tasks across 9 waves; independent plan verification passed on 2026-10-05
-- [ ] 07-27-PLAN.md — live play on composed clips with inherited motion-captured legs under the authored weapon pose; inertia fix; composed-pose guards (Wave A)
+**Plans:** 27/33 plans executed, 22 tasks across 9 waves; independent plan verification passed on 2026-10-05
+- [x] 07-27-PLAN.md — live play on composed clips with inherited motion-captured legs under the authored weapon pose; inertia fix; composed-pose guards (Wave A)
 - [ ] 07-28-PLAN.md — first-person look-down body view fix (Wave A)
 - [ ] 07-29-PLAN.md — browser check, focused specs, fast gates (Wave A)
 - [ ] 07-33-PLAN.md — independent opus/high review, then the blocking owner live check (Wave A, runs after 07-29)
@@ -210,7 +210,7 @@ Plans:
 - [x] 07-16-PLAN.md
 - [x] 07-17-PLAN.md
 - [x] 07-18-PLAN.md
-- [ ] 07-19-PLAN.md
+- [x] 07-19-PLAN.md
 
 **Wave 1**
 - [x] 07-01-PLAN.md
@@ -369,7 +369,7 @@ Armor plates remain future longer-mode scope. Monetization and generic authentic
 | 4. Bot-Filled Matches on Measured Pi Hosting | 0/TBD | Not started | - |
 | 5. Omnimovement with Reliable Body and Camera Collision | 0/TBD | Not started | - |
 | 6. Human Characters and Comic-Book Blender Iteration | 6/6 | Complete    | 2026-10-05 |
-| 7. Movement-Matched and Action-Safe Animation | 25/26 | In Progress|  |
+| 7. Movement-Matched and Action-Safe Animation | 27/33 | In Progress|  |
 | 8. Distinct Weapons and Authoritative Fast Combat | 0/TBD | Not started | - |
 | 9. Live Loadouts, Attachments, and Durable Unlocks | 0/TBD | Not started | - |
 | 10. Useful Equipment, Score Streaks, and Reconnaissance | 0/TBD | Not started | - |

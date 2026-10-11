@@ -359,7 +359,7 @@ None that stopped the plan. No measured value missed a limit.
 8. **Timing gates.** Two of the five mutable runtime files changed identity. No timing gate was run or requalified. The paired session evidence refers to the earlier identity.
 9. **`AGENTS.md`** still describes authored motion in live play. Plan 07-32 owns that update; it was not edited here.
 10. **Line endings of the new tests.** They are LF on disk and in the repository, but `.gitattributes` does not pin them, so a fresh checkout with `core.autocrlf=true` writes CRLF.
-11. **Plan 07-19 bookkeeping** was left as it is.
+11. **Plan 07-19 bookkeeping** was left as it is. Correction by the orchestrator after this summary was written: the close-out state commands count SUMMARY files on disk, so `STATE.md` and the ROADMAP plan list now also count plan 07-19 as executed (27/33). That is the execution count only. Plan 07-19's human motion review ended with the owner raising issues (`07-19-HUMAN-MOTION-REVIEW.md`), and no motion is accepted. The executor ran three state commands that rewrote the tool's mirror `.planning/state.json` (timestamp only) against its instructions and reported it; the file was not staged or hand-edited.
 
 ## Self-Check: PASSED
 
