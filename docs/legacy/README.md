@@ -3,8 +3,10 @@
 Kept from the GSD planning setup that was removed on 2026-10-15, and from older docs that
 describe past work. Nothing here is a current instruction: paths, counts, test names and tools
 mentioned in these files may no longer exist. The full history, including everything not
-copied here (every plan, summary, evidence file and review record), stays in git: check out a
-commit before `docs: remove GSD` to see the old `.planning/` tree.
+copied here (every plan, summary, evidence file and review record), stays in git: commit `4a136f0` is the last one with the
+old `.planning/` tree (`git show 4a136f0:.planning/ROADMAP.md`, or check it out in a separate worktree).
+The untracked research cache (captured videos, frames, timing sessions) was deleted and is not
+in git.
 
 Worth reading first:
 
