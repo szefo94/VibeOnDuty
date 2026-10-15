@@ -168,7 +168,12 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       const server = await startServer(options);
       console.log(`[mp server] ready bind=${options.host}:${options.port}; advertised=${server.publicUrl}`);
       console.log('[mp server] Advertised address does not establish public reachability.');
-      for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => { void server.close(); });
+      // Shutdown closes rooms and transport but leaves the process alive; exit once it is done,
+      // and force the exit if it hangs, so Ctrl+C and a host's stop signal end the server.
+      for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => {
+        setTimeout(() => process.exit(1), 5000).unref();
+        void server.close().catch(() => {}).finally(() => process.exit(0));
+      });
     }
   } catch (error) {
     console.error(error instanceof Error ? error.message : 'Server startup failed; check --help');

@@ -253,9 +253,13 @@ describe('built-game host boundary', () => {
       const html = await (await fetch(`http://127.0.0.1:${port}`)).text();
       expect(html).toBe(await readFile(resolve('dist/index.html'), 'utf8'));
       expect((await fetch(`http://127.0.0.1:${port}/models/enemy.glb`)).status).toBe(200);
-    } finally { child.kill(); await exited; }
-    // A full production build runs inside this case; hosted CI runners need well over 30 s.
-  }, 120000);
+    } finally {
+      child.kill('SIGTERM');
+      const ended = await Promise.race([exited.then(() => true), new Promise((ok) => setTimeout(ok, 8000, false))]);
+      if (!ended) { child.kill('SIGKILL'); await exited; }
+      expect(ended, 'server exits on SIGTERM').toBe(true);
+    }
+  }, 30000);
   it('rejects absent and foreign WebSocket origins at handshake', async () => {
     expect(await rejectedSocket(fixture.url)).toBe(403);
     expect(await rejectedSocket(fixture.url, 'https://foreign.example')).toBe(403);
