@@ -254,7 +254,8 @@ describe('built-game host boundary', () => {
       expect(html).toBe(await readFile(resolve('dist/index.html'), 'utf8'));
       expect((await fetch(`http://127.0.0.1:${port}/models/enemy.glb`)).status).toBe(200);
     } finally { child.kill(); await exited; }
-  }, 30000);
+    // A full production build runs inside this case; hosted CI runners need well over 30 s.
+  }, 120000);
   it('rejects absent and foreign WebSocket origins at handshake', async () => {
     expect(await rejectedSocket(fixture.url)).toBe(403);
     expect(await rejectedSocket(fixture.url, 'https://foreign.example')).toBe(403);
