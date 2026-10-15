@@ -1,9 +1,0 @@
-{
-  "command": "npm run test:unit -- server/tls.test.js --reporter=junit",
-  "exitCode": 1,
-  "targetTest": "testing TLS certificate lifecycle &gt; TLS startup creates a private active certificate pair",
-  "targetFile": "server/tls.test.js",
-  "expected": "A running --tls server publishes its restricted matching certificate pair",
-  "actual": "AssertionError: expected false to be true; active pair.json does not exist",
-  "output": "<testsuites tests=\"1\" failures=\"1\"><testsuite name=\"server/tls.test.js\" tests=\"1\" failures=\"1\"><testcase name=\"testing TLS certificate lifecycle &gt; TLS startup creates a private active certificate pair\"><failure type=\"AssertionError\" message=\"expected false to be true\">AssertionError at server/tls.test.js:32</failure></testcase></testsuite></testsuites>"
-}

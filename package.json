@@ -13,10 +13,8 @@
     "typecheck": "tsc --noEmit",
     "test:unit": "vitest run",
     "test:watch": "vitest",
-    "test:art": "node --test \"tools/art/*.test.mjs\"",
     "mp-server": "node server/index.js",
     "build:mp": "node tests/helpers/mpServer.js --build-only",
-    "test:mp": "playwright test --config playwright.multiplayer.config.js --workers=1",
     "typecheck:mp": "tsc --noEmit -p tsconfig.multiplayer.json"
   },
   "engines": {

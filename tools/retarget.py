@@ -7,7 +7,7 @@ enemy.glb shipped with two clip families: 24 clips authored on the UE-mannequin 
 and 12 Mixamo clips merged in by an earlier script that premultiplied a fixed +90 deg X
 "correction" instead of retargeting. The two families end up ~180 deg apart on every
 limb-root bone (thigh, upperarm, clavicle, ball), which is the root cause of the
-crouch/roll/jump blending faults. Measurements: docs/ANIMATION-SPACES.md.
+crouch/roll/jump blending faults. Measurements: docs/legacy/ANIMATION-SPACES.md.
 
 What it does
 ------------

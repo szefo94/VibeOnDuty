@@ -315,7 +315,7 @@ export function findLiveClip(animations, key, weapon = 'm4') {
 // The real split is a per-bone retarget offset, ~180° on the limb-root bones
 // (thigh/upperarm/clavicle/ball) and near 0 on the spine. It is not expressible as
 // one global rotation, which is why every ±90°X attempt was reverted. See
-// docs/ANIMATION-SPACES.md for the measurements and the upstream fix.
+// docs/legacy/ANIMATION-SPACES.md for the measurements and the upstream fix.
 
 // ── Quaternion sign normalisation ──────────────────────────────────────────
 // Three.js blends bone quaternions from two clips during crossfade. If the

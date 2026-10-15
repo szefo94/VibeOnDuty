@@ -1,263 +1,69 @@
 # tools
 
-## Phase 7 original motion and current-art recovery
+Two ways to rebuild the character model `public/models/enemy.glb`. The game only loads
+the finished GLB (and `tools/art/motion-manifest.json`, which the runtime imports); nothing
+here runs during play.
 
-The current accepted GLB contains 107 clip occurrences (48 inherited + 59 original
-`vod7_`). Read [docs/ART.md](../docs/ART.md#current-motion-creator-and-recovery-path--2026-10-07)
-for the exact donor append/import, world-space parent-first retarget, action-slot,
-bone-mapping and rights boundaries. The saved `MotionDonor` library uses action
-slot `OBMotionDonor`; exact `donorAction` and one-to-one bone names live in
-`art/motion-manifest.json`. New creator FBX inputs must first become a reviewed
-saved donor; runtime/export does not accept uncontrolled FBX paths.
+Work files of both pipelines go to `.cache/` at the repository root (gitignored). Deleting
+`.cache/` is always safe; the next run recreates what it needs, including the downloaded
+portable Blender.
 
-```sh
-node tools/art/motion-pipeline.mjs build --candidate
-node tools/art/motion-pipeline.mjs repeat
-node tools/art/motion-pipeline.mjs recover --demo
-node tools/art/verify-export.mjs --motion
-node tools/art/motion-pipeline.mjs publish --latest
-node tools/art/pipeline.mjs self-test
-node tools/art/pipeline.mjs iterate --demo
-node tools/art/verify-export.mjs --iteration
-node tools/art/review.mjs --animation-capture
-```
+## `art/` — editable human, motion and painted slice (Blender)
 
-Retain the editable donor/manifest before intentional edits. Update candidate
-sourceHash after saving, retain accepted art baselineHash, and run repeat/recover/
-independent verification before publication. The frozen Phase7 V2 contract
-currently requires candidate-only work: do not publish or rewrite protected
-provenance/art/runtime bytes. Separate new evidence identifies current recovery.
-The existing art build command below publishes assets; it is not the Phase7
-motion `build --candidate` command.
+The pipeline downloads and verifies the official portable **Blender 4.5.13 LTS** ZIP into
+`.cache/art/` (archive SHA256 `b5fdf800ce65fa2f209e8f68d02667e4d720fa1c42f247c72d1882ab04decba6`).
+No machine-wide Blender install is needed.
 
-Art iteration now retains all approved sampled motion bytes exactly while
-preserving historical inherited-occurrence, inverse-bind and rest checks. Actual
-old-motion-only, inverse-bind and quaternion corruption controls reject. Separate
-motion edits keep the motion validator; art recovery cannot authorize changed motion.
-New moving collection owns free root-base listeners, WebM and a local evidence
-index, then executes frozen V2 and non-halted09/browser qualification. Partial
-collection exits nonzero; human aesthetics, physical device/FPS qualification and
-Phase5 actual movement/stamina/×1.15/cancel/ANIM-01 remain open.
-The diagnostic `--animation-capture --tracer` and `--animation-capture --combat-probe`
-save separate partial evidence; their short segments cannot complete the matrix
-or bypass actual full-suite/frozen-V2 failures.
-`--animation-capture --independent-matrix` retains independently observable
-weapon/view/tier and online footage while explicitly recording the unresolved
-shared combat union. It keeps every original full acceptance predicate and
-cannot produce a complete report while that coverage is missing.
-
-### Phase 7 gate and qualification commands (2026-10-11)
-
-Heavy jobs (suites, captures, paired sessions, controls) run one at a time; they share
-output directories and their timing is sensitive to load. State as of this date: stable
-gates complete, plan 09 qualified on the paired route only (the frozen absolute limits
-were not met), strict capture exit 0, human review pending.
+| File | What it is |
+|---|---|
+| `sources/soldier.blend`, `character-params.json`, `build_soldier.py` | the fitted human with equipment and packed paint |
+| `sources/slice.blend`, `build_slice.py` | the shared M4 and Greek Columns paint atlas |
+| `sources/motion.blend`, `motion-manifest.json`, `build_motion.py`, `motion-pipeline.mjs` | the 59 authored `vod7_` actions, their slots and validation |
+| `pipeline.mjs` | bootstrap, build, export and atomic publication |
+| `inspect-character.mjs`, `verify-export.mjs` | GLB inspection and export comparison |
+| `provenance.json`, `sources/LICENSE*.md` | where every input came from and under which terms |
 
 ```sh
-node tools/art/stable-gates.mjs run --gates all
-node tools/art/stable-gates.mjs run --gates offline
-node tools/art/stable-gates.mjs check
-node tools/art/stable-gates.mjs check --only stable
-node tools/art/stable-gates.mjs plan09 --timing <timing result> --registry <registry> --offline-report <Playwright JSON report>
-node tools/art/multiplayer-ab.mjs control --reference <commit>
-node tools/art/multiplayer-ab.mjs run --reference <commit> --grep <title> --repeats <n>
-node tools/art/review.mjs --animation-paired --smoke --register
-node tools/art/review.mjs --animation-paired --calibration --register
-node tools/art/review.mjs --animation-paired --register
-node tools/art/review.mjs --animation-paired [--smoke | --calibration] --run <nonce>
-node tools/art/animation-budget-paired.mjs chain --registry <registry>
-node tools/art/animation-budget-paired.mjs verify --budget <frozen V2 budget> --session <session report> --registry <registry>
-node tools/art/animation-budget-paired.mjs verdict --registry <registry> --identity <hash>
-node tools/art/animation-budget-paired.mjs frozen-evaluations --identity <hash>
-node tools/art/frozen-bytes.mjs verify
-node tools/art/approach-fixture-control.mjs
-node tools/art/moving-online-control.mjs --label <new label> [--tiers <list>] [--warm-up-minutes <n>]
-node tools/art/moving-online-control.mjs --read <label>[,<label>...] --tiers <list>
-```
-
-- `stable-gates.mjs run --gates <ids | all>` (plan 07-17): run after any source change that
-  moves the protected identity, before a paired session or a capture. It runs lint, both
-  typechecks, build, units, the offline suite and the multiplayer suite serially and writes
-  `evidence/07-10-stable-gates.json`. Name single gates (for example `offline`) to rerun one.
-- `stable-gates.mjs check` (plans 07-17, 07-18): run before every capture and after any
-  edit near protected files. It launches nothing; `--only stable` leaves plan 09 out.
-- `stable-gates.mjs plan09` (plan 07-18): run once after a paired verdict, to build the plan
-  09 qualification record from the timing result, the registry and the offline report.
-- `multiplayer-ab.mjs` (plan 07-14): run when a multiplayer case fails and it is unclear
-  whether the current source or the host is responsible. Both sub-commands take a reference
-  commit; `run` repeats one case, interleaved, on this working tree and on a scratch copy of
-  the reference extracted with `git archive`. See the file header for `control`.
-- `review.mjs --animation-paired` (plans 07-16, 07-18): register a session, commit the
-  registry file alone, then run it by its nonce. A smoke proves the tooling, one calibration
-  comes before at most three qualifying sessions. Do not start one without the owner; the
-  registry is append-only and each session takes about 33 minutes.
-- `animation-budget-paired.mjs` (plans 07-16, 07-18): `chain` checks the registry, `verify`
-  recomputes one closed session from its reports, `verdict` applies the majority rule,
-  `frozen-evaluations` lists frozen results at an identity. None launches a browser.
-- `frozen-bytes.mjs verify` (plan 07-21): run after any git operation that could rewrite
-  working-tree bytes, and before a gate run. Its `restore` sub-command rewrites files and is
-  an owner decision, not a routine step.
-- `approach-fixture-control.mjs` (plan 07-23) and `moving-online-control.mjs` (plan 07-26):
-  labelled collector controls for the offline combat approach and the online route. Run one
-  when the collector's steering changes. Their output goes to the gitignored cache and is
-  not evidence.
-
-## `retarget.py` — rebuild `public/models/enemy.glb`
-
-`enemy.glb` shipped with clips from two sources on incompatible rigs: 24 authored on
-the UE-mannequin skeleton, and 12 Mixamo clips merged in by an earlier script that
-premultiplied a fixed +90°X "correction" instead of retargeting. The two families sat
-~180° apart on every limb-root bone, which caused the crouch, roll and jump blending
-faults documented in `docs/ANIMATION-SPACES.md`.
-
-This script retargets the Mixamo clips onto the mannequin skeleton properly, so every
-clip in the GLB is on one rig.
-
-```sh
-/Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup \
-  --python tools/retarget.py -- \
-  --glb public/models/enemy.glb \
-  --anims tools/anim-sources \
-  --out  public/models/enemy.glb
-```
-
-Measured effect (limb-root bones, mean angle between the two families):
-
-| | all bones | limb roots |
-|---|---|---|
-| before | 61.7° | **162.7°** |
-| after  | 28.5° | **36.5°** |
-
-The residual is genuine pose difference — a crouch legitimately differs from a stand —
-not a rig mismatch.
-
-### `anim-sources/`
-
-The 12 Mixamo FBX files the retarget consumes. They were committed once, then deleted
-in `11ece0e` when the GLB replaced the runtime FBX loader, leaving the GLB
-unreproducible. Restored here so the pipeline can be re-run.
-
-### Adding a clip
-
-Mixamo clips are exported **without skin**, FBX, 30 fps. Drop the file in
-`anim-sources/`, add `'<file stem>': '<action name in the GLB>'` to `CLIPS` in
-`retarget.py`, and re-run. Locomotion should be exported **In Place** where possible;
-the script strips horizontal root motion regardless, since the game drives position
-itself.
-
-The mannequin-family clips (crouch, roll, jump_start/land, death, dance, punch) have no
-Mixamo source and are passed through untouched. Sourcing rifle-holding replacements for
-those from Mixamo is the remaining work — see `docs/ANIMATION-SPACES.md`.
-
-## `art/` — editable human and painted slice
-
-The local pipeline uses the verified official **Blender 4.5.13 LTS** portable ZIP
-in `.planning/research/.cache/06-art/`. Its archive SHA256 is
-`b5fdf800ce65fa2f209e8f68d02667e4d720fa1c42f247c72d1882ab04decba6`;
-the executed Blender build is `daeeeca98fb0`. It adds no installed package,
-runtime AI service, account or machine-wide Blender installation. Inspect
-`art/iterate.py` before using an LLM-authored edit; the script itself is the
-offline assistance artifact. It accepts structured numeric operations, never
-prompts, generated Python, arbitrary selectors, commands or network requests.
-
-From the checkout root, with existing dependencies and Chromium available:
-
-```sh
-node tools/art/pipeline.mjs self-test
 node tools/art/pipeline.mjs bootstrap
-node tools/art/pipeline.mjs probe --provenance
-node tools/art/pipeline.mjs build --probe
-node tools/art/pipeline.mjs build-slice --probe
-node tools/art/pipeline.mjs export --source tools/art/sources/soldier.blend --out .planning/research/.cache/06-art/manual-export.glb
-node tools/art/verify-export.mjs --repeat
-node tools/art/pipeline.mjs iterate --demo
-node tools/art/verify-export.mjs --iteration
+node tools/art/pipeline.mjs build --probe        # rebuild soldier.blend and publish enemy.glb
+node tools/art/pipeline.mjs build-slice --probe  # rebuild slice.blend and the paint atlas
+node tools/art/pipeline.mjs export --source tools/art/sources/soldier.blend --out .cache/art/manual-export.glb
+node tools/art/motion-pipeline.mjs build --candidate
+node tools/art/motion-pipeline.mjs publish --latest
 ```
 
-`build --probe` rebuilds and publishes `soldier.blend` and `public/models/enemy.glb`
-only after reopening/export/compatibility and game tracer checks. `build-slice`
-similarly rebuilds the editable `slice.blend` and original paint atlas. These
-build/probe/repeat commands were executed by plans 06-01/02; export, self-test,
-iterate and independent restoration were executed by plan 06-05. Build/rebuild
-is unnecessary for a candidate iteration and can replace manual source edits.
+`build --probe` publishes only after the candidate reopens, exports, keeps the inherited
+65-joint skeleton and passes the three browser cases in `tests/art-tracer.spec.js`
+(the pipeline routes the game's model request to the candidate through `VOD_ART_CANDIDATE`).
 
-`iterate --demo` keeps the accepted published model and editable source intact.
-It creates a unique owned `iteration-*` directory, retains a baseline source and
-parameter backup, reopens it, applies the reviewed edit to a separate `.blend`,
-and exports before/changed/restored GLBs with exact inherited rig/motion merge.
-It opens the actual game in owned headless browser contexts and routes the
-normal model HEAD/GET to each candidate. The real Training Range player rig,
-normal scene, M4 mount, lighting and selective ink are rendered at matched
-1280×960/DPR 1/Medium, idle time 0.4 and recorded camera settings. Test-only
-fixed random values and frozen animation frames allow matching pixel identities.
-The process closes its own browser and loopback server in `finally`.
+Not runnable any more: `pipeline.mjs iterate` and `verify-export.mjs --iteration`. They
+rendered matched screenshots through a review tool that was removed together with the
+Phase 6/7 measurement tooling (see `docs/legacy/tools-README.md` for the old commands).
+`motion-acceptance.mjs` and `runtime-dependencies.mjs` still name Phase 7 evidence files
+under `.planning/` as hash-pinned historical data; those files are gone, so the Phase 7
+crouch-correction promotion cannot be repeated.
 
-The demonstrated request format is exactly:
+The 59 `vod7_` actions are procedural hinge poses, not motion capture. Live play builds
+composed `live_` clips at load (inherited motion-captured legs under the authored weapon
+pose, `src/builders/enemyGLTF.js`); the measured defects of the authored clips are in
+`docs/legacy/debug/phase7-human-motion-review.md`.
 
-```json
-{
-  "schemaVersion": 1,
-  "operations": {
-    "helmet-cheek-guard-offset": 0.022,
-    "accent-paint-gain": 0.55
-  }
-}
-```
+## `retarget.py` — the inherited mannequin and Mixamo clips
 
-| Fixed operation | Range | Target |
-| --- | --- | --- |
-| `helmet-cheek-guard-offset` | −0.025…0.025 metres | Translate only `HelmetSidePanel-1` and `HelmetSidePanel1` vertically downward by the supplied offset; keep topology/UVs/skin weights |
-| `accent-paint-gain` | 0.4…1.3 | Scale only packed `Paint_team-accent` RGB and `TeamAccent` base appearance, clamped to 0…1; preserve alpha, normal maps and protected paint |
-
-At least one known operation is required. Duplicate/unknown keys, additional
-request fields, nonfinite values, booleans/strings/null, invalid ranges,
-uncontrolled object selection, input/output aliases, existing output files,
-path escapes and linked paths (including in-root Windows junctions) reject.
-Node and Python validate before opening a source or creating edited output;
-Python also verifies the exact owned mesh/material/image targets. Blender starts
-with factory settings and `--disable-autoexec`, and opens with
-`use_scripts=False`. This is bounded local authoring of trusted reviewed source,
-not a sandbox for arbitrary hostile `.blend` binaries.
-
-For a custom request, save it as an ordinary JSON file under the owned cache and
-choose a new output filename with an existing parent directory:
+`enemy.glb` carries 48 inherited clip occurrences: clips authored on the UE-mannequin
+skeleton plus 12 Mixamo clips retargeted onto it. `retarget.py` rebuilds that set from
+`anim-sources/` (the 12 Mixamo FBX inputs) in world space, parents first, stripping
+horizontal root motion because the game moves characters itself.
 
 ```sh
-node tools/art/pipeline.mjs iterate --validate --source tools/art/sources/soldier.blend --params tools/art/character-params.json --request .planning/research/.cache/06-art/request.json --out .planning/research/.cache/06-art/custom.blend
-node tools/art/pipeline.mjs iterate --source tools/art/sources/soldier.blend --params tools/art/character-params.json --request .planning/research/.cache/06-art/request.json --out .planning/research/.cache/06-art/custom.blend
-node tools/art/pipeline.mjs export --source .planning/research/.cache/06-art/custom.blend --out .planning/research/.cache/06-art/custom.glb
+<path to Blender> --background --factory-startup --python tools/retarget.py -- \
+  --glb public/models/enemy.glb --anims tools/anim-sources --out public/models/enemy.glb
 ```
 
-`--validate` writes no edited output. Source roots are `tools/art/sources/` and
-the cache; parameter roots are `tools/art/` and the cache; requests and outputs
-are cache-only. The edit produces `.blend.params.json` and `.blend.operation.json`
-beside the candidate. The latter records input, script, runtime and output hashes.
-Outputs must not overwrite anything, including accepted publication.
+To add a clip: export it from Mixamo without skin, FBX, 30 fps, In Place where possible;
+put it in `anim-sources/`, add `'<file stem>': '<action name>'` to `CLIPS` in
+`retarget.py`, and add the matching runtime alias in `src/builders/enemyGLTF.js`.
+Background and measurements: `docs/legacy/ANIMATION-SPACES.md`.
 
-Recovery is an editable-source operation: copy the independently retained
-`baseline.blend` and `baseline.params.json` back into working recovery files,
-then reopen those files through a fresh pinned Blender process and export again.
-The demo performs this step as `restored.blend` / `restored.params.json` /
-`restored.glb`. `verify-export --iteration` independently reopens them and writes
-`independent-*/regenerated.glb`. It checks full semantic mesh/material/image/skin/
-action equality against `before.glb`, including active scene roots, authored-node
-reachability, parents, resolved mesh/skin bindings, local transforms and rendering
-metadata. These identities survive serializer node/mesh/skin/scene index changes.
-The inspector requires the expected body/equipment in that active scene. It also checks the changed panel translation,
-UVs/weights/winding and accent pixels independently, and verifies the recorded
-matched game captures. Copying an earlier GLB or resetting Git is not recovery.
-
-`.planning/research/.cache/06-art/iteration-report.json` points to the latest
-demonstration and its immutable source/candidate artifacts; `iteration-verification.json`
-records independent verification. `before-game.png`, `changed-game.png` and
-`restored-game.png` live in that run's directory. Run hashes and outcomes are
-retained in `art/provenance.json`; future reruns create new cache evidence without
-silently rewriting that historical ledger. The actual demo changed only the
-intended panels/accent and recovered matching baseline semantics and pixels.
-Software/headless review does not establish human aesthetic acceptance, physical
-device performance or 60 FPS. The CC0 anatomical base remains separate from
-unresolved inherited rig, motion and weapon redistribution terms.
-
-API references checked for this workflow: [Blender 4.5 file operators](https://docs.blender.org/api/4.5/bpy.ops.wm.html),
-[Playwright route fulfillment](https://playwright.dev/docs/api/class-route),
-and [Vite owned server lifecycle](https://vite.dev/guide/api-javascript.html).
+The redistribution terms of the inherited rig, the mannequin and Mixamo motion and the
+weapon FBX files are unresolved; see `tools/art/provenance.json`.

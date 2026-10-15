@@ -14,7 +14,7 @@ import bpy
 import numpy as np
 
 ROOT = os.path.realpath(os.path.join(os.path.dirname(__file__), '../..'))
-CACHE = os.path.join(ROOT, '.planning', 'research', '.cache', '06-art')
+CACHE = os.path.join(ROOT, '.cache', 'art')
 SOURCES = os.path.join(ROOT, 'tools', 'art', 'sources')
 OPERATIONS = {'helmet-cheek-guard-offset': (-0.025, 0.025), 'accent-paint-gain': (0.4, 1.3)}
 

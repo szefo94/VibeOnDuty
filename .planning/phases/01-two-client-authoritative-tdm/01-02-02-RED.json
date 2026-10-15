@@ -1,9 +1,0 @@
-{
-  "command": "npm run test:unit -- src/shared/world.test.js --reporter=junit",
-  "exitCode": 1,
-  "targetTest": "room-owned world &gt; allows exactly tangent wall contact but blocks inward penetration",
-  "targetFile": "src/shared/world.test.js",
-  "expected": "An exactly tangent body is permitted; a body penetrating the wall is blocked",
-  "actual": "AssertionError at line 21: exact tangent returned false instead of true",
-  "output": "<testsuites tests=\"1\" failures=\"1\"><testsuite name=\"src/shared/world.test.js\" tests=\"1\" failures=\"1\"><testcase name=\"room-owned world &gt; allows exactly tangent wall contact but blocks inward penetration\"><failure message=\"expected false to be true // Object.is equality\" type=\"AssertionError\">AssertionError: expected false to be true at src/shared/world.test.js:21:69</failure></testcase></testsuite></testsuites>"
-}

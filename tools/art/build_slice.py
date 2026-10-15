@@ -13,7 +13,7 @@ parser.add_argument('--source', required=True)
 parser.add_argument('--out', required=True)
 args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
 ROOT = os.path.realpath(os.path.join(os.path.dirname(__file__), '../..'))
-CACHE = os.path.join(ROOT, '.planning', 'research', '.cache', '06-art')
+CACHE = os.path.join(ROOT, '.cache', 'art')
 SOURCES = os.path.join(ROOT, 'tools', 'art', 'sources')
 for filename, roots in [(args.source, [CACHE, SOURCES]), (args.out, [CACHE])]:
     if not any(os.path.commonpath([os.path.realpath(filename), root]) == root for root in roots):

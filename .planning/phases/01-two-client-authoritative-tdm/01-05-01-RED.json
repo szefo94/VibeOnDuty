@@ -1,9 +1,0 @@
-{
-  "command": "npm run test:unit -- src/shared/tdmRules.test.js --reporter=junit",
-  "exitCode": 1,
-  "targetTest": "authoritative TDM teams &gt; starts one human immediately as blue with locked defaults",
-  "targetFile": "src/shared/tdmRules.test.js",
-  "expected": "Solo guest starts phase active on blue with 50/600/3/0.25/15 settings",
-  "actual": "AssertionError expected playing to be active",
-  "output": "<testsuites tests=\"1\" failures=\"1\"><testsuite name=\"src/shared/tdmRules.test.js\" tests=\"1\" failures=\"1\"><testcase name=\"authoritative TDM teams &gt; starts one human immediately as blue with locked defaults\"><failure type=\"AssertionError\" message=\"expected playing to be active\">AssertionError at src/shared/tdmRules.test.js:9</failure></testcase></testsuite></testsuites>"
-}

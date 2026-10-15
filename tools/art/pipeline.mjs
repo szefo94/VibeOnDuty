@@ -10,7 +10,7 @@ import { excludeGenericPublication } from './motion-acceptance.mjs';
 import { runtimeDependencyBytes, verifyRuntimeDependencies } from './runtime-dependencies.mjs';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-export const CACHE = path.join(ROOT, '.planning/research/.cache/06-art');
+export const CACHE = path.join(ROOT, '.cache/art');
 export const SOURCES = path.join(ROOT, 'tools/art/sources');
 export const PIN = {
   url: 'https://download.blender.org/release/Blender4.5/blender-4.5.13-windows-x64.zip',
@@ -718,7 +718,7 @@ async function main() {
     [
       path.join(ROOT, 'node_modules/@playwright/test/cli.js'),
       'test',
-      'tests/character-art.spec.js',
+      'tests/art-tracer.spec.js',
       '--grep',
       'art tracer:',
       '--workers=1',

@@ -7,7 +7,7 @@ import { ROOT, SOURCES, PIN, hash, owned, bootstrap, run, iterationPath } from '
 import { parseGLB, encodeGLB, accessor, compareSemanticExports, inspectMotionCandidate,
   compareMotionExports } from './inspect-character.mjs';
 
-export const MOTION_CACHE = path.join(ROOT, '.planning/research/.cache/07-motion');
+export const MOTION_CACHE = path.join(ROOT, '.cache/motion');
 export const MANIFEST = path.join(ROOT, 'tools/art/motion-manifest.json');
 export const BASELINE = path.join(ROOT, 'public/models/enemy.glb');
 const SOURCE = path.join(SOURCES, 'motion.blend');

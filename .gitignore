@@ -2,9 +2,9 @@
 node_modules/
 dist/
 test-results/
+playwright-report/
 public/**/.DS_Store
-.planning/research/.cache/
-.gsd/
+# Work files of the Blender pipeline (tools/art); safe to delete, rebuilt on demand.
+.cache/
 .vod-server/tls/
 tools/art/sources/*.blend[0-9]
-tools/art/reports/

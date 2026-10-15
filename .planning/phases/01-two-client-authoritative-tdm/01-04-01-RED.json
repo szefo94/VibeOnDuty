@@ -1,9 +1,0 @@
-{
-  "command": "npm run test:unit -- src/shared/combat.test.js --reporter=junit",
-  "exitCode": 1,
-  "targetTest": "authoritative M4 travel &gt; clips the final fractional step and cannot hit beyond exact lifetime exhaustion",
-  "targetFile": "src/shared/combat.test.js",
-  "expected": "Target beyond the 1.1-second projectile lifetime retains 100 health",
-  "actual": "AssertionError: expected 72 to be 100; floating lifetime permits an extra full step and late damage",
-  "output": "<testsuites tests=\"1\" failures=\"1\"><testsuite name=\"src/shared/combat.test.js\" tests=\"1\" failures=\"1\"><testcase name=\"authoritative M4 travel &gt; clips the final fractional step and cannot hit beyond exact lifetime exhaustion\"><failure type=\"AssertionError\" message=\"expected 72 to be 100\">AssertionError at src/shared/combat.test.js:25</failure></testcase></testsuite></testsuites>"
-}

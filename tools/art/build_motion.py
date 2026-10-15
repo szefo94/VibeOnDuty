@@ -21,7 +21,7 @@ p.add_argument('--gain', type=float, default=1.12)
 p.add_argument('--corruption', choices=['slot', 'action', 'rig', 'unchanged'])
 args = p.parse_args(sys.argv[sys.argv.index('--') + 1:])
 ROOT = os.path.realpath(os.path.join(os.path.dirname(__file__), '../..'))
-CACHE = os.path.join(ROOT, '.planning', 'research', '.cache', '07-motion')
+CACHE = os.path.join(ROOT, '.cache', 'motion')
 
 def bounded(filename, roots):
     absolute = os.path.abspath(filename)

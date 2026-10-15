@@ -2,7 +2,6 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
-  testIgnore: ['**/multiplayer.spec.js', '**/hosting.spec.js'],
   // Hosted runners render WebGL on the CPU. Concurrent game loops contend for
   // that CPU and can time out even while their animation assertions are passing.
   workers: process.env.CI ? 1 : undefined,

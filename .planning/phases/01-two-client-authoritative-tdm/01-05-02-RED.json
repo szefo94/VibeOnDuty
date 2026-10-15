@@ -1,9 +1,0 @@
-{
-  "command": "npm run test:unit -- src/shared/tdmRules.test.js --reporter=junit",
-  "exitCode": 1,
-  "targetTest": "authoritative TDM lifecycle &gt; ends a real score-limit kill and publishes the fixed15-second result deadline",
-  "targetFile": "src/shared/tdmRules.test.js",
-  "expected": "Real lethal projectile ends killLimit1 as results with blue winner and15000ms results",
-  "actual": "AssertionError expected active to be results",
-  "output": "<testsuites tests=\"7\" failures=\"1\"><testsuite name=\"src/shared/tdmRules.test.js\" tests=\"7\" failures=\"1\"><testcase name=\"authoritative TDM lifecycle &gt; ends a real score-limit kill and publishes the fixed15-second result deadline\"><failure type=\"AssertionError\" message=\"expected active to be results\">AssertionError at src/shared/tdmRules.test.js:134</failure></testcase></testsuite></testsuites>"
-}

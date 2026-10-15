@@ -17,7 +17,7 @@ parser.add_argument('--params', default=os.path.join(os.path.dirname(__file__), 
 parser.add_argument('--out', required=True)
 args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
 ROOT = os.path.realpath(os.path.join(os.path.dirname(__file__), '../..'))
-CACHE = os.path.join(ROOT, '.planning', 'research', '.cache', '06-art')
+CACHE = os.path.join(ROOT, '.cache', 'art')
 SOURCES = os.path.join(ROOT, 'tools', 'art', 'sources')
 def bounded(filename, roots):
     target = os.path.realpath(filename)

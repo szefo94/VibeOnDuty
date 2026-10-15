@@ -25,7 +25,7 @@ export async function validateBuildDir(selected, certificateDir) {
     const source = await realpath(repoRoot);
     const secret = await realpath(certificateDir).catch(() => resolve(certificateDir));
     if (root === source || inside(secret, root) || inside(root, secret) ||
-        ['src', 'server', '.git', '.planning', '.vod-server'].some((dir) => inside(join(source, dir), root))) throw new Error();
+        ['src', 'server', '.git', '.cache', '.vod-server'].some((dir) => inside(join(source, dir), root))) throw new Error();
     const html = await readFile(join(root, 'index.html'), 'utf8');
     const assets = [...html.matchAll(/(?:src|href)="([^" ]+)"/g)]
       .map((match) => match[1]).filter((path) => /\/assets\//.test(path));

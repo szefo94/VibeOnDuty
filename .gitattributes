@@ -1,24 +1,4 @@
-# Pinned by exact hash in tools/art/motion-acceptance.mjs; keep checkout bytes stable.
+# These two files were checked out with LF on every platform while the Phase 6/7 hash
+# gates existed; the setting stays so their bytes do not change on a Windows checkout.
 src/builders/enemyGLTF.test.js text eol=lf
-# Reviewed plan 07-21 correction, registered by exact hash; LF on every checkout.
 src/main.js text eol=lf
-# Paired timing contract V2, pinned by exact hash (plan 07-25 review, E8); LF on every checkout.
-.planning/phases/07-movement-matched-and-action-safe-animation/07-09-PAIRED-AMENDMENT-V2.md text eol=lf
-# Owner decision on the paired contract, pinned by exact hash (E8); LF on every checkout.
-.planning/phases/07-movement-matched-and-action-safe-animation/07-09-PAIRED-AMENDMENT-DECISION.md text eol=lf
-# Review record of the paired contract V2, pinned by exact hash (E8); LF on every checkout.
-.planning/phases/07-movement-matched-and-action-safe-animation/07-09-PAIRED-AMENDMENT-V2-REVIEW.md text eol=lf
-# Paired session registry, hashed as raw bytes (E8); LF on every checkout.
-.planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-paired-session-registry.json text eol=lf
-# Paired session evidence, hashed as raw bytes by the registry's closed events (E8); LF on every checkout.
-.planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-16-paired-smoke.json text eol=lf
-.planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-18-paired-calibration.json text eol=lf
-.planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-18-paired-session-1.json text eol=lf
-.planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-18-paired-session-2.json text eol=lf
-.planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-18-paired-session-3.json text eol=lf
-.planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-18-cost-candidate.json text eol=lf
-.planning/phases/07-movement-matched-and-action-safe-animation/evidence/07-18-timing-result.json text eol=lf
-# Original paired proposal and its review, cited by hash in the V2 frontmatter (V2 review O-1, optional); LF on every checkout.
-.planning/phases/07-movement-matched-and-action-safe-animation/07-09-PAIRED-AMENDMENT.md text eol=lf
-.planning/phases/07-movement-matched-and-action-safe-animation/07-09-PAIRED-AMENDMENT-REVIEW.md text eol=lf
-.planning/phases/07-movement-matched-and-action-safe-animation/07-18-FROZEN-PASS-DECISION.md text eol=lf
